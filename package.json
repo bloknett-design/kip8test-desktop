@@ -24,7 +24,7 @@
   },
   "build": {
     "appId": "com.bloknett.kipia.test",
-    "productName": "КИПиА (Test)",
+    "productName": "KIPiA Test",
     "copyright": "Copyright © 2026 bloknett-design",
     "publish": {
       "provider": "github",
@@ -84,7 +84,9 @@
       ],
       "icon": "images/icon-512.png",
       "category": "Utility",
-      "artifactName": "KIPiA-Test-${version}.${ext}"
+      "artifactName": "KIPiA-Test-${version}.${ext}",
+      "desktopName": "KIPiA-Test.desktop",
+      "maintainer": "bloknett-design"
     },
     "mac": {
       "target": [
@@ -96,7 +98,8 @@
         }
       ],
       "icon": "images/icon-512.png",
-      "artifactName": "KIPiA-Test-${version}.${ext}"
+      "artifactName": "KIPiA-Test-${version}.${ext}",
+      "productName": "KIPiA Test"
     }
   }
 }
