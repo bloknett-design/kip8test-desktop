@@ -1,0 +1,102 @@
+{
+  "name": "kipia-desktop-test",
+  "version": "2.0.0",
+  "description": "КИПиА — справочник инженера (десктопное приложение, TEST)",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "build:mac": "electron-builder --mac",
+    "build": "electron-builder --win --linux"
+  },
+  "author": {
+    "name": "bloknett-design",
+    "email": "bloknett.design@gmail.com"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
+  },
+  "build": {
+    "appId": "com.bloknett.kipia.test",
+    "productName": "КИПиА (Test)",
+    "copyright": "Copyright © 2026 bloknett-design",
+    "publish": {
+      "provider": "github",
+      "owner": "bloknett-design",
+      "repo": "kip8test-desktop"
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "images/**/*",
+      "data/**/*",
+      "electron/**/*"
+    ],
+    "extraResources": [],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "images/icon-512.png",
+      "artifactName": "KIPiA-Test-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerLanguages": [
+        "ru"
+      ],
+      "language": 1049,
+      "shortcutName": "КИПиА (Test)",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "images/icon-512.png",
+      "category": "Utility",
+      "artifactName": "KIPiA-Test-${version}.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "images/icon-512.png",
+      "artifactName": "KIPiA-Test-${version}.${ext}"
+    }
+  }
+}

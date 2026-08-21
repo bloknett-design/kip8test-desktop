@@ -1,0 +1,43 @@
+# ============================================================
+# .gitignore для kip8test-desktop
+# ============================================================
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Electron Builder
+dist/
+dist-desktop/
+release/
+*.app
+*.exe
+*.dmg
+*.AppImage
+*.deb
+*.blockmap
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+logs/
+
+# Build cache
+.cache/
+.parcel-cache/
