@@ -85,7 +85,6 @@
       "icon": "images/icon-512.png",
       "category": "Utility",
       "artifactName": "KIPiA-Test-${version}.${ext}",
-      "desktopName": "KIPiA-Test.desktop",
       "maintainer": "bloknett-design"
     },
     "mac": {
@@ -98,8 +97,7 @@
         }
       ],
       "icon": "images/icon-512.png",
-      "artifactName": "KIPiA-Test-${version}.${ext}",
-      "productName": "KIPiA Test"
+      "artifactName": "KIPiA-Test-${version}.${ext}"
     }
   }
 }
