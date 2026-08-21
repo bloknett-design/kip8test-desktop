@@ -59,3 +59,47 @@ Task ID: 93 — sync-test passed
   автоматически создаёт коммит в kip8test-desktop/index.html
 - Автор авто-коммитов: kip-bot <bot@kip8test.local>
 - Все авто-коммиты содержат ссылку на SHA источника: kip8test@<sha>
+
+---
+Task ID: 94
+Agent: AI Assistant (GLM)
+Task: Выпустить первый релиз kip8test-desktop v2.0.0
+
+Work Log:
+- Создан аннотированный git tag v2.0.0 в kip8test-desktop
+- Push тега автоматически запустил workflow build-desktop.yml (4 джоба: build-linux, build-win, build-mac, release)
+- Первая попытка: build-linux упал с ошибкой
+  "productFilename contains characters that cannot be safely used in file paths: КИПиА (Test)"
+- Причина: productName содержал кириллицу и скобки, что не подходит для имён файлов на Linux/macOS
+- Решение: productName изменён на "KIPiA Test" (ASCII), nsis.shortcutName оставлен "КИПиА (Test)"
+  для локализованного имени в меню «Пуск» Windows
+- Вторая попытка: все 3 джоба упали с ошибкой "Invalid configuration object"
+- Причина: в package.json были добавлены недопустимые поля (linux.desktopName, mac.productName)
+- Решение: убраны недопустимые поля
+- Третья попытка: все 4 джоба прошли успешно (build-linux, build-win, build-mac, release)
+- Время сборки: ~3 минуты на все 3 платформы параллельно
+- Workflow создал релиз, но с некорректным URL (untagged-3c2ffb97642e635e9747 вместо /tag/v2.0.0)
+- Удалён левый релиз, создан новый через GitHub API с правильным tag_name=v2.0.0
+- Из workflow artifacts скачаны и загружены в релиз:
+  - KIPiA-Test-2.0.0.AppImage (114.7 MB) — Linux portable
+  - KIPiA-Test-2.0.0.deb (89.6 MB) — Linux DEB
+  - KIPiA-Test-2.0.0.dmg (112.9 MB) — macOS
+  - KIPiA-Test-Setup-2.0.0.exe (86.9 MB) — Windows NSIS installer
+  - latest.yml (348 bytes) — метаданные для electron-updater (Windows)
+- Все прямые ссылки канонического вида работают:
+  https://github.com/bloknett-design/kip8test-desktop/releases/download/v2.0.0/<asset>
+- /releases/latest перенаправляет на /releases/tag/v2.0.0
+- Релиз опубликован (draft=false, prerelease=false)
+
+Коммиты:
+- 0fe31d4 fix: productName ASCII 'KIPiA Test' (первая попытка фикса)
+- 97392b7 fix: убрать недопустимые поля desktopName/productName в linux/mac (финальный фикс)
+- v2.0.0 tag создан на коммите 97392b7
+
+Stage Summary:
+- Первый релиз kip8test-desktop v2.0.0 опубликован и доступен по адресу:
+  https://github.com/bloknett-design/kip8test-desktop/releases/tag/v2.0.0
+- Все 4 платформы собраны и доступны для скачивания
+- electron-updater будет автоматически проверять этот репозиторий на наличие новых версий
+  (latest.yml + GH_TOKEN/GITHUB_TOKEN в workflow для публикации метаданных)
+- Следующие релизы (v2.0.1, v2.1.0 и т.д.) автоматически создадут новый релиз при пуше тега v*
