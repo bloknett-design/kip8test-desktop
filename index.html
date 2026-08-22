@@ -24814,6 +24814,29 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 row.style.display = anyVisible ? '' : 'none';
             });
 
+            // Task 115: Скрыть кнопки, ведущие на родительские страницы,
+            // если на этих страницах нет видимых .menu-btn (пустые разделы).
+            // Например: если на page-docs все .menu-btn скрыты — скрыть кнопку
+            // «Документация» (которая ведёт на navigateTo('docs')).
+            document.querySelectorAll('.menu-btn').forEach(function(btn) {
+                const onclick = btn.getAttribute('onclick') || '';
+                const m = onclick.match(/navigateTo\(['"]([^'"]+)['"]/);
+                if (!m) return;
+                const targetPage = m[1];
+                const targetEl = document.getElementById('page-' + targetPage);
+                if (!targetEl) return;
+                // Подсчитать видимые .menu-btn на целевой странице
+                const innerBtns = targetEl.querySelectorAll('.menu-btn');
+                if (innerBtns.length === 0) return; // не родительская страница
+                let anyInnerVisible = false;
+                innerBtns.forEach(function(innerBtn) {
+                    if (innerBtn.style.display !== 'none') anyInnerVisible = true;
+                });
+                if (!anyInnerVisible) {
+                    btn.style.display = 'none';
+                }
+            });
+
             // ============================================================
             // Закреплённые элементы: скрыть .pinned-item-cell,
             // если вложенный .pinned-item (.menu-btn) скрыт.
