@@ -28309,12 +28309,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             // Внёс изменения
             // Task 109: показываем modDisplayName (имя из KIP8_Access), а не modName (email)
+            // Task 111: добавляем дату ввода (из modTimestamp) через запятую справа
             var modDisplay = m.modDisplayName || m.modName || '';
             if (modDisplay || m.modRole) {
                 var modParts = [];
                 if (m.modRole) modParts.push(this._esc(m.modRole));
                 if (modDisplay) modParts.push(this._esc(modDisplay));
-                html += '<div class="flow-detail-row"><span class="flow-detail-label" style="color:#7a8fa6;">Внёс изменения</span><span class="flow-detail-value" style="color:#5b7a96;">' + modParts.join(', ') + '</span></div>';
+                // Task 111: дата из modTimestamp → формат ДД.ММ.ГГГГ, ЧЧ:ММ
+                var modDateStr = '';
+                if (m.modTimestamp) {
+                    try {
+                        var md = new Date(m.modTimestamp);
+                        var dd = (md.getDate() < 10 ? '0' : '') + md.getDate();
+                        var mm = (md.getMonth() + 1 < 10 ? '0' : '') + (md.getMonth() + 1);
+                        var hh = (md.getHours() < 10 ? '0' : '') + md.getHours();
+                        var mi = (md.getMinutes() < 10 ? '0' : '') + md.getMinutes();
+                        modDateStr = ',<span class="flow-detail-date"> от ' + dd + '.' + mm + '.' + md.getFullYear() + ' ' + hh + ':' + mi + '</span>';
+                    } catch(e) { /* ignore */ }
+                }
+                html += '<div class="flow-detail-row"><span class="flow-detail-label" style="color:#7a8fa6;">Внёс изменения</span><span class="flow-detail-value" style="color:#5b7a96;">' + modParts.join(', ') + modDateStr + '</span></div>';
             }
 
             // Placeholder для архива (загрузится асинхронно)
