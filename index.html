@@ -28406,11 +28406,35 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _renderBottomBar: function(m) {
             if (!this._canInputReadings) return '';
             var btnSvg = '<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+            // Task 108: если пользователь может редактировать (< 1 часа, тот же пользователь) —
+            // заменяем кнопку «Ввести показания» на «Изменить показания»
+            if (this._canEdit(m)) {
+                return '<button type="button" class="flow-input-btn" onclick="FlowmeterData.openInput(true)">' + btnSvg + ' Изменить показания</button>';
+            }
             return '<button type="button" class="flow-input-btn" onclick="FlowmeterData.openInput()">' + btnSvg + ' Ввести показания</button>';
         },
 
+        // Task 108: Проверка, может ли текущий пользователь редактировать показания.
+        // Условия: есть право ввода + тот же пользователь ввёл + прошёл менее 1 часа.
+        _canEdit: function(m) {
+            if (!this._canInputReadings) return false;
+            if (!m || !m.modTimestamp) return false;
+            // Тот же пользователь?
+            var currentUser = '';
+            try { currentUser = (KipAuth._cachedUser || {}).name || (KipAuth._cachedUser || {}).email || ''; } catch(e) {}
+            if (!currentUser) return false;
+            if (m.modName !== currentUser) return false;
+            // Прошёл менее 1 часа?
+            try {
+                var ts = new Date(m.modTimestamp);
+                var elapsedMin = (Date.now() - ts.getTime()) / 1000 / 60;
+                return elapsedMin <= 60;
+            } catch(e) { return false; }
+        },
+
         // Открыть sheet ввода новых показаний
-        openInput: function() {
+        // isEdit (Task 108): если true — предзаполняем форму текущими показаниями
+        openInput: function(isEdit) {
             var id = window._flowDetailId;
             var m = null;
             for (var i = 0; i < this._METERS.length; i++) {
@@ -28419,41 +28443,52 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!m) return;
 
             var titleEl = document.getElementById('flowInputTitle');
-            if (titleEl) titleEl.textContent = m.hoz + ' — ввести показания';
+            if (titleEl) titleEl.textContent = m.hoz + (isEdit ? ' — изменить показания' : ' — ввести показания');
 
             var field = document.getElementById('flowInputField');
-            if (field) { field.value = ''; field.placeholder = 'Текущие показания, ' + m.unit; }
+            if (field) {
+                if (isEdit) {
+                    // Task 108: предзаполняем текущими показаниями при редактировании
+                    field.value = String(m.curr).replace('.', ',');
+                } else {
+                    field.value = '';
+                }
+                field.placeholder = 'Текущие показания, ' + m.unit;
+            }
 
             // Температура — поле видно только для Хозрасчёта №6 (Task 103)
-            // (это единственный расходомер с температурой среды — «Расход природного газа»)
-            // Task 104: НЕ предзаполняем текущим значением — поле пустое, ввод необязателен.
-            //           Это предотвращает случайное сохранение старого значения.
+            // Task 104: при новом вводе — пустое; при редактировании (isEdit) — предзаполняем
             var tempField = document.getElementById('flowInputTemp');
             var tempGroup = tempField ? tempField.closest('.flow-input-group') : null;
             if (tempField && tempGroup) {
                 if (m.id === 6) {
-                    // Хозрасчёт №6 — показываем поле, пустое
                     tempGroup.style.display = '';
-                    tempField.value = '';  // Task 104: всегда пустое
+                    if (isEdit && m.temp !== null && m.temp !== undefined) {
+                        tempField.value = m.temp.toFixed(1).replace('.', ',');
+                    } else {
+                        tempField.value = '';
+                    }
                     tempField.placeholder = '— (необязательно)';
                 } else {
-                    // Остальные — скрыть поле
                     tempGroup.style.display = 'none';
                     tempField.value = '';
                 }
             }
 
             // Гигакалории пара (Task 100) — поле видно только для расходомеров пара
-            // Task 104: НЕ предзаполняем текущим значением — поле пустое, ввод необязателен.
+            // Task 104: при новом вводе — пустое; при редактировании (isEdit) — предзаполняем
             var gcalGroup = document.getElementById('flowInputGcalGroup');
             var gcalField = document.getElementById('flowInputGcal');
             if (gcalGroup && gcalField) {
                 if (this._isSteamMeter(m)) {
                     gcalGroup.style.display = '';
-                    gcalField.value = '';  // Task 104: всегда пустое
+                    if (isEdit && m.gcal !== null && m.gcal !== undefined) {
+                        gcalField.value = m.gcal.toFixed(3).replace('.', ',');
+                    } else {
+                        gcalField.value = '';
+                    }
                     gcalField.placeholder = '— (необязательно)';
                 } else {
-                    // Не расходомер пара — скрыть поле
                     gcalGroup.style.display = 'none';
                     gcalField.value = '';
                 }
@@ -28495,6 +28530,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         submitInput: function() {
             var field = document.getElementById('flowInputField');
             if (!field) return;
+
+            // Task 108: определяем, это новый ввод или редактирование
+            // (по заголовку формы — если содержит «изменить», то isEdit=true)
+            var titleEl = document.getElementById('flowInputTitle');
+            var isEdit = titleEl && titleEl.textContent.indexOf('изменить') !== -1;
 
             var val = field.value.replace(/\s/g, '').replace(',', '.');
             var num = parseFloat(val);
@@ -28550,9 +28590,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             for (var i = 0; i < this._METERS.length; i++) {
                 if (this._METERS[i].id === id) {
                     meter = this._METERS[i];
-                    meter.prev = meter.curr;
+                    // Task 108: при редактировании НЕ сдвигаем prev → curr (просто перезаписываем curr)
+                    if (!isEdit) {
+                        meter.prev = meter.curr;
+                        meter.datePrev = meter.dateCurr;
+                    }
                     meter.curr = num;
-                    meter.datePrev = meter.dateCurr;
                     meter.dateCurr = dateStr;
                     if (tempVal !== null) {
                         meter.temp = tempVal;
@@ -28561,11 +28604,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     if (this._isSteamMeter(meter) && gcalVal !== null) {
                         meter.gcal = gcalVal;
                     }
-                    // Обновляем подпись — текущий пользователь
+                    // Обновляем подпись — текущий пользователь + timestamp
                     try {
                         var curUser = KipAuth._cachedUser || {};
                         meter.modName = curUser.name || curUser.email || '';
                         meter.modRole = curUser.role || '';
+                        meter.modTimestamp = new Date().toISOString();  // Task 108
                     } catch (e) { /* ignore */ }
                     break;
                 }
@@ -28586,17 +28630,28 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     curr: meter.curr,
                     datePrev: meter.datePrev,
                     dateCurr: meter.dateCurr,
-                    temp: meter.temp
+                    temp: meter.temp,
+                    isEdit: isEdit  // Task 108: сервер проверит «1 час + тот же пользователь»
                 };
                 if (this._isSteamMeter(meter)) {
                     apiPayload.gcal = (gcalVal !== null) ? gcalVal : (meter.gcal || '');
                 }
                 this._api('flowmeter.updateReading', apiPayload).then(function(res) {
-                    if (typeof KipToast !== 'undefined' && KipToast.show) {
-                        KipToast.show('Показания сохранены');
+                    if (res && res.ok === false) {
+                        // Task 108: серверная ошибка (edit_window_expired / not_your_input)
+                        var msg = res.message || res.error || 'Ошибка сохранения';
+                        if (typeof KipToast !== 'undefined' && KipToast.show) {
+                            KipToast.show(msg);
+                        }
+                        // Перезагрузить данные с сервера — откатить оптимистичное обновление
+                        setTimeout(function() { self.load(); }, 200);
+                    } else {
+                        if (typeof KipToast !== 'undefined' && KipToast.show) {
+                            KipToast.show(isEdit ? 'Показания изменены' : 'Показания сохранены');
+                        }
+                        // Перезагрузить данные с сервера, чтобы убедиться в синхронизации
+                        setTimeout(function() { self.load(); }, 200);
                     }
-                    // Перезагрузить данные с сервера, чтобы убедиться в синхронизации
-                    setTimeout(function() { self.load(); }, 200);
                 }).catch(function(err) {
                     console.error('flowmeter.updateReading:', err);
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
