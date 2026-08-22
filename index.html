@@ -24053,8 +24053,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Task 113: ИТР ТОКЕМ — фильтр 4 (ограниченные данные КИП ИОС)
             // Даёт доступ к КИП ИОС с ограничениями: скрываются графики, кабельный журнал,
             // поле «Замечания», приборы без «В гр. ППР», блокировки без «В перечне».
-            // Не включает FLOWMETER, CHARTS, SECRET.
-            const LVL_ITR_TOKEM = [].concat(BASE, CALC, KIP_IOS, WHATS_NEW);
+            // Не включает FLOWMETER, CHARTS, SECRET, LIBRARY (билеты/библиотека).
+            // Task 114: добавлен 'docs' — чтобы кнопка «Документация» на дашборде вела
+            // на страницу docs (где видны только «КИП ИОС» и «Документация ИОС»).
+            const LVL_ITR_TOKEM = [].concat(BASE, CALC, ['docs'], KIP_IOS, WHATS_NEW);
             const LVL_KIP8 = [].concat(BASE, CALC, LIB, SECRET, WHATS_NEW);
             const LVL_KIP_IOS = [].concat(BASE, CALC, LIB, KIP_IOS, SECRET, WHATS_NEW);
             // ИТР8+ и КИП ИОС дежурный: КИП ИОС + расходомеры (просмотр)
