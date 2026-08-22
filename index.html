@@ -11758,6 +11758,10 @@
             <label class="flow-input-label" for="flowInputTemp">Температура, °C</label>
             <input type="text" inputmode="decimal" id="flowInputTemp" class="flow-input-field-small" placeholder="— (необязательно)" autocomplete="off" enterkeyhint="done" onkeydown="if(event.key==='Enter')FlowmeterData.submitInput()">
         </div>
+        <div class="flow-input-group" id="flowInputGcalGroup" style="display:none;">
+            <label class="flow-input-label" for="flowInputGcal">Гкал</label>
+            <input type="text" inputmode="decimal" id="flowInputGcal" class="flow-input-field-small" placeholder="— (необязательно)" autocomplete="off" enterkeyhint="done" onkeydown="if(event.key==='Enter')FlowmeterData.submitInput()">
+        </div>
         <div class="flow-input-group">
             <label class="flow-input-label" for="flowInputDate">Дата снятия</label>
             <input type="date" id="flowInputDate" class="flow-input-field-small">
@@ -28255,6 +28259,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var consumption = m.curr - m.prev;
             var consStr = this._fmtNum(Math.abs(consumption));
             var tempStr = (m.temp !== null && m.temp !== undefined) ? m.temp.toFixed(1).replace('.', ',') + ' °C' : '—';
+            // Гигакалории пара (Task 100) — отображаем с 3 знаками после запятой
+            var gcalStr = (m.gcal !== null && m.gcal !== undefined) ? m.gcal.toFixed(3).replace('.', ',') + ' Гкал' : '—';
 
             var html = '';
             // Заголовок карточки — param + period внутри одного div с зеброй
@@ -28272,6 +28278,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 html += '<div class="flow-detail-row"><span class="flow-detail-label">Температура среды</span><span class="flow-detail-value">' + tempStr + '</span></div>';
             }
 
+            // Гигакалории пара (только для расходомеров пара, Task 100)
+            // Показываем, только если это расходомер пара (param содержит «пара») и значение есть
+            if (this._isSteamMeter(m) && (m.gcal !== null && m.gcal !== undefined)) {
+                html += '<div class="flow-detail-row"><span class="flow-detail-label">Гигакалории пара</span><span class="flow-detail-value">' + gcalStr + '</span></div>';
+            }
+
             // Внёс изменения
             if (m.modName || m.modRole) {
                 var modParts = [];
@@ -28284,6 +28296,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             html += '<div id="flowArchiveContainer" class="flow-archive-loading">Загрузка архива…</div>';
 
             return html;
+        },
+
+        // Признак расходомера пара: param содержит «пара» (Task 100)
+        // Используется для показа поля ввода и отображения Гкал
+        _isSteamMeter: function(m) {
+            if (!m || !m.param) return false;
+            return String(m.param).toLowerCase().indexOf('пара') !== -1;
         },
 
         // Открыть детальную карточку
@@ -28383,6 +28402,26 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 tempField.placeholder = '— (необязательно)';
             }
 
+            // Гигакалории пара (Task 100) — поле видно только для расходомеров пара
+            var gcalGroup = document.getElementById('flowInputGcalGroup');
+            var gcalField = document.getElementById('flowInputGcal');
+            if (gcalGroup && gcalField) {
+                if (this._isSteamMeter(m)) {
+                    gcalGroup.style.display = '';
+                    // Предзаполнить текущим значением
+                    if (m.gcal !== null && m.gcal !== undefined) {
+                        gcalField.value = m.gcal.toFixed(3).replace('.', ',');
+                    } else {
+                        gcalField.value = '';
+                    }
+                    gcalField.placeholder = '— (необязательно)';
+                } else {
+                    // Не расходомер пара — скрыть поле
+                    gcalGroup.style.display = 'none';
+                    gcalField.value = '';
+                }
+            }
+
             // Дата — предзаполнить сегодняшней датой (YYYY-MM-DD для type="date")
             var dateField = document.getElementById('flowInputDate');
             if (dateField) {
@@ -28404,9 +28443,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Убрать фокус с полей — закрывает клавиатуру на мобильных
             var field = document.getElementById('flowInputField');
             var tempField = document.getElementById('flowInputTemp');
+            var gcalField = document.getElementById('flowInputGcal');
             var dateField = document.getElementById('flowInputDate');
             if (field) field.blur();
             if (tempField) tempField.blur();
+            if (gcalField) gcalField.blur();
             if (dateField) dateField.blur();
 
             document.getElementById('flowInputOverlay').classList.remove('active');
@@ -28434,6 +28475,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var tempNum = parseFloat(tempRaw);
                 if (!isNaN(tempNum)) {
                     tempVal = tempNum;
+                }
+            }
+
+            // Гигакалории пара (Task 100, необязательное поле, только для расходомеров пара)
+            var gcalField = document.getElementById('flowInputGcal');
+            var gcalVal = null;
+            if (gcalField && gcalField.value.trim() !== '') {
+                var gcalRaw = gcalField.value.replace(/\s/g, '').replace(',', '.');
+                var gcalNum = parseFloat(gcalRaw);
+                if (!isNaN(gcalNum)) {
+                    gcalVal = gcalNum;
                 }
             }
 
@@ -28468,6 +28520,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     if (tempVal !== null) {
                         meter.temp = tempVal;
                     }
+                    // Гкал обновляем только для расходомеров пара (Task 100)
+                    if (this._isSteamMeter(meter) && gcalVal !== null) {
+                        meter.gcal = gcalVal;
+                    }
                     // Обновляем подпись — текущий пользователь
                     try {
                         var curUser = KipAuth._cachedUser || {};
@@ -28486,14 +28542,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             // Отправить обновление на сервер (в Google Sheets через Apps Script)
             if (meter) {
-                this._api('flowmeter.updateReading', {
+                // Для расходомеров пара добавляем gcal в payload (Task 100)
+                var apiPayload = {
                     id: id,
                     prev: meter.prev,
                     curr: meter.curr,
                     datePrev: meter.datePrev,
                     dateCurr: meter.dateCurr,
                     temp: meter.temp
-                }).then(function(res) {
+                };
+                if (this._isSteamMeter(meter)) {
+                    apiPayload.gcal = (gcalVal !== null) ? gcalVal : (meter.gcal || '');
+                }
+                this._api('flowmeter.updateReading', apiPayload).then(function(res) {
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
                         KipToast.show('Показания сохранены');
                     }
@@ -28593,8 +28654,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             html += '<th>Дата</th>';
             html += '<th>Показания</th>';
             html += '<th>Расход</th>';
+            // Температура — показываем колонку только если хоть в одной записи есть
             if (displayRecords[0] && displayRecords[0].temp !== null && displayRecords[0].temp !== undefined) {
                 html += '<th>T</th>';
+            }
+            // Гигакалории пара — показываем колонку только для расходомеров пара (Task 100)
+            // и если хоть в одной записи есть значение gcal
+            var showGcalCol = this._isSteamMeter(meter) && displayRecords[0] &&
+                displayRecords[0].gcal !== null && displayRecords[0].gcal !== undefined;
+            if (showGcalCol) {
+                html += '<th>Гкал</th>';
             }
             html += '<th>Внёс</th>';
             html += '</tr></thead>';
@@ -28611,6 +28680,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (displayRecords[0] && displayRecords[0].temp !== null && displayRecords[0].temp !== undefined) {
                     var tStr = (r.temp !== null && r.temp !== undefined) ? r.temp.toFixed(1).replace('.', ',') : '—';
                     html += '<td class="flow-archive-temp">' + tStr + '</td>';
+                }
+                // Гигакалории (Task 100) — только для расходомеров пара
+                if (showGcalCol) {
+                    var gcalStr = (r.gcal !== null && r.gcal !== undefined) ? r.gcal.toFixed(3).replace('.', ',') : '—';
+                    html += '<td class="flow-archive-gcal">' + gcalStr + '</td>';
                 }
                 var modStr = r.modName || r.modRole || '';
                 html += '<td class="flow-archive-mod">' + this._esc(modStr) + '</td>';
