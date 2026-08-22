@@ -19911,6 +19911,13 @@
 
     // Обработчик системной кнопки «Назад»
     window.addEventListener('popstate', function(e) {
+        // Если открыта форма ввода показаний расходомера — закрыть её без сохранения (Task 104)
+        var flowInputSheet = document.getElementById('flowInputSheet');
+        if (flowInputSheet && flowInputSheet.classList.contains('active')) {
+            FlowmeterData.closeInput();
+            history.pushState({ page: e.state ? e.state.page : 'dashboard' }, '', location.hash || '#dashboard');
+            return;
+        }
         // Если открыт pin-sheet — сначала закрыть его
         if (document.getElementById('pinSheet').classList.contains('active')) {
             closePinSheet();
@@ -28393,17 +28400,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             // Температура — поле видно только для Хозрасчёта №6 (Task 103)
             // (это единственный расходомер с температурой среды — «Расход природного газа»)
+            // Task 104: НЕ предзаполняем текущим значением — поле пустое, ввод необязателен.
+            //           Это предотвращает случайное сохранение старого значения.
             var tempField = document.getElementById('flowInputTemp');
             var tempGroup = tempField ? tempField.closest('.flow-input-group') : null;
             if (tempField && tempGroup) {
                 if (m.id === 6) {
-                    // Хозрасчёт №6 — показываем поле, предзаполняем
+                    // Хозрасчёт №6 — показываем поле, пустое
                     tempGroup.style.display = '';
-                    if (m.temp !== null && m.temp !== undefined) {
-                        tempField.value = m.temp.toFixed(1).replace('.', ',');
-                    } else {
-                        tempField.value = '';
-                    }
+                    tempField.value = '';  // Task 104: всегда пустое
                     tempField.placeholder = '— (необязательно)';
                 } else {
                     // Остальные — скрыть поле
@@ -28413,17 +28418,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
 
             // Гигакалории пара (Task 100) — поле видно только для расходомеров пара
+            // Task 104: НЕ предзаполняем текущим значением — поле пустое, ввод необязателен.
             var gcalGroup = document.getElementById('flowInputGcalGroup');
             var gcalField = document.getElementById('flowInputGcal');
             if (gcalGroup && gcalField) {
                 if (this._isSteamMeter(m)) {
                     gcalGroup.style.display = '';
-                    // Предзаполнить текущим значением
-                    if (m.gcal !== null && m.gcal !== undefined) {
-                        gcalField.value = m.gcal.toFixed(3).replace('.', ',');
-                    } else {
-                        gcalField.value = '';
-                    }
+                    gcalField.value = '';  // Task 104: всегда пустое
                     gcalField.placeholder = '— (необязательно)';
                 } else {
                     // Не расходомер пара — скрыть поле
