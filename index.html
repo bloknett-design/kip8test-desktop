@@ -3658,7 +3658,8 @@
     [data-theme="light"] .flow-card-fav-btn { color: rgba(184,90,42,0.4); background: rgba(0,0,0,0.03); }
     [data-theme="light"] .flow-card-fav-btn.active { color: #b85a2a; background: rgba(184,90,42,0.12); }
     /* На десктопе звёздочка скрыта — функция избранного расходомеров mobile-only (Task 98) */
-    @media (min-width: 1024px) { .flow-card-fav-btn { display: none !important; } }
+    /* Task 119: fav-btn видна на десктопе (избранное работает) */
+    /* @media (min-width: 1024px) { .flow-card-fav-btn { display: none !important; } } */
 
     /* Период — в header рядом с hoz (Task 99), без индивидуального фона.
        Раньше был внизу карточки (Task 97) с отдельным фоном-бейджем. */
@@ -3693,7 +3694,8 @@
     }
     [data-theme="light"] .flow-fav-hint { background: rgba(184,90,42,0.04); }
     /* На десктопе подсказка скрыта (drag-and-drop отключён, Task 98) */
-    @media (min-width: 1024px) { .flow-fav-hint { display: none; } }
+    /* Task 119: подсказка видна на десктопе */
+    /* @media (min-width: 1024px) { .flow-fav-hint { display: none; } } */
 
     /* Заглушка «нет избранных» */
     .flow-empty-fav {
@@ -3750,7 +3752,8 @@
     [data-theme="light"] #flowFavBtn { color: rgba(184,90,42,0.5); }
     [data-theme="light"] #flowFavBtn.active { color: #b85a2a; }
     /* На десктопе звёздочка в хедере детальной карточки скрыта — функция избранного расходомеров mobile-only (Task 98) */
-    @media (min-width: 1024px) { #flowFavBtn { display: none !important; } }
+    /* Task 119: flowFavBtn видна на десктопе */
+    /* @media (min-width: 1024px) { #flowFavBtn { display: none !important; } } */
 
     /* ========== Кабельный журнал — страница добавления записи ==========
        Открывается как обычная page-content из cable-journal-edit по кнопке '+'.
@@ -28062,9 +28065,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             container.innerHTML = html;
 
-            // Если в режиме избранных И не десктоп — навесить обработчики drag-and-drop.
-            // На десктопе (≥1024px) long-press не работает с мышью, а список в detailPanel — drag не нужен (Task 98).
-            if (isFavTab && typeof isDesktop === 'function' && !isDesktop()) {
+            // Task 119: drag-and-drop работает на всех устройствах (touch + mouse)
+            if (isFavTab) {
                 this._attachDragHandlers();
             }
         },
@@ -28985,6 +28987,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Обновляем заголовок панели
         var titleEl = document.getElementById('detailPanelTitle');
         if (titleEl) titleEl.textContent = m.hoz;
+
+        // Task 119: обновить состояние кнопки избранного
+        FlowmeterData._updateDetailFavBtn();
     }
 
     // KipCharts — Графики и статистика КИП ИОС
