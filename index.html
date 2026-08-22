@@ -3048,7 +3048,7 @@
         display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;
     }
     .flow-card-hoz { font-size: 17px; font-weight: 700; color: #c87048; }
-    .flow-card-period { font-size: 11px; color: var(--text-secondary); background: rgba(200,112,72,0.12); padding: 1px 6px; border-radius: 4px; flex-shrink: 0; margin-left: 8px; }
+    .flow-card-period { font-size: 11px; color: var(--text-secondary); background: rgba(200,112,72,0.10); padding: 1px 6px; border-radius: 4px; flex-shrink: 0; }
     .flow-card-param { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
     .flow-card-summary { display: flex; gap: 16px; padding-top: 6px; border-top: 1px solid var(--border-color); }
     .flow-summary-item { display: flex; flex-direction: column; }
@@ -3535,48 +3535,71 @@
         }
     }
 
-    /* === Расходомеры: тулбар «Все / Избранные» + избранное + drag-and-drop ===
-       v371, Task 95.
-       Тулбар под page-inline-header, перед flowList.
-       В режиме «Избранные» карточки можно перетаскивать (long-press 500ms). */
-    .flow-tabs {
-        display: flex;
+    /* === Расходомеры: нижний бар «Все / Избранные» + избранное + drag-and-drop ===
+       v373, Task 97.
+       Нижний бар (как dashboardBottomBar) — фиксированный внизу экрана,
+       показывается только когда активна page-flowmeter-data.
+       В режиме «Избранные» карточки можно перетаскивать (long-press 500ms + клон). */
+
+    /* Нижний бар с табами — позиционируется fixed внизу, как dashboard-bottom-bar */
+    .flow-bottom-bar {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        z-index: 80;
+        display: none; /* по умолчанию скрыт, показывается только на page-flowmeter-data */
+        grid-template-columns: 1fr 1fr;
         gap: 0;
         padding: 0;
-        margin: 0;
-        background: rgba(23, 33, 43, 0.96);
-        border-bottom: 1px solid rgba(255,255,255,0.06);
-        position: sticky;
-        top: 56px;
-        z-index: 5;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        background: var(--bottom-nav-bg, rgba(23, 33, 43, 0.95));
+        backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        border-top: 1px solid var(--card-border);
     }
-    [data-theme="light"] .flow-tabs {
-        background: rgba(255,255,255,0.96);
-        border-bottom-color: rgba(20,20,19,0.08);
+    /* Вертикальная линия-разделитель между двумя кнопками (как в dashboard-bottom-bar) */
+    .flow-bottom-bar::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 14px;
+        bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+        width: 1px;
+        background: rgba(200, 112, 72, 0.25);
+        transform: translateX(-50%);
+        pointer-events: none;
+        z-index: 1;
     }
+    [data-theme="light"] .flow-bottom-bar::before { background: rgba(184, 90, 42, 0.2); }
+    /* Показываем нижний бар только когда активна страница расходомеров */
+    body:has(#page-flowmeter-data.active) .flow-bottom-bar { display: grid; }
+    /* Добавляем нижний отступ для flowList, чтобы контент не перекрывался баром */
+    body:has(#page-flowmeter-data.active) #flowList { padding-bottom: 88px; }
+
     .flow-tab {
-        flex: 1;
-        padding: 12px 16px;
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+        padding: 16px 10px calc(16px + env(safe-area-inset-bottom, 0px));
+        border: none; border-radius: 0;
         background: transparent;
-        border: none;
-        color: var(--text-secondary);
+        color: rgba(200, 112, 72, 0.6);
         font-family: 'Inter', sans-serif;
         font-size: 14px;
         font-weight: 600;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        transition: color 0.15s, border-color 0.15s;
-        border-bottom: 2px solid transparent;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
+        cursor: pointer; pointer-events: auto;
+        touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+        box-shadow: none;
+        transition: background 0.2s, color 0.2s;
+        min-height: 56px;
+        position: relative;
+        z-index: 2;
     }
-    .flow-tab.active {
-        color: #c87048;
-        border-bottom-color: #c87048;
-    }
+    .flow-tab:active { background: rgba(200, 112, 72, 0.08); opacity: 0.75; }
+    .flow-tab.active { color: #c87048; }
+    [data-theme="light"] .flow-tab { color: rgba(184, 90, 42, 0.55); }
     [data-theme="light"] .flow-tab.active { color: #b85a2a; }
+    [data-theme="light"] .flow-tab:active { background: rgba(184, 90, 42, 0.06); }
+    @media (max-width: 400px) {
+        .flow-tab { font-size: 12px; padding: 14px 8px calc(14px + env(safe-area-inset-bottom, 0px)); gap: 4px; }
+    }
+
     .flow-tab-count {
         display: inline-block;
         min-width: 18px;
@@ -3626,37 +3649,37 @@
     [data-theme="light"] .flow-card-fav-btn { color: rgba(184,90,42,0.4); background: rgba(0,0,0,0.03); }
     [data-theme="light"] .flow-card-fav-btn.active { color: #b85a2a; background: rgba(184,90,42,0.12); }
 
-    /* Drag-handle (только в режиме «Избранные») */
-    .flow-card-drag-handle {
-        display: none;
-        position: absolute;
-        top: 50%;
-        left: 4px;
-        transform: translateY(-50%);
-        width: 20px;
-        height: 24px;
-        color: rgba(200,112,72,0.4);
-        font-size: 14px;
-        line-height: 24px;
-        text-align: center;
-        cursor: grab;
-        z-index: 2;
+    /* Период — теперь внизу карточки, отдельной строкой (не бейджем в header) */
+    /* Стиль задаётся в общей секции (строка ~3051), здесь только доп. отступ сверху */
+    .flow-card-period { margin-top: 4px; }
+
+    /* Drag-and-drop: клон карточки (как pinned-item-clone) */
+    .flow-card.flow-card-dragging {
+        opacity: 0.3;
+        transform: scale(0.97);
     }
-    .flow-card-drag-handle:active { cursor: grabbing; }
-    /* Когда карточку перетаскивают — она приподнимается */
-    .flow-card.dragging {
-        opacity: 0.85;
-        transform: scale(1.01);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-        z-index: 10;
-    }
-    /* Когда карточка — цель перетаскивания (placeholder) */
-    .flow-card.drag-over {
+    .flow-card.flow-card-drag-over {
         background: rgba(200,112,72,0.18) !important;
+        box-shadow: 0 0 0 2px rgba(200, 112, 72, 0.35) inset;
+        transform: scale(1.01);
     }
-    /* В режиме «Избранные» — отступ слева под drag-handle, справа под fav-btn */
-    .flow-list.fav-mode .flow-card { padding-left: 24px; padding-right: 36px; }
-    .flow-list.fav-mode .flow-card-drag-handle { display: block; }
+    .flow-card-clone {
+        pointer-events: none !important;
+        opacity: 0.92;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+        transform: scale(1.02);
+        transition: none !important;
+    }
+    /* Подсказка «перетащите карточку» в режиме избранных */
+    .flow-fav-hint {
+        padding: 8px 14px 4px;
+        font-size: 11px;
+        color: var(--text-secondary);
+        text-align: center;
+        background: rgba(200,112,72,0.06);
+        font-style: italic;
+    }
+    [data-theme="light"] .flow-fav-hint { background: rgba(184,90,42,0.04); }
 
     /* Заглушка «нет избранных» */
     .flow-empty-fav {
@@ -9306,13 +9329,16 @@
                 <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
                 <div class="page-inline-header-title">Расходомеры хозрасчётные</div>
             </div>
-            <div class="flow-tabs">
-                <button class="flow-tab active" data-flow-tab="all" onclick="FlowmeterData.setTab('all')">Все <span class="flow-tab-count" id="flowAllCount">0</span></button>
-                <button class="flow-tab" data-flow-tab="fav" onclick="FlowmeterData.setTab('fav')">Избранные <span class="flow-tab-count" id="flowFavCount">0</span></button>
-            </div>
             <div id="flowList" class="flow-list">
                 <div class="admin-empty" id="flowEmpty">Загрузка…</div>
             </div>
+        </div>
+
+        <!-- ======================== РАСХОДОМЕРЫ ХОЗРАСЧЁТНЫЕ — нижний бар «Все / Избранные» ======================== -->
+        <!-- Фиксированный бар внизу экрана (как dashboardBottomBar), показывается только на page-flowmeter-data -->
+        <div id="flowBottomBar" class="flow-bottom-bar">
+            <button class="flow-tab active" data-flow-tab="all" onclick="FlowmeterData.setTab('all')">Все <span class="flow-tab-count" id="flowAllCount">0</span></button>
+            <button class="flow-tab" data-flow-tab="fav" onclick="FlowmeterData.setTab('fav')">Избранные <span class="flow-tab-count" id="flowFavCount">0</span></button>
         </div>
 
         <!-- ======================== РАСХОДОМЕРЫ ХОЗРАСЧЁТНЫЕ — детальная карточка ======================== -->
@@ -27878,13 +27904,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var meters = this._getVisibleMeters();
             var isFavTab = (this._activeTab === 'fav');
 
-            // Маркировать контейнер: в режиме избранных — добавляем drag-handle и отступы
-            if (isFavTab) {
-                container.classList.add('fav-mode');
-            } else {
-                container.classList.remove('fav-mode');
-            }
-
             // Заглушка для пустого списка
             if (!meters || meters.length === 0) {
                 if (isFavTab) {
@@ -27901,6 +27920,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
 
             var html = '';
+            // В режиме «Избранные» добавляем подсказку о перетаскивании
+            if (isFavTab && meters.length > 1) {
+                html += '<div class="flow-fav-hint">Зажмите карточку и перетащите для изменения порядка</div>';
+            }
             for (var i = 0; i < meters.length; i++) {
                 var m = meters[i];
                 var consumption = m.curr - m.prev;
@@ -27912,19 +27935,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var isFav = FlowFav.has(m.id);
 
                 html += '<div class="flow-card" data-flow-id="' + m.id + '" data-fav-key="' + this._esc(String(m.id)) + '">';
-                // Drag-handle (только в режиме «Избранные», отображение через CSS .fav-mode)
-                html += '<div class="flow-card-drag-handle" aria-hidden="true">⋮⋮</div>';
                 // Кнопка-звёздочка (отображается всегда — в «Все» для добавления, в «Избранные» для удаления)
                 html += '<button type="button" class="flow-card-fav-btn' + (isFav ? ' active' : '') + '" data-flow-id="' + m.id + '" onclick="event.stopPropagation(); FlowmeterData.toggleFav(' + m.id + ')" aria-label="' + (isFav ? 'Убрать из избранного' : 'В избранное') + '">' + (isFav ? '★' : '☆') + '</button>';
+                // Header: только hoz (период перенесён вниз, чтобы не накладывался на звёздочку)
                 html += '<div class="flow-card-header" onclick="FlowmeterData.openDetail(' + m.id + ')">';
                 html += '<div class="flow-card-hoz">' + this._esc(m.hoz) + '</div>';
-                html += '<div class="flow-card-period">' + this._esc(m.period) + '</div>';
                 html += '</div>';
                 html += '<div class="flow-card-param" onclick="FlowmeterData.openDetail(' + m.id + ')">' + this._esc(m.param) + '</div>';
                 html += '<div class="flow-card-summary" onclick="FlowmeterData.openDetail(' + m.id + ')">';
                 html += '<span class="flow-summary-item"><span class="flow-summary-label">Последние показания</span><span class="flow-summary-val">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.dateCurr) + ' г.</span></span></span>';
                 if (m.temp !== null && m.temp !== undefined) { html += '<span class="flow-summary-item"><span class="flow-summary-label">T среды</span><span class="flow-summary-val">' + tempStr + '</span></span>'; }
                 html += '</div>';
+                // Период — внизу карточки, чтобы не накладывался на звёздочку в правом верхнем углу
+                html += '<div class="flow-card-period">' + this._esc(m.period) + '</div>';
                 html += '</div>';
             }
             container.innerHTML = html;
@@ -28018,129 +28041,199 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // ============================================================
-        // Drag-and-drop для избранных карточек (long-press 500ms, как в KipFav)
+        // Drag-and-drop для избранных карточек (long-press + клон, по принципу pinnedItems)
+        // v373, Task 97
         // ============================================================
+        // Использует Pointer Events (универсальный API для touch и мыши).
+        // Порог долгого зажатия: 500 мс без движения > 10px.
+        // Клон карточки следует за пальцем в position:fixed,
+        // оригинал получает класс .flow-card-dragging (полупрозрачный).
+        // Карточка под курсором подсвечивается .flow-card-drag-over.
+        // Если вертикальное движение > 15px в idle-фазе — переключаемся в режим
+        // ручного скролла (window.scrollBy), чтобы не блокировать прокрутку списка.
+        _DRAG_DELAY: 500,             // мс long-press до старта drag
+        _DRAG_THRESHOLD: 10,          // px горизонтального движения → отмена long-press
+        _IDLE_SCROLL_THRESHOLD: 15,   // px вертикального движения → режим скролла
+        // _drag объявлен в полях выше (строка ~27719)
+
         _attachDragHandlers: function() {
             var self = this;
             var cards = document.querySelectorAll('#flowList .flow-card[data-flow-id]');
-            for (var i = 0; i < cards.length; i++) {
-                var card = cards[i];
+            cards.forEach(function(card) {
                 // Избегаем повторной навески
-                if (card._flowDragAttached) continue;
+                if (card._flowDragAttached) return;
                 card._flowDragAttached = true;
-                this._attachDragToCard(card);
-            }
+                card.addEventListener('pointerdown', function(e) { self._onPointerDown(e); });
+            });
         },
 
-        _attachDragToCard: function(card) {
+        _onPointerDown: function(e) {
+            // Игнорируем клики по кнопке-звёздочке — она имеет свой onclick
+            if (e.target.closest('.flow-card-fav-btn')) return;
+            // Только основная кнопка/палец
+            if (e.button !== undefined && e.button !== 0) return;
+            var el = e.currentTarget;
+            var id = el.getAttribute('data-flow-id');
+            if (!id) return;
+            // Запрещаем нативные действия браузера (скролл, выделение, контекстное меню)
+            e.preventDefault();
+            var rect = el.getBoundingClientRect();
+            this._drag = {
+                el: el,
+                id: id,
+                startX: e.clientX,
+                startY: e.clientY,
+                timer: setTimeout(this._startDrag.bind(this, e), this._DRAG_DELAY),
+                clone: null,
+                hoverEl: null,
+                grabOffsetX: 0,
+                grabOffsetY: 0,
+                moved: false,
+                mode: 'idle', // 'idle' | 'drag' | 'scroll'
+                lastScrollY: e.clientY
+            };
+            // Слушаем movement/up на window — чтобы поймать даже если палец вышел за пределы карточки
             var self = this;
-            var touchStartX = 0, touchStartY = 0;
-            var pressTimer = null;
-            var isDragging = false;
-            var currentTarget = null;
+            window.addEventListener('pointermove', function(ev) { self._onPointerMove(ev); });
+            window.addEventListener('pointerup', function(ev) { self._onPointerUp(ev); });
+            window.addEventListener('pointercancel', function(ev) { self._onPointerUp(ev); });
+            // touchmove-перехватчик: блокирует скролл в режиме drag
+            window.addEventListener('touchmove', function(ev) { self._onTouchMove(ev); }, { passive: false });
+        },
 
-            // Универсальный обработчик: работает и для touch, и для mouse
-            var startY = 0, startX = 0;
-
-            function onStart(x, y, ev) {
-                startX = x; startY = y;
-                // Long-press 500ms — запускаем drag
-                pressTimer = setTimeout(function() {
-                    isDragging = true;
-                    card.classList.add('dragging');
-                    ev.preventDefault();
-                }, 500);
-            }
-            function onMove(x, y, ev) {
-                if (!isDragging) {
-                    // Если палец сдвинулся раньше 500мс — отменяем long-press
-                    var dx = Math.abs(x - startX);
-                    var dy = Math.abs(y - startY);
-                    if (dx > 10 || dy > 10) {
-                        if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
-                    }
-                    return;
-                }
-                ev.preventDefault();
-                // Найти карточку под пальцем/курсором
-                var el = document.elementFromPoint(x, y);
-                while (el && !el.classList.contains('flow-card')) el = el.parentElement;
-                if (currentTarget && currentTarget !== el) {
-                    currentTarget.classList.remove('drag-over');
-                }
-                if (el && el !== card && el.classList.contains('flow-card')) {
-                    el.classList.add('drag-over');
-                    currentTarget = el;
-                } else {
-                    currentTarget = null;
-                }
-            }
-            function onEnd(ev) {
-                if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
-                card.classList.remove('dragging');
-                if (currentTarget) {
-                    currentTarget.classList.remove('drag-over');
-                    // Переместить card перед currentTarget (или после, если вторая половина)
-                    self._moveFav(card, currentTarget);
-                }
-                isDragging = false;
-                currentTarget = null;
-            }
-
-            // Touch (мобильные)
-            card.addEventListener('touchstart', function(e) {
-                if (e.touches.length !== 1) return;
-                var t = e.touches[0];
-                onStart(t.clientX, t.clientY, e);
-            }, { passive: false });
-            card.addEventListener('touchmove', function(e) {
-                if (e.touches.length !== 1) return;
-                var t = e.touches[0];
-                onMove(t.clientX, t.clientY, e);
-            }, { passive: false });
-            card.addEventListener('touchend', onEnd);
-            card.addEventListener('touchcancel', onEnd);
-
-            // Mouse (десктоп) — только на drag-handle
-            var handle = card.querySelector('.flow-card-drag-handle');
-            if (handle) {
-                handle.addEventListener('mousedown', function(e) {
-                    onStart(e.clientX, e.clientY, e);
-                    document.addEventListener('mousemove', mouseMove);
-                    document.addEventListener('mouseup', mouseUp);
-                });
-                function mouseMove(e) { onMove(e.clientX, e.clientY, e); }
-                function mouseUp(e) {
-                    onEnd(e);
-                    document.removeEventListener('mousemove', mouseMove);
-                    document.removeEventListener('mouseup', mouseUp);
-                }
+        _onTouchMove: function(e) {
+            if (this._drag && this._drag.mode === 'drag') {
+                e.preventDefault();
             }
         },
 
-        // Переместить favId на позицию перед targetId в порядке избранных
-        _moveFav: function(draggedCard, targetCard) {
-            var draggedId = draggedCard.getAttribute('data-flow-id');
-            var targetId = targetCard.getAttribute('data-flow-id');
-            if (!draggedId || !targetId || draggedId === targetId) return;
-
-            var order = FlowFav.getOrder();
-            // Если в порядке нет какого-то из id — добавим в конец
-            if (order.indexOf(draggedId) === -1) order.push(draggedId);
-            if (order.indexOf(targetId) === -1) order.push(targetId);
-
-            // Перестроить массив: вытащить draggedId, вставить перед targetId
-            var newOrder = [];
-            for (var i = 0; i < order.length; i++) {
-                var k = order[i];
-                if (k === draggedId) continue;
-                if (k === targetId) {
-                    newOrder.push(draggedId);
-                }
-                newOrder.push(k);
+        _onPointerMove: function(e) {
+            if (!this._drag) return;
+            var st = this._drag;
+            var dx = e.clientX - st.startX;
+            var dy = e.clientY - st.startY;
+            // Режим ручного скролла — прокручиваем страницу
+            if (st.mode === 'scroll') {
+                var deltaY = e.clientY - st.lastScrollY;
+                if (deltaY !== 0) window.scrollBy(0, -deltaY);
+                st.lastScrollY = e.clientY;
+                return;
             }
-            FlowFav.setOrder(newOrder);
-            this.renderList();
+            // Если drag ещё не начался — определяем намерение
+            if (!st.clone) {
+                var absDx = Math.abs(dx), absDy = Math.abs(dy);
+                // Явно вертикальное движение → скролл страницы
+                if (absDy > this._IDLE_SCROLL_THRESHOLD && absDy > absDx * 1.5) {
+                    clearTimeout(st.timer);
+                    st.mode = 'scroll';
+                    st.lastScrollY = e.clientY;
+                    if (dy !== 0) window.scrollBy(0, -dy);
+                }
+                // Иначе: малое движение (джиттер) — таймер продолжает идти
+                return;
+            }
+            // Перетаскивание активно
+            e.preventDefault();
+            st.moved = true;
+            // Точное следование клона за пальцем
+            st.clone.style.left = (e.clientX - st.grabOffsetX) + 'px';
+            st.clone.style.top = (e.clientY - st.grabOffsetY) + 'px';
+            // Находим карточку под курсором
+            st.clone.style.pointerEvents = 'none';
+            var target = document.elementFromPoint(e.clientX, e.clientY);
+            var newHover = target ? target.closest('#flowList .flow-card[data-flow-id]') : null;
+            if (newHover !== st.hoverEl) {
+                if (st.hoverEl) st.hoverEl.classList.remove('flow-card-drag-over');
+                if (newHover && newHover !== st.el) newHover.classList.add('flow-card-drag-over');
+                st.hoverEl = newHover;
+            }
+        },
+
+        _startDrag: function(e) {
+            var st = this._drag;
+            if (!st) return;
+            // Создаём клон карточки
+            var rect = st.el.getBoundingClientRect();
+            st.grabOffsetX = st.startX - rect.left;
+            st.grabOffsetY = st.startY - rect.top;
+            var clone = st.el.cloneNode(true);
+            clone.classList.add('flow-card-clone');
+            clone.style.position = 'fixed';
+            clone.style.left = rect.left + 'px';
+            clone.style.top = rect.top + 'px';
+            clone.style.width = rect.width + 'px';
+            clone.style.height = rect.height + 'px';
+            clone.style.zIndex = '9999';
+            clone.style.pointerEvents = 'none';
+            clone.style.margin = '0';
+            document.body.appendChild(clone);
+            st.clone = clone;
+            st.el.classList.add('flow-card-dragging');
+            st.mode = 'drag';
+            // Тактильный отклик
+            if (navigator.vibrate) navigator.vibrate(30);
+            // Блокируем обычный onclick карточки
+            st.el.style.pointerEvents = 'none';
+        },
+
+        _onPointerUp: function(e) {
+            if (!this._drag) return;
+            var st = this._drag;
+            clearTimeout(st.timer);
+            // Режим скролла — просто очищаем состояние
+            if (st.mode === 'scroll') {
+                this._cleanupDrag();
+                return;
+            }
+            // Если drag не начался (тап без long-press) — это обычный тап,
+            // onclick карточки сработает (pointerEvents не блокирован)
+            if (!st.clone) {
+                this._cleanupDrag();
+                return;
+            }
+            // Завершаем перетаскивание — проверяем, был ли реальный перенос
+            var didReorder = false;
+            if (st.moved && st.hoverEl && st.hoverEl !== st.el) {
+                var draggedId = st.id;
+                var targetId = st.hoverEl.getAttribute('data-flow-id');
+                if (draggedId && targetId && draggedId !== targetId) {
+                    var order = FlowFav.getOrder();
+                    if (order.indexOf(draggedId) === -1) order.push(draggedId);
+                    if (order.indexOf(targetId) === -1) order.push(targetId);
+                    // Перестроить: вытащить draggedId, вставить перед targetId
+                    var newOrder = [];
+                    for (var i = 0; i < order.length; i++) {
+                        var k = order[i];
+                        if (k === draggedId) continue;
+                        if (k === targetId) newOrder.push(draggedId);
+                        newOrder.push(k);
+                    }
+                    FlowFav.setOrder(newOrder);
+                    didReorder = true;
+                    if (navigator.vibrate) navigator.vibrate(15);
+                }
+            }
+            this._cleanupDrag();
+            // Ре-рендер только если был реальный перенос
+            if (didReorder) this.renderList();
+        },
+
+        _cleanupDrag: function() {
+            if (!this._drag) return;
+            var st = this._drag;
+            clearTimeout(st.timer);
+            if (st.clone) st.clone.remove();
+            if (st.el) {
+                st.el.classList.remove('flow-card-dragging');
+                st.el.style.pointerEvents = '';
+            }
+            if (st.hoverEl) st.hoverEl.classList.remove('flow-card-drag-over');
+            this._drag = null;
+            var self = this;
+            window.removeEventListener('pointermove', function(ev) { self._onPointerMove(ev); });
+            window.removeEventListener('pointerup', function(ev) { self._onPointerUp(ev); });
+            window.removeEventListener('pointercancel', function(ev) { self._onPointerUp(ev); });
+            window.removeEventListener('touchmove', function(ev) { self._onTouchMove(ev); });
         },
 
         // Построить HTML детальной карточки
