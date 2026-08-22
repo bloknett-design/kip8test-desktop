@@ -18414,6 +18414,20 @@
 
 
     function navigateTo(page, addToHistory=true) {
+        // Task 105: Если открыта форма ввода показаний расходомера — закрыть её без сохранения.
+        // Это вторая линия обороны (первая — в popstate-обработчике из Task 104).
+        // Защищает от сценария: форма открыта → пользователь свайпнул назад или
+        // нажал шеврон → navigateTo сменил страницу → форма осталась висеть поверх новой страницы.
+        var _flowInputSheet = document.getElementById('flowInputSheet');
+        if (_flowInputSheet && _flowInputSheet.classList.contains('active')) {
+            if (typeof FlowmeterData !== 'undefined' && FlowmeterData.closeInput) {
+                FlowmeterData.closeInput();
+            } else {
+                _flowInputSheet.classList.remove('active');
+                var _flowOverlay = document.getElementById('flowInputOverlay');
+                if (_flowOverlay) _flowOverlay.classList.remove('active');
+            }
+        }
         // Проверка доступа (если KipAuth инициализирован).
         if (typeof KipAuth !== 'undefined' && KipAuth._cachedRole && !KipAuth.canAccess(page)) {
             KipAuth._showNoAccess(page);
