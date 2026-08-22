@@ -24058,6 +24058,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // на страницу docs (где видны только «КИП ИОС» и «Документация ИОС»).
             const LVL_ITR_TOKEM = [].concat(BASE, CALC, ['docs'], KIP_IOS, WHATS_NEW);
             const LVL_KIP8 = [].concat(BASE, CALC, LIB, SECRET, WHATS_NEW);
+            // Task 116: КИП8 pro — как КИП8, но + расходомеры (фильтр 10 = да в карте ролей)
+            const LVL_KIP8_PRO = [].concat(BASE, CALC, LIB, SECRET, WHATS_NEW, FLOWMETER);
             const LVL_KIP_IOS = [].concat(BASE, CALC, LIB, KIP_IOS, SECRET, WHATS_NEW);
             // ИТР8+ и КИП ИОС дежурный: КИП ИОС + расходомеры (просмотр)
             const LVL_KIP_IOS_WITH_FLOW = [].concat(BASE, CALC, LIB, KIP_IOS, FLOWMETER, SECRET, WHATS_NEW);
@@ -24067,7 +24069,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 'Общий доступ': LVL_OBSHCHIJ,     // только калькуляторы (гостевой режим)
                 'ИТР ТОКЕМ': LVL_ITR_TOKEM,       // калькуляторы + «Что нового» (Task 112)
                 'КИП8': LVL_KIP8,
-                'КИП8 pro': LVL_KIP8,
+                'КИП8 pro': LVL_KIP8_PRO,    // Task 116: + расходомеры (фильтр 10 = да)
                 'КИП ИОС': LVL_KIP_IOS,
                 'КИП ИОС pro': LVL_KIP_IOS,       // + canEdit (право записи в каб. журнал)
                 'КИП ИОС дежурный': LVL_KIP_IOS_WITH_FLOW,  // + canInputReadings (расходомеры)
