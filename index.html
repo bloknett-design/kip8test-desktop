@@ -27922,7 +27922,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var isDetailVisible = (detailPage && detailPage.classList.contains('active')) ||
                                           (detailPanel && detailPanel.classList.contains('active'));
                     if (isDetailVisible) {
-                        self.openDetail(window._flowDetailId);
+                        self.openDetail(window._flowDetailId, false);  // Task 106: без pushState
                     }
                 }
             }).catch(function(err) {
@@ -28327,7 +28327,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // Открыть детальную карточку
-        openDetail: function(id) {
+        // addToHistory: true (по умолчанию) — добавить в history браузера.
+        //                false — перерисовать карточку без navigateTo/pushState
+        //                (используется из submitInput и load() — когда мы уже на
+        //                flowmeter-detail и не хотим добавлять лишнюю запись в history).
+        openDetail: function(id, addToHistory) {
             var m = null;
             for (var i = 0; i < this._METERS.length; i++) {
                 if (this._METERS[i].id === id) { m = this._METERS[i]; break; }
@@ -28366,7 +28370,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
             });
 
-            navigateTo('flowmeter-detail');
+            // Task 106: navigateTo только если addToHistory !== false.
+            // Если мы уже на flowmeter-detail (вызов из submitInput или load()),
+            // не добавляем лишний pushState — это ломало history браузера и
+            // приводило к закрытию приложения при кнопке «Назад».
+            if (addToHistory !== false) {
+                navigateTo('flowmeter-detail');
+            }
         },
 
         // HTML-экранирование
@@ -28563,7 +28573,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             // Перерендерить список и текущую карточку
             this.renderList();
-            this.openDetail(id);
+            this.openDetail(id, false);  // Task 106: без pushState — мы уже на flowmeter-detail
 
             // Отправить обновление на сервер (в Google Sheets через Apps Script)
             if (meter) {
