@@ -28415,15 +28415,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // Task 108: Проверка, может ли текущий пользователь редактировать показания.
-        // Условия: есть право ввода + тот же пользователь ввёл + прошёл менее 1 часа.
+        // Условия: есть право ввода + тот же пользователь (по email) + прошёл менее 1 часа.
         _canEdit: function(m) {
             if (!this._canInputReadings) return false;
             if (!m || !m.modTimestamp) return false;
-            // Тот же пользователь?
-            var currentUser = '';
-            try { currentUser = (KipAuth._cachedUser || {}).name || (KipAuth._cachedUser || {}).email || ''; } catch(e) {}
-            if (!currentUser) return false;
-            if (m.modName !== currentUser) return false;
+            // Тот же пользователь? Сравниваем по email (доступен на клиенте через KipAuth._cachedEmail)
+            var currentUserEmail = '';
+            try { currentUserEmail = KipAuth._cachedEmail || ''; } catch(e) {}
+            if (!currentUserEmail) return false;
+            // modName может быть email или user.name (зависит от того, что записал сервер)
+            if (m.modName !== currentUserEmail) return false;
             // Прошёл менее 1 часа?
             try {
                 var ts = new Date(m.modTimestamp);
@@ -28606,10 +28607,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     }
                     // Обновляем подпись — текущий пользователь + timestamp
                     try {
-                        var curUser = KipAuth._cachedUser || {};
-                        meter.modName = curUser.name || curUser.email || '';
-                        meter.modRole = curUser.role || '';
-                        meter.modTimestamp = new Date().toISOString();  // Task 108
+                        // Task 108: используем _cachedEmail (не _cachedUser, которого нет)
+                        meter.modName = KipAuth._cachedEmail || '';
+                        meter.modRole = KipAuth._cachedRole || '';
+                        meter.modTimestamp = new Date().toISOString();
                     } catch (e) { /* ignore */ }
                     break;
                 }
