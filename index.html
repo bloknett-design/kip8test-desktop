@@ -27966,6 +27966,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var consumption = m.curr - m.prev;
                 var consStr = this._fmtNum(Math.abs(consumption));
                 var tempStr = (m.temp !== null && m.temp !== undefined) ? m.temp.toFixed(1).replace('.', ',') + ' °C' : '—';
+                var gcalStr = (m.gcal !== null && m.gcal !== undefined) ? m.gcal.toFixed(3).replace('.', ',') + ' Гкал' : '—';
                 var days = this._daysBetween(m.datePrev, m.dateCurr);
                 var daysStr = (days > 0) ? days + ' дн.' : '';
 
@@ -27985,6 +27986,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 html += '<div class="flow-card-summary" onclick="FlowmeterData.openDetail(' + m.id + ')">';
                 html += '<span class="flow-summary-item"><span class="flow-summary-label">Последние показания</span><span class="flow-summary-val">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.dateCurr) + ' г.</span></span></span>';
                 if (m.temp !== null && m.temp !== undefined) { html += '<span class="flow-summary-item"><span class="flow-summary-label">T среды</span><span class="flow-summary-val">' + tempStr + '</span></span>'; }
+                if (m.gcal !== null && m.gcal !== undefined) { html += '<span class="flow-summary-item"><span class="flow-summary-label">Гкал</span><span class="flow-summary-val">' + gcalStr + '</span></span>'; }
                 html += '</div>';
                 html += '</div>';
             }
