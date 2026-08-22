@@ -28308,10 +28308,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
 
             // Внёс изменения
-            if (m.modName || m.modRole) {
+            // Task 109: показываем modDisplayName (имя из KIP8_Access), а не modName (email)
+            var modDisplay = m.modDisplayName || m.modName || '';
+            if (modDisplay || m.modRole) {
                 var modParts = [];
                 if (m.modRole) modParts.push(this._esc(m.modRole));
-                if (m.modName) modParts.push(this._esc(m.modName));
+                if (modDisplay) modParts.push(this._esc(modDisplay));
                 html += '<div class="flow-detail-row"><span class="flow-detail-label" style="color:#7a8fa6;">Внёс изменения</span><span class="flow-detail-value" style="color:#5b7a96;">' + modParts.join(', ') + '</span></div>';
             }
 
@@ -28607,9 +28609,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     }
                     // Обновляем подпись — текущий пользователь + timestamp
                     try {
-                        // Task 108: используем _cachedEmail (не _cachedUser, которого нет)
+                        // Task 108: modName = email (для _canEdit)
+                        // Task 109: modDisplayName = имя (для отображения)
                         meter.modName = KipAuth._cachedEmail || '';
                         meter.modRole = KipAuth._cachedRole || '';
+                        meter.modDisplayName = KipAuth._cachedEmail || '';  // пока email — сервер заменит на имя при load()
                         meter.modTimestamp = new Date().toISOString();
                     } catch (e) { /* ignore */ }
                     break;
