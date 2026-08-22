@@ -103,3 +103,55 @@ Stage Summary:
 - electron-updater будет автоматически проверять этот репозиторий на наличие новых версий
   (latest.yml + GH_TOKEN/GITHUB_TOKEN в workflow для публикации метаданных)
 - Следующие релизы (v2.0.1, v2.1.0 и т.д.) автоматически создадут новый релиз при пуше тега v*
+
+
+---
+Task ID: 122
+Agent: AI Assistant (GLM)
+Task: Релиз v2.1.0 — починить автообновление десктоп-приложения
+
+Симптом пользователя:
+- Десктоп-приложение не обновляется
+
+Корневая причина:
+- electron-updater (electron/main.js) проверяет GitHub Releases репо kip8test-desktop
+- Файл latest.yml генерируется только при пуше git-тега v* (т.к. в build-desktop.yml
+  стоит флаг --publish onTagOrDraft — публикация только при теге или в draft-релизе)
+- Был только один тег: v2.0.0 (21 августа 2026)
+- После v2.0.0 в kip8test-desktop сделано 27 коммитов (sync из kip8test):
+    * Task 118: ИТР ТОКЕМ, КИП8 pro +расходомеры, фильтр 4 (sync из kip8test)
+    * Task 119: избранное и drag-and-drop расходомеров на десктопе
+    * Task 120: переключатель «Все/Избранные» в breadcrumb bar + drag-and-drop
+    * Task 121: добавлена папка tests/ (CI Tests падал из-за отсутствия тестов)
+- НО ни одного нового тега не было создано → latest.yml остался от v2.0.0
+- 25 скачиваний latest.yml = 25 проверок обновлений клиентами, все вернулись с 2.0.0
+- electron-updater сравнивает версии SemVer: 2.0.0 <= 2.0.0 → «обновлений нет»
+
+Work Log:
+1. Проверены компоненты автосинхронизации:
+   - workflow sync-to-desktop.yml в kip8test работает (success при каждом пуше)
+   - секрет DESKTOP_SYNC_TOKEN в kip8test на месте (updated 2026-08-21)
+   - workflow build-desktop.yml в kip8test-desktop: триггер push тега v* + paths
+2. Проверена целостность данных:
+   - index.html в kip8test и kip8test-desktop полностью идентичны (md5 e199e7e5…)
+   - все 9 файлов data/*.json синхронизированы (md5 совпадают)
+   - тесты в kip8test-desktop: 207 passed, 0 failed
+3. Bump version package.json: 2.0.0 → 2.1.0 (добавлены новые фичи, SemVer minor bump)
+4. Создан аннотированный git-тег v2.1.0
+5. Push коммита + тега в main → автоматически запустится build-desktop.yml
+6. Workflow соберёт 3 платформы (Linux AppImage+deb, Windows NSIS, macOS dmg)
+   и опубликует релиз v2.1.0 с новым latest.yml (version: 2.1.0)
+7. После завершения сборки (~3-5 мин):
+   - установленные клиенты при следующем запуске увидят новую версию 2.1.0
+   - autoUpdater.on('update-available') покажет диалог «Скачать / Позже»
+   - после скачивания — «Установить / Позже», после установки — перезапуск
+
+Файлы:
+- package.json (kip8test-desktop): version 2.0.0 → 2.1.0
+- worklog.md (kip8test-desktop): этот Task 122
+
+Stage Summary:
+- После push тега v2.1.0 автообновление десктоп-приложения снова работает
+- Все установленные клиенты (v2.0.0) при следующем запуске увидят предложение обновиться
+- На будущее: для публикации обновлений десктопа ВСЕГДА создавать новый тег v* —
+  обычные пуши в main только собирают артефакты, но НЕ публикуют релиз
