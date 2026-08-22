@@ -3569,10 +3569,19 @@
         z-index: 1;
     }
     [data-theme="light"] .flow-bottom-bar::before { background: rgba(184, 90, 42, 0.2); }
-    /* Показываем нижний бар только когда активна страница расходомеров */
+    /* Показываем нижний бар только когда активна страница расходомеров И только на мобильной/планшетной версии.
+       На десктопе (≥1024px) нижний бар скрыт — там список в левой панели detailPanel,
+       табы «Все / Избранные» и drag-and-drop на десктопе не нужны (Task 98). */
     body:has(#page-flowmeter-data.active) .flow-bottom-bar { display: grid; }
-    /* Добавляем нижний отступ для flowList, чтобы контент не перекрывался баром */
-    body:has(#page-flowmeter-data.active) #flowList { padding-bottom: 88px; }
+    @media (min-width: 1024px) {
+        body:has(#page-flowmeter-data.active) .flow-bottom-bar { display: none !important; }
+        /* На десктопе убираем нижний отступ flowList (нет бара → не нужен padding) */
+        body:has(#page-flowmeter-data.active) #flowList { padding-bottom: 0; }
+    }
+    /* Добавляем нижний отступ для flowList, чтобы контент не перекрывался баром (только мобильная) */
+    @media (max-width: 1023px) {
+        body:has(#page-flowmeter-data.active) #flowList { padding-bottom: 88px; }
+    }
 
     .flow-tab {
         display: flex; align-items: center; justify-content: center; gap: 6px;
@@ -3648,10 +3657,21 @@
     }
     [data-theme="light"] .flow-card-fav-btn { color: rgba(184,90,42,0.4); background: rgba(0,0,0,0.03); }
     [data-theme="light"] .flow-card-fav-btn.active { color: #b85a2a; background: rgba(184,90,42,0.12); }
+    /* На десктопе звёздочка скрыта — функция избранного расходомеров mobile-only (Task 98) */
+    @media (min-width: 1024px) { .flow-card-fav-btn { display: none !important; } }
 
     /* Период — теперь внизу карточки, отдельной строкой (не бейджем в header) */
     /* Стиль задаётся в общей секции (строка ~3051), здесь только доп. отступ сверху */
     .flow-card-period { margin-top: 4px; }
+    /* На мобильном (.flow-card-period-header) — скрыт, период показан внизу через .flow-card-period-bottom.
+       На десктопе (Task 98) — наоборот: период показан в header (как до Task 97),
+       потому что звёздочки на десктопе нет и период не накладывается. */
+    .flow-card-period-header { display: none; margin-top: 0; margin-left: 8px; }  /* по умолчанию скрыт */
+    .flow-card-period-bottom { display: inline-block; }  /* по умолчанию виден (мобильный) */
+    @media (min-width: 1024px) {
+        .flow-card-period-header { display: inline-block; }  /* на десктопе показываем в header */
+        .flow-card-period-bottom { display: none; }           /* на десктопе скрываем нижний */
+    }
 
     /* Drag-and-drop: клон карточки (как pinned-item-clone) */
     .flow-card.flow-card-dragging {
@@ -3680,6 +3700,8 @@
         font-style: italic;
     }
     [data-theme="light"] .flow-fav-hint { background: rgba(184,90,42,0.04); }
+    /* На десктопе подсказка скрыта (drag-and-drop отключён, Task 98) */
+    @media (min-width: 1024px) { .flow-fav-hint { display: none; } }
 
     /* Заглушка «нет избранных» */
     .flow-empty-fav {
@@ -3735,6 +3757,8 @@
     }
     [data-theme="light"] #flowFavBtn { color: rgba(184,90,42,0.5); }
     [data-theme="light"] #flowFavBtn.active { color: #b85a2a; }
+    /* На десктопе звёздочка в хедере детальной карточки скрыта — функция избранного расходомеров mobile-only (Task 98) */
+    @media (min-width: 1024px) { #flowFavBtn { display: none !important; } }
 
     /* ========== Кабельный журнал — страница добавления записи ==========
        Открывается как обычная page-content из cable-journal-edit по кнопке '+'.
@@ -27936,24 +27960,30 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
                 html += '<div class="flow-card" data-flow-id="' + m.id + '" data-fav-key="' + this._esc(String(m.id)) + '">';
                 // Кнопка-звёздочка (отображается всегда — в «Все» для добавления, в «Избранные» для удаления)
+                // На десктопе скрыта через CSS (Task 98)
                 html += '<button type="button" class="flow-card-fav-btn' + (isFav ? ' active' : '') + '" data-flow-id="' + m.id + '" onclick="event.stopPropagation(); FlowmeterData.toggleFav(' + m.id + ')" aria-label="' + (isFav ? 'Убрать из избранного' : 'В избранное') + '">' + (isFav ? '★' : '☆') + '</button>';
-                // Header: только hoz (период перенесён вниз, чтобы не накладывался на звёздочку)
+                // Header: hoz + период (на мобильном период скрыт здесь через CSS .flow-card-period-header, показан внизу)
                 html += '<div class="flow-card-header" onclick="FlowmeterData.openDetail(' + m.id + ')">';
                 html += '<div class="flow-card-hoz">' + this._esc(m.hoz) + '</div>';
+                // Период в header — виден только на десктопе (Task 98): на десктопе звёздочки нет,
+                // период не накладывается, можно показать как раньше
+                html += '<div class="flow-card-period flow-card-period-header">' + this._esc(m.period) + '</div>';
                 html += '</div>';
                 html += '<div class="flow-card-param" onclick="FlowmeterData.openDetail(' + m.id + ')">' + this._esc(m.param) + '</div>';
                 html += '<div class="flow-card-summary" onclick="FlowmeterData.openDetail(' + m.id + ')">';
                 html += '<span class="flow-summary-item"><span class="flow-summary-label">Последние показания</span><span class="flow-summary-val">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.dateCurr) + ' г.</span></span></span>';
                 if (m.temp !== null && m.temp !== undefined) { html += '<span class="flow-summary-item"><span class="flow-summary-label">T среды</span><span class="flow-summary-val">' + tempStr + '</span></span>'; }
                 html += '</div>';
-                // Период — внизу карточки, чтобы не накладывался на звёздочку в правом верхнем углу
-                html += '<div class="flow-card-period">' + this._esc(m.period) + '</div>';
+                // Период внизу карточки — виден только на мобильном (Task 97),
+                // на десктопе скрыт через CSS .flow-card-period:not(.flow-card-period-header)
+                html += '<div class="flow-card-period flow-card-period-bottom">' + this._esc(m.period) + '</div>';
                 html += '</div>';
             }
             container.innerHTML = html;
 
-            // Если в режиме избранных — навесить обработчики drag-and-drop
-            if (isFavTab) {
+            // Если в режиме избранных И не десктоп — навесить обработчики drag-and-drop.
+            // На десктопе (≥1024px) long-press не работает с мышью, а список в detailPanel — drag не нужен (Task 98).
+            if (isFavTab && typeof isDesktop === 'function' && !isDesktop()) {
                 this._attachDragHandlers();
             }
         },
