@@ -28273,15 +28273,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Расход
             html += '<div class="flow-detail-row flow-detail-highlight"><span class="flow-detail-label">Расход</span><span class="flow-detail-value">' + consStr + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> за ' + this._daysBetween(m.datePrev, m.dateCurr) + ' дн.</span></span></div>';
 
-            // Температура среды (только если есть)
+            // Температура среды (только если есть) — с датой, как в показаниях
             if (m.temp !== null && m.temp !== undefined) {
-                html += '<div class="flow-detail-row"><span class="flow-detail-label">Температура среды</span><span class="flow-detail-value">' + tempStr + '</span></div>';
+                html += '<div class="flow-detail-row"><span class="flow-detail-label">Температура среды</span><span class="flow-detail-value">' + tempStr + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.dateCurr) + ' г.</span></span></div>';
             }
 
-            // Гигакалории пара (только для расходомеров пара, Task 100)
+            // Гигакалории пара (только для расходомеров пара, Task 100) — с датой
             // Показываем, только если это расходомер пара (param содержит «пара») и значение есть
             if (this._isSteamMeter(m) && (m.gcal !== null && m.gcal !== undefined)) {
-                html += '<div class="flow-detail-row"><span class="flow-detail-label">Гигакалории пара</span><span class="flow-detail-value">' + gcalStr + '</span></div>';
+                html += '<div class="flow-detail-row"><span class="flow-detail-label">Гигакалории пара</span><span class="flow-detail-value">' + gcalStr + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.dateCurr) + ' г.</span></span></div>';
             }
 
             // Внёс изменения
@@ -28391,15 +28391,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var field = document.getElementById('flowInputField');
             if (field) { field.value = ''; field.placeholder = 'Текущие показания, ' + m.unit; }
 
-            // Температура — предзаполнить текущим значением
+            // Температура — поле видно только для Хозрасчёта №6 (Task 103)
+            // (это единственный расходомер с температурой среды — «Расход природного газа»)
             var tempField = document.getElementById('flowInputTemp');
-            if (tempField) {
-                if (m.temp !== null && m.temp !== undefined) {
-                    tempField.value = m.temp.toFixed(1).replace('.', ',');
+            var tempGroup = tempField ? tempField.closest('.flow-input-group') : null;
+            if (tempField && tempGroup) {
+                if (m.id === 6) {
+                    // Хозрасчёт №6 — показываем поле, предзаполняем
+                    tempGroup.style.display = '';
+                    if (m.temp !== null && m.temp !== undefined) {
+                        tempField.value = m.temp.toFixed(1).replace('.', ',');
+                    } else {
+                        tempField.value = '';
+                    }
+                    tempField.placeholder = '— (необязательно)';
                 } else {
+                    // Остальные — скрыть поле
+                    tempGroup.style.display = 'none';
                     tempField.value = '';
                 }
-                tempField.placeholder = '— (необязательно)';
             }
 
             // Гигакалории пара (Task 100) — поле видно только для расходомеров пара
