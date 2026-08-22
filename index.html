@@ -24032,6 +24032,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             const CHARTS = this._CHARTS_PAGES;
 
             const LVL_OBSHCHIJ = [].concat(BASE, CALC);
+            // Task 112: ИТР ТОКЕМ — калькуляторы + «Что нового» (без LIB, без SECRET, без KIP_IOS)
+            const LVL_ITR_TOKEM = [].concat(BASE, CALC, WHATS_NEW);
             const LVL_KIP8 = [].concat(BASE, CALC, LIB, SECRET, WHATS_NEW);
             const LVL_KIP_IOS = [].concat(BASE, CALC, LIB, KIP_IOS, SECRET, WHATS_NEW);
             // ИТР8+ и КИП ИОС дежурный: КИП ИОС + расходомеры (просмотр)
@@ -24040,6 +24042,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this.ROLE_ACCESS = {
                 'Запрет': BASE,                   // только главная
                 'Общий доступ': LVL_OBSHCHIJ,     // только калькуляторы (гостевой режим)
+                'ИТР ТОКЕМ': LVL_ITR_TOKEM,       // калькуляторы + «Что нового» (Task 112)
                 'КИП8': LVL_KIP8,
                 'КИП8 pro': LVL_KIP8,
                 'КИП ИОС': LVL_KIP_IOS,
