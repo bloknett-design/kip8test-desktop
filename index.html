@@ -3629,6 +3629,34 @@
     [data-theme="light"] .flow-tab-count { background: rgba(184,90,42,0.15); color: #b85a2a; }
     [data-theme="light"] .flow-tab.active .flow-tab-count { background: #b85a2a; color: #fff; }
 
+    /* Task 120: Переключатель «Все / Избранные» в breadcrumb bar на десктопе */
+    .flow-desktop-tabs {
+        display: flex;
+        gap: 0;
+        flex-shrink: 0;
+        margin-left: 8px;
+        border: 1px solid rgba(200,112,72,0.25);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .flow-desktop-tabs .flow-tab {
+        padding: 6px 14px;
+        font-size: 13px;
+        min-height: auto;
+        border-radius: 0;
+        border: none;
+        border-bottom: none;
+        background: transparent;
+    }
+    .flow-desktop-tabs .flow-tab.active {
+        background: rgba(200,112,72,0.15);
+        color: #c87048;
+    }
+    [data-theme="light"] .flow-desktop-tabs .flow-tab.active {
+        background: rgba(184,90,42,0.12);
+        color: #b85a2a;
+    }
+
     /* Кнопка-звёздочка в карточке расходомера (как в приборах/клапанах) */
     .flow-card-fav-btn {
         position: absolute;
@@ -9281,6 +9309,11 @@
             <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
         </div>
         <div id="detailBreadcrumbContent"></div>
+        <!-- Task 120: Переключатель «Все / Избранные» для расходомеров на десктопе -->
+        <div id="flowDesktopTabs" class="flow-desktop-tabs" style="display:none;">
+            <button class="flow-tab active" data-flow-tab="all" onclick="FlowmeterData.setTab('all')">Все</button>
+            <button class="flow-tab" data-flow-tab="fav" onclick="FlowmeterData.setTab('fav')">Избранные</button>
+        </div>
         <button type="button" class="detail-breadcrumb-close" onclick="closeDetailPanel()" aria-label="Закрыть панель">
             <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:rgba(74,143,199,0.9);fill:none;stroke-width:2;stroke-linecap:round;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -18322,6 +18355,9 @@
         // Скрыть значок избранного в хедере десктоп-панели
         const favBtn = document.getElementById('detailPanelFavBtn');
         if (favBtn) favBtn.style.display = 'none';
+        // Task 120: скрыть переключатель «Все / Избранные»
+        const flowTabs = document.getElementById('flowDesktopTabs');
+        if (flowTabs) flowTabs.style.display = 'none';
         // Скрываем полноэкранную строку breadcrumbs
         const bcBar = document.getElementById('detailBreadcrumbBar');
         if (bcBar) {
@@ -18558,7 +18594,19 @@
         if (page === 'kip-ios') { setTimeout(() => { if (typeof cablesInitEntryButton === 'function') cablesInitEntryButton(); }, 30); }
         if (page === 'kip-ios') { setTimeout(() => { if (typeof plan114InitEntryButton === 'function') plan114InitEntryButton(); }, 30); }
         if (page === 'kip-ios') { setTimeout(() => { if (typeof KipCharts !== 'undefined') KipCharts.initEntryButton(); }, 30); }
-        if (page === 'flowmeter-data') { setTimeout(() => { if (typeof FlowmeterData !== 'undefined') FlowmeterData.init(); }, 30); }
+        if (page === 'flowmeter-data') {
+            setTimeout(() => { if (typeof FlowmeterData !== 'undefined') FlowmeterData.init(); }, 30);
+            // Task 120: показать переключатель «Все / Избранные» на десктопе
+            if (isDesktop()) {
+                var _flowTabs = document.getElementById('flowDesktopTabs');
+                if (_flowTabs) _flowTabs.style.display = '';
+                // Показать breadcrumbBar с табами (без detail-panel)
+                var _bcBar = document.getElementById('detailBreadcrumbBar');
+                if (_bcBar) _bcBar.classList.add('active');
+                var _bcContent = document.getElementById('detailBreadcrumbContent');
+                if (_bcContent) _bcContent.innerHTML = '<span class="breadcrumb-link">Расходомеры хозрасчётные</span>';
+            }
+        }
         if (page === 'plan-114') { setTimeout(() => { if (typeof plan114RenderList === 'function') plan114RenderList(); }, 30); }
         if (page === 'charts') { setTimeout(() => { if (typeof KipCharts !== 'undefined') KipCharts.onPageOpen(); }, 30); }
         if (TICKET_IDS.includes(page)) { setTimeout(() => initTicketsPage(page), 30); }
