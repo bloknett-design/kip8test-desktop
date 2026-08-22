@@ -3535,6 +3535,184 @@
         }
     }
 
+    /* === Расходомеры: тулбар «Все / Избранные» + избранное + drag-and-drop ===
+       v371, Task 95.
+       Тулбар под page-inline-header, перед flowList.
+       В режиме «Избранные» карточки можно перетаскивать (long-press 500ms). */
+    .flow-tabs {
+        display: flex;
+        gap: 0;
+        padding: 0;
+        margin: 0;
+        background: rgba(23, 33, 43, 0.96);
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        position: sticky;
+        top: 56px;
+        z-index: 5;
+    }
+    [data-theme="light"] .flow-tabs {
+        background: rgba(255,255,255,0.96);
+        border-bottom-color: rgba(20,20,19,0.08);
+    }
+    .flow-tab {
+        flex: 1;
+        padding: 12px 16px;
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: color 0.15s, border-color 0.15s;
+        border-bottom: 2px solid transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+    .flow-tab.active {
+        color: #c87048;
+        border-bottom-color: #c87048;
+    }
+    [data-theme="light"] .flow-tab.active { color: #b85a2a; }
+    .flow-tab-count {
+        display: inline-block;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        background: rgba(200,112,72,0.18);
+        color: #c87048;
+        border-radius: 9px;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 18px;
+        text-align: center;
+    }
+    .flow-tab.active .flow-tab-count {
+        background: #c87048;
+        color: #fff;
+    }
+    [data-theme="light"] .flow-tab-count { background: rgba(184,90,42,0.15); color: #b85a2a; }
+    [data-theme="light"] .flow-tab.active .flow-tab-count { background: #b85a2a; color: #fff; }
+
+    /* Кнопка-звёздочка в карточке расходомера (как в приборах/клапанах) */
+    .flow-card-fav-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: transparent;
+        color: rgba(200,112,72,0.35);
+        font-size: 18px;
+        line-height: 1;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        transition: transform 0.12s, color 0.15s, background 0.15s;
+        z-index: 2;
+    }
+    .flow-card-fav-btn:active { transform: scale(0.85); }
+    .flow-card-fav-btn.active {
+        color: #c87048;
+        background: rgba(200,112,72,0.12);
+    }
+    [data-theme="light"] .flow-card-fav-btn { color: rgba(184,90,42,0.4); background: rgba(0,0,0,0.03); }
+    [data-theme="light"] .flow-card-fav-btn.active { color: #b85a2a; background: rgba(184,90,42,0.12); }
+
+    /* Drag-handle (только в режиме «Избранные») */
+    .flow-card-drag-handle {
+        display: none;
+        position: absolute;
+        top: 50%;
+        left: 4px;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 24px;
+        color: rgba(200,112,72,0.4);
+        font-size: 14px;
+        line-height: 24px;
+        text-align: center;
+        cursor: grab;
+        z-index: 2;
+    }
+    .flow-card-drag-handle:active { cursor: grabbing; }
+    /* Когда карточку перетаскивают — она приподнимается */
+    .flow-card.dragging {
+        opacity: 0.85;
+        transform: scale(1.01);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        z-index: 10;
+    }
+    /* Когда карточка — цель перетаскивания (placeholder) */
+    .flow-card.drag-over {
+        background: rgba(200,112,72,0.18) !important;
+    }
+    /* В режиме «Избранные» — отступ слева под drag-handle, справа под fav-btn */
+    .flow-list.fav-mode .flow-card { padding-left: 24px; padding-right: 36px; }
+    .flow-list.fav-mode .flow-card-drag-handle { display: block; }
+
+    /* Заглушка «нет избранных» */
+    .flow-empty-fav {
+        text-align: center;
+        padding: 50px 20px 30px;
+        color: var(--text-secondary);
+    }
+    .flow-empty-fav-icon {
+        font-size: 48px;
+        color: rgba(200,112,72,0.35);
+        margin-bottom: 12px;
+        line-height: 1;
+    }
+    .flow-empty-fav-text {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+    }
+    .flow-empty-fav-hint {
+        font-size: 13px;
+        line-height: 1.5;
+    }
+    .flow-empty-fav-hint .star {
+        color: #c87048;
+        font-weight: 700;
+    }
+
+    /* Кнопка-звёздочка в хедере детальной карточки (как deviceFavBtn) */
+    #flowFavBtn {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 36px;
+        height: 36px;
+        border: none;
+        background: transparent;
+        color: rgba(200,112,72,0.45);
+        font-size: 22px;
+        line-height: 1;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: transform 0.12s, color 0.15s;
+    }
+    #flowFavBtn:active { transform: translateY(-50%) scale(0.88); }
+    #flowFavBtn.active {
+        color: #c87048;
+    }
+    [data-theme="light"] #flowFavBtn { color: rgba(184,90,42,0.5); }
+    [data-theme="light"] #flowFavBtn.active { color: #b85a2a; }
+
     /* ========== Кабельный журнал — страница добавления записи ==========
        Открывается как обычная page-content из cable-journal-edit по кнопке '+'.
        Поля идут вертикально по одному в строке (полная ширина контейнера),
@@ -9128,6 +9306,10 @@
                 <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
                 <div class="page-inline-header-title">Расходомеры хозрасчётные</div>
             </div>
+            <div class="flow-tabs">
+                <button class="flow-tab active" data-flow-tab="all" onclick="FlowmeterData.setTab('all')">Все <span class="flow-tab-count" id="flowAllCount">0</span></button>
+                <button class="flow-tab" data-flow-tab="fav" onclick="FlowmeterData.setTab('fav')">Избранные <span class="flow-tab-count" id="flowFavCount">0</span></button>
+            </div>
             <div id="flowList" class="flow-list">
                 <div class="admin-empty" id="flowEmpty">Загрузка…</div>
             </div>
@@ -9138,6 +9320,7 @@
             <div class="page-inline-header">
                 <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
                 <div class="page-inline-header-title" id="flowDetailTitle">Расходомер</div>
+                <button type="button" id="flowFavBtn" onclick="FlowmeterData.toggleFavFromDetail()" aria-label="В избранное">☆</button>
             </div>
             <div id="flowDetailBody" class="flow-detail-body"></div>
             <div class="flow-detail-bottom-bar" id="flowDetailBottomBar"></div>
@@ -25034,6 +25217,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 const projId = window._projectDetailId;
                 projBtn.classList.toggle('active', projId ? this.hasItem(this._favKey('proj', projId)) : false);
             }
+            // Мобильный: значок в хедере расходомера (flowFavBtn)
+            if (typeof FlowmeterData !== 'undefined' && FlowmeterData._updateDetailFavBtn) {
+                FlowmeterData._updateDetailFavBtn();
+            }
             // Десктоп: значок в detailPanel хедере
             const dpBtn = document.getElementById('detailPanelFavBtn');
             if (dpBtn) {
@@ -25045,7 +25232,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 const isValveDetail = !!window._valveDetailId;
                 const isRegDetail = !!window._regulatorDetailId;
                 const isProjDetail = !!window._projectDetailId;
-                const showFav = isDevDetail || isLockDetail || isValveDetail || isRegDetail || isProjDetail;
+                const isFlowDetail = !!window._flowDetailId;
+                const showFav = isDevDetail || isLockDetail || isValveDetail || isRegDetail || isProjDetail || isFlowDetail;
                 dpBtn.style.display = showFav ? '' : 'none';
                 // Определяем активность: для приборов — по devId, для lock/valve/reg — по составному ключу
                 let isActive = false;
@@ -25054,12 +25242,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 else if (isValveDetail) isActive = this.hasItem(this._favKey('valve', window._valveDetailId));
                 else if (isRegDetail) isActive = this.hasItem(this._favKey('reg', window._regulatorDetailId));
                 else if (isProjDetail) isActive = this.hasItem(this._favKey('proj', window._projectDetailId));
+                else if (isFlowDetail) isActive = this.hasItem(this._favKey('flow', window._flowDetailId));
                 dpBtn.classList.toggle('active', isActive);
                 // Сохраняем текущий тип для toggleFromDetailByType
                 if (isLockDetail) dpBtn.setAttribute('data-fav-type', 'lock');
                 else if (isValveDetail) dpBtn.setAttribute('data-fav-type', 'valve');
                 else if (isRegDetail) dpBtn.setAttribute('data-fav-type', 'reg');
                 else if (isProjDetail) dpBtn.setAttribute('data-fav-type', 'proj');
+                else if (isFlowDetail) dpBtn.setAttribute('data-fav-type', 'flow');
                 else dpBtn.removeAttribute('data-fav-type');
             }
             // Десктоп: значок внутри карточки (.dev-detail-fav-btn)
@@ -25072,6 +25262,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 else if (window._valveDetailId) isActive = this.hasItem(this._favKey('valve', window._valveDetailId));
                 else if (window._regulatorDetailId) isActive = this.hasItem(this._favKey('reg', window._regulatorDetailId));
                 else if (window._projectDetailId) isActive = this.hasItem(this._favKey('proj', window._projectDetailId));
+                else if (window._flowDetailId) isActive = this.hasItem(this._favKey('flow', window._flowDetailId));
                 cardBtn.classList.toggle('active', isActive);
             }
         },
@@ -25102,9 +25293,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
         },
 
-        /** Клик по значку: toggle избранного для блокировки/клапана/регулятора/проекта.
-         *  type: 'lock' | 'valve' | 'reg' | 'proj'
-         *  Определяет ID по window._lockDetailId / _valveDetailId / _regulatorDetailId / _projectDetailId,
+        /** Клик по значку: toggle избранного для блокировки/клапана/регулятора/проекта/расходомера.
+         *  type: 'lock' | 'valve' | 'reg' | 'proj' | 'flow'
+         *  Определяет ID по window._lockDetailId / _valveDetailId / _regulatorDetailId / _projectDetailId / _flowDetailId,
          *  строит составной ключ через _favKey(), toggle, обновляет UI. */
         toggleFromDetailByType: function(type) {
             var id;
@@ -25112,7 +25303,26 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             else if (type === 'valve') id = window._valveDetailId;
             else if (type === 'reg') id = window._regulatorDetailId;
             else if (type === 'proj') id = window._projectDetailId;
+            else if (type === 'flow') id = window._flowDetailId;
             if (!id) return;
+            // Для расходомеров — делегировать в FlowmeterData.toggleFav,
+            // который сам обновит счётчик + перерисует список
+            if (type === 'flow') {
+                if (typeof FlowmeterData !== 'undefined' && FlowmeterData.toggleFav) {
+                    if (navigator.vibrate) navigator.vibrate(10);
+                    FlowmeterData.toggleFav(id);
+                    // showToast + updateHeaderIcon для десктопа
+                    var flowFavKey = this._favKey('flow', id);
+                    var wasFlowAdded = this.hasItem(flowFavKey);
+                    if (wasFlowAdded) {
+                        showToast('Добавлено в избранное', 'Открыть', function() { navigateTo('flowmeter-data'); });
+                    } else {
+                        showToast('Убрано из избранного');
+                    }
+                    this.updateHeaderIcon();
+                }
+                return;
+            }
             if (navigator.vibrate) navigator.vibrate(10);
             const favKey = this._favKey(type, id);
             const wasAdded = this.toggle(favKey);
@@ -27352,6 +27562,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Ключи localStorage для кэша данных
         _cacheKey: 'kip8_flow_cache_v1',
 
+        // Отдельный ключ для порядка избранных расходомеров
+        // (не смешивать с KipFav._ORDER_KEY, который для приборов/блокировок/клапанов/регуляторов)
+        _FLOW_FAV_ORDER_KEY: 'kip8_flow_fav_order_v1',
+
+        // Текущая вкладка: 'all' или 'fav'
+        _activeTab: 'all',
+
+        // Состояние drag-and-drop (для избранных карточек)
+        _drag: null,
+
         // Флаг: данные загружены с сервера (true) или это fallback
         _loaded: false,
 
@@ -27531,29 +27751,318 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var container = document.getElementById('flowList');
             if (!container) return;
 
-            var html = '';
+            // Обновить счётчики в табах
+            this._updateTabCounts();
 
-            for (var i = 0; i < this._METERS.length; i++) {
-                var m = this._METERS[i];
+            // Определить список для отображения в зависимости от вкладки
+            var meters = this._getVisibleMeters();
+            var isFavTab = (this._activeTab === 'fav');
+
+            // Маркировать контейнер: в режиме избранных — добавляем drag-handle и отступы
+            if (isFavTab) {
+                container.classList.add('fav-mode');
+            } else {
+                container.classList.remove('fav-mode');
+            }
+
+            // Заглушка для пустого списка
+            if (!meters || meters.length === 0) {
+                if (isFavTab) {
+                    container.innerHTML =
+                        '<div class="flow-empty-fav">' +
+                        '<div class="flow-empty-fav-icon">☆</div>' +
+                        '<div class="flow-empty-fav-text">Нет избранных расходомеров</div>' +
+                        '<div class="flow-empty-fav-hint">Перейдите во вкладку «Все»<br>и нажмите <span class="star">☆</span> на карточке</div>' +
+                        '</div>';
+                } else {
+                    container.innerHTML = '<div class="admin-empty">Нет данных</div>';
+                }
+                return;
+            }
+
+            var html = '';
+            for (var i = 0; i < meters.length; i++) {
+                var m = meters[i];
                 var consumption = m.curr - m.prev;
                 var consStr = this._fmtNum(Math.abs(consumption));
                 var tempStr = (m.temp !== null && m.temp !== undefined) ? m.temp.toFixed(1).replace('.', ',') + ' °C' : '—';
                 var days = this._daysBetween(m.datePrev, m.dateCurr);
                 var daysStr = (days > 0) ? days + ' дн.' : '';
 
-                html += '<div class="flow-card" data-flow-id="' + m.id + '" onclick="FlowmeterData.openDetail(' + m.id + ')">';
-                html += '<div class="flow-card-header">';
+                var favKey = this._favKey(m.id);
+                var isFav = KipFav.hasItem(favKey);
+
+                html += '<div class="flow-card" data-flow-id="' + m.id + '" data-fav-key="' + this._esc(favKey) + '">';
+                // Drag-handle (только в режиме «Избранные», отображение через CSS .fav-mode)
+                html += '<div class="flow-card-drag-handle" aria-hidden="true">⋮⋮</div>';
+                // Кнопка-звёздочка (отображается всегда — в «Все» для добавления, в «Избранные» для удаления)
+                html += '<button type="button" class="flow-card-fav-btn' + (isFav ? ' active' : '') + '" data-flow-id="' + m.id + '" onclick="event.stopPropagation(); FlowmeterData.toggleFav(' + m.id + ')" aria-label="' + (isFav ? 'Убрать из избранного' : 'В избранное') + '">' + (isFav ? '★' : '☆') + '</button>';
+                html += '<div class="flow-card-header" onclick="FlowmeterData.openDetail(' + m.id + ')">';
                 html += '<div class="flow-card-hoz">' + this._esc(m.hoz) + '</div>';
                 html += '<div class="flow-card-period">' + this._esc(m.period) + '</div>';
                 html += '</div>';
-                html += '<div class="flow-card-param">' + this._esc(m.param) + '</div>';
-                html += '<div class="flow-card-summary">';
+                html += '<div class="flow-card-param" onclick="FlowmeterData.openDetail(' + m.id + ')">' + this._esc(m.param) + '</div>';
+                html += '<div class="flow-card-summary" onclick="FlowmeterData.openDetail(' + m.id + ')">';
                 html += '<span class="flow-summary-item"><span class="flow-summary-label">Последние показания</span><span class="flow-summary-val">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.dateCurr) + ' г.</span></span></span>';
                 if (m.temp !== null && m.temp !== undefined) { html += '<span class="flow-summary-item"><span class="flow-summary-label">T среды</span><span class="flow-summary-val">' + tempStr + '</span></span>'; }
                 html += '</div>';
                 html += '</div>';
             }
             container.innerHTML = html;
+
+            // Если в режиме избранных — навесить обработчики drag-and-drop
+            if (isFavTab) {
+                this._attachDragHandlers();
+            }
+        },
+
+        // ============================================================
+        // Избранное + вкладки (v371, Task 95)
+        // ============================================================
+
+        // Составной ключ избранного для расходомера
+        _favKey: function(id) {
+            return KipFav._favKey('flow', id);
+        },
+
+        // Переключить вкладку
+        setTab: function(tab) {
+            if (tab !== 'all' && tab !== 'fav') return;
+            if (this._activeTab === tab) return;
+            this._activeTab = tab;
+            // Обновить визуальное состояние кнопок табов
+            var tabs = document.querySelectorAll('.flow-tab[data-flow-tab]');
+            for (var i = 0; i < tabs.length; i++) {
+                tabs[i].classList.toggle('active', tabs[i].getAttribute('data-flow-tab') === tab);
+            }
+            this.renderList();
+        },
+
+        // Получить массив расходомеров для отображения (все или только избранные, отсортированные)
+        _getVisibleMeters: function() {
+            if (this._activeTab === 'all') {
+                return this._METERS;
+            }
+            // fav: отфильтровать _METERS по KipFav, упорядочить по kip8_flow_fav_order_v1
+            var order = this._getFavOrder();
+            var orderMap = {};
+            order.forEach(function(k, i) { orderMap[k] = i; });
+
+            var favMeters = [];
+            for (var i = 0; i < this._METERS.length; i++) {
+                var m = this._METERS[i];
+                if (KipFav.hasItem(this._favKey(m.id))) {
+                    favMeters.push(m);
+                }
+            }
+            // Сортировка: по пользовательскому порядку, затем по id (стабильно)
+            favMeters.sort(function(a, b) {
+                var ai = orderMap[String(a.id)];
+                var bi = orderMap[String(b.id)];
+                if (ai !== undefined && bi !== undefined) return ai - bi;
+                if (ai !== undefined) return -1;
+                if (bi !== undefined) return 1;
+                return a.id - b.id;
+            });
+            return favMeters;
+        },
+
+        // Обновить счётчики в табах «Все» и «Избранные»
+        _updateTabCounts: function() {
+            var allCount = (this._METERS || []).length;
+            var favCount = 0;
+            for (var i = 0; i < (this._METERS || []).length; i++) {
+                if (KipFav.hasItem(this._favKey(this._METERS[i].id))) favCount++;
+            }
+            var allEl = document.getElementById('flowAllCount');
+            if (allEl) allEl.textContent = String(allCount);
+            var favEl = document.getElementById('flowFavCount');
+            if (favEl) favEl.textContent = String(favCount);
+        },
+
+        // Получить порядок избранных расходомеров из localStorage
+        _getFavOrder: function() {
+            try {
+                var raw = localStorage.getItem(this._FLOW_FAV_ORDER_KEY);
+                if (!raw) return [];
+                var arr = JSON.parse(raw);
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) { return []; }
+        },
+
+        // Сохранить порядок избранных расходомеров
+        _setFavOrder: function(arr) {
+            try { localStorage.setItem(this._FLOW_FAV_ORDER_KEY, JSON.stringify(arr)); } catch (e) {}
+        },
+
+        // Переключить избранное для карточки в списке
+        toggleFav: function(id) {
+            var favKey = this._favKey(id);
+            var added = !KipFav.hasItem(favKey);
+            if (added) {
+                KipFav._load();
+                KipFav._data[favKey] = new Date().toISOString();
+                KipFav._save();
+                // Добавить в конец порядка (если ещё не там)
+                var order = this._getFavOrder();
+                if (order.indexOf(String(id)) === -1) {
+                    order.push(String(id));
+                    this._setFavOrder(order);
+                }
+            } else {
+                KipFav._load();
+                delete KipFav._data[favKey];
+                KipFav._save();
+                // Убрать из порядка
+                var order2 = this._getFavOrder();
+                var cleaned = order2.filter(function(k) { return k !== String(id); });
+                if (cleaned.length !== order2.length) this._setFavOrder(cleaned);
+            }
+            // Перерисовать список + обновить детальную, если открыта
+            this.renderList();
+            this._updateDetailFavBtn();
+        },
+
+        // Переключить избранное из детальной карточки (flowFavBtn в хедере)
+        toggleFavFromDetail: function() {
+            if (!window._flowDetailId) return;
+            this.toggleFav(window._flowDetailId);
+        },
+
+        // Обновить состояние кнопки в хедере детальной карточки
+        _updateDetailFavBtn: function() {
+            var btn = document.getElementById('flowFavBtn');
+            if (!btn) return;
+            if (!window._flowDetailId) { btn.classList.remove('active'); btn.textContent = '☆'; return; }
+            var isFav = KipFav.hasItem(this._favKey(window._flowDetailId));
+            btn.classList.toggle('active', isFav);
+            btn.textContent = isFav ? '★' : '☆';
+        },
+
+        // ============================================================
+        // Drag-and-drop для избранных карточек (long-press 500ms, как в KipFav)
+        // ============================================================
+        _attachDragHandlers: function() {
+            var self = this;
+            var cards = document.querySelectorAll('#flowList .flow-card[data-flow-id]');
+            for (var i = 0; i < cards.length; i++) {
+                var card = cards[i];
+                // Избегаем повторной навески
+                if (card._flowDragAttached) continue;
+                card._flowDragAttached = true;
+                this._attachDragToCard(card);
+            }
+        },
+
+        _attachDragToCard: function(card) {
+            var self = this;
+            var touchStartX = 0, touchStartY = 0;
+            var pressTimer = null;
+            var isDragging = false;
+            var currentTarget = null;
+
+            // Универсальный обработчик: работает и для touch, и для mouse
+            var startY = 0, startX = 0;
+
+            function onStart(x, y, ev) {
+                startX = x; startY = y;
+                // Long-press 500ms — запускаем drag
+                pressTimer = setTimeout(function() {
+                    isDragging = true;
+                    card.classList.add('dragging');
+                    ev.preventDefault();
+                }, 500);
+            }
+            function onMove(x, y, ev) {
+                if (!isDragging) {
+                    // Если палец сдвинулся раньше 500мс — отменяем long-press
+                    var dx = Math.abs(x - startX);
+                    var dy = Math.abs(y - startY);
+                    if (dx > 10 || dy > 10) {
+                        if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+                    }
+                    return;
+                }
+                ev.preventDefault();
+                // Найти карточку под пальцем/курсором
+                var el = document.elementFromPoint(x, y);
+                while (el && !el.classList.contains('flow-card')) el = el.parentElement;
+                if (currentTarget && currentTarget !== el) {
+                    currentTarget.classList.remove('drag-over');
+                }
+                if (el && el !== card && el.classList.contains('flow-card')) {
+                    el.classList.add('drag-over');
+                    currentTarget = el;
+                } else {
+                    currentTarget = null;
+                }
+            }
+            function onEnd(ev) {
+                if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+                card.classList.remove('dragging');
+                if (currentTarget) {
+                    currentTarget.classList.remove('drag-over');
+                    // Переместить card перед currentTarget (или после, если вторая половина)
+                    self._moveFav(card, currentTarget);
+                }
+                isDragging = false;
+                currentTarget = null;
+            }
+
+            // Touch (мобильные)
+            card.addEventListener('touchstart', function(e) {
+                if (e.touches.length !== 1) return;
+                var t = e.touches[0];
+                onStart(t.clientX, t.clientY, e);
+            }, { passive: false });
+            card.addEventListener('touchmove', function(e) {
+                if (e.touches.length !== 1) return;
+                var t = e.touches[0];
+                onMove(t.clientX, t.clientY, e);
+            }, { passive: false });
+            card.addEventListener('touchend', onEnd);
+            card.addEventListener('touchcancel', onEnd);
+
+            // Mouse (десктоп) — только на drag-handle
+            var handle = card.querySelector('.flow-card-drag-handle');
+            if (handle) {
+                handle.addEventListener('mousedown', function(e) {
+                    onStart(e.clientX, e.clientY, e);
+                    document.addEventListener('mousemove', mouseMove);
+                    document.addEventListener('mouseup', mouseUp);
+                });
+                function mouseMove(e) { onMove(e.clientX, e.clientY, e); }
+                function mouseUp(e) {
+                    onEnd(e);
+                    document.removeEventListener('mousemove', mouseMove);
+                    document.removeEventListener('mouseup', mouseUp);
+                }
+            }
+        },
+
+        // Переместить favId на позицию перед targetId в порядке избранных
+        _moveFav: function(draggedCard, targetCard) {
+            var draggedId = draggedCard.getAttribute('data-flow-id');
+            var targetId = targetCard.getAttribute('data-flow-id');
+            if (!draggedId || !targetId || draggedId === targetId) return;
+
+            var order = this._getFavOrder();
+            // Если в порядке нет какого-то из id — добавим в конец
+            if (order.indexOf(draggedId) === -1) order.push(draggedId);
+            if (order.indexOf(targetId) === -1) order.push(targetId);
+
+            // Перестроить массив: вытащить draggedId, вставить перед targetId
+            var newOrder = [];
+            for (var i = 0; i < order.length; i++) {
+                var k = order[i];
+                if (k === draggedId) continue;
+                if (k === targetId) {
+                    newOrder.push(draggedId);
+                }
+                newOrder.push(k);
+            }
+            this._setFavOrder(newOrder);
+            this.renderList();
         },
 
         // Построить HTML детальной карточки
@@ -27619,6 +28128,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Нижний бар с кнопкой «Ввести показания»
             var bar = document.getElementById('flowDetailBottomBar');
             if (bar) bar.innerHTML = this._renderBottomBar(m);
+
+            // Обновить состояние кнопки-звёздочки в хедере
+            this._updateDetailFavBtn();
 
             // Загрузить архив асинхронно
             this.loadArchive(id, function(records) {
