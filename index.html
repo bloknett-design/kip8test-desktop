@@ -3045,10 +3045,10 @@
     .flow-card:active { background: rgba(200,112,72,0.12); }
     [data-theme="light"] .flow-card:active { background: rgba(200,112,72,0.08); }
     .flow-card-header {
-        display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;
+        display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px;
     }
     .flow-card-hoz { font-size: 17px; font-weight: 700; color: #c87048; }
-    .flow-card-period { font-size: 11px; color: var(--text-secondary); background: rgba(200,112,72,0.10); padding: 1px 6px; border-radius: 4px; flex-shrink: 0; }
+    .flow-card-period { font-size: 11px; color: var(--text-secondary); flex-shrink: 0; }
     .flow-card-param { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
     .flow-card-summary { display: flex; gap: 16px; padding-top: 6px; border-top: 1px solid var(--border-color); }
     .flow-summary-item { display: flex; flex-direction: column; }
@@ -3590,7 +3590,7 @@
         background: transparent;
         color: rgba(200, 112, 72, 0.6);
         font-family: 'Inter', sans-serif;
-        font-size: 14px;
+        font-size: 17px;     /* Task 99: увеличен с 14px до 17px */
         font-weight: 600;
         cursor: pointer; pointer-events: auto;
         touch-action: manipulation; -webkit-tap-highlight-color: transparent;
@@ -3606,7 +3606,7 @@
     [data-theme="light"] .flow-tab.active { color: #b85a2a; }
     [data-theme="light"] .flow-tab:active { background: rgba(184, 90, 42, 0.06); }
     @media (max-width: 400px) {
-        .flow-tab { font-size: 12px; padding: 14px 8px calc(14px + env(safe-area-inset-bottom, 0px)); gap: 4px; }
+        .flow-tab { font-size: 15px; padding: 14px 8px calc(14px + env(safe-area-inset-bottom, 0px)); gap: 4px; }
     }
 
     .flow-tab-count {
@@ -3660,18 +3660,10 @@
     /* На десктопе звёздочка скрыта — функция избранного расходомеров mobile-only (Task 98) */
     @media (min-width: 1024px) { .flow-card-fav-btn { display: none !important; } }
 
-    /* Период — теперь внизу карточки, отдельной строкой (не бейджем в header) */
-    /* Стиль задаётся в общей секции (строка ~3051), здесь только доп. отступ сверху */
-    .flow-card-period { margin-top: 4px; }
-    /* На мобильном (.flow-card-period-header) — скрыт, период показан внизу через .flow-card-period-bottom.
-       На десктопе (Task 98) — наоборот: период показан в header (как до Task 97),
-       потому что звёздочки на десктопе нет и период не накладывается. */
-    .flow-card-period-header { display: none; margin-top: 0; margin-left: 8px; }  /* по умолчанию скрыт */
-    .flow-card-period-bottom { display: inline-block; }  /* по умолчанию виден (мобильный) */
-    @media (min-width: 1024px) {
-        .flow-card-period-header { display: inline-block; }  /* на десктопе показываем в header */
-        .flow-card-period-bottom { display: none; }           /* на десктопе скрываем нижний */
-    }
+    /* Период — в header рядом с hoz (Task 99), без индивидуального фона.
+       Раньше был внизу карточки (Task 97) с отдельным фоном-бейджем. */
+    .flow-card-period-header { display: inline-block; }
+    /* .flow-card-period-bottom больше не используется (Task 99 — период перенесён в header) */
 
     /* Drag-and-drop: клон карточки (как pinned-item-clone) */
     .flow-card.flow-card-dragging {
@@ -27944,10 +27936,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
 
             var html = '';
-            // В режиме «Избранные» добавляем подсказку о перетаскивании
-            if (isFavTab && meters.length > 1) {
-                html += '<div class="flow-fav-hint">Зажмите карточку и перетащите для изменения порядка</div>';
-            }
             for (var i = 0; i < meters.length; i++) {
                 var m = meters[i];
                 var consumption = m.curr - m.prev;
@@ -27962,11 +27950,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // Кнопка-звёздочка (отображается всегда — в «Все» для добавления, в «Избранные» для удаления)
                 // На десктопе скрыта через CSS (Task 98)
                 html += '<button type="button" class="flow-card-fav-btn' + (isFav ? ' active' : '') + '" data-flow-id="' + m.id + '" onclick="event.stopPropagation(); FlowmeterData.toggleFav(' + m.id + ')" aria-label="' + (isFav ? 'Убрать из избранного' : 'В избранное') + '">' + (isFav ? '★' : '☆') + '</button>';
-                // Header: hoz + период (на мобильном период скрыт здесь через CSS .flow-card-period-header, показан внизу)
+                // Header: hoz + период (Task 99: период перенесён из нижней части в header,
+                // сразу справа от hoz, без индивидуального фона)
                 html += '<div class="flow-card-header" onclick="FlowmeterData.openDetail(' + m.id + ')">';
                 html += '<div class="flow-card-hoz">' + this._esc(m.hoz) + '</div>';
-                // Период в header — виден только на десктопе (Task 98): на десктопе звёздочки нет,
-                // период не накладывается, можно показать как раньше
                 html += '<div class="flow-card-period flow-card-period-header">' + this._esc(m.period) + '</div>';
                 html += '</div>';
                 html += '<div class="flow-card-param" onclick="FlowmeterData.openDetail(' + m.id + ')">' + this._esc(m.param) + '</div>';
@@ -27974,9 +27961,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 html += '<span class="flow-summary-item"><span class="flow-summary-label">Последние показания</span><span class="flow-summary-val">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.dateCurr) + ' г.</span></span></span>';
                 if (m.temp !== null && m.temp !== undefined) { html += '<span class="flow-summary-item"><span class="flow-summary-label">T среды</span><span class="flow-summary-val">' + tempStr + '</span></span>'; }
                 html += '</div>';
-                // Период внизу карточки — виден только на мобильном (Task 97),
-                // на десктопе скрыт через CSS .flow-card-period:not(.flow-card-period-header)
-                html += '<div class="flow-card-period flow-card-period-bottom">' + this._esc(m.period) + '</div>';
                 html += '</div>';
             }
             container.innerHTML = html;
