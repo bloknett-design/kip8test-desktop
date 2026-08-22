@@ -12976,7 +12976,10 @@
         html += '</div>'; // .dev-detail-meta
         html += '</div>'; // .dev-detail-top
         html += '<div class="dev-detail-rows">';
+        // Task 113: Фильтр 4 — скрыть поле «Замечания» для ролей с ограниченным доступом
+        var _hideRemarks = (typeof KipAuth !== 'undefined' && KipAuth._hasRestrictedKipIos && KipAuth._hasRestrictedKipIos());
         for (const f of DEV_FIELDS) {
+            if (_hideRemarks && f.key === 'Замечания') continue;
             let val = '';
             if (f.isCombined) {
                 const dateRaw = dev['Дата'] || '';
@@ -13433,6 +13436,12 @@
             const idv = d['ID'];
             return idv !== 0 && idv !== '0' && String(idv ?? '').trim() !== '0';
         });
+
+        // Task 113: Фильтр 4 — скрыть приборы, у которых «В гр. ППР» = «Нет»
+        // (для ролей с ограниченным доступом к КИП ИОС, например ИТР ТОКЕМ)
+        if (typeof KipAuth !== 'undefined' && KipAuth._hasRestrictedKipIos && KipAuth._hasRestrictedKipIos()) {
+            filtered = filtered.filter(d => String(d['В гр. ППР'] || '').trim().toLowerCase() !== 'нет');
+        }
 
         // Сортировка. Главная цель — обеспечить корректный порядок внутри
         // подгруппы (которая формируется ниже). Поэтому сортируем по полю
@@ -13975,6 +13984,12 @@
         }
         let filtered = lockData.lockouts || [];
 
+        // Task 113: Фильтр 4 — скрыть блокировки, у которых «В перечне» = «Нет»
+        // (для ролей с ограниченным доступом к КИП ИОС, например ИТР ТОКЕМ)
+        if (typeof KipAuth !== 'undefined' && KipAuth._hasRestrictedKipIos && KipAuth._hasRestrictedKipIos()) {
+            filtered = filtered.filter(d => String(d['В перечне'] || '').trim().toLowerCase() !== 'нет');
+        }
+
         const sortKey = mode === 'type' ? 'Тип' : mode === 'name' ? 'Наименование' : 'Производство';
         filtered.sort((a, b) => {
             const va = (a[sortKey] || '').toString().toLowerCase();
@@ -14237,7 +14252,10 @@
         // Значок избранного в правом верхнем углу (виден только на десктопе)
         html += '<button type="button" class="dev-detail-fav-btn" onclick="KipFav.toggleFromDetailByType(\'lock\')" aria-label="Избранное" title="Добавить/убрать из избранного"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>';
         html += '<div class="lock-detail-rows">';
+        // Task 113: Фильтр 4 — скрыть поле «Замечания» для ролей с ограниченным доступом
+        var _hideLockRemarks = (typeof KipAuth !== 'undefined' && KipAuth._hasRestrictedKipIos && KipAuth._hasRestrictedKipIos());
         for (const f of LOCK_FIELDS) {
+            if (_hideLockRemarks && f.key === 'Замечания') continue;
             if (f.hiddenInCard) continue;
             let val = item[f.key];
             if (val === undefined || val === null || val === '') continue;
@@ -24032,8 +24050,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             const CHARTS = this._CHARTS_PAGES;
 
             const LVL_OBSHCHIJ = [].concat(BASE, CALC);
-            // Task 112: ИТР ТОКЕМ — калькуляторы + «Что нового» (без LIB, без SECRET, без KIP_IOS)
-            const LVL_ITR_TOKEM = [].concat(BASE, CALC, WHATS_NEW);
+            // Task 113: ИТР ТОКЕМ — фильтр 4 (ограниченные данные КИП ИОС)
+            // Даёт доступ к КИП ИОС с ограничениями: скрываются графики, кабельный журнал,
+            // поле «Замечания», приборы без «В гр. ППР», блокировки без «В перечне».
+            // Не включает FLOWMETER, CHARTS, SECRET.
+            const LVL_ITR_TOKEM = [].concat(BASE, CALC, KIP_IOS, WHATS_NEW);
             const LVL_KIP8 = [].concat(BASE, CALC, LIB, SECRET, WHATS_NEW);
             const LVL_KIP_IOS = [].concat(BASE, CALC, LIB, KIP_IOS, SECRET, WHATS_NEW);
             // ИТР8+ и КИП ИОС дежурный: КИП ИОС + расходомеры (просмотр)
@@ -24540,6 +24561,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return allowed.indexOf(page) !== -1;
         },
 
+        // Task 113: Проверка, имеет ли текущая роль ограниченный доступ к КИП ИОС (фильтр 4).
+        // ИТР ТОКЕМ: видит КИП ИОС, но со скрытиями (нет графиков, каб. журнала, «Замечаний»,
+        // приборов без «В гр. ППР», блокировок без «В перечне»).
+        _hasRestrictedKipIos: function() {
+            return this._cachedRole === 'ИТР ТОКЕМ';
+        },
+
         // ============================================================
         // Показать экран "нет доступа".
         // ============================================================
@@ -24659,6 +24687,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (chartsBtn) {
                 const hasChartsAccess = isAll || allowed.indexOf('charts') !== -1;
                 chartsBtn.style.display = hasChartsAccess ? '' : 'none';
+            }
+
+            // Task 113: Фильтр 4 — скрыть «Кабельный журнал» для ролей с ограниченным доступом
+            // (ИТР ТОКЕМ имеет cable-journal-edit в allowed через KIP_IOS, но каб. журнал
+            //  должен быть скрыт по фильтру 4)
+            if (typeof KipAuth !== 'undefined' && KipAuth._hasRestrictedKipIos && KipAuth._hasRestrictedKipIos()) {
+                const cablesBtn = document.getElementById('cablesEntryBtn');
+                if (cablesBtn) cablesBtn.style.display = 'none';
             }
 
             // Скрыть кнопки "Сапёр" и "Телефонный справочник" на главной,
