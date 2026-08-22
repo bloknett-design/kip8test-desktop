@@ -25217,10 +25217,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 const projId = window._projectDetailId;
                 projBtn.classList.toggle('active', projId ? this.hasItem(this._favKey('proj', projId)) : false);
             }
-            // Мобильный: значок в хедере расходомера (flowFavBtn)
-            if (typeof FlowmeterData !== 'undefined' && FlowmeterData._updateDetailFavBtn) {
-                FlowmeterData._updateDetailFavBtn();
-            }
             // Десктоп: значок в detailPanel хедере
             const dpBtn = document.getElementById('detailPanelFavBtn');
             if (dpBtn) {
@@ -25232,8 +25228,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 const isValveDetail = !!window._valveDetailId;
                 const isRegDetail = !!window._regulatorDetailId;
                 const isProjDetail = !!window._projectDetailId;
-                const isFlowDetail = !!window._flowDetailId;
-                const showFav = isDevDetail || isLockDetail || isValveDetail || isRegDetail || isProjDetail || isFlowDetail;
+                const showFav = isDevDetail || isLockDetail || isValveDetail || isRegDetail || isProjDetail;
                 dpBtn.style.display = showFav ? '' : 'none';
                 // Определяем активность: для приборов — по devId, для lock/valve/reg — по составному ключу
                 let isActive = false;
@@ -25242,14 +25237,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 else if (isValveDetail) isActive = this.hasItem(this._favKey('valve', window._valveDetailId));
                 else if (isRegDetail) isActive = this.hasItem(this._favKey('reg', window._regulatorDetailId));
                 else if (isProjDetail) isActive = this.hasItem(this._favKey('proj', window._projectDetailId));
-                else if (isFlowDetail) isActive = this.hasItem(this._favKey('flow', window._flowDetailId));
                 dpBtn.classList.toggle('active', isActive);
                 // Сохраняем текущий тип для toggleFromDetailByType
                 if (isLockDetail) dpBtn.setAttribute('data-fav-type', 'lock');
                 else if (isValveDetail) dpBtn.setAttribute('data-fav-type', 'valve');
                 else if (isRegDetail) dpBtn.setAttribute('data-fav-type', 'reg');
                 else if (isProjDetail) dpBtn.setAttribute('data-fav-type', 'proj');
-                else if (isFlowDetail) dpBtn.setAttribute('data-fav-type', 'flow');
                 else dpBtn.removeAttribute('data-fav-type');
             }
             // Десктоп: значок внутри карточки (.dev-detail-fav-btn)
@@ -25262,7 +25255,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 else if (window._valveDetailId) isActive = this.hasItem(this._favKey('valve', window._valveDetailId));
                 else if (window._regulatorDetailId) isActive = this.hasItem(this._favKey('reg', window._regulatorDetailId));
                 else if (window._projectDetailId) isActive = this.hasItem(this._favKey('proj', window._projectDetailId));
-                else if (window._flowDetailId) isActive = this.hasItem(this._favKey('flow', window._flowDetailId));
                 cardBtn.classList.toggle('active', isActive);
             }
         },
@@ -25293,9 +25285,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
         },
 
-        /** Клик по значку: toggle избранного для блокировки/клапана/регулятора/проекта/расходомера.
-         *  type: 'lock' | 'valve' | 'reg' | 'proj' | 'flow'
-         *  Определяет ID по window._lockDetailId / _valveDetailId / _regulatorDetailId / _projectDetailId / _flowDetailId,
+        /** Клик по значку: toggle избранного для блокировки/клапана/регулятора/проекта.
+         *  type: 'lock' | 'valve' | 'reg' | 'proj'
+         *  Определяет ID по window._lockDetailId / _valveDetailId / _regulatorDetailId / _projectDetailId,
          *  строит составной ключ через _favKey(), toggle, обновляет UI. */
         toggleFromDetailByType: function(type) {
             var id;
@@ -25303,26 +25295,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             else if (type === 'valve') id = window._valveDetailId;
             else if (type === 'reg') id = window._regulatorDetailId;
             else if (type === 'proj') id = window._projectDetailId;
-            else if (type === 'flow') id = window._flowDetailId;
             if (!id) return;
-            // Для расходомеров — делегировать в FlowmeterData.toggleFav,
-            // который сам обновит счётчик + перерисует список
-            if (type === 'flow') {
-                if (typeof FlowmeterData !== 'undefined' && FlowmeterData.toggleFav) {
-                    if (navigator.vibrate) navigator.vibrate(10);
-                    FlowmeterData.toggleFav(id);
-                    // showToast + updateHeaderIcon для десктопа
-                    var flowFavKey = this._favKey('flow', id);
-                    var wasFlowAdded = this.hasItem(flowFavKey);
-                    if (wasFlowAdded) {
-                        showToast('Добавлено в избранное', 'Открыть', function() { navigateTo('flowmeter-data'); });
-                    } else {
-                        showToast('Убрано из избранного');
-                    }
-                    this.updateHeaderIcon();
-                }
-                return;
-            }
             if (navigator.vibrate) navigator.vibrate(10);
             const favKey = this._favKey(type, id);
             const wasAdded = this.toggle(favKey);
@@ -27551,6 +27524,157 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     // FlowmeterData — Расходомеры хозрасчётные: накопительные расходы
     // Источник: Google Таблица
     // ============================================================
+    // ============================================================
+    // FlowFav — независимое избранное для расходомеров хозрасчётных
+    // (v372, Task 96)
+    //
+    // Полностью изолировано от KipFav:
+    // - свой localStorage-ключ (kip8_flow_fav_v1) — НЕ общий с KipFav
+    // - свой порядок (kip8_flow_fav_order_v1)
+    // - не использует составные ключи 'flow:ID', хранит просто ID (как число/строка)
+    // - не вызывает KipFav.* — никакой связи
+    // - не обновляет кнопку на дашборде (KipFav.updateDashboardButton)
+    // - не отображается в page-device-favorites (общий список избранного)
+    //
+    // Это намеренное дублирование кода — чтобы:
+    //   1. Избранное расходомеров не «утекало» в общий список избранных КИП ИОС
+    //   2. Баги/правки в KipFav не влияли на FlowFav, и наоборот
+    //   3. Список «Избранные» на дашборде не показывал расходомеры
+    // ============================================================
+    var FlowFav = {
+        // localStorage-ключи — собственные, не пересекаются с KipFav
+        _STORAGE_KEY: 'kip8_flow_fav_v1',
+        _ORDER_KEY:   'kip8_flow_fav_order_v1',
+
+        // Ленивый кэш данных: { '<id>': '2026-08-21T...', ... }
+        // В качестве ключа — просто ID расходомера (число или строка)
+        _data: null,
+
+        // ----------------------------------------------------------
+        // Хранилище
+        // ----------------------------------------------------------
+        _load: function() {
+            if (this._data !== null) return;
+            try {
+                const raw = localStorage.getItem(this._STORAGE_KEY);
+                this._data = raw ? JSON.parse(raw) : {};
+            } catch (e) { this._data = {}; }
+        },
+
+        _save: function() {
+            try { localStorage.setItem(this._STORAGE_KEY, JSON.stringify(this._data || {})); } catch (e) {}
+        },
+
+        // ----------------------------------------------------------
+        // API
+        // ----------------------------------------------------------
+
+        /** Проверить, в избранном ли расходомер.
+         *  id — число или строка (число расходомера) */
+        has: function(id) {
+            this._load();
+            return this._data.hasOwnProperty(String(id));
+        },
+
+        /** Добавить расходомер в избранное.
+         *  Возвращает true если был добавлен (раньше не было), false если уже был. */
+        add: function(id) {
+            this._load();
+            const key = String(id);
+            if (this._data.hasOwnProperty(key)) return false;
+            this._data[key] = new Date().toISOString();
+            this._save();
+            // Добавить в конец порядка (если ещё не там)
+            const order = this.getOrder();
+            if (order.indexOf(key) === -1) {
+                order.push(key);
+                this.setOrder(order);
+            }
+            return true;
+        },
+
+        /** Убрать расходомер из избранного.
+         *  Возвращает true если был убран (раньше был), false если не было. */
+        remove: function(id) {
+            this._load();
+            const key = String(id);
+            if (!this._data.hasOwnProperty(key)) return false;
+            delete this._data[key];
+            this._save();
+            // Убрать из порядка
+            const order = this.getOrder();
+            const cleaned = order.filter(function(k) { return k !== key; });
+            if (cleaned.length !== order.length) this.setOrder(cleaned);
+            return true;
+        },
+
+        /** Переключить избранное. Возвращает true если добавлен, false если убран. */
+        toggle: function(id) {
+            if (this.has(id)) {
+                this.remove(id);
+                return false;
+            } else {
+                this.add(id);
+                return true;
+            }
+        },
+
+        /** Количество избранных расходомеров. */
+        count: function() {
+            this._load();
+            return Object.keys(this._data).length;
+        },
+
+        /** Получить порядок избранных (массив строк-ID). */
+        getOrder: function() {
+            try {
+                const raw = localStorage.getItem(this._ORDER_KEY);
+                if (!raw) return [];
+                const arr = JSON.parse(raw);
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) { return []; }
+        },
+
+        /** Сохранить порядок избранных (массив строк-ID). */
+        setOrder: function(arr) {
+            try { localStorage.setItem(this._ORDER_KEY, JSON.stringify(arr)); } catch (e) {}
+        },
+
+        /** Все избранные ID в правильном порядке.
+         *  Элементы с порядком — по индексу, без порядка — в конце (по addedAt desc).
+         *  Автоочистка порядка от удалённых ID. */
+        all: function() {
+            this._load();
+            const order = this.getOrder();
+            const orderMap = {};
+            order.forEach(function(k, i) { orderMap[k] = i; });
+
+            const result = [];
+            for (const id in this._data) {
+                if (this._data.hasOwnProperty(id)) {
+                    result.push({ id: id, addedAt: this._data[id] });
+                }
+            }
+            if (order.length > 0) {
+                result.sort(function(a, b) {
+                    const ai = orderMap[a.id];
+                    const bi = orderMap[b.id];
+                    if (ai !== undefined && bi !== undefined) return ai - bi;
+                    if (ai !== undefined) return -1;
+                    if (bi !== undefined) return 1;
+                    return (b.addedAt || '').localeCompare(a.addedAt || '');
+                });
+                // Автоочистка
+                const currentKeys = Object.keys(this._data);
+                const cleaned = order.filter(function(k) { return currentKeys.indexOf(k) !== -1; });
+                if (cleaned.length !== order.length) this.setOrder(cleaned);
+            } else {
+                result.sort(function(a, b) { return (b.addedAt || '').localeCompare(a.addedAt || ''); });
+            }
+            return result;
+        }
+    };
+
     var FlowmeterData = {
         _GOOGLE_SHEET_URL: 'https://docs.google.com/spreadsheets/d/1enZSq7K8pwJVzaAI_tbXZtvATqARTxH0lSU4c-wc1eY/edit?usp=sharing',
 
@@ -27561,10 +27685,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Ключи localStorage для кэша данных
         _cacheKey: 'kip8_flow_cache_v1',
-
-        // Отдельный ключ для порядка избранных расходомеров
-        // (не смешивать с KipFav._ORDER_KEY, который для приборов/блокировок/клапанов/регуляторов)
-        _FLOW_FAV_ORDER_KEY: 'kip8_flow_fav_order_v1',
 
         // Текущая вкладка: 'all' или 'fav'
         _activeTab: 'all',
@@ -27789,10 +27909,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var days = this._daysBetween(m.datePrev, m.dateCurr);
                 var daysStr = (days > 0) ? days + ' дн.' : '';
 
-                var favKey = this._favKey(m.id);
-                var isFav = KipFav.hasItem(favKey);
+                var isFav = FlowFav.has(m.id);
 
-                html += '<div class="flow-card" data-flow-id="' + m.id + '" data-fav-key="' + this._esc(favKey) + '">';
+                html += '<div class="flow-card" data-flow-id="' + m.id + '" data-fav-key="' + this._esc(String(m.id)) + '">';
                 // Drag-handle (только в режиме «Избранные», отображение через CSS .fav-mode)
                 html += '<div class="flow-card-drag-handle" aria-hidden="true">⋮⋮</div>';
                 // Кнопка-звёздочка (отображается всегда — в «Все» для добавления, в «Избранные» для удаления)
@@ -27817,13 +27936,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // ============================================================
-        // Избранное + вкладки (v371, Task 95)
+        // Избранное + вкладки (v372, Task 96)
+        // Полностью изолировано от KipFav — используется отдельный модуль FlowFav
+        // (свой localStorage-ключ kip8_flow_fav_v1, свой порядок kip8_flow_fav_order_v1)
         // ============================================================
-
-        // Составной ключ избранного для расходомера
-        _favKey: function(id) {
-            return KipFav._favKey('flow', id);
-        },
 
         // Переключить вкладку
         setTab: function(tab) {
@@ -27843,15 +27959,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (this._activeTab === 'all') {
                 return this._METERS;
             }
-            // fav: отфильтровать _METERS по KipFav, упорядочить по kip8_flow_fav_order_v1
-            var order = this._getFavOrder();
+            // fav: отфильтровать _METERS по FlowFav.has(id), упорядочить по FlowFav.getOrder()
+            var order = FlowFav.getOrder();
             var orderMap = {};
             order.forEach(function(k, i) { orderMap[k] = i; });
 
             var favMeters = [];
             for (var i = 0; i < this._METERS.length; i++) {
                 var m = this._METERS[i];
-                if (KipFav.hasItem(this._favKey(m.id))) {
+                if (FlowFav.has(m.id)) {
                     favMeters.push(m);
                 }
             }
@@ -27870,54 +27986,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Обновить счётчики в табах «Все» и «Избранные»
         _updateTabCounts: function() {
             var allCount = (this._METERS || []).length;
-            var favCount = 0;
-            for (var i = 0; i < (this._METERS || []).length; i++) {
-                if (KipFav.hasItem(this._favKey(this._METERS[i].id))) favCount++;
-            }
+            var favCount = FlowFav.count();
             var allEl = document.getElementById('flowAllCount');
             if (allEl) allEl.textContent = String(allCount);
             var favEl = document.getElementById('flowFavCount');
             if (favEl) favEl.textContent = String(favCount);
         },
 
-        // Получить порядок избранных расходомеров из localStorage
-        _getFavOrder: function() {
-            try {
-                var raw = localStorage.getItem(this._FLOW_FAV_ORDER_KEY);
-                if (!raw) return [];
-                var arr = JSON.parse(raw);
-                return Array.isArray(arr) ? arr : [];
-            } catch (e) { return []; }
-        },
-
-        // Сохранить порядок избранных расходомеров
-        _setFavOrder: function(arr) {
-            try { localStorage.setItem(this._FLOW_FAV_ORDER_KEY, JSON.stringify(arr)); } catch (e) {}
-        },
-
         // Переключить избранное для карточки в списке
         toggleFav: function(id) {
-            var favKey = this._favKey(id);
-            var added = !KipFav.hasItem(favKey);
-            if (added) {
-                KipFav._load();
-                KipFav._data[favKey] = new Date().toISOString();
-                KipFav._save();
-                // Добавить в конец порядка (если ещё не там)
-                var order = this._getFavOrder();
-                if (order.indexOf(String(id)) === -1) {
-                    order.push(String(id));
-                    this._setFavOrder(order);
-                }
-            } else {
-                KipFav._load();
-                delete KipFav._data[favKey];
-                KipFav._save();
-                // Убрать из порядка
-                var order2 = this._getFavOrder();
-                var cleaned = order2.filter(function(k) { return k !== String(id); });
-                if (cleaned.length !== order2.length) this._setFavOrder(cleaned);
-            }
+            var added = FlowFav.toggle(id);
             // Перерисовать список + обновить детальную, если открыта
             this.renderList();
             this._updateDetailFavBtn();
@@ -27934,7 +28012,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var btn = document.getElementById('flowFavBtn');
             if (!btn) return;
             if (!window._flowDetailId) { btn.classList.remove('active'); btn.textContent = '☆'; return; }
-            var isFav = KipFav.hasItem(this._favKey(window._flowDetailId));
+            var isFav = FlowFav.has(window._flowDetailId);
             btn.classList.toggle('active', isFav);
             btn.textContent = isFav ? '★' : '☆';
         },
@@ -28046,7 +28124,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var targetId = targetCard.getAttribute('data-flow-id');
             if (!draggedId || !targetId || draggedId === targetId) return;
 
-            var order = this._getFavOrder();
+            var order = FlowFav.getOrder();
             // Если в порядке нет какого-то из id — добавим в конец
             if (order.indexOf(draggedId) === -1) order.push(draggedId);
             if (order.indexOf(targetId) === -1) order.push(targetId);
@@ -28061,7 +28139,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
                 newOrder.push(k);
             }
-            this._setFavOrder(newOrder);
+            FlowFav.setOrder(newOrder);
             this.renderList();
         },
 
