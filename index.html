@@ -19979,6 +19979,15 @@
             cell.appendChild(rightBg);
             cell.appendChild(btn);
 
+            // Task 142: обёртка создаётся при ПЕРВОМ переходе на страницу —
+            // ПОЗЖЕ _applyRoleToUI, которая уже скрыла недоступные кнопки.
+            // Если кнопка скрыта ролью — скрыть обёртку сразу, иначе пустая
+            // ячейка займёт место в grid (дыра) и доступные кнопки не
+            // перестроятся сверху-вниз, слева-направо.
+            if (btn.style.display === 'none') {
+                cell.style.display = 'none';
+            }
+
             // Навесить pointer-обработчик для swipe
             btn.addEventListener('pointerdown', onSubsectionPointerDown);
         });
@@ -25311,6 +25320,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             });
 
             // ============================================================
+            // Task 142: скрыть ПУСТЫЕ обёртки кнопок — иначе пустая ячейка
+            // занимает место в grid и доступные кнопки не перестраиваются
+            // сверху-вниз, слева-направо (дыры в сетке).
+            // Обёртки: .subsection-cell (страницы calc-*/docs — свайп «Добавить»),
+            // .dev-swipe-cell (Приборы/Клапана на КИП ИОС — свайп сортировки).
+            // Симметрично .pinned-item-cell выше: скрытая кнопка -> скрыта ячейка,
+            // видимая -> ячейка видна (возврат при смене роли).
+            // ============================================================
+            document.querySelectorAll('.subsection-cell, .dev-swipe-cell').forEach(function(cell) {
+                const btn = cell.querySelector('.menu-btn');
+                if (!btn) return;
+                cell.style.display = (btn.style.display === 'none') ? 'none' : '';
+            });
+
             // Закреплённые элементы: скрыть .pinned-item-cell,
             // если вложенный .pinned-item (.menu-btn) скрыт.
             // ============================================================
