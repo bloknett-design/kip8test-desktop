@@ -6068,6 +6068,16 @@
     #page-devices-prod .page-inline-header:has(.dev-table-toggle-btn) .dev-search-toggle-btn {
         right: 92px;
     }
+    /* Task 153: Кабельный журнал — кнопка «+» (cj-add-btn-inline) занимает
+       right: 8..40; иконка поиска сдвигается левее неё. Если «+» скрыта
+       (роль без права записи) — :has() не сработает, иконка остаётся
+       на right: 8px. Скрытая кнопка не матчится через :not([style*="none"]). */
+    #page-cable-journal-edit .page-inline-header .dev-search-toggle-btn {
+        right: 48px;
+    }
+    #page-cable-journal-edit .page-inline-header:not(:has(.cj-add-btn-inline:not([style*="display:none"]))) .dev-search-toggle-btn {
+        right: 8px; /* «+» скрыта — иконка поиска прижимается к краю */
+    }
 
     /* Поле поиска: скрыто по умолчанию; разворачивается от правого края
        влево — до текста заголовка/крошек (Task 149). Task 152: Кабельный
@@ -11905,9 +11915,13 @@
             });
             inputRight -= GAP_BTN_TO_INPUT;
 
-            // Левая граница = конец ТЕКСТА крошек/заголовка + отступ.
+            // Левая граница = конец ВИДИМОГО текста крошек/заголовка + отступ.
             // Крошки — <span>-ы в заголовке; берём последний span.
             // Обычный заголовок — текстовый узел: Range для точной ширины.
+            // Task 153: на мобильном заголовок обрезается (overflow) —
+            // берём min(конец текста, правый край контейнера заголовка
+            // минус padding), чтобы поле не «съедало» весь заголовок:
+            // текст остаётся видимым до начала поля.
             var textRight = 0;
             var spans = title.querySelectorAll('span');
             if (spans.length) {
@@ -11921,6 +11935,14 @@
                     var rects = range.getClientRects();
                     if (rects.length) textRight = rects[rects.length - 1].right - headerRect.left;
                 } catch (e) {}
+                // Видимая (не обрезанная) часть: clientWidth минус правый padding
+                var titleRect = title.getBoundingClientRect();
+                var titleLeft = titleRect.left - headerRect.left;
+                var visibleRight = titleLeft + title.clientWidth;
+                var csTitle = getComputedStyle(title);
+                var padRight = parseFloat(csTitle.paddingRight) || 0;
+                var visibleTextRight = visibleRight - padRight;
+                if (visibleTextRight < textRight) textRight = visibleTextRight;
             }
             if (!textRight) textRight = Math.min(headerRect.width * 0.5, 260);
 
