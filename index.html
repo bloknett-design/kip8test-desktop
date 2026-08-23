@@ -7277,31 +7277,34 @@
         font-size: 17px; font-weight: 700; color: #fff;
         letter-spacing: 1px;
         opacity: 0.85;
-        margin: 6px 8px 6px 6px;
+        /* Task 138: равные отступы 6px от верхнего и левого края карточки
+           (единый вид с фото-миниатюрой) */
+        margin: 6px;
         border-radius: 6px;
-        align-self: stretch;
+        align-self: flex-start;
     }
     .fav-card-img {
         flex-shrink: 0;
-        width: 48px;
+        width: 64px;
         /* Task 137: прибор по центру миниатюры избранного — тем же способом,
            что в строках группировки (Task 135) и карточках (Task 136):
-           высота = 48 / --kip-img-crop + object-position: top — нижнее
+           высота = 64 / --kip-img-crop + object-position: top — нижнее
            пустое поле фото обрезается, прибор примерно в центре рамки.
-           align-self: center — миниатюра центрирована по вертикали
-           относительно текста (вместо растяжения на высоту текста). */
-        height: calc(48px / var(--kip-img-crop));
+           Task 138: картинка больше (48 -> 64) и прижата к верхнему левому
+           углу карточки с равными отступами 6px от краёв (align-self:
+           flex-start вместо центрирования по вертикали). */
+        height: calc(64px / var(--kip-img-crop));
         border-radius: 6px;
         object-fit: cover;
         object-position: center top;
         background: rgba(255, 255, 255, 0.08);
-        margin: 6px 8px 6px 6px;
-        align-self: center;
+        margin: 6px;
+        align-self: flex-start;
     }
     /* Task 137: заглушка — квадратная, без обрезки и сдвига
        (круг «КИП» уже в центре DEV_PLACEHOLDER_SVG) */
     .fav-card-img.fav-card-img-ph {
-        height: 48px;
+        height: 64px;
         object-fit: contain;
         object-position: center center;
     }
