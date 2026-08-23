@@ -6048,6 +6048,99 @@
 
     /* ===== Приборы (КИП ИОС) ===== */
     /* Поле поиска в верхнем баре, справа от названия */
+    /* ============================================================
+       Task 149: ЕДИНЫЙ стиль поиска (по образцу Кабельного журнала):
+       иконка-кнопка справа в шапке; по клику поле разворачивается
+       влево. Применяется ко всем страницам с .dev-header-search.
+       ============================================================ */
+    /* Иконка-кнопка поиска (видна всегда, когда поле скрыто) */
+    .dev-search-toggle-btn {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        transform: translateY(-50%);
+        z-index: 6; /* выше input (z-index:4) */
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 8px;
+        color: rgba(180,200,220,0.8);
+        cursor: pointer;
+        -webkit-user-select: none; user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .dev-search-toggle-btn:hover { border-color: rgba(74,143,199,0.5); color: #6aa6e0; }
+    .dev-search-toggle-btn.active {
+        border-color: rgba(106,141,181,0.55);
+        color: #6aa6e0;
+        background: rgba(74,143,199,0.10);
+    }
+    .dev-search-toggle-btn:active { transform: translateY(-50%) scale(0.94); }
+    [data-theme="light"] .dev-search-toggle-btn {
+        border-color: rgba(20,20,19,0.15);
+        color: rgba(60,70,80,0.9);
+    }
+    [data-theme="light"] .dev-search-toggle-btn.active {
+        border-color: rgba(58,110,165,0.55);
+        color: #3a6ea5;
+        background: rgba(74,143,199,0.08);
+    }
+    .dev-search-toggle-btn svg { pointer-events: none; }
+
+    /* Поле поиска: скрыто по умолчанию; разворачивается от правого края
+       влево — до текста заголовка/крошек (Task 149) */
+    .dev-header-search {
+        display: none;
+    }
+    .dev-header-search.search-open {
+        display: block;
+        position: absolute;
+        top: 50%;
+        right: 48px; /* левее иконки-кнопки (8..40) с gap 8px */
+        transform: translateY(-50%);
+        z-index: 4;
+        width: 180px;               /* начальная ширина */
+        max-width: calc(100vw - 120px);
+        padding: 6px 10px;
+        border: 1px solid rgba(106,141,181,0.55);
+        border-radius: 8px;
+        background: #1a2233;
+        color: #e0e6f0;
+        font-size: 13px;
+        font-family: 'Inter', sans-serif;
+        outline: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+        animation: devSearchExpand 0.18s ease-out;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a0b4c8' stroke-width='2'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
+        background-repeat: no-repeat;
+        background-position: 8px center;
+        background-size: 13px;
+        padding-left: 30px;
+    }
+    @keyframes devSearchExpand {
+        from { width: 0; opacity: 0; }
+        to   { width: 180px; opacity: 1; }
+    }
+    [data-theme="light"] .dev-header-search.search-open {
+        background-color: #fbf6ea;
+        border-color: rgba(58,110,165,0.5);
+        color: #1a1a1a;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7a8d' stroke-width='2'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
+    }
+    .dev-header-search.search-open:focus {
+        border-color: rgba(74,143,199,0.75);
+        width: 220px;
+    }
+    .dev-header-search.search-open::placeholder { color: rgba(255,255,255,0.4); }
+    [data-theme="light"] .dev-header-search.search-open::placeholder { color: rgba(20,20,19,0.4); }
+
+    /* Старые правила разворота при фокусе (широкое поле) больше не нужны */
     .dev-header-search {
         position: absolute;
         top: 50%; right: 8px;
@@ -9278,21 +9371,21 @@
 
         <!-- ======================== ПРИБОРЫ — ПО ТИПУ ======================== -->
         <div id="page-devices-type" class="page-content">
-            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Приборы по типу</div><input type="search" id="devTypeSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="devRenderSorted('type')"></div>
+            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Приборы по типу</div><input type="search" id="devTypeSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="devRenderSorted('type')" hidden><button type="button" id="devTypeSearchInputToggleBtn" class="dev-search-toggle-btn" aria-label="Поиск" data-search-input="devTypeSearchInput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></div>
             <div class="pb-info" id="devTypeInfo">Загрузка…</div>
             <div id="devTypeList"></div>
         </div>
 
         <!-- ======================== ПРИБОРЫ — ПО НАИМЕНОВАНИЮ ======================== -->
         <div id="page-devices-name" class="page-content">
-            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Приборы по наименованию</div><input type="search" id="devNameSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="devRenderSorted('name')"></div>
+            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Приборы по наименованию</div><input type="search" id="devNameSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="devRenderSorted('name')" hidden><button type="button" id="devNameSearchInputToggleBtn" class="dev-search-toggle-btn" aria-label="Поиск" data-search-input="devNameSearchInput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></div>
             <div class="pb-info" id="devNameInfo">Загрузка…</div>
             <div id="devNameList"></div>
         </div>
 
         <!-- ======================== ПРИБОРЫ — ПО ПРОИЗВОДСТВАМ ======================== -->
         <div id="page-devices-prod" class="page-content">
-            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Приборы по производствам</div><input type="search" id="devProdSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="devRenderSorted('prod')"></div>
+            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Приборы по производствам</div><input type="search" id="devProdSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="devRenderSorted('prod')" hidden><button type="button" id="devProdSearchInputToggleBtn" class="dev-search-toggle-btn" aria-label="Поиск" data-search-input="devProdSearchInput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></div>
             <div class="pb-info" id="devProdInfo">Загрузка…</div>
             <div id="devProdList"></div>
         </div>
@@ -9312,7 +9405,7 @@
 
         <!-- ======================== БЛОКИРОВКИ ======================== -->
         <div id="page-lockouts-prod" class="page-content">
-            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Блокировки по производствам</div><input type="search" id="lockProdSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="lockRenderSorted('prod')"></div>
+            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Блокировки по производствам</div><input type="search" id="lockProdSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="lockRenderSorted('prod')" hidden><button type="button" id="lockProdSearchInputToggleBtn" class="dev-search-toggle-btn" aria-label="Поиск" data-search-input="lockProdSearchInput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></div>
             <div id="lockProdInfo" class="pb-info-bar" style="padding:6px 14px;font-size:11px;color:var(--text-secondary);border-bottom:1px solid var(--border-color);">Загрузка…</div>
             <div id="lockProdList"></div>
         </div>
@@ -9325,21 +9418,21 @@
 
         <!-- ======================== КЛАПАНЫ — ПО ТИПУ (свайп справа налево) ======================== -->
         <div id="page-valves-type" class="page-content">
-            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Клапана по типу</div><input type="search" id="valveTypeSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="valveRenderSorted('type')"></div>
+            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Клапана по типу</div><input type="search" id="valveTypeSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="valveRenderSorted('type')" hidden><button type="button" id="valveTypeSearchInputToggleBtn" class="dev-search-toggle-btn" aria-label="Поиск" data-search-input="valveTypeSearchInput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></div>
             <div class="pb-info" id="valveTypeInfo">Загрузка…</div>
             <div id="valveTypeList"></div>
         </div>
 
         <!-- ======================== КЛАПАНЫ — ПО DN (свайп слева направо) ======================== -->
         <div id="page-valves-name" class="page-content">
-            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Клапана по DN</div><input type="search" id="valveNameSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="valveRenderSorted('name')"></div>
+            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Клапана по DN</div><input type="search" id="valveNameSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="valveRenderSorted('name')" hidden><button type="button" id="valveNameSearchInputToggleBtn" class="dev-search-toggle-btn" aria-label="Поиск" data-search-input="valveNameSearchInput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></div>
             <div class="pb-info" id="valveNameInfo">Загрузка…</div>
             <div id="valveNameList"></div>
         </div>
 
         <!-- ======================== КЛАПАНЫ — ПО ПРОИЗВОДСТВАМ (тап) ======================== -->
         <div id="page-valves-prod" class="page-content">
-            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Клапана по производствам</div><input type="search" id="valveProdSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="valveRenderSorted('prod')"></div>
+            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Клапана по производствам</div><input type="search" id="valveProdSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="valveRenderSorted('prod')" hidden><button type="button" id="valveProdSearchInputToggleBtn" class="dev-search-toggle-btn" aria-label="Поиск" data-search-input="valveProdSearchInput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></div>
             <div id="valveProdInfo" class="pb-info-bar" style="padding:6px 14px;font-size:11px;color:var(--text-secondary);border-bottom:1px solid var(--border-color);">Загрузка…</div>
             <div id="valveProdList"></div>
         </div>
@@ -9352,7 +9445,7 @@
 
         <!-- ======================== РЕГУЛЯТОРЫ — ПО ПРОИЗВОДСТВАМ ======================== -->
         <div id="page-regulators-prod" class="page-content">
-            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Регуляторы по производствам</div><input type="search" id="regulatorProdSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="regulatorRenderSorted('prod')"></div>
+            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Регуляторы по производствам</div><input type="search" id="regulatorProdSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="regulatorRenderSorted('prod')" hidden><button type="button" id="regulatorProdSearchInputToggleBtn" class="dev-search-toggle-btn" aria-label="Поиск" data-search-input="regulatorProdSearchInput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></div>
             <div id="regulatorProdInfo" class="pb-info-bar" style="padding:6px 14px;font-size:11px;color:var(--text-secondary);border-bottom:1px solid var(--border-color);">Загрузка…</div>
             <div id="regulatorProdList"></div>
         </div>
@@ -9389,7 +9482,7 @@
 
         <!-- ======================== ПРОЕКТЫ — ПО ОТДЕЛЕНИЯМ ======================== -->
         <div id="page-projects-prod" class="page-content">
-            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Проекты по отделениям</div><input type="search" id="projectProdSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="projectsRenderSorted('prod')"></div>
+            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Проекты по отделениям</div><input type="search" id="projectProdSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="projectsRenderSorted('prod')" hidden><button type="button" id="projectProdSearchInputToggleBtn" class="dev-search-toggle-btn" aria-label="Поиск" data-search-input="projectProdSearchInput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></div>
             <div id="projectProdInfo" class="pb-info-bar" style="padding:6px 14px;font-size:11px;color:var(--text-secondary);border-bottom:1px solid var(--border-color);">Загрузка…</div>
             <div id="projectProdList"></div>
         </div>
@@ -9681,7 +9774,7 @@
 
         <!-- ======================== ПРИБОРЫ (КИП ИОС) ======================== -->
         <div id="page-devices" class="page-content">
-            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Приборы</div><input type="search" id="devSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="devRender()"></div>
+            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Приборы</div><input type="search" id="devSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="devRender()" hidden><button type="button" id="devSearchInputToggleBtn" class="dev-search-toggle-btn" aria-label="Поиск" data-search-input="devSearchInput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></div>
 
             <div class="pb-info" id="devInfo">Загрузка…</div>
             <div id="devList"></div>
@@ -11785,6 +11878,138 @@
             document.head.appendChild(s);
         });
     }
+
+    // ============================================================
+    // Task 149: ЕДИНЫЙ ПОИСК В ШАПКЕ (по образцу Кабельного журнала)
+    // ============================================================
+    // Иконка-кнопка справа от заголовка/крошек; по клику поле
+    // разворачивается горизонтально влево. Ширина поля вычисляется
+    // так, чтобы оно доходило до ТЕКСТА хлебных крошек (заголовка
+    // страницы) с небольшим отступом — крошки не скрываются.
+    // Повторный клик по иконке (или Esc/blur с пустым полем) —
+    // сворачивает поле; текст запроса при закрытии сбрасывается.
+    // ============================================================
+    (function () {
+        'use strict';
+
+        var GAP_FROM_TITLE = 12;   // отступ поля от текста крошек, px
+        var GAP_BTN_TO_INPUT = 8;  // зазор поле-иконка, px
+        var ICON_W = 32;           // ширина иконки-кнопки (right: 8..40)
+
+        // Пересчитать ширину и left открытого поля: от правого края
+        // (иконка + зазор) влево до края текста заголовка/крошек.
+        function fitToTitle(input) {
+            var header = input.closest('.page-inline-header');
+            if (!header) return;
+            var title = header.querySelector('.page-inline-header-title');
+            if (!title) return;
+
+            // Все координаты — в системе шапки (position: absolute
+            // относительно .page-inline-header): left = X_вьюпорта - X_шапки
+            var headerRect = header.getBoundingClientRect();
+
+            // Правый край поля: от правого края шапки минус иконка+зазор
+            var inputRight = headerRect.width - ICON_W - 2 - GAP_BTN_TO_INPUT; // 2 = border иконки
+
+            // Левая граница = конец ТЕКСТА крошек/заголовка + отступ.
+            // Крошки — <span>-ы в заголовке; берём последний span.
+            // Обычный заголовок — текстовый узел: Range для точной ширины.
+            var textRight = 0;
+            var spans = title.querySelectorAll('span');
+            if (spans.length) {
+                var last = spans[spans.length - 1];
+                var tr = last.getBoundingClientRect();
+                textRight = tr.right - headerRect.left;   // координата в системе шапки
+            } else {
+                try {
+                    var range = document.createRange();
+                    range.selectNodeContents(title);
+                    var rects = range.getClientRects();
+                    if (rects.length) textRight = rects[rects.length - 1].right - headerRect.left;
+                } catch (e) {}
+            }
+            if (!textRight) textRight = Math.min(headerRect.width * 0.5, 260);
+
+            // Ширина: от левого края (крошки + отступ) до правого края поля
+            var left = textRight + GAP_FROM_TITLE;
+            var width = inputRight - left;
+            // Минимальная комфортная ширина поля
+            var MIN_W = 150;
+            if (width < MIN_W) {
+                // Крошки/заголовок длинные — поле фиксированной ширины
+                // от правого края; заголовок на мобильном обрезается
+                // (ellipsis) — это уже текущее поведение шапки
+                width = Math.min(220, Math.max(MIN_W, inputRight - 44));
+                left = Math.max(44, inputRight - width);
+            }
+            input.style.left = left + 'px';
+            input.style.right = 'auto';
+            input.style.width = width + 'px';
+            input.style.maxWidth = 'none';
+            input.style.minWidth = '0';
+        }
+
+        // Открыть поле
+        function openSearch(input, btn) {
+            input.removeAttribute('hidden');
+            // force reflow для анимации
+            void input.offsetWidth;
+            input.classList.add('search-open');
+            btn.classList.add('active');
+            fitToTitle(input);
+            setTimeout(function () { try { input.focus(); } catch (e) {} }, 30);
+        }
+
+        // Закрыть поле (сброс запроса)
+        function closeSearch(input, btn) {
+            input.classList.remove('search-open');
+            input.setAttribute('hidden', '');
+            btn.classList.remove('active');
+            if (input.value) {
+                input.value = '';
+                // Вызвать исходный oninput для сброса фильтра
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+
+        // Делегированный клик по кнопкам-иконкам
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest ? e.target.closest('.dev-search-toggle-btn') : null;
+            if (!btn) return;
+            var inputId = btn.getAttribute('data-search-input');
+            var input = document.getElementById(inputId);
+            if (!input) return;
+            if (input.classList.contains('search-open')) {
+                closeSearch(input, btn);
+            } else {
+                openSearch(input, btn);
+            }
+        });
+
+        // Esc — закрыть поиск на активном поле
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape') return;
+            var input = document.activeElement;
+            if (input && input.classList && input.classList.contains('dev-header-search') && input.classList.contains('search-open')) {
+                var btn = document.getElementById(input.id + 'ToggleBtn');
+                if (btn) closeSearch(input, btn);
+            }
+        });
+
+        // При вводе — пересчитать ширину (крошки могли смениться,
+        // например при фильтрации меняется подпись)
+        document.addEventListener('input', function (e) {
+            var input = e.target;
+            if (input && input.classList && input.classList.contains('dev-header-search') && input.classList.contains('search-open')) {
+                fitToTitle(input);
+            }
+        }, true);
+
+        // Ресайз окна — подогнать открытое поле
+        window.addEventListener('resize', function () {
+            document.querySelectorAll('.dev-header-search.search-open').forEach(fitToTitle);
+        });
+    })();
 
     // ======================== ИГРА САПЁР ========================
     let msCols = 9, msRows = 9, msMines = 10;
