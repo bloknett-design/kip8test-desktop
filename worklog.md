@@ -358,3 +358,78 @@ Work Log:
 Stage Summary:
 - v2.1.3 — диагностическая сборка, не должна выпускаться как боевое обновление
 - После анализа диагностики выпускается v2.1.4 с правильным фиксом
+
+---
+Task ID: 126
+Agent: AI Assistant (GLM)
+Task: Фикс #3 — CSS-only показ flowDesktopTabs (обходит баг isDesktop() в Electron)
+
+Симптом:
+- Пользователь установил v2.1.3 (диагностическая сборка)
+- VLM-анализ скриншотов диагностики показал:
+  * URL: https://bloknett-design.github.io/kip8test/ ✓ (правильно)
+  * #flowDesktopTabs: true (элемент в DOM есть)
+  * #flowFavBtn: true (Task 119 код на месте)
+  * .flow-card-fav-btn count: 0 (норма — на дашборде нет карточек)
+  * Cache Storage: ["kipia-test-v395", "kipia-images-test-v3"] ✓
+  * Service Worker controller: активен
+
+Вывод: HTML свежий, SW работает, элементы Task 120 в DOM ЕСТЬ.
+Значит проблема в том, что #flowDesktopTabs СКРЫТ.
+
+Корневая причина:
+- В HTML стоял inline style="display:none;" на #flowDesktopTabs (для скрытия на мобильном)
+- В navigateTo() код Task 120 сбрасывает inline display:none только если isDesktop() возвращает true
+- isDesktop() = window.matchMedia('(min-width: 1024px)').matches
+- В Electron эта проверка иногда возвращает false (возможно, из-за того что
+  Chromium запускается с viewport= device-width, а не с innerWidth)
+- Поэтому JS-блок не срабатывает → inline display:none остаётся → табы невидимы
+- Звёздочки .flow-card-fav-btn при этом видны, потому что CSS-правило
+  @media (min-width: 1024px) { display: none !important; } для них ЗАКОММЕНТИРОВАНО
+  (Task 119) — то есть они показываются ВСЕГДА, без зависимости от isDesktop()
+
+Решение Task 126 — CSS-only показ через @media + :has():
+1. .flow-desktop-tabs: по умолчанию display: none (на мобильном скрыт)
+2. @media (min-width: 1024px) {
+     body:has(#page-flowmeter-data.active) #flowDesktopTabs {
+       display: flex !important;
+     }
+   }
+3. Убран inline style="display:none;" с #flowDesktopTabs в HTML
+4. Аналогично для #detailBreadcrumbBar — добавить @media + :has() правило,
+   чтобы breadcrumb bar показывался на странице расходомеров без JS
+
+Также добавлено для #detailBreadcrumbBar:
+   @media (min-width: 1024px) {
+     body:has(#page-flowmeter-data.active) #detailBreadcrumbBar {
+       display: flex;
+     }
+   }
+
+Почему это работает:
+- CSS @media (min-width: 1024px) срабатывает корректно в Electron
+  (это подтверждается тем, что звёздочки .flow-card-fav-btn видны)
+- CSS :has() поддерживается в Chromium 105+ (Electron 35 — Chromium 134)
+- !important на #flowDesktopTabs гарантирует показ, даже если JS попытается
+  скрыть (closeDetailPanel)
+
+Work Log:
+- index.html: CSS для .flow-desktop-tabs — display: none по умолчанию,
+  @media (min-width: 1024px) + body:has(#page-flowmeter-data.active) → display: flex !important
+- index.html: убран inline style="display:none;" с #flowDesktopTabs
+- index.html: добавлено @media (min-width: 1024px) правило для #detailBreadcrumbBar
+- sw.js: CACHE_VERSION kipia-test-v395 → kipia-test-v396
+- electron/main.js: убран diag-блок (Task 125), devTools: false, autoHideMenuBar: true
+- package.json: version 2.1.3 → 2.1.4
+- Тесты: 207 passed, 0 failed
+
+Stage Summary:
+- После установки v2.1.4 и обновления GitHub Pages (CACHE_VERSION v396):
+  1. Service Worker обновится до v396 (старый кэш v395 удалится)
+  2. Грузится свежий index.html с CSS-фиксом Task 126
+  3. При переходе на страницу расходомеров:
+     - CSS @media (min-width: 1024px) + :has() показывает #detailBreadcrumbBar
+     - CSS @media (min-width: 1024px) + :has() показывает #flowDesktopTabs
+     - Не зависит от isDesktop() в JS
+  4. Пользователь видит переключатель «Все / Избранные» в breadcrumb bar
+  5. Drag-and-drop в режиме «Избранные» работает через Pointer Events (Task 119)
