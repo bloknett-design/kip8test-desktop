@@ -155,3 +155,73 @@ Stage Summary:
 - Все установленные клиенты (v2.0.0) при следующем запуске увидят предложение обновиться
 - На будущее: для публикации обновлений десктопа ВСЕГДА создавать новый тег v* —
   обычные пуши в main только собирают артефакты, но НЕ публикуют релиз
+
+---
+Task ID: 123
+Agent: AI Assistant (GLM)
+Task: Фикс — после обновления до v2.1.0 новый код не появился (Task 119-120 не видны)
+
+Симптом:
+- Пользователь скачал и переустановил v2.1.0
+- Но последние обновления (переключатель «Все / Избранные» + drag-and-drop) не появились
+
+Корневая причина:
+- Electron грузит index.html с GitHub Pages (REMOTE_APP_URL = https://bloknett-design.github.io/kip8test/)
+- При первой установке v2.0.0 Service Worker скачал и закэшировал старый index.html
+  (с CACHE_VERSION ниже v395 — без Task 119-120)
+- SW и cacheStorage хранятся в userData, ОТДЕЛЬНО от кода Electron-приложения
+- При обновлении на v2.1.0:
+  * Файлы Electron обновились (новый package.json, main.js)
+  * НО Service Worker и cacheStorage НЕ очищаются — они переживают обновление
+  * При запуске v2.1.0 Electron грузит GitHub Pages → старый SW перехватывает fetch
+    → отдаёт закэшированный старый index.html (с CACHE_VERSION v394 или ниже)
+- GitHub Pages отдаёт правильный свежий код (md5 e199e7e5…, v395) —
+  проблема исключительно в кэше SW на стороне клиента
+
+Проверки, которые это подтвердили:
+1. md5 index.html на GitHub Pages = md5 index.html в kip8test = e199e7e5…
+2. CACHE_VERSION в sw.js на GitHub Pages = 'kipia-test-v395' (правильная)
+3. Код Task 119-120 присутствует в index.html на GitHub Pages (grep: 7 + 7 совпадений)
+4. Заголовки GitHub Pages: cache-control: max-age=600 (10 минут — норма)
+5. forceDesktopRefresh() в index.html корректно очищает SW — но это требует
+   ручного действия пользователя (Ctrl+R / меню «Вид → Обновить»)
+
+Решение:
+1. В electron/main.js добавлена функция cleanCacheOnVersionChange():
+   - При запуске (в app.whenReady(), до createWindow()) читает файл
+     userData/last-version.txt с предыдущей версией приложения
+   - Если версия изменилась → вызывает session.clearCache() и
+     session.clearStorageData({ storages: ['serviceworkers', 'cachestorage'] })
+   - Сохраняет новую версию в last-version.txt
+   - Если версия не изменилась → пропускает очистку (быстрый запуск)
+2. Импортирован session из electron (добавлен в require)
+3. app.whenReady().then(async () => { ... }) — сделан async,
+   чтобы дождаться очистки перед созданием окна
+4. Bump version package.json: 2.1.0 → 2.1.1 (patch — фикс бага автообновления SW)
+
+Work Log:
+- electron/main.js: добавлен require session, функция cleanCacheOnVersionChange,
+  вызов в app.whenReady() до createWindow()
+- package.json: version 2.1.0 → 2.1.1
+- Тесты: 207 passed, 0 failed
+- Создан аннотированный git-тег v2.1.1
+- После push тега workflow build-desktop.yml соберёт 3 платформы и опубликует релиз v2.1.1
+
+Ожидаемое поведение после установки v2.1.1:
+1. autoUpdater видит новый latest.yml с version: 2.1.1 → предлагает обновиться
+2. Пользователь нажимает «Скачать» → устанавливается v2.1.1
+3. При запуске v2.1.1 cleanCacheOnVersionChange() видит:
+   - last-version.txt = "2.1.0" (или "2.0.0")
+   - app.getVersion() = "2.1.1"
+   - Версии разные → очищает SW и cacheStorage, сохраняет "2.1.1"
+4. createWindow() → loadApp() → Electron грузит GitHub Pages без старого SW
+5. SW заново регистрируется с актуальным sw.js (v395) → кэширует свежий index.html
+6. Пользователь видит переключатель «Все / Избранные» и drag-and-drop
+
+Stage Summary:
+- Фикс работает на будущее: после любого обновления Electron-приложения
+  (v2.1.1 → v2.2.0 → v2.2.1 …) SW и cacheStorage будут автоматически очищаться
+- Не требует ручного действия пользователя (Ctrl+R)
+- Не замедляет регулярные запуски (если версия не изменилась — чистый пропуск)
+- Коммит в kip8test-desktop: dfe0b8a → новый после push
+- Релиз: https://github.com/bloknett-design/kip8test-desktop/releases/tag/v2.1.1

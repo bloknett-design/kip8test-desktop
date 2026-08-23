@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, shell, dialog, protocol } = require('electron');
+const { app, BrowserWindow, Menu, shell, dialog, protocol, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
@@ -94,6 +94,55 @@ function checkForUpdates() {
     autoUpdater.checkForUpdates().catch(() => {});
   } catch (e) {
     // Не критично — обновления не обязательны
+  }
+}
+
+// ============================================================
+// ОЧИСТКА КЭША ПРИ ИЗМЕНЕНИИ ВЕРСИИ ПРИЛОЖЕНИЯ (фикс Task 123)
+// ============================================================
+// При установке обновления Electron старый Service Worker и HTTP-кэш
+// Chromium сохраняются в userData. SW перехватывает fetch и отдаёт
+// закэшированный старый index.html — пользователь не видит новый код,
+// хотя GitHub Pages уже обновился.
+// Решение: при изменении версии Electron-приложения очищаем SW и cacheStorage
+// ДО первой загрузки окна.
+
+async function cleanCacheOnVersionChange() {
+  const userDataPath = app.getPath('userData');
+  const versionFile = path.join(userDataPath, 'last-version.txt');
+  const currentVersion = app.getVersion();
+
+  let lastVersion = null;
+  try {
+    lastVersion = fs.readFileSync(versionFile, 'utf8').trim();
+  } catch (e) {
+    // Файла нет — первый запуск или после ручного сброса
+    console.log('[cleanCacheOnVersionChange] Файл версии не найден — первый запуск');
+  }
+
+  if (lastVersion === currentVersion) {
+    console.log(`[cleanCacheOnVersionChange] Версия не изменилась (${currentVersion}) — кэш не трогаем`);
+    return;
+  }
+
+  console.log(`[cleanCacheOnVersionChange] ${lastVersion || '(новая установка)'} → ${currentVersion}, очищаем SW и кэш`);
+
+  try {
+    const ses = session.defaultSession;
+    // Очистить HTTP-кэш Chromium
+    await ses.clearCache();
+    // Очистить Service Worker и Cache Storage (где SW хранит закэшированные файлы)
+    await ses.clearStorageData({
+      storages: ['serviceworkers', 'cachestorage']
+    });
+    console.log('[cleanCacheOnVersionChange] ✓ SW и cacheStorage очищены');
+
+    // Сохранить новую версию
+    fs.writeFileSync(versionFile, currentVersion, 'utf8');
+    console.log(`[cleanCacheOnVersionChange] ✓ Версия ${currentVersion} сохранена в last-version.txt`);
+  } catch (e) {
+    console.log('[cleanCacheOnVersionChange] Ошибка при очистке:', e.message);
+    // Не блокируем запуск приложения — оно загрузится, но SW может остаться старым
   }
 }
 
@@ -327,7 +376,12 @@ function createMenu() {
 // ЗАПУСК
 // ============================================================
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Очистить SW и cacheStorage при изменении версии Electron-приложения.
+  // Должно выполниться ДО createWindow() / loadApp() — иначе старый SW
+  // перехватит загрузку и отдаст закэшированный старый index.html.
+  await cleanCacheOnVersionChange();
+
   registerProtocolHandler();
   createMenu();
   createWindow();
