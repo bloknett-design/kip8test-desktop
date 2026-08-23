@@ -11776,12 +11776,14 @@
     // применяет фильтрацию ролей.
     // ============================================================
     if (IS_ELECTRON) {
-        (function () {
+        // Task 147: графики; Task 148: таблица приборов — модули только десктопа.
+        // Мобильная PWA не содержит и не загружает эти файлы.
+        ['charts-desktop.js', 'devices-table-desktop.js'].forEach(function (src) {
             var s = document.createElement('script');
-            s.src = 'charts-desktop.js';
-            s.onerror = function () { console.warn('[charts] charts-desktop.js не загрузился'); };
+            s.src = src;
+            s.onerror = function () { console.warn('[desktop] ' + src + ' не загрузился'); };
             document.head.appendChild(s);
-        })();
+        });
     }
 
     // ======================== ИГРА САПЁР ========================
