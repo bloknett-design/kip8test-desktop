@@ -25019,8 +25019,32 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 const m = onclick.match(/navigateTo\(['"]([^'"]+)['"]/);
                 if (!m) return; // нет navigateTo — внешняя ссылка или сервисная кнопка
                 const page = m[1];
-                const allowedForPage = isAll || allowed.indexOf(page) !== -1;
+                let allowedForPage = isAll || allowed.indexOf(page) !== -1;
+                // Task 139: фильтр 4 — «Кабельный журнал» скрыт для ролей с
+                // ограниченным КИП ИОС (ИТР ТОКЕМ): cable-journal-edit есть в allowed
+                // через KIP_IOS, но по фильтру 4 раздел должен быть скрыт
+                // (как и кнопка cablesEntryBtn на странице КИП ИОС).
+                if (allowedForPage && page === 'cable-journal-edit' &&
+                    self._hasRestrictedKipIos && self._hasRestrictedKipIos()) {
+                    allowedForPage = false;
+                }
                 item.style.display = allowedForPage ? '' : 'none';
+            });
+
+            // Task 139: актуализировать счётчики групп сайдбара — показывать
+            // число ВИДИМЫХ пунктов (раньше счётчик был статичным из HTML и
+            // не менялся при скрытии пунктов ролью, например «Кабельный журнал»
+            // у ИТР ТОКЕМ: группа показывала «7» при 6 видимых пунктах).
+            document.querySelectorAll('.sidebar-group').forEach(function(group) {
+                const countEl = group.querySelector('.sidebar-group-title-count');
+                if (!countEl) return;
+                const items = group.querySelectorAll('.sidebar-item');
+                if (items.length === 0) return;
+                let visibleCount = 0;
+                items.forEach(function(item) {
+                    if (item.style.display !== 'none') visibleCount++;
+                });
+                countEl.textContent = visibleCount;
             });
 
             // Sidebar groups: скрыть целиком, если все .sidebar-item скрыты.
@@ -30582,9 +30606,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         </div>
         </div>
 
-        <!-- ===== Группа: Документация ИОС =====
-             data-requires="kip-ios" — группа видна только ролям с доступом к КИП ИОС. -->
-        <div class="sidebar-group" data-group="docs-ios" data-requires="kip-ios">
+        <!-- ===== Группа: Документация ИОС (расходомеры) =====
+             Task 139: data-requires="kip-ios" УБРАН — он неправильно скрывал
+             группу для КИП8 pro (роль имеет доступ к flowmeter-data по фильтру 10,
+             но не имеет kip-ios по фильтру 3). Видимость группы определяется
+             общей логикой _applyRoleToUI: группа видна, если виден её единственный
+             пункт «Расходомеры хозрасчётные» (flowmeter-data), т.е. для ролей
+             с доступом к расходомерам. -->
+        <div class="sidebar-group" data-group="docs-ios">
         <div class="sidebar-group-title sidebar-group-title-docs" onclick="toggleSidebarGroup(this.parentElement)">
             <span class="sidebar-group-title-text">Документация ИОС</span>
             <span class="sidebar-group-title-count">1</span>
