@@ -6530,17 +6530,35 @@
     }
     .dev-card-image {
         flex-shrink: 0;
-        width: 56px; height: 56px;
+        width: 56px; height: 41px;
         border-radius: 0;
         object-fit: cover;
+        /* Task 136: прибор по центру миниатюры — фото каталога 512x512 с прибором
+           в верхней части кадра (центр ~36%), снизу пустое поле под подпись.
+           Высота 56/1.35 = 41px + object-position top: фото отображается 56x56,
+           окно показывает верхние 41px — нижнее пустое поле обрезается,
+           прибор оказывается примерно в центре рамки (как в строках
+           группировки, Task 135) */
+        object-position: center top;
         background: rgba(255, 255, 255, 0.08);
         border: none;
         transition: width 0.2s, height 0.2s;
     }
     .dev-card.expanded .dev-card-image {
-        width: 45vw; height: 45vw;
-        max-width: 180px; max-height: 180px;
+        width: 45vw; height: calc(45vw / 1.35);
+        max-width: 180px; max-height: 133px;
         border-radius: 0;
+    }
+    /* Task 136: заглушка — квадратная, без обрезки и сдвига
+       (круг «КИП» уже в центре DEV_PLACEHOLDER_SVG) */
+    .dev-card-image.dev-card-image-ph {
+        height: 56px;
+        object-fit: contain;
+        object-position: center center;
+    }
+    .dev-card.expanded .dev-card-image.dev-card-image-ph {
+        height: 45vw;
+        max-height: 180px;
     }
     [data-theme="light"] .dev-card-image {
         background: rgba(255, 255, 255, 0.8);
@@ -13056,6 +13074,22 @@
         '</svg>'
     );
 
+    // Task 136: делегированный обработчик ошибок загрузки фото в карточках
+    // приборов. Битое фото (офлайн без кэша) подменяется заглушкой
+    // DEV_PLACEHOLDER_SVG с корректными стилями (класс dev-card-image-ph —
+    // квадратная, без обрезки). Capture-фаза: событие error не всплывает,
+    // но захватывается на document — один обработчик на все карточки,
+    // без раздувания HTML инлайн-onerror на каждую карточку.
+    document.addEventListener('error', function (e) {
+        var img = e.target;
+        if (!img || img.tagName !== 'IMG') return;
+        if (img.classList && img.classList.contains('dev-card-image') && !img.dataset.phApplied) {
+            img.dataset.phApplied = '1';
+            img.classList.add('dev-card-image-ph');
+            img.src = DEV_PLACEHOLDER_SVG;
+        }
+    }, true);
+
     // Получить URL картинки для прибора.
     // Поддерживаемые форматы поля «Изображение»:
     //   1) base64 data URI (data:image/...) — встройка из старых JSON, используется напрямую.
@@ -13153,12 +13187,14 @@
             const place = dev['Место установки'] || '';
             const imgUrl = devGetImageUrl(dev);
             const finalImgUrl = imgUrl || DEV_PLACEHOLDER_SVG;
+            // Task 136: заглушке — квадратные пропорции без обрезки
+            const phCls = String(dev['Изображение'] || '').trim() ? '' : ' dev-card-image-ph';
 
             html += '<div class="dev-card" data-dev-id="' + devEsc(devId) + '">';
             html += '<div class="dev-card-header" onclick="devOpenDetail(\'' + devEsc(devId) + '\')">';
             html += '<div class="dev-card-header-inner">';
             html += '<div class="dev-card-image-wrap">';
-            html += '<img class="dev-card-image" src="' + devEsc(finalImgUrl) + '" alt="' + devEsc(name) + '" loading="lazy">';
+            html += '<img class="dev-card-image' + phCls + '" src="' + devEsc(finalImgUrl) + '" alt="' + devEsc(name) + '" loading="lazy">';
             html += KipFav._cardFavBtnHtml(devId);
             html += '<div class="dev-card-name-overlay">' + devMark(name, query) + '</div>';
             html += '</div>'; // .dev-card-image-wrap
@@ -13917,12 +13953,14 @@
                     const number = dev['№ прибора'] || '';
                     const place = dev['Место установки'] || '';
                     const imgUrl = devGetImageUrl(dev);
+                    // Task 136: заглушке — квадратные пропорции без обрезки
+                    const phCls = String(dev['Изображение'] || '').trim() ? '' : ' dev-card-image-ph';
 
                     html += '<div class="dev-card" data-dev-id="' + devEsc(devId) + '" data-mode="' + mode + '">';
                     html += '<div class="dev-card-header" onclick="devOpenDetail(\'' + devEsc(devId) + '\')">';
                     html += '<div class="dev-card-header-inner">';
                     html += '<div class="dev-card-image-wrap">';
-                    html += '<img class="dev-card-image" src="' + devEsc(imgUrl) + '" alt="' + devEsc(name) + '" loading="lazy">';
+                    html += '<img class="dev-card-image' + phCls + '" src="' + devEsc(imgUrl) + '" alt="' + devEsc(name) + '" loading="lazy">';
                     html += KipFav._cardFavBtnHtml(devId);
                     // Если имя прибора уже в заголовке подгруппы — overlay не нужен.
                     if (!hideNameInCard) {
@@ -14100,12 +14138,14 @@
                 const number = dev['№ прибора'] || '';
                 const place = dev['Место установки'] || '';
                 const imgUrl = devGetImageUrl(dev);
+                // Task 136: заглушке — квадратные пропорции без обрезки
+                const phCls = String(dev['Изображение'] || '').trim() ? '' : ' dev-card-image-ph';
 
                 html += '<div class="dev-card" data-dev-id="' + devEsc(devId) + '" data-mode="' + mode + '">';
                 html += '<div class="dev-card-header" onclick="devOpenDetail(\'' + devEsc(devId) + '\')">';
                 html += '<div class="dev-card-header-inner">';
                 html += '<div class="dev-card-image-wrap">';
-                html += '<img class="dev-card-image" src="' + devEsc(imgUrl) + '" alt="' + devEsc(name) + '" loading="lazy">';
+                html += '<img class="dev-card-image' + phCls + '" src="' + devEsc(imgUrl) + '" alt="' + devEsc(name) + '" loading="lazy">';
                 html += KipFav._cardFavBtnHtml(devId);
                 // Если имя уже в заголовке подгруппы (mode='prod') — overlay не нужен.
                 if (!hideNameInCard) {
