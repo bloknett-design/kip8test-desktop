@@ -5013,25 +5013,55 @@
         font-feature-settings: "tnum";
         flex-shrink: 0;
     }
-    /* Task 133/134: крупная картинка прибора в строке группировки приборов
-       (Приборы по типу / наименованию / производствам).
-       Размер по примеру пользователя (скриншот в 2x): фото 100x82 —
-       строка группировки получает высоту ~106px, фото занимает ~80% высоты.
+    /* Task 133/134/135: крупная картинка прибора в строке группировки
+       (Приборы по типу / наименованию — на вкладке «по производствам»
+       картинок нет). Контейнер с overflow: hidden — фото каталога
+       512x512 с прибором в верхней части кадра, снизу ~35% пустое поле
+       под подпись: img с height: 135% + прижим к верху обрезает нижнее
+       пустое поле, прибор отображается примерно в центре рамки (Task 135).
        Единый вид всех строк: у групп без картинок — та же заглушка-иконка
-       «КИП» (GROUP_PLACEHOLDER_SVG), поэтому ВСЕ строки одинаковые. */
+       «КИП» (GROUP_PLACEHOLDER_SVG), размер и рамка одинаковые. */
     .pb-section-title-thumb {
         width: 100px; height: 82px;
         border-radius: 12px;
-        object-fit: cover;
         flex-shrink: 0;
         border: 1px solid rgba(199,150,74,0.25);
         background: rgba(255,255,255,0.04);
         pointer-events: none; /* клик всегда идёт в строку группы */
         align-self: center;
+        overflow: hidden; /* обрезка нижнего пустого поля фото */
     }
     [data-theme="light"] .pb-section-title-thumb {
         border-color: rgba(140,110,60,0.3);
         background: rgba(0,0,0,0.04);
+    }
+    /* Фото прибора: высота с запасом 135% — нижнее пустое поле уходит
+       за низ рамки, прибор смещается в центр (по анализу каталога:
+       центр прибора в кадре ~34-42%, оптимум k = 1/(2*0.36) ~ 1.35-1.4) */
+    .pb-section-title-thumb > img {
+        display: block;
+        width: 100%;
+        height: 135%;
+        object-fit: cover;
+        object-position: center top;
+    }
+    /* Заглушка «КИП»: круг уже в центре SVG — без сдвига и обрезки */
+    .pb-section-title-thumb > img.thumb-ph {
+        height: 100%;
+        object-position: center center;
+    }
+    /* Task 135: строка с картинкой — минимальные отступы от рамки
+       картинки до рамки строки (2px), текст вертикально по центру.
+       Специфичность выше .dev-group .pb-section-title (padding 14px 16px),
+       т.к. то правило идёт позже в CSS с равной специфичностью */
+    .dev-group .pb-section-title.with-thumb {
+        padding: 2px 36px 2px 2px;
+    }
+    /* Task 135: мобильная версия — картинки немного меньше,
+       чтобы строки не расширялись (в Electron не срабатывает —
+       там принудительный десктопный режим, Task 131) */
+    @media (max-width: 1023px) {
+        .pb-section-title-thumb { width: 76px; height: 62px; }
     }
     .pb-section-arrow {
         position: absolute;
@@ -13817,19 +13847,30 @@
 
             // Групповой заголовок (сворачиваемый)
             html += '<div class="pb-section dev-group' + (isGroupExpanded ? ' expanded' : '') + '" data-group="' + devEsc(g) + '" data-mode="' + mode + '">';
-            html += '<div class="pb-section-title dev-group-title" onclick="devToggleGroup(this)">';
-            // Task 133/134: крупная картинка в строке группировки (по примеру
-            // пользователя) — ЕДИНЫЙ ВИД ВСЕХ СТРОК:
-            //   - у группы с картинкой — фото первого прибора с «Изображением»
-            //     (Google Drive share -> thumbnail w800 через devGetImageUrl,
-            //     кэшируется SW в IMAGE_CACHE — как картинки в карточках);
-            //   - у группы без картинок — заглушка-иконка «КИП»
-            //     (GROUP_PLACEHOLDER_SVG), та же рамка и размер;
-            //   - при ошибке загрузки фото (офлайн без кэша) onerror подменяет
-            //     его на заглушку — строка никогда не ломается.
-            const thumbDev = items.find(it => String(it['Изображение'] || '').trim());
-            const thumbSrc = thumbDev ? devGetImageUrl(thumbDev) : GROUP_PLACEHOLDER_SVG;
-            html += '<img class="pb-section-title-thumb" src="' + devEsc(thumbSrc) + '" alt="" loading="lazy" onerror="this.onerror=null;this.src=\'' + GROUP_PLACEHOLDER_SVG + '\'">';
+            // Task 135: картинки в строках группировки — ТОЛЬКО для вкладок
+            // «по типу» и «по наименованию». На вкладке «по производствам»
+            // картинок нет (запрос пользователя): основные группы там —
+            // производства, картинка типа прибора не отражает группу.
+            const showThumb = (mode !== 'prod');
+            html += '<div class="pb-section-title dev-group-title' + (showThumb ? ' with-thumb' : '') + '" onclick="devToggleGroup(this)">';
+            if (showThumb) {
+                // Task 133/134/135: картинка в строке группировки — ЕДИНЫЙ ВИД ВСЕХ СТРОК:
+                //   - у группы с картинкой — фото первого прибора с «Изображением»
+                //     (Google Drive share -> thumbnail w800 через devGetImageUrl,
+                //     кэшируется SW в IMAGE_CACHE — как картинки в карточках);
+                //   - у группы без картинок — заглушка-иконка «КИП»
+                //     (GROUP_PLACEHOLDER_SVG), та же рамка и размер;
+                //   - при ошибке загрузки фото (офлайн без кэша) onerror
+                //     подменяет его на заглушку — строка никогда не ломается.
+                // Обёртка .pb-section-title-thumb + img (height 135%, к верху):
+                // нижнее пустое поле фото обрезается, прибор — в центре рамки.
+                const thumbDev = items.find(it => String(it['Изображение'] || '').trim());
+                const thumbSrc = thumbDev ? devGetImageUrl(thumbDev) : GROUP_PLACEHOLDER_SVG;
+                const phClass = thumbDev ? '' : ' thumb-ph';
+                html += '<div class="pb-section-title-thumb">';
+                html += '<img src="' + devEsc(thumbSrc) + '" alt="" class="' + phClass.trim() + '" loading="lazy" onerror="this.onerror=null;this.classList.add(\'thumb-ph\');this.src=\'' + GROUP_PLACEHOLDER_SVG + '\'">';
+                html += '</div>';
+            }
             html += '<span class="pb-section-title-text">' + devMark(g, query) + '</span>';
             html += '<span class="pb-section-title-count">' + items.length + '</span>';
             html += '<span class="pb-section-arrow"></span>';
