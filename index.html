@@ -12986,6 +12986,220 @@
         return (s || '').toString().toLowerCase().replace(/\s+/g, ' ').trim();
     }
 
+    // ============================================================
+    // Task 151: ГИБКИЙ ПОИСК (для всех списков: приборы, блокировки,
+    // клапана, регуляторы, проекты)
+    // Этап 1: по словам (AND) + нормализация + транслитерация
+    //         (латиница <-> кириллица: «metran» находит «Метран»)
+    // Этап 2: нечёткий fallback (Дамерау-Левенштейн, только если
+    //         точных совпадений нет): 1 опечатка для слов >= 5 симв.,
+    //         2 — для слов >= 9; расстояние считается слово-к-слову.
+    // ============================================================
+
+    // Транслитерация кириллица -> латиница (для сопоставления раскладок)
+    var _TRANSLIT_RU2EN = {
+        'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
+        'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'i', 'к': 'k', 'л': 'l', 'м': 'm',
+        'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+        'ф': 'f', 'х': 'h', 'ц': 'c', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+        'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+    };
+    var _TRANSLIT_EN2RU = {
+        'a': 'а', 'b': 'б', 'c': 'ц', 'd': 'д', 'e': 'е', 'f': 'ф', 'g': 'г',
+        'h': 'х', 'i': 'и', 'j': 'й', 'k': 'к', 'l': 'л', 'm': 'м', 'n': 'н',
+        'o': 'о', 'p': 'п', 'q': 'к', 'r': 'р', 's': 'с', 't': 'т', 'u': 'у',
+        'v': 'в', 'w': 'в', 'x': 'х', 'y': 'ы', 'z': 'з'
+    };
+
+    // Разбить строку запроса/поля на нормализованные слова:
+    // нижний регистр, ё->е, НЕ-буквенно-цифровые — разделители.
+    function kipSearchWords(s) {
+        var t = (s == null ? '' : String(s)).toLowerCase().replace(/ё/g, 'е');
+        var raw = t.split(/[^a-zа-я0-9]+/);
+        var words = [];
+        for (var i = 0; i < raw.length; i++) {
+            var w = raw[i];
+            if (!w) continue;
+            words.push(w);
+        }
+        return words;
+    }
+
+    // Транслитерация слова (в обе стороны: пробуем ru->en и en->ru,
+    // запрос сопоставляется с полем по ОБЕИМ формам)
+    function kipTranslit(s, map) {
+        var out = '';
+        for (var i = 0; i < s.length; i++) {
+            var ch = s[i];
+            out += (map[ch] !== undefined) ? map[ch] : ch;
+        }
+        return out;
+    }
+
+    // Дамерау-Левенштейн (расстояние с перестановками соседних символов)
+    function kipEditDistance(a, b) {
+        var la = a.length, lb = b.length;
+        if (la === 0) return lb;
+        if (lb === 0) return la;
+        var INF = la + lb;
+        var da = {}; // последняя позиция символа в a
+        var d = [];
+        for (var i = 0; i <= la + 1; i++) {
+            d.push(new Array(lb + 2).fill(0));
+        }
+        d[0][0] = INF;
+        for (var i = 0; i <= la; i++) {
+            d[i + 1][0] = INF;
+            d[i + 1][1] = i;
+        }
+        for (var j = 0; j <= lb; j++) {
+            d[0][j + 1] = INF;
+            d[1][j + 1] = j;
+        }
+        for (var i = 1; i <= la; i++) {
+            var db = 0;
+            for (var j = 1; j <= lb; j++) {
+                var k1 = da[b[j - 1]] || 0;
+                var k2 = db;
+                var cost = (a[i - 1] === b[j - 1]) ? 0 : 1;
+                if (cost === 0) db = j;
+                d[i + 1][j + 1] = Math.min(
+                    d[i][j] + cost,                        // замена
+                    d[i + 1][j] + 1,                       // вставка
+                    d[i][j + 1] + 1,                       // удаление
+                    d[k1][k2] + (i - k1 - 1) + 1 + (j - k2 - 1) // перестановка
+                );
+            }
+            da[a[i - 1]] = i;
+        }
+        return d[la + 1][lb + 1];
+    }
+
+    // Порог нечёткости по длине слова (Этап 2)
+    function kipFuzzyThreshold(word) {
+        var len = word.length;
+        if (len >= 9) return 2;
+        if (len >= 5) return 1;
+        return 0; // короткие слова — только точное совпадение
+    }
+
+    // Совпадает ли слово запроса со словом поля (с учётом транслита и нечёткости)
+    function kipWordMatches(qw, fw, allowFuzzy) {
+        // Прямое сравнение
+        if (qw === fw) return true;
+        // Подстрока (слово поля начинается со слова запроса или содержит его)
+        if (fw.indexOf(qw) !== -1) return true;
+        // Транслитерация: qw (лат) vs fw (кир) и наоборот
+        var qwAsRu = kipTranslit(qw, _TRANSLIT_EN2RU);
+        var qwAsEn = kipTranslit(qw, _TRANSLIT_RU2EN);
+        if (qwAsRu === fw || qwAsEn === fw) return true;
+        if (fw.indexOf(qwAsRu) !== -1 || fw.indexOf(qwAsEn) !== -1) return true;
+        // Нечёткость (Этап 2): только для достаточно длинных слов
+        if (allowFuzzy) {
+            var t = kipFuzzyThreshold(qw);
+            if (t > 0 && fw.length >= 4) {
+                if (kipEditDistance(qw, fw) <= t) return true;
+                if (kipEditDistance(qwAsRu, fw) <= t) return true;
+                if (kipEditDistance(qwAsEn, fw) <= t) return true;
+            }
+        }
+        return false;
+    }
+
+    // Сопоставление всех слов запроса со словами haystack-строки.
+    // Этап 1: точное (вкл. транслит); Этап 2 — если allowFuzzy.
+    // Логика AND: каждое слово запроса должно найтись в haystack.
+    function kipMatchAll(query, haystack, allowFuzzy) {
+        var qWords = kipSearchWords(query);
+        if (qWords.length === 0) return true;
+        var hWords = kipSearchWords(haystack);
+        for (var qi = 0; qi < qWords.length; qi++) {
+            var qw = qWords[qi];
+            var found = false;
+            for (var hi = 0; hi < hWords.length && !found; hi++) {
+                if (kipWordMatches(qw, hWords[hi], allowFuzzy)) found = true;
+            }
+            if (!found) return false;
+        }
+        return true;
+    }
+
+    // Главная функция поиска для списков: точный этап по всем записям,
+    // затем (если ничего не нашлось и запрос не пуст) — нечёткий этап.
+    // fieldGetter возвращает строку для поиска по записи.
+    // Оптимизация: нормализованные слова записи кэшируются на самой
+    // записи (item._kipSearchWords) — нормализация выполняется один
+    // раз на запись, а не при каждом нажатии клавиши и в обоих этапах.
+    var _kipSearchCache = new WeakMap();
+    function kipHaystackWords(item, fieldGetter) {
+        var cached = _kipSearchCache.get(item);
+        if (cached !== undefined) return cached;
+        var words = kipSearchWords(fieldGetter(item));
+        // Предвычислить транслит-формы слов поля (для сопоставления
+        // латинского запроса с кириллическим полем без повторных
+        // транслитераций на каждое сравнение)
+        var forms = [];
+        for (var i = 0; i < words.length; i++) {
+            var w = words[i];
+            forms.push({ w: w, ru: kipTranslit(w, _TRANSLIT_EN2RU), en: kipTranslit(w, _TRANSLIT_RU2EN) });
+        }
+        _kipSearchCache.set(item, forms);
+        return forms;
+    }
+
+    // Сопоставление слов запроса с предвычисленными формами слов записи
+    function kipMatchForms(qWords, forms, allowFuzzy) {
+        for (var qi = 0; qi < qWords.length; qi++) {
+            var qw = qWords[qi];
+            var qwRu = kipTranslit(qw, _TRANSLIT_EN2RU);
+            var qwEn = kipTranslit(qw, _TRANSLIT_RU2EN);
+            var found = false;
+            for (var hi = 0; hi < forms.length && !found; hi++) {
+                var f = forms[hi];
+                if (f.w === qw || f.w.indexOf(qw) !== -1) { found = true; break; }
+                if (f.w === qwRu || f.w.indexOf(qwRu) !== -1) { found = true; break; }
+                if (f.w === qwEn || f.w.indexOf(qwEn) !== -1) { found = true; break; }
+                if (allowFuzzy) {
+                    var t = kipFuzzyThreshold(qw);
+                    if (t > 0 && f.w.length >= 4) {
+                        if (kipEditDistance(qw, f.w) <= t ||
+                            kipEditDistance(qwRu, f.w) <= t ||
+                            kipEditDistance(qwEn, f.w) <= t) { found = true; break; }
+                    }
+                }
+            }
+            if (!found) return false;
+        }
+        return true;
+    }
+
+    function kipSearchFilter(items, query, fieldGetter) {
+        var q = (query || '').toString().trim();
+        if (!q) return items;
+        var qWords = kipSearchWords(q);
+        if (qWords.length === 0) return items;
+        // Этап 1: точный (слова + нормализация + транслит)
+        var exact = [];
+        var fuzzyPool = [];
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            var forms = kipHaystackWords(item, fieldGetter);
+            if (kipMatchForms(qWords, forms, false)) {
+                exact.push(item);
+            } else {
+                fuzzyPool.push(item); // кандидаты для этапа 2 (формы уже кэшированы)
+            }
+        }
+        if (exact.length > 0) return exact;
+        // Этап 2: нечёткий (опечатки) — только когда точных нет
+        var fuzzy = [];
+        for (var j = 0; j < fuzzyPool.length; j++) {
+            var forms2 = kipHaystackWords(fuzzyPool[j], fieldGetter);
+            if (kipMatchForms(qWords, forms2, true)) fuzzy.push(fuzzyPool[j]);
+        }
+        return fuzzy;
+    }
+
     // Экранирование HTML
     function devEsc(s) {
         return (s || '').toString()
@@ -13160,9 +13374,10 @@
             filtered = filtered.filter(d => String(d['В гр. ППР'] || '').trim().toLowerCase() !== 'нет');
         }
         if (query) {
-            filtered = filtered.filter(d =>
-                DEV_FIELDS.some(f => devNorm(d[f.key] || '').includes(query))
-            );
+            // Task 151: гибкий поиск (слова AND + транслит + нечёткий fallback)
+            filtered = kipSearchFilter(filtered, query, function (d) {
+                return DEV_FIELDS.map(f => d[f.key] || '').join(' ');
+            });
         }
 
         // Инфо
@@ -13798,13 +14013,12 @@
 
         // Поиск
         if (query) {
-            filtered = filtered.filter(d =>
-                DEV_FIELDS.some(f => devNorm(d[f.key] || '').includes(query)) ||
-                devNorm(d['Тип'] || '').includes(query) ||
-                devNorm(d['№ прибора'] || '').includes(query) ||
-                devNorm(d['Место установки'] || '').includes(query) ||
-                devNorm(d['Наименование'] || '').includes(query)
-            );
+            // Task 151: гибкий поиск (слова AND + транслит + нечёткий fallback)
+            filtered = kipSearchFilter(filtered, query, function (d) {
+                return DEV_FIELDS.map(f => d[f.key] || '').join(' ') + ' ' +
+                    (d['Тип'] || '') + ' ' + (d['№ прибора'] || '') + ' ' +
+                    (d['Место установки'] || '') + ' ' + (d['Наименование'] || '');
+            });
         }
 
         // Группировка. Для вкладки «по производству» группируем по полю
@@ -14353,9 +14567,9 @@
         }
 
         if (query) {
-            filtered = filtered.filter(d =>
-                LOCK_FIELDS.some(f => lockNorm(d[f.key] || '').includes(query))
-            );
+            filtered = kipSearchFilter(filtered, query, function (d) {
+                return LOCK_FIELDS.map(f => d[f.key] || '').join(' ');
+            });
         }
 
         const groups = {};
@@ -14861,9 +15075,9 @@
         }
 
         if (query) {
-            filtered = filtered.filter(d =>
-                VALVE_FIELDS.some(f => valveNorm(d[f.key] || '').includes(query))
-            );
+            filtered = kipSearchFilter(filtered, query, function (d) {
+                return VALVE_FIELDS.map(f => d[f.key] || '').join(' ');
+            });
         }
 
         // Группировка по groupKey. Порядок групп по умолчанию — порядок первого
@@ -15642,9 +15856,9 @@
         }
 
         if (query) {
-            filtered = filtered.filter(d =>
-                REGULATOR_FIELDS.some(f => regulatorNorm(d[f.key] || '').includes(query))
-            );
+            filtered = kipSearchFilter(filtered, query, function (d) {
+                return REGULATOR_FIELDS.map(f => d[f.key] || '').join(' ');
+            });
         }
 
         const groups = {};
@@ -16236,9 +16450,9 @@
         });
 
         if (query) {
-            filtered = filtered.filter(d =>
-                PROJECT_FIELDS.some(f => projectNorm(d[f.key] || '').includes(query))
-            );
+            filtered = kipSearchFilter(filtered, query, function (d) {
+                return PROJECT_FIELDS.map(f => d[f.key] || '').join(' ');
+            });
         }
 
         // Группировка верхнего уровня — по «Отделению».
