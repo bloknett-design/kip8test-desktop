@@ -497,3 +497,54 @@ Task: Фикс — хлебные крошки не отображаются н�
 
 - package.json: version 2.1.5 → 2.1.6
 - Тесты: 207 passed, 0 failed
+
+---
+Task ID: 129
+Agent: AI Assistant (GLM)
+Task: Автоматическая очистка SW + cacheStorage при каждом запуске (без переустановки)
+
+Контекст:
+- Пользователь спросил: «почему в мобильной версии достаточно просто
+  обновить данные в установленном приложении, а в десктопной — каждый раз
+  нужно устанавливать новую версию?»
+- Причина: cleanCacheOnVersionChange() (Task 122-124) очищал SW ТОЛЬКО при
+  изменении версии Electron-приложения (проверка через last-version.txt)
+- Поэтому при обновлении index.html в kip8test (через GitHub Pages) приходилось
+  bump version в kip8test-desktop/package.json + push тега v* + переустановка
+
+Решение Task 129 — cleanCacheOnStartup():
+- Функция переименована: cleanCacheOnVersionChange → cleanCacheOnStartup
+- Убрана проверка last-version.txt / app.getVersion()
+- Убрано сохранение новой версии в last-version.txt
+- Теперь ВСЕГДА очищает SW + cacheStorage при запуске (~500 мс задержка)
+- pendingDeepClean = true всегда → dom-ready хук вызывает deepCleanAfterLoad()
+  → JS API удаляет SW + caches.keys/delete + перезагрузка с ?_nocache=ts
+
+Как это работает теперь:
+1. Обновляется index.html в kip8test → GitHub Pages обновляется
+2. SW (на GitHub Pages) меняет CACHE_VERSION
+3. Пользователь просто ПЕРЕЗАПУСКАЕТ десктоп (без переустановки)
+4. cleanCacheOnStartup() очищает старый SW + cacheStorage
+5. deepCleanAfterLoad() (через JS API) удаляет оставшийся SW + перезагрузка с cache-busting
+6. Грузится свежий index.html с GitHub Pages
+7. SW регистрируется заново с актуальным sw.js → кэширует свежий код
+
+Переустановка Electron-приложения нужна ТОЛЬКО при изменениях:
+- electron/main.js (логика BrowserWindow, autoUpdater, protocol)
+- package.json (новые Node-зависимости)
+- Иконки, манифест, другие Electron-ресурсы
+
+Work Log:
+- electron/main.js: cleanCacheOnVersionChange → cleanCacheOnStartup (убрана проверка версии)
+- Комментарии обновлены: объяснено, что очистка всегда при запуске
+- package.json: version 2.1.6 → 2.1.7
+- Тесты: 207 passed, 0 failed
+
+Stage Summary:
+- После установки v2.1.7 (последняя переустановка для этого функционала):
+  - При каждом запуске: cleanCacheOnStartup() очищает SW + cacheStorage
+  - deepCleanAfterLoad() через JS API завершает очистку + cache-busting reload
+- В дальнейшем (после обновлений kip8test/index.html):
+  - Пользователь просто перезапускает десктоп
+  - Без переустановки Electron-приложения
+  - Аналогично мобильной PWA: «Обновить» → свежий контент
