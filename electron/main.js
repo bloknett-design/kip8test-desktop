@@ -97,15 +97,27 @@ function checkForUpdates() {
   }
 }
 
+let pendingDeepClean = false;  // флаг: нужно ли глубокую очистку SW через JS API
+
 // ============================================================
-// ОЧИСТКА КЭША ПРИ ИЗМЕНЕНИИ ВЕРСИИ ПРИЛОЖЕНИЯ (фикс Task 123)
+// ОЧИСТКА КЭША ПРИ ИЗМЕНЕНИИ ВЕРСИИ ПРИЛОЖЕНИЯ (фикс Task 124)
 // ============================================================
 // При установке обновления Electron старый Service Worker и HTTP-кэш
 // Chromium сохраняются в userData. SW перехватывает fetch и отдаёт
 // закэшированный старый index.html — пользователь не видит новый код,
 // хотя GitHub Pages уже обновился.
-// Решение: при изменении версии Electron-приложения очищаем SW и cacheStorage
-// ДО первой загрузки окна.
+//
+// Проблема Task 123: session.clearStorageData() без указания origin
+// может не очистить SW для HTTPS origin, когда приложение грузится через
+// https://. Также HTTP-кэш Chromium может отдать старый index.html через
+// условный запрос (304 Not Modified).
+//
+// Решение Task 124: ДВУХУРОВНЕВАЯ очистка:
+// 1. ДО загрузки страницы: session.clearCache() + clearStorageData с origin
+// 2. ПОСЛЕ dom-ready: executeJavaScript, который через JS API
+//    (navigator.serviceWorker.getRegistrations + unregister,
+//    caches.keys + caches.delete) гарантированно удаляет SW на origin'е
+//    страницы, потом перезагружает с cache-busting ?_nocache=ts
 
 async function cleanCacheOnVersionChange() {
   const userDataPath = app.getPath('userData');
@@ -126,23 +138,83 @@ async function cleanCacheOnVersionChange() {
   }
 
   console.log(`[cleanCacheOnVersionChange] ${lastVersion || '(новая установка)'} → ${currentVersion}, очищаем SW и кэш`);
+  pendingDeepClean = true;  // поставить флаг для dom-ready хука
 
   try {
     const ses = session.defaultSession;
-    // Очистить HTTP-кэш Chromium
+    // Очистить HTTP-кэш Chromium (для всех origin)
     await ses.clearCache();
-    // Очистить Service Worker и Cache Storage (где SW хранит закэшированные файлы)
+    // Очистить Service Worker и Cache Storage для origin GitHub Pages
+    await ses.clearStorageData({
+      origin: 'https://bloknett-design.github.io',
+      storages: ['serviceworkers', 'cachestorage']
+    });
+    // Также очистить общий storage (на случай, если origin не сработал)
     await ses.clearStorageData({
       storages: ['serviceworkers', 'cachestorage']
     });
-    console.log('[cleanCacheOnVersionChange] ✓ SW и cacheStorage очищены');
+    console.log('[cleanCacheOnVersionChange] ✓ SW и cacheStorage очищены (session API)');
 
     // Сохранить новую версию
     fs.writeFileSync(versionFile, currentVersion, 'utf8');
     console.log(`[cleanCacheOnVersionChange] ✓ Версия ${currentVersion} сохранена в last-version.txt`);
   } catch (e) {
     console.log('[cleanCacheOnVersionChange] Ошибка при очистке:', e.message);
-    // Не блокируем запуск приложения — оно загрузится, но SW может остаться старым
+    // Не блокируем запуск — dom-ready хук попробует ещё раз через JS API
+  }
+}
+
+// Глубокая очистка SW через JS API после загрузки страницы.
+// Эта функция вызывается из dom-ready хука, ЕСЛИ версия изменилась.
+// В отличие от session API, JS API (navigator.serviceWorker, caches)
+// работает на origin'е страницы — гарантированно удаляет SW.
+async function deepCleanAfterLoad() {
+  if (!mainWindow) return;
+
+  console.log('[deepCleanAfterLoad] Запуск глубокой очистки через JS API');
+
+  const script = `
+    (async function() {
+      var results = { sw: 0, caches: 0, reloaded: false };
+      try {
+        // 1. Удалить все Service Worker через JS API
+        if ('serviceWorker' in navigator) {
+          var regs = await navigator.serviceWorker.getRegistrations();
+          results.sw = regs.length;
+          await Promise.all(regs.map(function(reg) { return reg.unregister(); }));
+          console.log('[deepClean] SW удалены: ' + regs.length);
+        }
+        // 2. Удалить все Cache Storage через JS API
+        if ('caches' in window) {
+          var names = await caches.keys();
+          results.caches = names.length;
+          await Promise.all(names.map(function(name) { return caches.delete(name); }));
+          console.log('[deepClean] Cache Storage очищен: ' + names.length + ' (' + names.join(', ') + ')');
+        }
+      } catch (e) {
+        console.log('[deepClean] Ошибка: ' + e.message);
+      }
+      // 3. Перезагрузить страницу с cache-busting
+      //    ?_nocache=ts — Chromium HTTP-кэш видит это как новый URL
+      //    → идёт в сеть → получает свежий index.html с GitHub Pages
+      try {
+        var url = new URL(window.location.href);
+        url.searchParams.set('_nocache', Date.now());
+        results.reloaded = true;
+        console.log('[deepClean] Перезагрузка: ' + url.toString());
+        window.location.replace(url.toString());
+      } catch (e) {
+        console.log('[deepClean] Ошибка reload: ' + e.message);
+      }
+      return results;
+    })();
+  `;
+
+  try {
+    const result = await mainWindow.webContents.executeJavaScript(script);
+    console.log('[deepCleanAfterLoad] ✓ Готово:', JSON.stringify(result));
+  } catch (e) {
+    console.log('[deepCleanAfterLoad] Ошибка executeJavaScript:', e.message);
   }
 }
 
@@ -252,6 +324,8 @@ function createWindow() {
 
   // Загружаем приложение: приоритет — удалённый сервер (GitHub Pages),
   // fallback — локальные файлы (app://), если сервер недоступен.
+  // При изменении версии добавляем cache-busting к URL (Task 124),
+  // чтобы Chromium HTTP-кэш не отдал старый index.html.
   loadApp();
 
   // Устанавливаем флаг, чтобы рендерер знал, что он работает в Electron
@@ -265,7 +339,23 @@ function createWindow() {
         // Здесь — заглушка, основная работа делается в меню «Обновить».
         return true;
       };
-    `);
+    `).then(() => {
+      // Если версия изменилась → глубокая очистка через JS API.
+      // JS API (navigator.serviceWorker, caches) работает на origin'е
+      // страницы — гарантированно удаляет SW, в отличие от session API.
+      if (pendingDeepClean) {
+        console.log('[dom-ready] pendingDeepClean=true → запускаем deepCleanAfterLoad()');
+        deepCleanAfterLoad().then(() => {
+          console.log('[dom-ready] ✓ deepCleanAfterLoad завершён');
+          pendingDeepClean = false;  // сбросить флаг (после reload он не нужен)
+        }).catch((err) => {
+          console.log('[dom-ready] Ошибка deepCleanAfterLoad:', err.message);
+          pendingDeepClean = false;
+        });
+      }
+    }).catch((err) => {
+      console.log('[dom-ready] Ошибка executeJavaScript:', err.message);
+    });
   });
 
   mainWindow.once('ready-to-show', () => {

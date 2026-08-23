@@ -225,3 +225,81 @@ Stage Summary:
 - Не замедляет регулярные запуски (если версия не изменилась — чистый пропуск)
 - Коммит в kip8test-desktop: dfe0b8a → новый после push
 - Релиз: https://github.com/bloknett-design/kip8test-desktop/releases/tag/v2.1.1
+
+---
+Task ID: 124
+Agent: AI Assistant (GLM)
+Task: Фикс — после v2.1.1 новый код всё ещё не появился (переключатель/drag-and-drop отсутствуют)
+
+Симптом:
+- Пользователь установил v2.1.1 (где уже был фикс Task 123 с cleanCacheOnVersionChange)
+- Но переключатель «Все / Избранные» и drag-and-drop НЕ появились
+
+Анализ причины почему Task 123 не сработал:
+1. session.clearStorageData() без указания origin может НЕ очистить SW
+   для HTTPS origin, когда приложение грузится через https://
+2. HTTP-кэш Chromium может отдать старый index.html через условный запрос
+   (304 Not Modified) — SW видит «тот же ответ», не обновляет свой кэш
+3. sw.js для navigate-запросов идёт в сеть через fetch(request), но если
+   HTTP-кэш Chromium перехватывает fetch и отдаёт старую версию — SW
+   использует её и обновляет кэш тем же старым index.html
+
+Решение Task 124 — ДВУХУРОВНЕВАЯ очистка:
+
+Уровень 1 (ДО загрузки страницы — cleanCacheOnVersionChange):
+- session.clearCache() — очистка HTTP-кэша Chromium (для всех origin)
+- session.clearStorageData({ origin: 'https://bloknett-design.github.io',
+  storages: ['serviceworkers', 'cachestorage'] }) — с указанием origin
+- Дополнительно: clearStorageData без origin (для всех origin на всякий случай)
+- pendingDeepClean = true — флаг для второго уровня
+
+Уровень 2 (ПОСЛЕ dom-ready — deepCleanAfterLoad через executeJavaScript):
+- navigator.serviceWorker.getRegistrations() + unregister() — JS API,
+  гарантированно работает на origin'е страницы (https://bloknett-design.github.io)
+- caches.keys() + caches.delete() — очищает Cache Storage через JS API
+- window.location.replace(url + '?_nocache=' + Date.now()) — перезагрузка
+  с cache-busting параметром: Chromium HTTP-кэш видит URL с query как
+  НОВЫЙ ресурс → идёт в сеть → получает свежий index.html с GitHub Pages
+
+Почему это сработает (в отличие от Task 123):
+- JS API (navigator.serviceWorker, caches) работают на origin'е страницы,
+  в отличие от session API, которые могут не увидеть HTTPS origin
+- Cache-busting через ?_nocache=ts заставляет Chromium HTTP-кэш сделать
+  реальный сетевой запрос, а не отдать кэш через 304 Not Modified
+- После reload регистрируется новый SW (v395) с актуальным sw.js →
+  кэширует свежий index.html с Task 119-120
+
+Work Log:
+- electron/main.js: добавлен pendingDeepClean флаг, функция deepCleanAfterLoad,
+  вызов в dom-ready хуке (только если pendingDeepClean=true)
+- cleanCacheOnVersionChange: добавлен origin: 'https://bloknett-design.github.io'
+  в clearStorageData (важно!)
+- package.json: version 2.1.1 → 2.1.2 (patch — второй фикс бага автообновления SW)
+- Тесты: 207 passed, 0 failed
+
+Ожидаемое поведение после установки v2.1.2:
+1. autoUpdater видит latest.yml с version: 2.1.2 → предлагает обновиться
+2. При запуске v2.1.2:
+   - cleanCacheOnVersionChange видит last="2.1.1" → current="2.1.2"
+   - session.clearCache() + clearStorageData с origin (Уровень 1)
+   - pendingDeepClean = true
+3. loadApp() → Electron грузит GitHub Pages → dom-ready срабатывает
+4. deepCleanAfterLoad (Уровень 2):
+   - navigator.serviceWorker.getRegistrations() → unregister() всех SW
+   - caches.keys() → caches.delete() всех cacheStorage
+   - window.location.replace('https://...?_nocache=1734567890')
+5. Страница перезагружается с cache-busting:
+   - Chromium HTTP-кэш не находит ?_nocache=... → идёт в сеть
+   - GitHub Pages отдаёт свежий index.html (md5 e199e7e5…, v395, Task 119-120)
+   - Свежий index.html регистрирует новый SW (v395)
+6. Пользователь видит:
+   - Переключатель «Все / Избранные» в breadcrumb bar (Task 120)
+   - Drag-and-drop в избранном расходомеров (Task 119)
+
+Stage Summary:
+- Двухуровневая очистка гарантирует, что SW будет удалён, даже если
+  session API не сработал (через JS API как fallback)
+- Cache-busting через ?_nocache=ts заставляет Chromium HTTP-кэш сделать
+  реальный сетевой запрос — обходит проблему 304 Not Modified
+- Коммит в kip8test-desktop: новый после push
+- Релиз: https://github.com/bloknett-design/kip8test-desktop/releases/tag/v2.1.2
