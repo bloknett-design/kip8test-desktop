@@ -2723,6 +2723,12 @@
         right: 48px;  /* + кнопка 8..40 (32px+border), search-кнопка 40..72? нет — кнопки рядом */
         display: none;
     }
+    /* Task 150: cj-поле полностью изолировано от фоновых/позиционных правил
+       .dev-header-search (иконка лупы размножалась из-за shorthand-каскада).
+       Своя иконка — один раз, слева, no-repeat. */
+    .cj-header-search:not(.search-open) {
+        background-image: none;
+    }
     .cj-header-search.search-open {
         display: block;
         position: absolute;
@@ -2732,10 +2738,17 @@
         z-index: 4;
         width: 180px;
         max-width: calc(100vw - 120px);
-        padding: 6px 10px;
+        padding: 6px 10px 6px 30px;
         border: 1px solid rgba(106,141,181,0.55);
         border-radius: 8px;
-        background: #1a2233;
+        /* Task 150: полная спецификация фона — иконка ОДИН раз слева.
+           Раньше shorthand background:#1a2233 сбрасывал no-repeat/size
+           из .dev-header-search -> иконки размножались по полю. */
+        background-color: #1a2233;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a0b4c8' stroke-width='2'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
+        background-repeat: no-repeat;
+        background-position: 8px center;
+        background-size: 13px;
         color: #e0e6f0;
         font-size: 13px;
         font-family: 'Inter', sans-serif;
@@ -2743,7 +2756,7 @@
         transition: none;
     }
     [data-theme="light"] .cj-header-search.search-open {
-        background: #eef2f8;
+        background-color: #eef2f8;  /* только цвет — repeat/size не сбрасываются */
         border-color: rgba(74,108,148,0.55);
         color: #1a2233;
     }
