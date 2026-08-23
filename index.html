@@ -3630,14 +3630,23 @@
     [data-theme="light"] .flow-tab.active .flow-tab-count { background: #b85a2a; color: #fff; }
 
     /* Task 120: Переключатель «Все / Избранные» в breadcrumb bar на десктопе */
+    /* Task 126: показываем через CSS media query + :has() — обходит баг, где
+       isDesktop() (window.matchMedia('(min-width: 1024px)').matches) в Electron
+       иногда возвращает false, и JS-блок navigateTo() не снимает inline display:none */
     .flow-desktop-tabs {
-        display: flex;
+        display: none;  /* скрыт по умолчанию (на мобильном) */
         gap: 0;
         flex-shrink: 0;
         margin-left: 8px;
         border: 1px solid rgba(200,112,72,0.25);
         border-radius: 8px;
         overflow: hidden;
+    }
+    /* На десктопе + когда активна страница расходомеров — показываем */
+    @media (min-width: 1024px) {
+        body:has(#page-flowmeter-data.active) #flowDesktopTabs {
+            display: flex !important;
+        }
     }
     .flow-desktop-tabs .flow-tab {
         padding: 6px 14px;
@@ -8148,6 +8157,14 @@
         #detailBreadcrumbBar.active {
             display: flex;
         }
+        /* Task 126: показывать breadcrumb bar на странице расходомеров без JS —
+           CSS :has() + media query (обходит баг, где isDesktop() возвращает
+           false в Electron и JS не добавляет .active класс) */
+        @media (min-width: 1024px) {
+            body:has(#page-flowmeter-data.active) #detailBreadcrumbBar {
+                display: flex;
+            }
+        }
         /* Шеврон «назад» в строке крошек — как в page-inline-header */
         .detail-breadcrumb-chevron {
             position: absolute;
@@ -9310,7 +9327,7 @@
         </div>
         <div id="detailBreadcrumbContent"></div>
         <!-- Task 120: Переключатель «Все / Избранные» для расходомеров на десктопе -->
-        <div id="flowDesktopTabs" class="flow-desktop-tabs" style="display:none;">
+        <div id="flowDesktopTabs" class="flow-desktop-tabs">
             <button class="flow-tab active" data-flow-tab="all" onclick="FlowmeterData.setTab('all')">Все</button>
             <button class="flow-tab" data-flow-tab="fav" onclick="FlowmeterData.setTab('fav')">Избранные</button>
         </div>
