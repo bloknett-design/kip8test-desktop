@@ -18625,15 +18625,22 @@
         if (page === 'kip-ios') { setTimeout(() => { if (typeof KipCharts !== 'undefined') KipCharts.initEntryButton(); }, 30); }
         if (page === 'flowmeter-data') {
             setTimeout(() => { if (typeof FlowmeterData !== 'undefined') FlowmeterData.init(); }, 30);
-            // Task 120: показать переключатель «Все / Избранные» на десктопе
-            if (isDesktop()) {
-                var _flowTabs = document.getElementById('flowDesktopTabs');
-                if (_flowTabs) _flowTabs.style.display = '';
-                // Показать breadcrumbBar с табами (без detail-panel)
-                var _bcBar = document.getElementById('detailBreadcrumbBar');
-                if (_bcBar) _bcBar.classList.add('active');
-                var _bcContent = document.getElementById('detailBreadcrumbContent');
-                if (_bcContent) _bcContent.innerHTML = '<span class="breadcrumb-link">Расходомеры хозрасчётные</span>';
+            // Task 120 + Task 128: показать переключатель «Все / Избранные» + заполнить крошки
+            // Task 126: display через CSS @media + :has(), обходит баг isDesktop() в Electron
+            // Task 128: крошки заполняем ВСЕГДА (не только если isDesktop())
+            var _flowTabs = document.getElementById('flowDesktopTabs');
+            if (_flowTabs) _flowTabs.style.display = '';  // для старых клиентов, где inline display:none ещё стоит
+            // Заполнить крошки «Расходомеры хозрасчётные» — это нужно даже если isDesktop()=false,
+            // потому что CSS @media (Task 126) всё равно покажет detailBreadcrumbBar
+            var _bcContent = document.getElementById('detailBreadcrumbContent');
+            if (_bcContent && !_bcContent.innerHTML.trim()) {
+                _bcContent.innerHTML = '<span class="breadcrumb-link" onclick="navigateTo(\'dashboard\')">Главная</span>' +
+                    '<span class="breadcrumb-sep">/</span>' +
+                    '<span class="breadcrumb-link" onclick="navigateTo(\'docs\')">Документация</span>' +
+                    '<span class="breadcrumb-sep">/</span>' +
+                    '<span class="breadcrumb-link" onclick="navigateTo(\'docs-ios\')">Документация ИОС</span>' +
+                    '<span class="breadcrumb-sep">/</span>' +
+                    '<span class="breadcrumb-current">Расходомеры хозрасчётные</span>';
             }
         }
         if (page === 'plan-114') { setTimeout(() => { if (typeof plan114RenderList === 'function') plan114RenderList(); }, 30); }
