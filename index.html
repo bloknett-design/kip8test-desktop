@@ -2719,49 +2719,9 @@
        (.cj-icon-btn-inline) + раскрывающееся поле (.cj-header-search).
        По умолчанию поле скрыто (hidden + CSS), при .search-open — показывается
        поверх заголовка как overlay слева от кнопок. */
-    .cj-header-search {
-        right: 48px;  /* + кнопка 8..40 (32px+border), search-кнопка 40..72? нет — кнопки рядом */
-        display: none;
-    }
-    /* Task 150: cj-поле полностью изолировано от фоновых/позиционных правил
-       .dev-header-search (иконка лупы размножалась из-за shorthand-каскада).
-       Своя иконка — один раз, слева, no-repeat. */
-    .cj-header-search:not(.search-open) {
-        background-image: none;
-    }
-    .cj-header-search.search-open {
-        display: block;
-        position: absolute;
-        top: 50%;
-        right: 88px;  /* левее кнопки-иконки (48..80) с gap 8px */
-        transform: translateY(-50%);
-        z-index: 4;
-        width: 180px;
-        max-width: calc(100vw - 120px);
-        padding: 6px 10px 6px 30px;
-        border: 1px solid rgba(106,141,181,0.55);
-        border-radius: 8px;
-        /* Task 150: полная спецификация фона — иконка ОДИН раз слева.
-           Раньше shorthand background:#1a2233 сбрасывал no-repeat/size
-           из .dev-header-search -> иконки размножались по полю. */
-        background-color: #1a2233;
-        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a0b4c8' stroke-width='2'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
-        background-repeat: no-repeat;
-        background-position: 8px center;
-        background-size: 13px;
-        color: #e0e6f0;
-        font-size: 13px;
-        font-family: 'Inter', sans-serif;
-        outline: none;
-        transition: none;
-    }
-    [data-theme="light"] .cj-header-search.search-open {
-        background-color: #eef2f8;  /* только цвет — repeat/size не сбрасываются */
-        border-color: rgba(74,108,148,0.55);
-        color: #1a2233;
-    }
-    .cj-header-search.search-open::placeholder { color: rgba(255,255,255,0.4); }
-    [data-theme="light"] .cj-header-search.search-open::placeholder { color: rgba(20,20,19,0.4); }
+/* Task 152: cj-поиск переведён на единый стиль .dev-search-toggle-btn +
+       .dev-header-search.search-open (правила выше, Task 149) — собственные
+       cj-header-search-правила удалены. */
     /* Заголовок страницы — увеличенный правый padding, чтобы текст не
        залезал под + кнопку и search-кнопку. */
     .page-inline-header:has(.cj-icon-btn-inline) .page-inline-header-title {
@@ -2779,10 +2739,7 @@
         }
     }
     /* Когда поиск раскрыт — title прячем, чтобы не было наложения. */
-    .page-inline-header:has(.cj-header-search.search-open) .page-inline-header-title {
-        opacity: 0;
-        pointer-events: none;
-    }
+/* Task 152: cj-поиск использует общие правила Task 149 */
 
     /* Кнопка-иконка поиска в шапке — компактная квадратная 32×32,
        как кнопка '+'. Расположена левее '+' кнопки. */
@@ -6113,13 +6070,12 @@
     }
 
     /* Поле поиска: скрыто по умолчанию; разворачивается от правого края
-       влево — до текста заголовка/крошек (Task 149).
-       :not(.cj-header-search) — Кабельный журнал живёт по СВОИМ правилам
-       (.cj-header-search), правки Task 149 его не затрагивают. */
-    .dev-header-search:not(.cj-header-search) {
+       влево — до текста заголовка/крошек (Task 149). Task 152: Кабельный
+       журнал тоже использует эти правила (собственные удалены). */
+    .dev-header-search {
         display: none;
     }
-    .dev-header-search:not(.cj-header-search).search-open {
+    .dev-header-search.search-open {
         display: block;
         position: absolute;
         top: 50%;
@@ -6144,9 +6100,11 @@
         background-size: 13px;
         padding-left: 30px;
     }
+    /* Анимация только по прозрачности: ширина задаётся инлайн-стилем
+       fitToTitle (Task 152) — keyframes не должны её перекрывать */
     @keyframes devSearchExpand {
-        from { width: 0; opacity: 0; }
-        to   { width: 180px; opacity: 1; }
+        from { opacity: 0; }
+        to   { opacity: 1; }
     }
     [data-theme="light"] .dev-header-search.search-open {
         background-color: #fbf6ea;
@@ -9527,8 +9485,12 @@
             <div class="page-inline-header">
                 <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
                 <div class="page-inline-header-title">Кабельный журнал</div>
-                <input type="search" id="cjSearchInput" class="dev-header-search cj-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="KipCableJournal.handleSearchInput()" hidden>
-                <button type="button" id="cjSearchToggleBtn" class="cj-icon-btn-inline" aria-label="Поиск" onclick="KipCableJournal.toggleSearch()">
+                <!-- Task 152: единый стиль поиска (как на всех страницах):
+                     иконка-кнопка + разворот поля поверх крошек (fitToTitle).
+                     Клиентская фильтрация движком kipSearchFilter (Task 151),
+                     серверный поиск больше не используется. -->
+                <input type="search" id="cjSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="KipCableJournal.handleSearchInput()" hidden>
+                <button type="button" id="cjSearchToggleBtn" class="dev-search-toggle-btn" aria-label="Поиск" data-search-input="cjSearchInput">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 </button>
                 <button type="button" class="cj-add-btn-inline" id="cjAddBtn" onclick="KipCableJournal.openAdd()" style="display:none;" aria-label="Добавить запись">+</button>
@@ -11918,10 +11880,8 @@
 
         // Пересчитать ширину и left открытого поля: от правого края
         // (самая левая кнопка шапки + зазор) влево до края текста
-        // заголовка/крошек. Кабельный журнал (.cj-header-search) не
-        // обрабатываем — у него собственная раскладка (Task 149 fix).
+        // заголовка/крошек. Task 152: работает и для Кабельного журнала.
         function fitToTitle(input) {
-            if (input.classList.contains('cj-header-search')) return;
             var header = input.closest('.page-inline-header');
             if (!header) return;
             var title = header.querySelector('.page-inline-header-title');
@@ -12035,8 +11995,7 @@
         document.addEventListener('input', function (e) {
             var input = e.target;
             if (input && input.classList && input.classList.contains('dev-header-search')
-                && input.classList.contains('search-open')
-                && !input.classList.contains('cj-header-search')) {
+                && input.classList.contains('search-open')) {
                 fitToTitle(input);
             }
         }, true);
@@ -27331,25 +27290,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Если уже есть кэш — рендерим его немедленно и тихо обновляем
         // в фоне (Task 58 — кэш в памяти приложения).
         // ============================================================
+        // Task 152: load всегда тянет ПОЛНЫЙ список (серверный search не
+        // используется — фильтрация клиентская, kipSearchFilter). После
+        // загрузки — применить текущий поисковый запрос, если поле открыто.
         load: function() {
             const self = this;
-            const search = (document.getElementById('cjSearchInput').value || '').trim();
-
-            // Если есть кэш и это не поисковый запрос — рендерим сразу.
             const hasCache = this._rows && this._rows.length > 0;
-            const isSearch = !!search;
-            if (!hasCache && !isSearch) {
+            if (!hasCache) {
                 document.getElementById('cjList').innerHTML =
                     '<div style="padding:32px;text-align:center;color:var(--text-secondary,rgba(255,255,255,0.5));font-size:13px;">Загрузка…</div>';
-            } else if (isSearch) {
-                // При поиске показываем loading (результаты могут отличаться от кэша)
-                document.getElementById('cjList').innerHTML =
-                    '<div style="padding:32px;text-align:center;color:var(--text-secondary,rgba(255,255,255,0.5));font-size:13px;">Поиск…</div>';
             }
 
             this._api('cableJournal.list', {
                 options: {
-                    search: search,
                     limit: 1000  // максимум на стороне сервера (см. CableJournal.gs)
                 }
             }).then(function(data) {
@@ -27357,12 +27310,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self._total = data.total || 0;
                 self._canEdit = !!data.canEdit;
                 document.getElementById('cjAddBtn').style.display = self._canEdit ? '' : 'none';
-                // Сохраняем в кэш только полный список (без поискового фильтра),
-                // чтобы при следующем открытии пользователь видел все записи.
-                if (!isSearch) {
-                    self._persistData(self._rows, self._total);
-                }
-                self._render();
+                self._persistData(self._rows, self._total);
+                // Полный список — в _allRows; применить поиск, если активен
+                self._allRows = self._rows.slice();
+                const q = (document.getElementById('cjSearchInput').value || '').trim();
+                if (q) self._applyClientSearch();
+                else self._render();
             }).catch(function(err) {
                 // При ошибке — если кэш есть, оставляем его; иначе показываем ошибку.
                 if (!hasCache) {
@@ -27506,12 +27459,40 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // ============================================================
         // Поиск с debounce
         // ============================================================
+        // Task 152: поиск — КЛИЕНТСКИЙ, движком kipSearchFilter (Task 151):
+        // слова AND, нормализация, транслитерация, нечёткий fallback.
+        // Сервер запрашивается только при загрузке полного списка
+        // (load без search); фильтрация выполняется по this._rows
+        // без похода на сервер — мгновенно и работает офлайн.
         handleSearchInput: function() {
             const self = this;
             if (this._searchTimer) clearTimeout(this._searchTimer);
             this._searchTimer = setTimeout(function() {
-                self.load();
-            }, 350);
+                self._applyClientSearch();
+            }, 200);
+        },
+
+        // Клиентская фильтрация записей по полю поиска
+        _applyClientSearch: function() {
+            const q = (document.getElementById('cjSearchInput').value || '').trim();
+            // Полный список держим отдельно: _rows — то, что рендерится
+            // (может быть отфильтровано), _allRows — всё из кэша/сервера.
+            if (!this._allRows) this._allRows = (this._rows || []).slice();
+            if (!q) {
+                this._rows = this._allRows.slice();
+                this._total = this._allRows.length;
+            } else {
+                // Task 151: гибкий поиск по всем полям записи
+                this._rows = kipSearchFilter(this._allRows, q, function (row) {
+                    return [
+                        row.department, row.designation, row.start, row.end,
+                        row.mark, row.mark_actual, row.cores, row.cores_actual,
+                        row.length, row.length_actual, row.notes
+                    ].join(' ');
+                });
+                this._total = this._allRows.length;
+            }
+            this._render();
         },
 
         // ============================================================
@@ -27519,27 +27500,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Кнопка-иконка переключает видимость поля ввода.
         // При раскрытии — фокус на поле; при скрытии — очистка + reload.
         // ============================================================
+        // Task 152: переключение поиска теперь общим делегированным
+        // обработчиком (.dev-search-toggle-btn, data-search-input) —
+        // как на всех страницах. Функция оставлена для совместимости
+        // (вдруг где-то вызывается напрямую) и пробрасывает клик.
         toggleSearch: function() {
-            const input = document.getElementById('cjSearchInput');
             const btn = document.getElementById('cjSearchToggleBtn');
-            if (!input || !btn) return;
-            const isOpen = input.classList.contains('search-open');
-            if (isOpen) {
-                // Закрыть
-                input.classList.remove('search-open');
-                input.removeAttribute('open');
-                btn.classList.remove('active');
-                if (input.value) {
-                    input.value = '';
-                    this.load();
-                }
-            } else {
-                // Открыть
-                input.classList.add('search-open');
-                input.setAttribute('open', '');
-                btn.classList.add('active');
-                setTimeout(function() { try { input.focus(); } catch (e) {} }, 30);
-            }
+            if (btn) btn.click();
         },
 
         // ============================================================
