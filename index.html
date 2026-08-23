@@ -24984,6 +24984,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         canAccess: function(page) {
             if (!this._cachedRole) return false;
             // ============================================================
+            // Task 146: «Графики» — раздел ТОЛЬКО десктопного приложения
+            // (Electron). В мобильной PWA и обычном браузере раздел скрыт
+            // и заблокирован даже у Админа (прямая навигация #charts —
+            // «Нет доступа»). В Electron UA содержит «Electron» (Task 131).
+            // ============================================================
+            if (page === 'charts' && !(typeof IS_ELECTRON !== 'undefined' && IS_ELECTRON)) {
+                return false;
+            }
+            // ============================================================
             // Защита admin-страниц: только роль "Админ".
             // Это двойная защита — даже если ROLE_ACCESS случайно
             // включит admin-страницу в список, доступ всё равно
@@ -25123,6 +25132,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     (page === 'cable-journal-edit' || page === 'projects-prod')) {
                     allowedForPage = false;
                 }
+                // Task 146: «Графики» — только десктоп (Electron): скрыть
+                // закреплённый ярлык и любые кнопки-входы в мобильной PWA/браузере.
+                if (allowedForPage && page === 'charts' &&
+                    !(typeof IS_ELECTRON !== 'undefined' && IS_ELECTRON)) {
+                    allowedForPage = false;
+                }
                 btn.style.display = allowedForPage ? '' : 'none';
             });
 
@@ -25156,7 +25171,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // ============================================================
             const chartsBtn = document.getElementById('chartsEntryBtn');
             if (chartsBtn) {
-                const hasChartsAccess = isAll || allowed.indexOf('charts') !== -1;
+                // Task 146: «Графики» — раздел ТОЛЬКО десктопного приложения
+                // (Electron). В мобильной PWA и браузере кнопка скрыта даже
+                // у Админа. IS_ELECTRON — детекция Electron по User-Agent
+                // (Task 131; в десктоп-приложении всегда true).
+                const isElectronApp = (typeof IS_ELECTRON !== 'undefined') && IS_ELECTRON;
+                const hasChartsAccess = isElectronApp && (isAll || allowed.indexOf('charts') !== -1);
                 chartsBtn.style.display = hasChartsAccess ? '' : 'none';
             }
 
