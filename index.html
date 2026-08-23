@@ -12026,6 +12026,27 @@
         window.addEventListener('resize', function () {
             document.querySelectorAll('.dev-header-search.search-open').forEach(fitToTitle);
         });
+
+        // Task 154: свернуть все раскрытые поиски (вызывается при
+        // смене страницы). Запрос сбрасывается с перерендером списка,
+        // чтобы вернувшийся пользователь видел полный список.
+        window.kipCollapseSearch = function () {
+            document.querySelectorAll('.dev-header-search.search-open').forEach(function (input) {
+                var btn = document.getElementById((input.getAttribute('data-toggle-btn') || input.id) + 'ToggleBtn');
+                if (!btn) {
+                    // fallback: кнопка по data-search-input
+                    btn = document.querySelector('.dev-search-toggle-btn[data-search-input="' + input.id + '"]');
+                }
+                if (input.classList.contains('cj-header-search')) return; // cj теперь тоже общий, но на всякий случай
+                input.classList.remove('search-open');
+                input.setAttribute('hidden', '');
+                if (btn) btn.classList.remove('active');
+                if (input.value) {
+                    input.value = '';
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            });
+        };
     })();
 
     // ======================== ИГРА САПЁР ========================
@@ -19184,6 +19205,9 @@
             return;
         }
         document.querySelectorAll('.page-content').forEach(el => { el.classList.remove('active', 'visible'); });
+        // Task 154: свернуть раскрытый поиск при уходе со страницы
+        // (запрос сбрасывается — вернувшийся видит полный список)
+        if (typeof window.kipCollapseSearch === 'function') window.kipCollapseSearch();
         // Task 130: при навигации на обычную страницу закрыть detail-панель ВСЕГДА
         // (раньше только если isDesktop(), но в Electron isDesktop() возвращает false)
         closeDetailPanel();
