@@ -40,6 +40,14 @@
         --text-faint: rgba(255, 255, 255, 0.25);       /* placeholder, hint */
         --accent-green: #4ac771;                       /* значения в таблицах */
         --accent-gold: #c7964a;                        /* предупреждения (= --warning-text) */
+        /* Task 137: коэффициент обрезки фото приборов (центрирование прибора
+           в миниатюрах). Фото каталога 512x512: прибор в верхних ~36% кадра,
+           снизу ~35% пустое поле под подпись. Высота окна = ширина / коэффициент,
+           фото прижимается к верху — нижнее пустое поле обрезается, прибор
+           оказывается примерно в центре рамки. Единое место изменения:
+           применяется к строкам группировки (Task 135), карточкам приборов
+           (Task 136) и избранному (Task 137). */
+        --kip-img-crop: 1.35;
         --table-head-bg: rgba(22, 27, 34, 0.7);        /* фон шапки таблиц */
         --table-row-bg: rgba(13, 17, 23, 0.4);         /* фон чётной строки */
         --table-row-alt-bg: rgba(22, 27, 34, 0.4);     /* фон нечётной строки */
@@ -5035,13 +5043,13 @@
         border-color: rgba(140,110,60,0.3);
         background: rgba(0,0,0,0.04);
     }
-    /* Фото прибора: высота с запасом 135% — нижнее пустое поле уходит
-       за низ рамки, прибор смещается в центр (по анализу каталога:
-       центр прибора в кадре ~34-42%, оптимум k = 1/(2*0.36) ~ 1.35-1.4) */
+    /* Фото прибора: высота с запасом (коэффициент --kip-img-crop) —
+       нижнее пустое поле уходит за низ рамки, прибор смещается в центр
+       (по анализу каталога: центр прибора в кадре ~34-42%, оптимум ~1.35) */
     .pb-section-title-thumb > img {
         display: block;
         width: 100%;
-        height: 135%;
+        height: calc(var(--kip-img-crop) * 100%);
         object-fit: cover;
         object-position: center top;
     }
@@ -6530,23 +6538,23 @@
     }
     .dev-card-image {
         flex-shrink: 0;
-        width: 56px; height: 41px;
+        width: 56px; height: calc(56px / var(--kip-img-crop));
         border-radius: 0;
         object-fit: cover;
         /* Task 136: прибор по центру миниатюры — фото каталога 512x512 с прибором
            в верхней части кадра (центр ~36%), снизу пустое поле под подпись.
-           Высота 56/1.35 = 41px + object-position top: фото отображается 56x56,
-           окно показывает верхние 41px — нижнее пустое поле обрезается,
-           прибор оказывается примерно в центре рамки (как в строках
-           группировки, Task 135) */
+           Высота окна = 56 / --kip-img-crop + object-position top: фото
+           отображается 56x56, окно показывает верхние ~41px — нижнее пустое
+           поле обрезается, прибор оказывается примерно в центре рамки
+           (как в строках группировки, Task 135) */
         object-position: center top;
         background: rgba(255, 255, 255, 0.08);
         border: none;
         transition: width 0.2s, height 0.2s;
     }
     .dev-card.expanded .dev-card-image {
-        width: 45vw; height: calc(45vw / 1.35);
-        max-width: 180px; max-height: 133px;
+        width: 45vw; height: calc(45vw / var(--kip-img-crop));
+        max-width: 180px; max-height: calc(180px / var(--kip-img-crop));
         border-radius: 0;
     }
     /* Task 136: заглушка — квадратная, без обрезки и сдвига
@@ -7276,12 +7284,26 @@
     .fav-card-img {
         flex-shrink: 0;
         width: 48px;
-        min-height: 48px;
+        /* Task 137: прибор по центру миниатюры избранного — тем же способом,
+           что в строках группировки (Task 135) и карточках (Task 136):
+           высота = 48 / --kip-img-crop + object-position: top — нижнее
+           пустое поле фото обрезается, прибор примерно в центре рамки.
+           align-self: center — миниатюра центрирована по вертикали
+           относительно текста (вместо растяжения на высоту текста). */
+        height: calc(48px / var(--kip-img-crop));
         border-radius: 6px;
         object-fit: cover;
+        object-position: center top;
         background: rgba(255, 255, 255, 0.08);
         margin: 6px 8px 6px 6px;
-        align-self: stretch;
+        align-self: center;
+    }
+    /* Task 137: заглушка — квадратная, без обрезки и сдвига
+       (круг «КИП» уже в центре DEV_PLACEHOLDER_SVG) */
+    .fav-card-img.fav-card-img-ph {
+        height: 48px;
+        object-fit: contain;
+        object-position: center center;
     }
     .fav-card-body {
         flex: 1;
@@ -13074,18 +13096,23 @@
         '</svg>'
     );
 
-    // Task 136: делегированный обработчик ошибок загрузки фото в карточках
-    // приборов. Битое фото (офлайн без кэша) подменяется заглушкой
-    // DEV_PLACEHOLDER_SVG с корректными стилями (класс dev-card-image-ph —
-    // квадратная, без обрезки). Capture-фаза: событие error не всплывает,
-    // но захватывается на document — один обработчик на все карточки,
-    // без раздувания HTML инлайн-onerror на каждую карточку.
+    // Task 136/137: делегированный обработчик ошибок загрузки фото
+    // (карточки приборов и избранное). Битое фото (офлайн без кэша)
+    // подменяется заглушкой DEV_PLACEHOLDER_SVG с корректными стилями
+    // (класс -ph — квадратная, без обрезки). Capture-фаза: событие error
+    // не всплывает, но захватывается на document — один обработчик
+    // на все изображения, без инлайн-onerror в HTML каждой карточки.
     document.addEventListener('error', function (e) {
         var img = e.target;
         if (!img || img.tagName !== 'IMG') return;
-        if (img.classList && img.classList.contains('dev-card-image') && !img.dataset.phApplied) {
+        if (!img.classList || img.dataset.phApplied) return;
+        if (img.classList.contains('dev-card-image')) {
             img.dataset.phApplied = '1';
             img.classList.add('dev-card-image-ph');
+            img.src = DEV_PLACEHOLDER_SVG;
+        } else if (img.classList.contains('fav-card-img')) {
+            img.dataset.phApplied = '1';
+            img.classList.add('fav-card-img-ph');
             img.src = DEV_PLACEHOLDER_SVG;
         }
     }, true);
@@ -25986,6 +26013,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 let itemSub1 = '';
                 let itemSub2 = '';
                 let itemImgUrl = '';
+                let itemHasImg = false;  // Task 137: у прибора есть реальное фото (не заглушка)
 
                 // Найти данные элемента
                 if (type === 'dev') {
@@ -25998,6 +26026,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             const num = dev['№ прибора'] || '';
                             if (num) itemSub1 += (itemSub1 ? ' · №' : '№') + num;
                             if (typeof devGetImageUrl === 'function') itemImgUrl = devGetImageUrl(dev) || '';
+                            // devGetImageUrl для приборов без фото возвращает
+                            // DEV_PLACEHOLDER_SVG (не пустую строку) — признак
+                            // «настоящего» фото проверяем по полю «Изображение»
+                            itemHasImg = !!(dev['Изображение'] || '').trim();
                         }
                     }
                 } else if (type === 'lock') {
@@ -26039,6 +26071,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
 
                 const imgSrc = itemImgUrl || (typeof DEV_PLACEHOLDER_SVG !== 'undefined' ? DEV_PLACEHOLDER_SVG : '');
+                // Task 137: заглушке — квадратные пропорции без обрезки
+                // (по флагу itemHasImg: devGetImageUrl всегда возвращает URL —
+                // для приборов без фото это сама заглушка DEV_PLACEHOLDER_SVG)
+                const favPhCls = itemHasImg ? '' : ' fav-card-img-ph';
                 const safeKey = self._esc(favKey).replace(/'/g, "\\'");
                 const note = KipFavNotes.get(favKey);
 
@@ -26051,7 +26087,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // Верхняя строка: миниатюра/бейдж слева + данные справа
                 html += '<div class="fav-card-top">';
                 if (type === 'dev' && imgSrc) {
-                    html += '<img class="fav-card-img" src="' + self._esc(imgSrc) + '" alt="' + self._esc(itemName) + '" loading="lazy">';
+                    html += '<img class="fav-card-img' + favPhCls + '" src="' + self._esc(imgSrc) + '" alt="' + self._esc(itemName) + '" loading="lazy">';
                 } else {
                     html += '<div class="fav-card-type-badge" style="background:' + meta.color + ';">' + meta.label + '</div>';
                 }
