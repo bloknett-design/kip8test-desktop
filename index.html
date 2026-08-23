@@ -8164,6 +8164,18 @@
             body:has(#page-flowmeter-data.active) #detailBreadcrumbBar {
                 display: flex;
             }
+            /* Task 127: скрыть page-inline-header на странице расходомеров на десктопе,
+               т.к. detailBreadcrumbBar уже показывает крошки + переключатель «Все / Избранные»
+               (иначе будет 2 header'а один под другим — «все кнопки в отдельной строке») */
+            body:has(#page-flowmeter-data.active) #page-flowmeter-data > .page-inline-header {
+                display: none;
+            }
+            /* Task 127: скрыть кнопки ✕ (close) и ⇄ (swap) когда detail-panel НЕ открыт —
+               на странице расходомеров detail-panel не активен, эти кнопки не нужны */
+            body:not(:has(#detailPanel.active)) #detailBreadcrumbBar .detail-breadcrumb-close,
+            body:not(:has(#detailPanel.active)) #detailBreadcrumbBar .detail-breadcrumb-swap {
+                display: none;
+            }
         }
         /* Шеврон «назад» в строке крошек — как в page-inline-header */
         .detail-breadcrumb-chevron {
