@@ -8161,20 +8161,21 @@
            CSS :has() + media query (обходит баг, где isDesktop() возвращает
            false в Electron и JS не добавляет .active класс) */
         @media (min-width: 1024px) {
-            body:has(#page-flowmeter-data.active) #detailBreadcrumbBar {
-                display: flex;
+            body:has(#page-flowmeter-data.active) #detailBreadcrumbBar,
+            body:has(#page-flowmeter-data.active) #detailBreadcrumbBar.active {
+                display: flex !important;
             }
             /* Task 127: скрыть page-inline-header на странице расходомеров на десктопе,
                т.к. detailBreadcrumbBar уже показывает крошки + переключатель «Все / Избранные»
                (иначе будет 2 header'а один под другим — «все кнопки в отдельной строке») */
             body:has(#page-flowmeter-data.active) #page-flowmeter-data > .page-inline-header {
-                display: none;
+                display: none !important;
             }
             /* Task 127: скрыть кнопки ✕ (close) и ⇄ (swap) когда detail-panel НЕ открыт —
                на странице расходомеров detail-panel не активен, эти кнопки не нужны */
             body:not(:has(#detailPanel.active)) #detailBreadcrumbBar .detail-breadcrumb-close,
             body:not(:has(#detailPanel.active)) #detailBreadcrumbBar .detail-breadcrumb-swap {
-                display: none;
+                display: none !important;
             }
         }
         /* Шеврон «назад» в строке крошек — как в page-inline-header */
@@ -18625,23 +18626,7 @@
         if (page === 'kip-ios') { setTimeout(() => { if (typeof KipCharts !== 'undefined') KipCharts.initEntryButton(); }, 30); }
         if (page === 'flowmeter-data') {
             setTimeout(() => { if (typeof FlowmeterData !== 'undefined') FlowmeterData.init(); }, 30);
-            // Task 120 + Task 128: показать переключатель «Все / Избранные» + заполнить крошки
-            // Task 126: display через CSS @media + :has(), обходит баг isDesktop() в Electron
-            // Task 128: крошки заполняем ВСЕГДА (не только если isDesktop())
-            var _flowTabs = document.getElementById('flowDesktopTabs');
-            if (_flowTabs) _flowTabs.style.display = '';  // для старых клиентов, где inline display:none ещё стоит
-            // Заполнить крошки «Расходомеры хозрасчётные» — это нужно даже если isDesktop()=false,
-            // потому что CSS @media (Task 126) всё равно покажет detailBreadcrumbBar
-            var _bcContent = document.getElementById('detailBreadcrumbContent');
-            if (_bcContent && !_bcContent.innerHTML.trim()) {
-                _bcContent.innerHTML = '<span class="breadcrumb-link" onclick="navigateTo(\'dashboard\')">Главная</span>' +
-                    '<span class="breadcrumb-sep">/</span>' +
-                    '<span class="breadcrumb-link" onclick="navigateTo(\'docs\')">Документация</span>' +
-                    '<span class="breadcrumb-sep">/</span>' +
-                    '<span class="breadcrumb-link" onclick="navigateTo(\'docs-ios\')">Документация ИОС</span>' +
-                    '<span class="breadcrumb-sep">/</span>' +
-                    '<span class="breadcrumb-current">Расходомеры хозрасчётные</span>';
-            }
+            // Task 130: крошки и .active класс уже установлены выше (перед сменой active страницы)
         }
         if (page === 'plan-114') { setTimeout(() => { if (typeof plan114RenderList === 'function') plan114RenderList(); }, 30); }
         if (page === 'charts') { setTimeout(() => { if (typeof KipCharts !== 'undefined') KipCharts.onPageOpen(); }, 30); }
@@ -18716,8 +18701,28 @@
             return;
         }
         document.querySelectorAll('.page-content').forEach(el => { el.classList.remove('active', 'visible'); });
-        // На десктопе: при навигации на обычную страницу закрыть detail-панель
-        if (isDesktop()) closeDetailPanel();
+        // Task 130: при навигации на обычную страницу закрыть detail-панель ВСЕГДА
+        // (раньше только если isDesktop(), но в Electron isDesktop() возвращает false)
+        closeDetailPanel();
+        // Task 130: если мы идём на flowmeter-data — заполнить крошки заново
+        // (closeDetailPanel() очищает #detailBreadcrumbContent.innerHTML)
+        if (page === 'flowmeter-data') {
+            var _bcBar = document.getElementById('detailBreadcrumbBar');
+            if (_bcBar) _bcBar.classList.add('active');
+            var _bcContent = document.getElementById('detailBreadcrumbContent');
+            if (_bcContent) {
+                _bcContent.innerHTML = '<span class="breadcrumb-link" onclick="navigateTo(\'dashboard\')">Главная</span>' +
+                    '<span class="breadcrumb-sep">/</span>' +
+                    '<span class="breadcrumb-link" onclick="navigateTo(\'docs\')">Документация</span>' +
+                    '<span class="breadcrumb-sep">/</span>' +
+                    '<span class="breadcrumb-link" onclick="navigateTo(\'docs-ios\')">Документация ИОС</span>' +
+                    '<span class="breadcrumb-sep">/</span>' +
+                    '<span class="breadcrumb-current">Расходомеры хозрасчётные</span>';
+            }
+            // Task 130: показать переключатель «Все / Избранные»
+            var _flowTabs = document.getElementById('flowDesktopTabs');
+            if (_flowTabs) _flowTabs.style.display = '';
+        }
         // Сбросить состояние прокрутки при переходе на новую страницу
         document.querySelectorAll('.page-content.scrolled').forEach(el => el.classList.remove('scrolled'));
         let target = document.getElementById('page-' + page);
