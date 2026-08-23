@@ -6093,12 +6093,20 @@
     }
     .dev-search-toggle-btn svg { pointer-events: none; }
 
+    /* Task 149: на «Приборах по производствам» кнопка «Таблица» (Task 148)
+       занимает right: 8..84px — иконка поиска сдвигается левее неё */
+    #page-devices-prod .page-inline-header:has(.dev-table-toggle-btn) .dev-search-toggle-btn {
+        right: 92px;
+    }
+
     /* Поле поиска: скрыто по умолчанию; разворачивается от правого края
-       влево — до текста заголовка/крошек (Task 149) */
-    .dev-header-search {
+       влево — до текста заголовка/крошек (Task 149).
+       :not(.cj-header-search) — Кабельный журнал живёт по СВОИМ правилам
+       (.cj-header-search), правки Task 149 его не затрагивают. */
+    .dev-header-search:not(.cj-header-search) {
         display: none;
     }
-    .dev-header-search.search-open {
+    .dev-header-search:not(.cj-header-search).search-open {
         display: block;
         position: absolute;
         top: 50%;
@@ -11893,12 +11901,14 @@
         'use strict';
 
         var GAP_FROM_TITLE = 12;   // отступ поля от текста крошек, px
-        var GAP_BTN_TO_INPUT = 8;  // зазор поле-иконка, px
-        var ICON_W = 32;           // ширина иконки-кнопки (right: 8..40)
+        var GAP_BTN_TO_INPUT = 8;  // зазор поле-кнопки, px
 
         // Пересчитать ширину и left открытого поля: от правого края
-        // (иконка + зазор) влево до края текста заголовка/крошек.
+        // (самая левая кнопка шапки + зазор) влево до края текста
+        // заголовка/крошек. Кабельный журнал (.cj-header-search) не
+        // обрабатываем — у него собственная раскладка (Task 149 fix).
         function fitToTitle(input) {
+            if (input.classList.contains('cj-header-search')) return;
             var header = input.closest('.page-inline-header');
             if (!header) return;
             var title = header.querySelector('.page-inline-header-title');
@@ -11908,8 +11918,19 @@
             // относительно .page-inline-header): left = X_вьюпорта - X_шапки
             var headerRect = header.getBoundingClientRect();
 
-            // Правый край поля: от правого края шапки минус иконка+зазор
-            var inputRight = headerRect.width - ICON_W - 2 - GAP_BTN_TO_INPUT; // 2 = border иконки
+            // Правый край поля = самая ЛЕВАЯ кнопка шапки минус зазор.
+            // Учитываем все кнопки-иконки: поиск, «Таблица» (Task 148),
+            // cj-кнопки — поле не должно наезжать ни на одну.
+            var buttons = header.querySelectorAll('.dev-search-toggle-btn, .dev-table-toggle-btn, .cj-icon-btn-inline, .cj-add-btn-inline');
+            var inputRight = headerRect.width; // fallback — правый край шапки
+            buttons.forEach(function (b) {
+                if (b === input) return;
+                var br = b.getBoundingClientRect();
+                if (br.width === 0) return; // скрытая (display:none)
+                var bLeft = br.left - headerRect.left;
+                if (bLeft < inputRight) inputRight = bLeft;
+            });
+            inputRight -= GAP_BTN_TO_INPUT;
 
             // Левая граница = конец ТЕКСТА крошек/заголовка + отступ.
             // Крошки — <span>-ы в заголовке; берём последний span.
@@ -12000,7 +12021,9 @@
         // например при фильтрации меняется подпись)
         document.addEventListener('input', function (e) {
             var input = e.target;
-            if (input && input.classList && input.classList.contains('dev-header-search') && input.classList.contains('search-open')) {
+            if (input && input.classList && input.classList.contains('dev-header-search')
+                && input.classList.contains('search-open')
+                && !input.classList.contains('cj-header-search')) {
                 fitToTitle(input);
             }
         }, true);
