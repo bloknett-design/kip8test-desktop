@@ -433,3 +433,43 @@ Stage Summary:
      - Не зависит от isDesktop() в JS
   4. Пользователь видит переключатель «Все / Избранные» в breadcrumb bar
   5. Drag-and-drop в режиме «Избранные» работает через Pointer Events (Task 119)
+
+---
+Task ID: 127
+Agent: AI Assistant (GLM)
+Task: Фикс — после Task 126 два header'а на странице расходомеров
+
+Симптом:
+- После v2.1.4 (Task 126) переключатель «Все / Избранные» появился
+- Но «все кнопки в отдельной строке» — два header'а один под другим:
+  1. detailBreadcrumbBar: < + крошки + переключатель + ✕ + ⇄
+  2. page-inline-header: < + «Расходомеры хозрасчётные»
+
+Причина:
+- Task 126 добавил CSS-показ detailBreadcrumbBar через @media + :has()
+- НО не скрыл page-inline-header, который тоже есть на странице
+- Для других detail-страниц page-inline-header скрывается через
+  body:has(#detailPanel.active) — но detail-panel не активен на странице расходомеров
+
+Решение Task 127 (в kip8test/index.html):
+1. body:has(#page-flowmeter-data.active) #page-flowmeter-data > .page-inline-header { display: none; }
+2. body:not(:has(#detailPanel.active)) #detailBreadcrumbBar .detail-breadcrumb-close,
+   body:not(:has(#detailPanel.active)) #detailBreadcrumbBar .detail-breadcrumb-swap {
+     display: none;
+   }
+   (Кнопки ✕ и ⇄ нужны только когда detail-panel открыт)
+
+В kip8test-desktop изменений в electron-коде нет — достаточно поднять версию
+package.json, чтобы autoUpdater подтянул новую сборку с актуальным index.html
+(синхронизируется из kip8test через sync-to-desktop.yml).
+
+- package.json: version 2.1.4 → 2.1.5
+- Тесты: 207 passed, 0 failed
+
+Stage Summary:
+- После установки v2.1.5 и обновления SW (v397):
+  - На странице расходомеров будет виден ТОЛЬКО detailBreadcrumbBar
+  - page-inline-header скрыт
+  - Кнопки ✕ и ⇄ скрыты (detail-panel не активен)
+- Коммит в kip8test: новый после push
+- Релиз: https://github.com/bloknett-design/kip8test-desktop/releases/tag/v2.1.5
