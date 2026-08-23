@@ -19511,7 +19511,10 @@
         'lockouts':      { label: 'Блокировки',               sublabel: 'По производствам',                               target: 'lockouts-prod', category: 'docs' },
         'valves':        { label: 'Клапана',                  sublabel: 'По производствам',                               target: 'valves-prod',   category: 'docs' },
         'regulators':    { label: 'Регуляторы',               sublabel: 'По производствам',                               target: 'regulators-prod',category: 'docs' },
-        'projects':      { label: 'Проекты',                  sublabel: 'Перечень проектов КИП пр-ва ИОС',               target: 'projects',      category: 'docs' },
+        // Task 141: target 'projects-prod' (было несуществующее 'projects' —
+        // нет обработчика page === 'projects'; из-за этого закреплённый ярлык
+        // «Проекты» был скрыт для КИП ИОС-ролей и вёл в никуда у Админа)
+        'projects':      { label: 'Проекты',                  sublabel: 'Перечень проектов КИП пр-ва ИОС',               target: 'projects-prod',  category: 'docs' },
         'cables':        { label: 'Кабельный журнал',        sublabel: 'Кабельный журнал КИП пр-ва ИОС',                 target: 'cable-journal-edit', category: 'docs' },
         'plan-114':      { label: 'План корпуса 114',        sublabel: '6 планов помещений',                             target: 'plan-114',      category: 'docs' },
         'charts':        { label: 'Графики',                  sublabel: 'Статистика КИП ИОС',                             target: 'charts',        category: 'docs' },
@@ -24431,6 +24434,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                          'exam-tickets', 'tickets-4', 'tickets-5', 'tickets-6', 'tickets-1000v'],
         _KIP_IOS_PAGES: ['kip-ios',
                          'docs-ios',
+                         'devices',
                          'devices-prod', 'devices-type', 'devices-name', 'device-detail', 'dev-group',
                          'device-favorites',
                          'lockouts-prod', 'lockout-detail', 'lock-group',
