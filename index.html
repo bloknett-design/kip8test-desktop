@@ -13190,6 +13190,12 @@
             const id = d['ID'];
             return id !== 0 && id !== '0' && String(id ?? '').trim() !== '0';
         });
+        // Task 140: Фильтр 4 — скрыть приборы, у которых «В гр. ППР» = «Нет»
+        // (для ролей с ограниченным доступом к КИП ИОС, например ИТР ТОКЕМ).
+        // Ранее применялся только в devRenderSorted — теперь и на основной странице.
+        if (typeof KipAuth !== 'undefined' && KipAuth._hasRestrictedKipIos && KipAuth._hasRestrictedKipIos()) {
+            filtered = filtered.filter(d => String(d['В гр. ППР'] || '').trim().toLowerCase() !== 'нет');
+        }
         if (query) {
             filtered = filtered.filter(d =>
                 DEV_FIELDS.some(f => devNorm(d[f.key] || '').includes(query))
@@ -14079,6 +14085,12 @@
             const g = d[groupFieldKey] || '(без группы)';
             return g === group;
         });
+        // Task 140: Фильтр 4 — скрыть приборы, у которых «В гр. ППР» = «Нет»
+        // (для ролей с ограниченным доступом к КИП ИОС). Ранее применялся только
+        // в devRenderSorted — теперь и на странице группы.
+        if (typeof KipAuth !== 'undefined' && KipAuth._hasRestrictedKipIos && KipAuth._hasRestrictedKipIos()) {
+            items = items.filter(d => String(d['В гр. ППР'] || '').trim().toLowerCase() !== 'нет');
+        }
         // Применить активный фильтр (проект / СБС / САР), если он установлен.
         // Без этого при клике на группу из отфильтрованного списка будет показан
         // весь список приборов этой группы, а не только относящиеся к проекту.
@@ -14498,6 +14510,12 @@
             const g = d[sortKey] || '(без группы)';
             return g === group;
         });
+        // Task 140: Фильтр 4 — скрыть блокировки, у которых «В перечне» = «Нет»
+        // (для ролей с ограниченным доступом к КИП ИОС). Ранее применялся только
+        // в lockRenderSorted — теперь и на странице группы.
+        if (typeof KipAuth !== 'undefined' && KipAuth._hasRestrictedKipIos && KipAuth._hasRestrictedKipIos()) {
+            items = items.filter(d => String(d['В перечне'] || '').trim().toLowerCase() !== 'нет');
+        }
         // Применить активный фильтр по «№ проекта», если он установлен.
         // Без этого при клике на группу из отфильтрованного списка будет показан
         // весь список блокировок этой группы, а не только относящиеся к проекту.
@@ -25020,12 +25038,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (!m) return; // нет navigateTo — внешняя ссылка или сервисная кнопка
                 const page = m[1];
                 let allowedForPage = isAll || allowed.indexOf(page) !== -1;
-                // Task 139: фильтр 4 — «Кабельный журнал» скрыт для ролей с
-                // ограниченным КИП ИОС (ИТР ТОКЕМ): cable-journal-edit есть в allowed
-                // через KIP_IOS, но по фильтру 4 раздел должен быть скрыт
-                // (как и кнопка cablesEntryBtn на странице КИП ИОС).
-                if (allowedForPage && page === 'cable-journal-edit' &&
-                    self._hasRestrictedKipIos && self._hasRestrictedKipIos()) {
+                // Task 139/140: фильтр 4 — «Кабельный журнал» и «Проекты» скрыты для
+                // ролей с ограниченным КИП ИОС (ИТР ТОКЕМ): эти страницы есть в allowed
+                // через KIP_IOS, но по фильтру 4 разделы должны быть скрыты
+                // (как и кнопки cablesEntryBtn / projectsEntryBtn на странице КИП ИОС).
+                if (allowedForPage && self._hasRestrictedKipIos && self._hasRestrictedKipIos() &&
+                    (page === 'cable-journal-edit' || page === 'projects-prod')) {
                     allowedForPage = false;
                 }
                 item.style.display = allowedForPage ? '' : 'none';
@@ -25083,7 +25101,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 const m = onclick.match(/navigateTo\(['"]([^'"]+)['"]/);
                 if (!m) return; // не навигационная кнопка
                 const page = m[1];
-                const allowedForPage = isAll || allowed.indexOf(page) !== -1;
+                let allowedForPage = isAll || allowed.indexOf(page) !== -1;
+                // Task 140: фильтр 4 — «Кабельный журнал» и «Проекты» скрыты и здесь
+                // (в т.ч. закреплённые ярлыки на главной, чей target = cable-journal-edit /
+                // projects-prod). Кнопки projectsEntryBtn/cablesEntryBtn скрыты отдельной
+                // проверкой ниже (onclick назначается через JS, этот цикл их не видит).
+                if (allowedForPage && self._hasRestrictedKipIos && self._hasRestrictedKipIos() &&
+                    (page === 'cable-journal-edit' || page === 'projects-prod')) {
+                    allowedForPage = false;
+                }
                 btn.style.display = allowedForPage ? '' : 'none';
             });
 
@@ -25121,12 +25147,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 chartsBtn.style.display = hasChartsAccess ? '' : 'none';
             }
 
-            // Task 113: Фильтр 4 — скрыть «Кабельный журнал» для ролей с ограниченным доступом
-            // (ИТР ТОКЕМ имеет cable-journal-edit в allowed через KIP_IOS, но каб. журнал
-            //  должен быть скрыт по фильтру 4)
+            // Task 113/140: Фильтр 4 — скрыть «Кабельный журнал» и «Проекты» для ролей
+            // с ограниченным доступом (ИТР ТОКЕМ имеет cable-journal-edit и projects-prod
+            // в allowed через KIP_IOS, но по фильтру 4 эти разделы должны быть скрыты).
+            // «Графики» уже скрыты отдельной проверкой hasChartsAccess выше
+            // (charts есть только у Админа в allowed).
+            // Кнопки имеют JS-назначенный onclick (addEventListener) — общий цикл
+            // .menu-btn по атрибуту onclick их не видит, поэтому и скрытие, и
+            // ВОЗВРАТ видимости делаются здесь симметрично (как у chartsBtn):
+            // ограниченная роль или роль без доступа — скрыть, иначе показать.
             if (typeof KipAuth !== 'undefined' && KipAuth._hasRestrictedKipIos && KipAuth._hasRestrictedKipIos()) {
                 const cablesBtn = document.getElementById('cablesEntryBtn');
                 if (cablesBtn) cablesBtn.style.display = 'none';
+                const projectsBtn = document.getElementById('projectsEntryBtn');
+                if (projectsBtn) projectsBtn.style.display = 'none';
+            } else {
+                const cablesBtn2 = document.getElementById('cablesEntryBtn');
+                if (cablesBtn2) cablesBtn2.style.display = (isAll || allowed.indexOf('cable-journal-edit') !== -1) ? '' : 'none';
+                const projectsBtn2 = document.getElementById('projectsEntryBtn');
+                if (projectsBtn2) projectsBtn2.style.display = (isAll || allowed.indexOf('projects-prod') !== -1) ? '' : 'none';
             }
 
             // Скрыть кнопки "Сапёр" и "Телефонный справочник" на главной,
