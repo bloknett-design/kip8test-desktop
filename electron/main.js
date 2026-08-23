@@ -100,45 +100,27 @@ function checkForUpdates() {
 let pendingDeepClean = false;  // флаг: нужно ли глубокую очистку SW через JS API
 
 // ============================================================
-// ОЧИСТКА КЭША ПРИ ИЗМЕНЕНИИ ВЕРСИИ ПРИЛОЖЕНИЯ (фикс Task 124)
+// ОЧИСТКА КЭША ПРИ КАЖДОМ ЗАПУСКЕ (Task 129)
 // ============================================================
-// При установке обновления Electron старый Service Worker и HTTP-кэш
-// Chromium сохраняются в userData. SW перехватывает fetch и отдаёт
-// закэшированный старый index.html — пользователь не видит новый код,
-// хотя GitHub Pages уже обновился.
+// Ранее (Task 122-124) очистка SW + cacheStorage делалась ТОЛЬКО при
+// изменении версии Electron-приложения (проверка через last-version.txt).
+// Это приводило к тому, что при обновлении index.html в kip8test пользователю
+// приходилось переустанавливать десктоп только ради bump version в package.json.
 //
-// Проблема Task 123: session.clearStorageData() без указания origin
-// может не очистить SW для HTTPS origin, когда приложение грузится через
-// https://. Также HTTP-кэш Chromium может отдать старый index.html через
-// условный запрос (304 Not Modified).
+// Task 129: всегда очищаем SW + cacheStorage при запуске (~500 мс задержка).
+// После очистки Electron грузит свежий index.html с GitHub Pages напрямую,
+// минуя старый SW. SW регистрируется заново с актуальным sw.js (v398+).
 //
-// Решение Task 124: ДВУХУРОВНЕВАЯ очистка:
-// 1. ДО загрузки страницы: session.clearCache() + clearStorageData с origin
-// 2. ПОСЛЕ dom-ready: executeJavaScript, который через JS API
-//    (navigator.serviceWorker.getRegistrations + unregister,
-//    caches.keys + caches.delete) гарантированно удаляет SW на origin'е
-//    страницы, потом перезагружает с cache-busting ?_nocache=ts
+// Это даёт тот же UX, что и в мобильной PWA: пользователь просто перезапускает
+// приложение, чтобы получить свежий контент (без переустановки).
+//
+// Переустановка Electron-приложения всё ещё нужна, но ТОЛЬКО при изменениях
+// в самом electron/main.js или package.json (например, новые Node-зависимости,
+// изменения в BrowserWindow, autoUpdater и т.п.).
 
-async function cleanCacheOnVersionChange() {
-  const userDataPath = app.getPath('userData');
-  const versionFile = path.join(userDataPath, 'last-version.txt');
-  const currentVersion = app.getVersion();
-
-  let lastVersion = null;
-  try {
-    lastVersion = fs.readFileSync(versionFile, 'utf8').trim();
-  } catch (e) {
-    // Файла нет — первый запуск или после ручного сброса
-    console.log('[cleanCacheOnVersionChange] Файл версии не найден — первый запуск');
-  }
-
-  if (lastVersion === currentVersion) {
-    console.log(`[cleanCacheOnVersionChange] Версия не изменилась (${currentVersion}) — кэш не трогаем`);
-    return;
-  }
-
-  console.log(`[cleanCacheOnVersionChange] ${lastVersion || '(новая установка)'} → ${currentVersion}, очищаем SW и кэш`);
-  pendingDeepClean = true;  // поставить флаг для dom-ready хука
+async function cleanCacheOnStartup() {
+  console.log('[cleanCacheOnStartup] Очистка SW и cacheStorage (Task 129)');
+  pendingDeepClean = true;  // флаг для dom-ready хука
 
   try {
     const ses = session.defaultSession;
@@ -153,21 +135,19 @@ async function cleanCacheOnVersionChange() {
     await ses.clearStorageData({
       storages: ['serviceworkers', 'cachestorage']
     });
-    console.log('[cleanCacheOnVersionChange] ✓ SW и cacheStorage очищены (session API)');
-
-    // Сохранить новую версию
-    fs.writeFileSync(versionFile, currentVersion, 'utf8');
-    console.log(`[cleanCacheOnVersionChange] ✓ Версия ${currentVersion} сохранена в last-version.txt`);
+    console.log('[cleanCacheOnStartup] ✓ SW и cacheStorage очищены (session API)');
   } catch (e) {
-    console.log('[cleanCacheOnVersionChange] Ошибка при очистке:', e.message);
+    console.log('[cleanCacheOnStartup] Ошибка при очистке:', e.message);
     // Не блокируем запуск — dom-ready хук попробует ещё раз через JS API
   }
 }
 
 // Глубокая очистка SW через JS API после загрузки страницы.
-// Эта функция вызывается из dom-ready хука, ЕСЛИ версия изменилась.
+// Эта функция вызывается из dom-ready хука при каждом запуске (Task 129).
 // В отличие от session API, JS API (navigator.serviceWorker, caches)
 // работает на origin'е страницы — гарантированно удаляет SW.
+// Перезагружает страницу с cache-busting ?_nocache=ts, чтобы Chromium
+// HTTP-кэш не отдал старый index.html через 304 Not Modified.
 async function deepCleanAfterLoad() {
   if (!mainWindow) return;
 
@@ -467,10 +447,11 @@ function createMenu() {
 // ============================================================
 
 app.whenReady().then(async () => {
-  // Очистить SW и cacheStorage при изменении версии Electron-приложения.
+  // Очистить SW и cacheStorage при каждом запуске (Task 129).
   // Должно выполниться ДО createWindow() / loadApp() — иначе старый SW
   // перехватит загрузку и отдаст закэшированный старый index.html.
-  await cleanCacheOnVersionChange();
+  // Без проверки версии — всегда чистый старт, как в мобильной PWA.
+  await cleanCacheOnStartup();
 
   registerProtocolHandler();
   createMenu();

@@ -1,6 +1,6 @@
 {
   "name": "kipia-desktop-test",
-  "version": "2.1.6",
+  "version": "2.1.7",
   "description": "КИПиА — справочник инженера (десктопное приложение, TEST)",
   "main": "electron/main.js",
   "scripts": {
