@@ -473,3 +473,27 @@ Stage Summary:
   - Кнопки ✕ и ⇄ скрыты (detail-panel не активен)
 - Коммит в kip8test: новый после push
 - Релиз: https://github.com/bloknett-design/kip8test-desktop/releases/tag/v2.1.5
+
+---
+Task ID: 128
+Agent: AI Assistant (GLM)
+Task: Фикс — хлебные крошки не отображаются на странице со списком расходомеров
+
+Симптом:
+- После v2.1.5 (Task 127) на странице со списком карточек крошки пустые
+- При открытии карточки крошки появляются
+
+Причина:
+- В navigateTo('flowmeter-data') крошки заполнялись только если isDesktop()=true
+- В Electron isDesktop() возвращает false (баг Task 126)
+- CSS показывает detailBreadcrumbBar, но крошки остаются пустыми
+
+Решение Task 128 (в kip8test/index.html):
+- Вынести заполнение крошек ИЗ if (isDesktop()) блока
+- Заполнять крошки ВСЕГДА при заходе на страницу расходомеров
+- Крошки полные с кликабельными ссылками
+
+В kip8test-desktop только bump version, чтобы autoUpdater подтянул новую сборку.
+
+- package.json: version 2.1.5 → 2.1.6
+- Тесты: 207 passed, 0 failed
