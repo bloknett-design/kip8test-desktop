@@ -316,11 +316,15 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
-      devTools: false
+      devTools: true   // Task 125: включено для диагностики — можно убрать после фикса
     },
-    autoHideMenuBar: true,
+    autoHideMenuBar: false,  // Task 125: показываем меню bar, чтобы был доступ к «Вид → Обновить» и DevTools
     show: false
   });
+
+  // Task 125: автоматически открыть DevTools при запуске для диагностики
+  // После нахождения причины бага можно убрать эту строку
+  mainWindow.webContents.openDevTools({ mode: 'detach' });
 
   // Загружаем приложение: приоритет — удалённый сервер (GitHub Pages),
   // fallback — локальные файлы (app://), если сервер недоступен.
@@ -356,6 +360,97 @@ function createWindow() {
     }).catch((err) => {
       console.log('[dom-ready] Ошибка executeJavaScript:', err.message);
     });
+
+    // Task 125: через 3 секунды собрать диагностику и показать в виде alert + в консоль
+    // Это поможет понять, что реально грузится в Electron
+    setTimeout(async () => {
+      if (!mainWindow) return;
+      try {
+        const diag = await mainWindow.webContents.executeJavaScript(`
+          (async function() {
+            var d = {};
+            // URL страницы
+            d.url = window.location.href;
+            d.origin = window.location.origin;
+            // Service Worker
+            if ('serviceWorker' in navigator) {
+              try {
+                var regs = await navigator.serviceWorker.getRegistrations();
+                d.sw_count = regs.length;
+                d.sw_urls = regs.map(function(r) { return r.active ? r.active.scriptURL : '(no active)'; });
+                d.sw_controller = navigator.serviceWorker.controller
+                  ? navigator.serviceWorker.controller.scriptURL : '(null)';
+              } catch (e) { d.sw_error = e.message; }
+            } else {
+              d.sw_count = -1; d.sw_urls = ['serviceWorker API не поддерживается'];
+            }
+            // Cache Storage
+            if ('caches' in window) {
+              try {
+                var names = await caches.keys();
+                d.cache_names = names;
+              } catch (e) { d.cache_error = e.message; }
+            } else {
+              d.cache_names = ['caches API не поддерживается'];
+            }
+            // CACHE_VERSION из index.html (если есть)
+            try {
+              // попытаемся получить sw.js и прочитать CACHE_VERSION
+              var resp = await fetch('sw.js?v=' + Date.now(), { cache: 'no-store' });
+              var txt = await resp.text();
+              var m = txt.match(/CACHE_VERSION\\\\s*=\\\\s*['\"]([^'\"]+)['\"]/);
+              d.sw_cache_version = m ? m[1] : '(не найдено в sw.js)';
+            } catch (e) { d.sw_cache_version = 'Ошибка: ' + e.message; }
+            // Проверка ключевых элементов Task 119/120 в DOM
+            d.has_flowDesktopTabs = !!document.getElementById('flowDesktopTabs');
+            d.has_flowFavBtn = !!document.getElementById('flowFavBtn');
+            d.flow_card_fav_btn_count = document.querySelectorAll('.flow-card-fav-btn').length;
+            // Активная страница
+            var activePage = document.querySelector('.page-content.active');
+            d.active_page = activePage ? activePage.id : '(нет active)';
+            // localStorage ключи
+            d.ls_keys_electron = !!localStorage.getItem('last-version.txt');
+            // __isElectron
+            d.is_electron = !!window.__isElectron;
+            // meta-теги
+            var metaViewport = document.querySelector('meta[name=viewport]');
+            d.viewport = metaViewport ? metaViewport.content : '(нет)';
+            // user agent
+            d.ua = navigator.userAgent.substring(0, 100);
+            return d;
+          })();
+        `);
+        const msg = '=== ДИАГНОСТИКА v2.1.3 ===\\n\\n' +
+                    'URL: ' + diag.url + '\\n' +
+                    'Origin: ' + diag.origin + '\\n\\n' +
+                    '__isElectron: ' + diag.is_electron + '\\n' +
+                    'UserAgent: ' + diag.ua + '\\n\\n' +
+                    'Service Worker:\\n' +
+                    '  count: ' + diag.sw_count + '\\n' +
+                    '  urls: ' + JSON.stringify(diag.sw_urls) + '\\n' +
+                    '  controller: ' + diag.sw_controller + '\\n\\n' +
+                    'Cache Storage:\\n' +
+                    '  names: ' + JSON.stringify(diag.cache_names) + '\\n\\n' +
+                    'CACHE_VERSION в sw.js: ' + diag.sw_cache_version + '\\n\\n' +
+                    'DOM (Task 119/120):\\n' +
+                    '  #flowDesktopTabs: ' + diag.has_flowDesktopTabs + '\\n' +
+                    '  #flowFavBtn: ' + diag.has_flowFavBtn + '\\n' +
+                    '  .flow-card-fav-btn count: ' + diag.flow_card_fav_btn_count + '\\n\\n' +
+                    'Активная страница: ' + diag.active_page + '\\n' +
+                    'viewport: ' + diag.viewport;
+        console.log(msg);
+        dialog.showMessageBox(mainWindow, {
+          type: 'info',
+          title: 'Диагностика v2.1.3 (Task 125)',
+          message: 'Диагностика приложения',
+          detail: msg,
+          buttons: ['OK'],
+          defaultId: 0
+        });
+      } catch (e) {
+        console.log('[diag] Ошибка:', e.message);
+      }
+    }, 3000);
   });
 
   mainWindow.once('ready-to-show', () => {

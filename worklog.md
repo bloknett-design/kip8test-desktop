@@ -303,3 +303,58 @@ Stage Summary:
   реальный сетевой запрос — обходит проблему 304 Not Modified
 - Коммит в kip8test-desktop: новый после push
 - Релиз: https://github.com/bloknett-design/kip8test-desktop/releases/tag/v2.1.2
+
+---
+Task ID: 125
+Agent: AI Assistant (GLM)
+Task: Диагностическая сборка v2.1.3 — почему Task 120 не виден после v2.1.2
+
+Симптом:
+- Пользователь установил v2.1.2 (Task 124 — двухуровневая очистка)
+- VLM-анализ скриншота: звёздочки избранного видны на карточках (Task 119 работает),
+  но переключатель «Все / Избранные» в breadcrumb bar не виден (Task 120 не работает)
+- Это противоречие: если index.html обновился, должны работать ОБА Task'а
+- Если index.html не обновился, звёздочек бы тоже не было
+
+Гипотезы:
+1. Electron грузит локальный index.html (app://), а не с GitHub Pages —
+   локальный index.html может быть старым
+2. Service Worker контролирует страницу, но не обновился
+3. CSS скрывает flowDesktopTabs (но display:none должен быть снят в Task 119)
+4. JS не вызывает показ flowDesktopTabs при navigateTo('flowmeter-data')
+
+Решение — диагностическая сборка v2.1.3:
+1. Включить devTools: true в webPreferences
+2. Автоматически открыть DevTools при запуске (mode: 'detach')
+3. Показать menu bar (autoHideMenuBar: false)
+4. Через 3 сек после dom-ready собрать диагностику:
+   - URL страницы (локальный или GitHub Pages?)
+   - origin (app://localhost vs https://bloknett-design.github.io)
+   - Service Worker: count, scriptURLs, controller
+   - Cache Storage: список имён
+   - CACHE_VERSION из sw.js (через fetch с cache-busting)
+   - DOM: наличие #flowDesktopTabs, #flowFavBtn, .flow-card-fav-btn count
+   - Активная страница (.page-content.active)
+   - UserAgent, viewport
+5. Показать диагностику в виде dialog.showMessageBox + в консоль
+
+Work Log:
+- electron/main.js: devTools: true, autoHideMenuBar: false, openDevTools({mode:'detach'})
+- Добавлен diag-блок в dom-ready хук (через 3 сек)
+- package.json: version 2.1.2 → 2.1.3
+- Тесты: 207 passed, 0 failed
+
+Что увидит пользователь при запуске v2.1.3:
+- Откроется DevTools (в отдельном окне)
+- Через 3 сек появится dialog с диагностикой:
+  - Если URL = https://bloknett-design.github.io/kip8test/ → грузится с GitHub Pages
+  - Если URL = app://localhost/index.html → грузится локальный index.html (старый)
+  - Если CACHE_VERSION ≠ kipia-test-v395 → грузится старый sw.js
+  - Если #flowDesktopTabs = false → HTML старый (без Task 120)
+  - Если sw_count > 0 → SW контролирует страницу
+
+Эта информация позволит точно понять причину и применить правильный фикс.
+
+Stage Summary:
+- v2.1.3 — диагностическая сборка, не должна выпускаться как боевое обновление
+- После анализа диагностики выпускается v2.1.4 с правильным фиксом
