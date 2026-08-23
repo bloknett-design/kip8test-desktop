@@ -11838,6 +11838,143 @@
 </div>
 
 <script>
+    // ============================================================
+    // ELECTRON: ПРИНУДИТЕЛЬНЫЙ ДЕСКТОПНЫЙ РЕЖИМ (Task 131)
+    // ============================================================
+    // Проблема: при уменьшении окна десктопного приложения ниже 1024px
+    // media-запросы CSS и isDesktop() переключали интерфейс в мобильный
+    // вид. В десктопном приложении это не нужно.
+    //
+    // Решение: если страница запущена в Electron (определяем по User-Agent),
+    // приложение ВСЕГДА работает в десктопном режиме при любом размере окна:
+    //   1) window.matchMedia для width-запросов отвечает так, будто окно
+    //      бесконечно широкое: (min-width: N) — всегда true,
+    //      (max-width: N) — всегда false. Запросы без width-условий
+    //      (prefers-color-scheme и т.п.) проходят без изменений;
+    //   2) media-условия в уже разобранных CSS-таблицах переписываются:
+    //      (min-width: 1024px) -> all      (десктопные стили — всегда)
+    //      (max-width: 1023px) -> not all  (мобильные стили — никогда)
+    //      Обход рекурсивный: вложенные @media-блоки тоже обрабатываются.
+    //
+    // Почему User-Agent, а не window.__isElectron: флаг ставится main.js
+    // на dom-ready — ПОЗЖЕ выполнения скриптов страницы, а решение о
+    // десктопном режиме нужно сразу, до первого рендера.
+    var IS_ELECTRON = /Electron/i.test(navigator.userAgent || '');
+
+    if (IS_ELECTRON) {
+        (function () {
+            'use strict';
+
+            // Ранний флаг для остального кода (main.js продублирует его на dom-ready)
+            try { window.__isElectron = true; } catch (e) {}
+
+            var _origMatchMedia = window.matchMedia.bind(window);
+
+            // Все (min|max)-width условия в media-запросе
+            var _WIDTH_COND_RE = /(min-width|max-width)\s*:\s*[\d.]+\s*(?:px|em|rem)\s*/gi;
+
+            // Вычислить запрос так, будто окно бесконечно широкое.
+            // null — если width-условий нет (запрос не про ширину).
+            function _evalAsWideViewport(query) {
+                var found = false;
+                var result = true;
+                var m;
+                _WIDTH_COND_RE.lastIndex = 0;
+                while ((m = _WIDTH_COND_RE.exec(query)) !== null) {
+                    found = true;
+                    if (m[1].toLowerCase() === 'max-width') result = false;
+                }
+                return found ? result : null;
+            }
+
+            // Статичный аналог MediaQueryList: состояние никогда не меняется,
+            // поэтому слушатели change — заглушки (перехода в мобильный режим нет)
+            function _StaticMQL(query, matches) {
+                this.media = query;
+                this.matches = matches;
+                this.onchange = null;
+            }
+            _StaticMQL.prototype.addListener = function () {};
+            _StaticMQL.prototype.removeListener = function () {};
+            _StaticMQL.prototype.addEventListener = function () {};
+            _StaticMQL.prototype.removeEventListener = function () {};
+            _StaticMQL.prototype.dispatchEvent = function () { return false; };
+
+            window.matchMedia = function (query) {
+                var wide = _evalAsWideViewport(String(query || ''));
+                if (wide === null) return _origMatchMedia(query); // не width-запрос
+                return new _StaticMQL(query, wide);
+            };
+
+            // --- CSS: переписать media-условия в разобранных таблицах стилей ---
+
+            function _norm(s) { return String(s || '').replace(/\s+/g, ''); }
+
+            function _walkMediaRules(rules, fallbackCss) {
+                for (var i = 0; i < rules.length; i++) {
+                    var r = rules[i];
+                    if (!r) continue;
+                    var isMedia = (typeof CSSMediaRule !== 'undefined') && (r instanceof CSSMediaRule);
+                    if (isMedia) {
+                        var cond = _norm(r.media && r.media.mediaText);
+                        var isDesktopBlock = cond.indexOf('min-width:1024px') !== -1;
+                        var isMobileBlock = cond.indexOf('max-width:1023px') !== -1;
+                        if (isDesktopBlock || isMobileBlock) {
+                            var target = isDesktopBlock ? 'all' : 'not all';
+                            try {
+                                r.media.mediaText = target;
+                            } catch (e) { /* см. fallback ниже */ }
+                            // Проверить, применилась ли замена условия
+                            if (_norm(r.media && r.media.mediaText) !== _norm(target)) {
+                                // Fallback: мутация не сработала (неожиданно для Chromium).
+                                // Для десктопного блока — собрать содержимое в буфер:
+                                // оно будет добавлено отдельным <style> без условий.
+                                if (isDesktopBlock && r.cssRules) {
+                                    for (var k = 0; k < r.cssRules.length; k++) {
+                                        fallbackCss.push(r.cssRules[k].cssText);
+                                    }
+                                }
+                                // Мобильный блок в fallback не копируем: его правила
+                                // продолжат действовать только ниже 1024px, а буфер
+                                // десктопных правил в конце документа перекроет их
+                            }
+                        }
+                    }
+                    // Рекурсия во вложенные правила (в т.ч. вложенные @media)
+                    if (r.cssRules && r.cssRules.length) _walkMediaRules(r.cssRules, fallbackCss);
+                }
+            }
+
+            function _forceDesktopCss() {
+                try {
+                    var fallbackCss = [];
+                    var sheets = Array.prototype.slice.call(document.styleSheets);
+                    for (var s = 0; s < sheets.length; s++) {
+                        var rules = null;
+                        try { rules = sheets[s].cssRules; } catch (e) { rules = null; }
+                        if (rules && rules.length) _walkMediaRules(rules, fallbackCss);
+                    }
+                    // Fallback-стили добавляются только если какая-то мутация не прошла
+                    if (fallbackCss.length) {
+                        var old = document.getElementById('electronForceDesktopCss');
+                        if (old && old.parentNode) old.parentNode.removeChild(old);
+                        var st = document.createElement('style');
+                        st.id = 'electronForceDesktopCss';
+                        st.textContent = '/* Electron: принудительные десктопные стили (fallback) */\n' + fallbackCss.join('\n');
+                        (document.head || document.documentElement).appendChild(st);
+                    }
+                } catch (e) { /* CSS-часть не критична: JS-часть уже работает */ }
+            }
+
+            // Основной <style> в <head> уже разобран к этому моменту — применяем сразу
+            _forceDesktopCss();
+            // Повтор после полной загрузки и с задержкой — страховка от поздно
+            // добавленных стилей (операция идемпотентна)
+            window.addEventListener('load', _forceDesktopCss);
+            setTimeout(_forceDesktopCss, 1500);
+        })();
+    }
+
     // ======================== ИГРА САПЁР ========================
     let msCols = 9, msRows = 9, msMines = 10;
     let msBoard = [], msRevealed = [], msFlagged = [], msGameOver = false, msFirstClick = true;
