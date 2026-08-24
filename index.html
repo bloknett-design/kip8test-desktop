@@ -6063,6 +6063,22 @@
     }
     .dev-search-toggle-btn svg { pointer-events: none; }
 
+    /* Task 156: счётчик результатов поиска над списком */
+    .kip-search-counter {
+        padding: 8px 14px;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: #8ab4e0;
+        background: rgba(74,143,199,0.08);
+        border-left: 3px solid rgba(74,143,199,0.55);
+        margin: 8px 8px 4px;
+        border-radius: 6px;
+    }
+    [data-theme="light"] .kip-search-counter {
+        color: #3a6ea5;
+        background: rgba(74,143,199,0.07);
+    }
+
     /* Task 149: на «Приборах по производствам» кнопка «Таблица» (Task 148)
        занимает right: 8..84px — иконка поиска сдвигается левее неё */
     #page-devices-prod .page-inline-header:has(.dev-table-toggle-btn) .dev-search-toggle-btn {
@@ -12027,6 +12043,27 @@
             document.querySelectorAll('.dev-header-search.search-open').forEach(fitToTitle);
         });
 
+
+        // Task 156: счётчик результатов поиска — строка «Найдено: N из M»
+        // над списком при активном поиске. Вызывается из рендеров списков
+        // после отрисовки; без поискового запроса — удаляет счётчик.
+        window.kipRenderSearchCounter = function (listEl, found, total, query) {
+            if (!listEl) return;
+            var old = null;
+            for (var i = 0; i < listEl.children.length; i++) {
+                if (listEl.children[i].classList && listEl.children[i].classList.contains('kip-search-counter')) {
+                    old = listEl.children[i];
+                    break;
+                }
+            }
+            if (old) old.remove();
+            if (!query) return; // без поиска счётчик не показываем
+            var div = document.createElement('div');
+            div.className = 'kip-search-counter';
+            div.textContent = 'Найдено: ' + found + ' из ' + total;
+            listEl.insertBefore(div, listEl.firstChild);
+        };
+
         // Task 154: свернуть все раскрытые поиски (вызывается при
         // смене страницы). Запрос сбрасывается с перерендером списка,
         // чтобы вернувшийся пользователь видел полный список.
@@ -13399,7 +13436,8 @@
         }
         if (query) {
             // Task 151: гибкий поиск (слова AND + транслит + нечёткий fallback)
-            filtered = kipSearchFilter(filtered, query, function (d) {
+           var __searchTotal = filtered.length;
+             filtered = kipSearchFilter(filtered, query, function (d) {
                 return DEV_FIELDS.map(f => d[f.key] || '').join(' ');
             });
         }
@@ -13471,6 +13509,7 @@
             html += '</div>';
         }
         list.innerHTML = html;
+        kipRenderSearchCounter(list, filtered.length, __searchTotal, query);
         if (typeof KipFav !== 'undefined') KipFav.wrapDevCardsForFavSwipe();
     }
 
@@ -14038,7 +14077,8 @@
         // Поиск
         if (query) {
             // Task 151: гибкий поиск (слова AND + транслит + нечёткий fallback)
-            filtered = kipSearchFilter(filtered, query, function (d) {
+           var __searchTotal = filtered.length;
+             filtered = kipSearchFilter(filtered, query, function (d) {
                 return DEV_FIELDS.map(f => d[f.key] || '').join(' ') + ' ' +
                     (d['Тип'] || '') + ' ' + (d['№ прибора'] || '') + ' ' +
                     (d['Место установки'] || '') + ' ' + (d['Наименование'] || '');
@@ -14089,6 +14129,7 @@
                 emptyHtml = '<div class="pb-empty">Ничего не найдено.<br>Попробуйте изменить запрос.</div>';
             }
             list.innerHTML = emptyHtml;
+            kipRenderSearchCounter(list, filtered.length, __searchTotal, query);
             kipBindFilterBadge(list, 'devices', devRenderSorted);
             kipBindSbsFilterBadge(list, 'devices', devRenderSorted);
             kipBindSarFilterBadge(list, 'devices', devRenderSorted);
@@ -14234,6 +14275,7 @@
 
 
         list.innerHTML = html;
+        kipRenderSearchCounter(list, filtered.length, __searchTotal, query);
         if (typeof KipFav !== 'undefined') KipFav.wrapDevCardsForFavSwipe();
         // Привязка обработчика к кнопке ✕ в бейдже фильтра
         kipBindFilterBadge(list, 'devices', devRenderSorted);
@@ -14595,7 +14637,8 @@
         }
 
         if (query) {
-            filtered = kipSearchFilter(filtered, rawQuery, function (d) {
+           var __searchTotal = filtered.length;
+             filtered = kipSearchFilter(filtered, rawQuery, function (d) {
                 return LOCK_FIELDS.map(f => d[f.key] || '').join(' ');
             });
         }
@@ -14627,6 +14670,7 @@
                 emptyHtml = '<div class="pb-empty">Ничего не найдено.<br>Попробуйте изменить запрос.</div>';
             }
             list.innerHTML = emptyHtml;
+            kipRenderSearchCounter(list, filtered.length, __searchTotal, rawQuery);
             kipBindFilterBadge(list, 'lockouts', lockRenderSorted);
             return;
         }
@@ -14676,6 +14720,7 @@
         }
         html += '</div>';
         list.innerHTML = html;
+        kipRenderSearchCounter(list, filtered.length, __searchTotal, rawQuery);
         // Привязка обработчика к кнопке ✕ в бейдже фильтра
         kipBindFilterBadge(list, 'lockouts', lockRenderSorted);
         // Свайп для добавления в избранное
@@ -15107,7 +15152,8 @@
         }
 
         if (query) {
-            filtered = kipSearchFilter(filtered, rawQuery, function (d) {
+           var __searchTotal = filtered.length;
+             filtered = kipSearchFilter(filtered, rawQuery, function (d) {
                 return VALVE_FIELDS.map(f => d[f.key] || '').join(' ');
             });
         }
@@ -15155,6 +15201,7 @@
                 emptyHtml = '<div class="pb-empty">Ничего не найдено.<br>Попробуйте изменить запрос.</div>';
             }
             list.innerHTML = emptyHtml;
+            kipRenderSearchCounter(list, filtered.length, __searchTotal, rawQuery);
             kipBindFilterBadge(list, 'valves', valveRenderSorted);
             kipBindSbsFilterBadge(list, 'valves', valveRenderSorted);
             kipBindSarFilterBadge(list, 'valves', valveRenderSorted);
@@ -15216,6 +15263,7 @@
         }
         html += '</div>';
         list.innerHTML = html;
+        kipRenderSearchCounter(list, filtered.length, __searchTotal, rawQuery);
         // Привязка обработчика к кнопке ✕ в бейдже фильтра
         kipBindFilterBadge(list, 'valves', valveRenderSorted);
         kipBindSbsFilterBadge(list, 'valves', valveRenderSorted);
@@ -15892,7 +15940,8 @@
         }
 
         if (query) {
-            filtered = kipSearchFilter(filtered, rawQuery, function (d) {
+           var __searchTotal = filtered.length;
+             filtered = kipSearchFilter(filtered, rawQuery, function (d) {
                 return REGULATOR_FIELDS.map(f => d[f.key] || '').join(' ');
             });
         }
@@ -15927,6 +15976,7 @@
                 emptyHtml = '<div class="pb-empty">Ничего не найдено.<br>Попробуйте изменить запрос.</div>';
             }
             list.innerHTML = emptyHtml;
+            kipRenderSearchCounter(list, filtered.length, __searchTotal, rawQuery);
             kipBindFilterBadge(list, 'regulators', regulatorRenderSorted);
             kipBindSbsFilterBadge(list, 'regulators', regulatorRenderSorted);
             // Свайп для добавления в избранное
@@ -15983,6 +16033,7 @@
         }
         html += '</div>';
         list.innerHTML = html;
+        kipRenderSearchCounter(list, filtered.length, __searchTotal, rawQuery);
         // Привязка обработчика к кнопке ✕ в бейдже фильтра
         kipBindFilterBadge(list, 'regulators', regulatorRenderSorted);
         kipBindSbsFilterBadge(list, 'regulators', regulatorRenderSorted);
@@ -16490,7 +16541,8 @@
         });
 
         if (query) {
-            filtered = kipSearchFilter(filtered, rawQuery, function (d) {
+           var __searchTotal = filtered.length;
+             filtered = kipSearchFilter(filtered, rawQuery, function (d) {
                 return PROJECT_FIELDS.map(f => d[f.key] || '').join(' ');
             });
         }
@@ -16579,6 +16631,7 @@
         }
         html += '</div>';
         list.innerHTML = html;
+        kipRenderSearchCounter(list, filtered.length, __searchTotal, rawQuery);
         // Добавить кликабельность значка избранного на карточках проектов
         if (typeof KipFav !== 'undefined') KipFav.wrapKipCardsForFavSwipe('.project-card', 'proj', 'data-project-id');
     }
@@ -27577,6 +27630,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 this._total = this._allRows.length;
             }
             this._render();
+            // Task 156: счётчик результатов (после _render, чтобы не перезаписался)
+            kipRenderSearchCounter(document.getElementById('cjList'),
+                this._rows.length, this._allRows.length, q);
         },
 
         // ============================================================
