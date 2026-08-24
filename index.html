@@ -15239,7 +15239,11 @@
 
             for (const item of items) {
                 const itemId = String(item['ID'] ?? '');
-                const name = item['Марка'] || item['Назначение арматуры (параметр)'] || '(без названия)';
+                // Task 158: заголовок карточки — «Назначение арматуры (параметр)»
+                // (выделенным шрифтом); «Марка» и остальные данные — строками
+                // ниже, обычным шрифтом меньшего размера.
+                const name = item['Назначение арматуры (параметр)'] || item['Марка'] || '(без названия)';
+                const mark = item['Марка'] || '';
                 const type = item['Тип, пропускная характеристика'] || '';
                 const place = item['Место расположения'] || '';
 
@@ -15249,10 +15253,12 @@
                 html += '<div class="valve-card-header-inner">';
                 html += '<div class="valve-card-text">';
                 html += '<div class="valve-card-title">' + valveMark(name, query) + '</div>';
+                // Строки ниже: Марка (полужирно-приглушённо) + тип + место
                 let subtitle = '';
-                if (type) subtitle += type;
-                if (place) subtitle += (subtitle ? ' · ' : '') + place;
-                if (subtitle) html += '<div class="valve-card-subtitle">' + valveMark(subtitle, query) + '</div>';
+                if (mark) subtitle += valveMark(mark, query);
+                if (type) subtitle += (subtitle ? ' · ' : '') + valveMark(type, query);
+                if (place) subtitle += (subtitle ? ' · ' : '') + valveMark(place, query);
+                if (subtitle) html += '<div class="valve-card-subtitle">' + subtitle + '</div>';
                 html += '</div>';
                 html += '</div>';
                 html += '</div>';
@@ -15476,7 +15482,10 @@
             html += '<div class="pb-section-body">';
             for (const item of sgItems) {
                 const itemId = String(item['ID'] ?? '');
-                const name = item['Марка'] || item['Назначение арматуры (параметр)'] || '(без названия)';
+                // Task 158: заголовок — «Назначение арматуры (параметр)»;
+                // «Марка» — первой строкой подзаголовка
+                const name = item['Назначение арматуры (параметр)'] || item['Марка'] || '(без названия)';
+                const mark = item['Марка'] || '';
                 const type = item['Тип, пропускная характеристика'] || '';
                 const place = item['Место расположения'] || '';
                 const dn = item['DN (мм)'] || '';
@@ -15494,6 +15503,8 @@
                 //   • mode='name' / 'type' — «Тип запорной части» в заголовке подгруппы,
                 //     поэтому в подзаголовке показываем DN + «Тип, пропускная характеристика» + место
                 let subtitleParts = [];
+                // Task 158: Марка — первой строкой подзаголовка
+                if (mark) subtitleParts.push(valveEsc(mark));
                 if (mode === 'prod') {
                     if (shutOff) subtitleParts.push(shutOff);
                 } else {
@@ -15552,7 +15563,8 @@
         const titleEl = document.getElementById('valveDetailTitle');
         const content = document.getElementById('valveDetailContent');
         if (!titleEl || !content) return;
-        const name = item['Марка'] || item['Назначение арматуры (параметр)'] || '(без названия)';
+        // Task 158: заголовок детальной — назначение (как в карточках списка)
+        const name = item['Назначение арматуры (параметр)'] || item['Марка'] || '(без названия)';
         titleEl.textContent = name;
 
         let html = '<div class="valve-detail-card">';
@@ -26430,7 +26442,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     if (typeof valveData !== 'undefined' && valveData && valveData.valves) {
                         const item = valveData.valves.find(function(d) { return String(d['ID'] || '') === String(itemId); });
                         if (item) {
-                            itemName = item['Марка'] || item['Назначение арматуры (параметр)'] || itemId;
+                            // Task 158: имя — назначение (консистентно со списком)
+                            itemName = item['Назначение арматуры (параметр)'] || item['Марка'] || itemId;
                             itemSub1 = item['Тип, пропускная характеристика'] || '';
                             itemSub2 = item['Место расположения'] || '';
                         }
