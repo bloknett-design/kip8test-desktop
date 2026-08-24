@@ -8780,7 +8780,62 @@
             gap: 8px;
             cursor: pointer;
             user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
             margin-right: 8px;
+            padding: 4px 6px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+        .desktop-top-bar-brand:hover {
+            background: rgba(74, 143, 199, 0.10);
+        }
+        .desktop-top-bar-brand:focus-visible {
+            outline: 2px solid rgba(74, 143, 199, 0.55);
+            outline-offset: 2px;
+        }
+        .desktop-top-bar-brand svg.led-display {
+            height: 28px;
+            width: auto;
+            transform: skewX(-9deg);
+            filter: drop-shadow(0 0 3px rgba(74,143,199,0.4)) drop-shadow(0 0 7px rgba(74,143,199,0.15));
+            animation: segmentGlow 3s ease-in-out infinite;
+            pointer-events: none;
+        }
+        [data-theme="light"] .desktop-top-bar-brand svg.led-display {
+            filter: drop-shadow(0 0 3px rgba(198,97,63,0.3)) drop-shadow(0 0 7px rgba(198,97,63,0.1));
+        }
+        .desktop-top-bar-brand.hint-pulse svg.led-display {
+            filter: drop-shadow(0 0 5px rgba(199,150,74,0.55)) drop-shadow(0 0 10px rgba(199,150,74,0.22)) !important;
+        }
+        .desktop-top-bar-brand.hint-pulse .led-seg-on {
+            fill: #c7964a !important;
+            transition: fill 0.15s;
+        }
+        .desktop-top-bar-brand.hint-pulse .led-seg-blink-on {
+            fill: #c7964a !important;
+        }
+        /* Градиент LED для десктопного бара (отдельный id, чтобы не конфликтовать с мобильным) */
+        .desktop-top-bar-brand .led-seg-on {
+            fill: url(#ledGradientDesktop);
+        }
+        .desktop-top-bar-brand .led-seg-blink-on {
+            fill: url(#ledGradientDesktop);
+            opacity: 0;
+            animation: segBlink 10s ease-in-out infinite;
+        }
+        .desktop-top-bar-brand .led-seg-off {
+            fill: rgba(120, 160, 200, 0.06);
+        }
+        [data-theme="light"] .desktop-top-bar-brand .led-seg-on {
+            fill: url(#ledGradientDesktop);
+        }
+        [data-theme="light"] .desktop-top-bar-brand .led-seg-off {
+            fill: rgba(198, 97, 63, 0.05);
+        }
+        [data-theme="light"] .desktop-top-bar-brand .led-seg-blink-on {
+            fill: url(#ledGradientDesktop);
         }
         .desktop-top-bar-title {
             font-family: 'Jura', sans-serif;
@@ -9215,9 +9270,72 @@
             <button type="button" id="desktopBurgerBtn" onclick="toggleDesktopSidebar()" aria-label="Меню">
                 <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
             </button>
-            <div class="desktop-top-bar-brand" onclick="navigateTo('dashboard')">
-                <img id="headerLogoDesktop" src="images/logo.png" alt="КИПиА" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">
-                <span class="desktop-top-bar-title">КИПиА</span>
+            <div class="desktop-top-bar-brand" id="desktopBrandBtn" role="button" aria-label="КИПиА — на главную (двойной клик — секретные разделы)" tabindex="0">
+                <svg class="led-display" viewBox="0 0 362 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+<defs>
+  <linearGradient id="ledGradientDesktop" x1="0" y1="0" x2="362" y2="0" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#4a8fc7"><animate attributeName="stop-color" values="#4a8fc7;#7ab8e0;#7ae0a0;#c77ae0;#4ac771;#4a8fc7" dur="10s" repeatCount="indefinite"/></stop>
+    <stop offset="25%" stop-color="#7ae0a0"><animate attributeName="stop-color" values="#7ae0a0;#c77ae0;#4ac771;#4a8fc7;#7ab8e0;#7ae0a0" dur="10s" repeatCount="indefinite"/></stop>
+    <stop offset="50%" stop-color="#c77ae0"><animate attributeName="stop-color" values="#c77ae0;#4ac771;#4a8fc7;#7ab8e0;#7ae0a0;#c77ae0" dur="10s" repeatCount="indefinite"/></stop>
+    <stop offset="75%" stop-color="#4ac771"><animate attributeName="stop-color" values="#4ac771;#4a8fc7;#7ab8e0;#7ae0a0;#c77ae0;#4ac771" dur="10s" repeatCount="indefinite"/></stop>
+    <stop offset="100%" stop-color="#7ab8e0"><animate attributeName="stop-color" values="#7ab8e0;#7ae0a0;#c77ae0;#4ac771;#4a8fc7;#7ab8e0" dur="10s" repeatCount="indefinite"/></stop>
+  </linearGradient>
+</defs>
+<!-- К: 1+2+4+7+8 (лев.верх, лев.низ, сред.гориз, прав.низ, верх.диаг) -->
+<g transform="translate(2,0)">
+  <polygon points="14,0 46,0 51,5 46,10 14,10 9,5" class="led-seg-off"/>
+  <polygon points="52,12 57,7 61,12 61,34 57,39 52,34" class="led-seg-off"/>
+  <polygon points="52,49 57,44 61,49 61,71 57,76 52,71" class="led-seg-on"/>
+  <polygon points="14,78 46,78 51,83 46,88 14,88 9,83" class="led-seg-off"/>
+  <polygon points="0,49 5,44 10,49 10,71 5,76 0,71" class="led-seg-on"/>
+  <polygon points="0,12 5,7 10,12 10,34 5,39 0,34" class="led-seg-on"/>
+  <polygon points="14,39 46,39 51,44 46,49 14,49 9,44" class="led-seg-on"/>
+  <polygon points="12,44 12,37 46,14 52,14 52,21 18,44" class="led-seg-on"/>
+</g>
+<!-- И: 1+2+6+7+9 (лев.верх, лев.низ, прав.верх, прав.низ, ниж.диаг) -->
+<g transform="translate(80,0)">
+  <polygon points="14,0 46,0 51,5 46,10 14,10 9,5" class="led-seg-off"/>
+  <polygon points="52,12 57,7 61,12 61,34 57,39 52,34" class="led-seg-on"/>
+  <polygon points="52,49 57,44 61,49 61,71 57,76 52,71" class="led-seg-on"/>
+  <polygon points="14,78 46,78 51,83 46,88 14,88 9,83" class="led-seg-off"/>
+  <polygon points="0,49 5,44 10,49 10,71 5,76 0,71" class="led-seg-on"/>
+  <polygon points="0,12 5,7 10,12 10,34 5,39 0,34" class="led-seg-on"/>
+  <polygon points="14,39 46,39 51,44 46,49 14,49 9,44" class="led-seg-off"/>
+  <polygon points="12,78 12,71 46,44 52,44 52,51 18,78" class="led-seg-on"/>
+</g>
+<!-- П: 1+2+3+6+7 (лев.верх, лев.низ, верх.гориз, прав.верх, прав.низ) -->
+<g transform="translate(158,0)">
+  <polygon points="14,0 46,0 51,5 46,10 14,10 9,5" class="led-seg-on"/>
+  <polygon points="52,12 57,7 61,12 61,34 57,39 52,34" class="led-seg-on"/>
+  <polygon points="52,49 57,44 61,49 61,71 57,76 52,71" class="led-seg-on"/>
+  <polygon points="14,78 46,78 51,83 46,88 14,88 9,83" class="led-seg-off"/>
+  <polygon points="0,49 5,44 10,49 10,71 5,76 0,71" class="led-seg-on"/>
+  <polygon points="0,12 5,7 10,12 10,34 5,39 0,34" class="led-seg-on"/>
+  <polygon points="14,39 46,39 51,44 46,49 14,49 9,44" class="led-seg-off"/>
+</g>
+<!-- и: 2+7+9 (лев.низ, прав.низ, ниж.диаг) (narrow) -->
+<g transform="translate(236,0)">
+  <polygon points="14,0 32,0 37,5 32,10 14,10 9,5" class="led-seg-off"/>
+  <polygon points="38,12 43,7 47,12 47,34 43,39 38,34" class="led-seg-off"/>
+  <polygon points="38,49 43,44 47,49 47,71 43,76 38,71" class="led-seg-on"/>
+  <polygon points="14,78 32,78 37,83 32,88 14,88 9,83" class="led-seg-off"/>
+  <polygon points="0,49 5,44 10,49 10,71 5,76 0,71" class="led-seg-on"/>
+  <polygon points="0,12 5,7 10,12 10,34 5,39 0,34" class="led-seg-off"/>
+  <polygon points="14,39 32,39 37,44 32,49 14,49 9,44" class="led-seg-off"/>
+  <polygon points="12,78 12,71 32,44 38,44 38,51 18,78" class="led-seg-on"/>
+</g>
+<!-- А: a+b+c+e+f+g -->
+<g transform="translate(300,0)">
+  <polygon points="14,0 46,0 51,5 46,10 14,10 9,5" class="led-seg-on"/>
+  <polygon points="52,12 57,7 61,12 61,34 57,39 52,34" class="led-seg-on"/>
+  <polygon points="52,49 57,44 61,49 61,71 57,76 52,71" class="led-seg-on"/>
+  <polygon points="14,78 46,78 51,83 46,88 14,88 9,83" class="led-seg-off"/>
+  <polygon points="14,78 46,78 51,83 46,88 14,88 9,83" class="led-seg-blink-on"/>
+  <polygon points="0,49 5,44 10,49 10,71 5,76 0,71" class="led-seg-on"/>
+  <polygon points="0,12 5,7 10,12 10,34 5,39 0,34" class="led-seg-on"/>
+  <polygon points="14,39 46,39 51,44 46,49 14,49 9,44" class="led-seg-on"/>
+</g>
+                </svg>
             </div>
             <span class="desktop-top-bar-divider"></span>
             <button type="button" class="desktop-top-bar-tab" data-page="calculators" onclick="navigateTo('calculators')">
@@ -12386,6 +12504,55 @@
         headerEl.addEventListener('click', function() {
             if (touchFired) { touchFired = false; return; }
             secretTapHandler();
+        });
+    })();
+
+    // ===== Десктоп-бренд в верхнем баре: 1 тап = на главную, 2 тапа = секретные разделы =====
+    // Task 159 (v426): заменили логотип+текст на LED-кнопку как в мобильной версии
+    (function() {
+        let brandEl = document.getElementById('desktopBrandBtn');
+        if (!brandEl) return;
+        let tapCount = 0;
+        let tapTimer = null;
+        let touchFired = false;
+        const TAP_DELAY = 300; // мс окно для двойного тапа
+
+        function handleBrandTap() {
+            tapCount++;
+            // Визуальная обратная связь (как в мобильной версии)
+            brandEl.classList.add('hint-pulse');
+            setTimeout(() => brandEl.classList.remove('hint-pulse'), 200);
+            clearTimeout(tapTimer);
+
+            if (tapCount >= 2) {
+                // Двойной тап → открыть секретные разделы
+                tapCount = 0;
+                clearTimeout(tapTimer);
+                secretTapHandler();
+            } else {
+                // Одиночный тап → отложенный переход на главную (даём шанс на 2-й тап)
+                tapTimer = setTimeout(() => {
+                    tapCount = 0;
+                    navigateTo('dashboard');
+                }, TAP_DELAY);
+            }
+        }
+
+        brandEl.addEventListener('touchend', function(e) {
+            touchFired = true;
+            handleBrandTap();
+            e.preventDefault();
+        });
+        brandEl.addEventListener('click', function(e) {
+            if (touchFired) { touchFired = false; return; }
+            handleBrandTap();
+        });
+        // Клавиатурная доступность: Enter/Space = одиночный тап (на главную)
+        brandEl.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigateTo('dashboard');
+            }
         });
     })();
 
