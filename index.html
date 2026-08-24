@@ -13145,22 +13145,44 @@
             var w = words[i];
             forms.push({ w: w, ru: kipTranslit(w, _TRANSLIT_EN2RU), en: kipTranslit(w, _TRANSLIT_RU2EN) });
         }
-        _kipSearchCache.set(item, forms);
-        return forms;
+        // Task 155: склеенная форма записи (все слова без разделителей) —
+        // для устойчивости к разным форматам разделителей: «8м/1»
+        // найдёт и «8 м/1», и «8м-1», и «8м 1» и т.п.
+        var glued = words.join('');
+        var result = { forms: forms, glued: glued };
+        _kipSearchCache.set(item, result);
+        return result;
     }
 
-    // Сопоставление слов запроса с предвычисленными формами слов записи
-    function kipMatchForms(qWords, forms, allowFuzzy) {
+    // Сопоставление слов запроса с предвычисленными формами слов записи.
+    // Task 155: сначала «склеенная» проверка — весь запрос без разделителей
+    // содержится в склеенной форме записи. Покрывает случаи, когда разделители
+    // в данных и запросе различаются («8м/1» vs «8 м/1» vs «8м-1»), а также
+    // слитые запросы («8м1»). Минимум 3 символа — от ложных срабатываний.
+    function kipMatchForms(qWords, data, allowFuzzy) {
+        var gluedQ = qWords.join('');
+        if (gluedQ.length >= 3 && data.glued && data.glued.indexOf(gluedQ) !== -1) {
+            return true;
+        }
+        var forms = data.forms;
         for (var qi = 0; qi < qWords.length; qi++) {
             var qw = qWords[qi];
             var qwRu = kipTranslit(qw, _TRANSLIT_EN2RU);
             var qwEn = kipTranslit(qw, _TRANSLIT_RU2EN);
             var found = false;
+            // Task 155: однобуквенные/однозначные слова запроса («8», «м»)
+            // сопоставляем ТОЛЬКО точным равенством со словом поля —
+            // подстрока даёт шум («8» матчится в «8мм», «18», «80»...).
+            // Составные запросы («8 м/1») покрывает glued-форма выше.
+            var shortWord = qw.length <= 1;
             for (var hi = 0; hi < forms.length && !found; hi++) {
                 var f = forms[hi];
-                if (f.w === qw || f.w.indexOf(qw) !== -1) { found = true; break; }
-                if (f.w === qwRu || f.w.indexOf(qwRu) !== -1) { found = true; break; }
-                if (f.w === qwEn || f.w.indexOf(qwEn) !== -1) { found = true; break; }
+                if (f.w === qw) { found = true; break; }
+                if (!shortWord && f.w.indexOf(qw) !== -1) { found = true; break; }
+                if (f.w === qwRu) { found = true; break; }
+                if (!shortWord && f.w.indexOf(qwRu) !== -1) { found = true; break; }
+                if (f.w === qwEn) { found = true; break; }
+                if (!shortWord && f.w.indexOf(qwEn) !== -1) { found = true; break; }
                 if (allowFuzzy) {
                     var t = kipFuzzyThreshold(qw);
                     if (t > 0 && f.w.length >= 4) {
@@ -14541,7 +14563,11 @@
             return;
         }
 
-        const query = lockNorm((document.getElementById(id.search)?.value || '').trim());
+        // Task 155: RAW-запрос для kipSearchFilter — norm-функции удаляют
+        // разделители («8м/1»->«8м1» одним словом) и ломают токенизацию
+        // движка. normQuery — только для подсветки совпадений.
+        const rawQuery = (document.getElementById(id.search)?.value || '').trim();
+        const query = lockNorm(rawQuery);
         // Если пользователь вручную ввёл поисковый запрос — сбросить фильтр по проекту
         if (query && kipIsProjectLinkFilterActive('lockouts')) {
             kipClearProjectLinkFilter('lockouts');
@@ -14569,7 +14595,7 @@
         }
 
         if (query) {
-            filtered = kipSearchFilter(filtered, query, function (d) {
+            filtered = kipSearchFilter(filtered, rawQuery, function (d) {
                 return LOCK_FIELDS.map(f => d[f.key] || '').join(' ');
             });
         }
@@ -15013,7 +15039,11 @@
             return;
         }
 
-        const query = valveNorm((document.getElementById(id.search)?.value || '').trim());
+        // Task 155: RAW-запрос для kipSearchFilter — norm-функции удаляют
+        // разделители («8м/1»->«8м1» одним словом) и ломают токенизацию
+        // движка. normQuery — только для подсветки совпадений.
+        const rawQuery = (document.getElementById(id.search)?.value || '').trim();
+        const query = valveNorm(rawQuery);
         // Если пользователь вручную ввёл поисковый запрос — сбросить фильтр по проекту
         if (query && kipIsProjectLinkFilterActive('valves')) {
             kipClearProjectLinkFilter('valves');
@@ -15077,7 +15107,7 @@
         }
 
         if (query) {
-            filtered = kipSearchFilter(filtered, query, function (d) {
+            filtered = kipSearchFilter(filtered, rawQuery, function (d) {
                 return VALVE_FIELDS.map(f => d[f.key] || '').join(' ');
             });
         }
@@ -15828,7 +15858,11 @@
             return;
         }
 
-        const query = regulatorNorm((document.getElementById(id.search)?.value || '').trim());
+        // Task 155: RAW-запрос для kipSearchFilter — norm-функции удаляют
+        // разделители («8м/1»->«8м1» одним словом) и ломают токенизацию
+        // движка. normQuery — только для подсветки совпадений.
+        const rawQuery = (document.getElementById(id.search)?.value || '').trim();
+        const query = regulatorNorm(rawQuery);
         // Если пользователь вручную ввёл поисковый запрос — сбросить фильтр по проекту
         if (query && kipIsProjectLinkFilterActive('regulators')) {
             kipClearProjectLinkFilter('regulators');
@@ -15858,7 +15892,7 @@
         }
 
         if (query) {
-            filtered = kipSearchFilter(filtered, query, function (d) {
+            filtered = kipSearchFilter(filtered, rawQuery, function (d) {
                 return REGULATOR_FIELDS.map(f => d[f.key] || '').join(' ');
             });
         }
@@ -16428,7 +16462,11 @@
             return;
         }
 
-        const query = projectNorm((document.getElementById(id.search)?.value || '').trim());
+        // Task 155: RAW-запрос для kipSearchFilter — norm-функции удаляют
+        // разделители («8м/1»->«8м1» одним словом) и ломают токенизацию
+        // движка. normQuery — только для подсветки совпадений.
+        const rawQuery = (document.getElementById(id.search)?.value || '').trim();
+        const query = projectNorm(rawQuery);
         let filtered = projectData.projects || [];
 
         // Сортировка: по «Отделению», внутри отделения — по «Дате утв.» (старые → новые).
@@ -16452,7 +16490,7 @@
         });
 
         if (query) {
-            filtered = kipSearchFilter(filtered, query, function (d) {
+            filtered = kipSearchFilter(filtered, rawQuery, function (d) {
                 return PROJECT_FIELDS.map(f => d[f.key] || '').join(' ');
             });
         }
