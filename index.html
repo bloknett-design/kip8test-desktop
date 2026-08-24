@@ -3657,6 +3657,16 @@
         background: rgba(184,90,42,0.12);
         color: #b85a2a;
     }
+    /* Task 161: компактные счётчики в десктопных табах «Все / Избранные»
+       (меньше мобильных — табы десктопа компактнее: шрифт 13px, паддинг 6px) */
+    .flow-desktop-tabs .flow-tab-count {
+        min-width: 15px;
+        height: 15px;
+        padding: 0 4px;
+        border-radius: 8px;
+        font-size: 10px;
+        line-height: 15px;
+    }
 
     /* Кнопка-звёздочка в карточке расходомера (как в приборах/клапанах) */
     .flow-card-fav-btn {
@@ -9362,9 +9372,10 @@
         </div>
         <div id="detailBreadcrumbContent"></div>
         <!-- Task 120: Переключатель «Все / Избранные» для расходомеров на десктопе -->
+        <!-- Task 161: счётчики количества расходомеров возле кнопок (как в мобильном баре) -->
         <div id="flowDesktopTabs" class="flow-desktop-tabs">
-            <button class="flow-tab active" data-flow-tab="all" onclick="FlowmeterData.setTab('all')">Все</button>
-            <button class="flow-tab" data-flow-tab="fav" onclick="FlowmeterData.setTab('fav')">Избранные</button>
+            <button class="flow-tab active" data-flow-tab="all" onclick="FlowmeterData.setTab('all')">Все <span class="flow-tab-count" id="flowAllCountDesk">0</span></button>
+            <button class="flow-tab" data-flow-tab="fav" onclick="FlowmeterData.setTab('fav')">Избранные <span class="flow-tab-count" id="flowFavCountDesk">0</span></button>
         </div>
         <button type="button" class="detail-breadcrumb-close" onclick="closeDetailPanel()" aria-label="Закрыть панель">
             <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:rgba(74,143,199,0.9);fill:none;stroke-width:2;stroke-linecap:round;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -29099,13 +29110,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // Обновить счётчики в табах «Все» и «Избранные»
+        // Task 161: счётчики в обоих барах — мобильном (#flowBottomBar:
+        // flowAllCount/flowFavCount) и десктопном (#flowDesktopTabs:
+        // flowAllCountDesk/flowFavCountDesk в breadcrumb bar)
         _updateTabCounts: function() {
             var allCount = (this._METERS || []).length;
             var favCount = FlowFav.count();
-            var allEl = document.getElementById('flowAllCount');
-            if (allEl) allEl.textContent = String(allCount);
-            var favEl = document.getElementById('flowFavCount');
-            if (favEl) favEl.textContent = String(favCount);
+            var counts = [
+                { id: 'flowAllCount', value: allCount },
+                { id: 'flowFavCount', value: favCount },
+                { id: 'flowAllCountDesk', value: allCount },
+                { id: 'flowFavCountDesk', value: favCount }
+            ];
+            for (var i = 0; i < counts.length; i++) {
+                var el = document.getElementById(counts[i].id);
+                if (el) el.textContent = String(counts[i].value);
+            }
         },
 
         // Переключить избранное для карточки в списке
