@@ -336,13 +336,16 @@
         '  width: 18px;',
         '  display: flex; align-items: center; justify-content: center;',
         '  font-size: 9px; line-height: 1;',
-        '  color: rgba(200,214,232,0.5); cursor: pointer; user-select: none;',
+        /* Task 174: кнопка фильтра выделена ярче — насыщенный голубой
+           вместо тускло-серого полупрозрачного */
+        '  color: #7db9f5; cursor: pointer; user-select: none;',
         '}',
-        '.dev-table-filter-btn:hover { color: #8fc1ee; background: rgba(255,255,255,0.08); }',
-        '.dev-table-filter-btn.has-filter { color: #ffd60a; background: rgba(255,214,10,0.10); }',
-        '[data-theme="light"] .dev-table-filter-btn { color: rgba(51,70,94,0.55); }',
-        '[data-theme="light"] .dev-table-filter-btn:hover { color: #2a5885; background: rgba(0,0,0,0.06); }',
-        '[data-theme="light"] .dev-table-filter-btn.has-filter { color: #b8860b; background: rgba(184,134,11,0.10); }',
+        /* Task 174: hover и активный фильтр — тоже ярче (синяя/янтарная плашка) */
+        '.dev-table-filter-btn:hover { color: #d5e9fd; background: rgba(125,185,245,0.22); }',
+        '.dev-table-filter-btn.has-filter { color: #ffd60a; background: rgba(255,214,10,0.22); }',
+        '[data-theme="light"] .dev-table-filter-btn { color: #3a6ea5; }',
+        '[data-theme="light"] .dev-table-filter-btn:hover { color: #1b5aa6; background: rgba(58,110,165,0.13); }',
+        '[data-theme="light"] .dev-table-filter-btn.has-filter { color: #c77e00; background: rgba(199,126,0,0.16); }',
         '.dev-table-filter-dd {',
         '  position: fixed; z-index: 1000; min-width: 250px; max-width: 330px;',
         '  background: #1a2331; border: 1px solid rgba(74,143,199,0.4); border-radius: 8px;',
