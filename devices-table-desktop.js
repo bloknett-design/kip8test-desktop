@@ -22,6 +22,15 @@
 // Task 165:
 //   - точные совпадения поискового запроса подсвечиваются жёлтым
 //     фоном <mark> в ячейках таблицы (по словам запроса, как в списках).
+// Task 168:
+//   - фильтры по колонкам (как в Excel): выпадающий список уникальных
+//     значений в заголовке, мультивыбор чекбоксами, живое применение;
+//   - изменение ширины колонок мышью (граница заголовка), ширины
+//     сохраняются в localStorage;
+//   - навигация с клавиатуры: стрелки — по строкам, Enter — открыть
+//     карточку, Home/End — в начало/конец списка;
+//   - виртуальный скролл: рендерится только видимое окно строк
+//     (+ буфер) — быстрая прокрутка на слабых машинах.
 //
 // Модуль самодостаточен; зависимости — глобальные: devData,
 // devRenderSorted, devOpenDetail, KipAuth. Загружается loader'ом
@@ -35,6 +44,22 @@
     var tableMode = false;                    // текущий вид: false=карточки, true=таблица
     var sortState = { key: null, dir: 1 };    // сортировка: { key: поле, dir: 1|−1 }
     var lastDevices = [];                     // приборы последней конвертации (для пересортировки)
+    // Task 168: фильтры по колонкам — key -> массив выбранных значений
+    var colFilters = {};
+    // Task 168: ширины колонок (сохраняются в localStorage)
+    var colWidths = {};
+    try {
+        var _savedW = localStorage.getItem('devTableColWidths');
+        if (_savedW) colWidths = JSON.parse(_savedW) || {};
+    } catch (e) {}
+    // Task 168: строки после фильтров+сортировки (навигация/экспорт)
+    var currentRows = [];
+    // Task 168: клавиатурный фокус (индекс строки в currentRows)
+    var focusIndex = -1;
+    // Task 168: виртуальный скролл
+    var rowH = 31;          // высота строки (замеряется после первого рендера)
+    var VBUF = 14;          // буфер строк сверху/снизу видимого окна
+    var _rowHMeasured = false;
 
     // Восстановить сохранённое состояние вида
     try { tableMode = localStorage.getItem('devTableMode') === '1'; } catch (e) {}
@@ -198,7 +223,13 @@
         '[data-theme="light"] .dev-table-wrap { background: #ffffff; }',
         '/* Task 163: в табличном виде — без нижнего паддинга страницы (таблица до низа) */',
         '#page-devices-prod.dev-table-full { padding-bottom: 0 !important; }',
-        '.dev-table { border-collapse: separate; border-spacing: 0; font-size: 12.5px; min-width: 100%; }',
+        /* Task 168: table-layout fixed — ширины колонок задаются точно
+           (как в Excel). ВАЖНО: при min-width:100% без width Chromium
+           трактует таблицу как width:100% и перераспределяет колонки
+           пропорционально — поэтому таблице задаётся ЯВНАЯ ширина = сумме
+           колонок (см. buildTableHtml / ресайз); min-width:100% остаётся
+           для заполнения контейнера при узкой таблице */
+        '.dev-table { table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 12.5px; min-width: 100%; }',
         '.dev-table th {',
         '  position: sticky; top: 0; z-index: 3;',
         '  background: #233043; color: #c8d6e8; font-weight: 600; text-align: left;',
@@ -262,7 +293,58 @@
         '.dev-table-csv-btn:hover { background: rgba(74,143,199,0.2); }',
         '[data-theme="light"] .dev-table-csv-btn { background: rgba(74,143,199,0.08); color: #3a6ea5; }',
         /* Task 165: жёлтая подсветка точных совпадений в ячейках таблицы */
-        '.dev-table td mark { background: #ffd60a; color: #1a1a1a; padding: 0 1px; border-radius: 2px; }'
+        '.dev-table td mark { background: #ffd60a; color: #1a1a1a; padding: 0 1px; border-radius: 2px; }',
+        /* ===== Task 168: фильтры по колонкам (как в Excel) ===== */
+        '.dev-table th { padding-right: 18px; }',
+        '.dev-table-filter-btn {',
+        '  display: inline-block; margin-left: 5px; padding: 1px 4px;',
+        '  font-size: 9px; line-height: 1; vertical-align: middle;',
+        '  color: rgba(200,214,232,0.5); cursor: pointer; user-select: none;',
+        '  border-radius: 3px;',
+        '}',
+        '.dev-table-filter-btn:hover { color: #8fc1ee; background: rgba(255,255,255,0.08); }',
+        '.dev-table-filter-btn.has-filter { color: #ffd60a; }',
+        '[data-theme="light"] .dev-table-filter-btn { color: rgba(51,70,94,0.55); }',
+        '[data-theme="light"] .dev-table-filter-btn:hover { color: #2a5885; background: rgba(0,0,0,0.06); }',
+        '[data-theme="light"] .dev-table-filter-btn.has-filter { color: #b8860b; }',
+        '.dev-table-filter-dd {',
+        '  position: fixed; z-index: 1000; min-width: 250px; max-width: 330px;',
+        '  background: #1a2331; border: 1px solid rgba(74,143,199,0.4); border-radius: 8px;',
+        '  box-shadow: 0 8px 24px rgba(0,0,0,0.45); font-size: 12.5px; color: #c8d6e8;',
+        '  font-family: inherit; overflow: hidden;',
+        '}',
+        '.dev-table-filter-dd .dtf-head { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.08); }',
+        '.dev-table-filter-dd .dtf-search { flex: 1; min-width: 0; padding: 4px 8px; border: 1px solid rgba(106,141,181,0.4); border-radius: 6px; background: #0f1622; color: #e0e6f0; font-size: 12px; font-family: inherit; outline: none; }',
+        '.dev-table-filter-dd .dtf-close { padding: 2px 7px; border: none; background: transparent; color: #8ab4e0; cursor: pointer; font-size: 13px; line-height: 1; border-radius: 4px; }',
+        '.dev-table-filter-dd .dtf-close:hover { background: rgba(74,143,199,0.15); }',
+        '.dev-table-filter-dd .dtf-list { max-height: 280px; overflow-y: auto; padding: 4px 0; }',
+        '.dev-table-filter-dd label.dtf-item { display: flex; align-items: center; gap: 8px; padding: 4px 12px; cursor: pointer; white-space: nowrap; }',
+        '.dev-table-filter-dd label.dtf-item:hover { background: rgba(74,143,199,0.10); }',
+        '.dev-table-filter-dd label.dtf-item input { accent-color: #6aa6e0; flex-shrink: 0; }',
+        '.dev-table-filter-dd .dtf-item-text { flex: 1; overflow: hidden; text-overflow: ellipsis; max-width: 215px; }',
+        '.dev-table-filter-dd .dtf-count { color: rgba(200,214,232,0.45); font-size: 11px; flex-shrink: 0; }',
+        '.dev-table-filter-dd .dtf-foot { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-top: 1px solid rgba(255,255,255,0.08); }',
+        '.dev-table-filter-dd .dtf-reset { border: none; background: transparent; color: #e08080; font-size: 12px; cursor: pointer; padding: 3px 8px; border-radius: 4px; font-family: inherit; }',
+        '.dev-table-filter-dd .dtf-reset:hover { background: rgba(224,128,128,0.12); }',
+        '.dev-table-filter-dd .dtf-status { color: rgba(200,214,232,0.5); font-size: 11px; }',
+        '[data-theme="light"] .dev-table-filter-dd { background: #ffffff; border-color: rgba(58,110,165,0.35); color: #2c3a4c; box-shadow: 0 8px 24px rgba(0,0,0,0.18); }',
+        '[data-theme="light"] .dev-table-filter-dd .dtf-search { background: #f4f7fa; color: #1a1a1a; border-color: rgba(58,110,165,0.3); }',
+        '[data-theme="light"] .dev-table-filter-dd label.dtf-item:hover { background: rgba(74,143,199,0.08); }',
+        /* ===== Task 168: ручка изменения ширины колонки ===== */
+        '.dev-table th .dev-table-resize-grip {',
+        '  position: absolute; top: 0; right: 0; width: 7px; height: 100%;',
+        '  cursor: col-resize; z-index: 5;',
+        '}',
+        '.dev-table th .dev-table-resize-grip:hover, .dev-table th .dev-table-resize-grip.dragging { background: rgba(74,143,199,0.35); }',
+        /* ===== Task 168: строка в фокусе клавиатурной навигации ===== */
+        '.dev-table tbody tr.dev-table-row-focused > td { background: rgba(74,143,199,0.12) !important; }',
+        '.dev-table tbody tr.dev-table-row-focused > td.dev-table-sticky-1,',
+        '.dev-table tbody tr.dev-table-row-focused > td.dev-table-sticky-2 { background: #23405e !important; }',
+        '[data-theme="light"] .dev-table tbody tr.dev-table-row-focused > td { background: rgba(74,143,199,0.10) !important; }',
+        '[data-theme="light"] .dev-table tbody tr.dev-table-row-focused > td.dev-table-sticky-1,',
+        '[data-theme="light"] .dev-table tbody tr.dev-table-row-focused > td.dev-table-sticky-2 { background: #dcebf8 !important; }',
+        /* ===== Task 168: спейсеры виртуального скролла ===== */
+        '.dev-table tbody tr.dev-table-vspacer > td { padding: 0 !important; border: none !important; background: transparent !important; }'
     ].join('\n');
 
     var styleEl = document.createElement('style');
@@ -294,6 +376,8 @@
             var page = document.getElementById('page-devices-prod');
             if (page) page.classList.toggle('dev-table-full', tableMode);
             updateHeaderGroup();
+            // Task 168: при переключении вида закрыть выпадающий фильтр
+            closeFilterDropdown();
             // Перезапустить рендер: патч devRenderSorted сам применит вид
             if (typeof window.devRenderSorted === 'function') window.devRenderSorted('prod');
         });
@@ -329,10 +413,13 @@
     // переменную НЕ ставим: иначе лупа съезжает на кнопку «Таблица»
     // (регрессия Task 166). Пересчёт — при первом рендере страницы
     // (патч devRenderSorted ниже вызывает эту функцию).
-    function updateHeaderGroup(count) {
+    function updateHeaderGroup(count, total) {
         var counter = document.getElementById('devTableCount');
         if (counter && typeof count === 'number') {
-            counter.textContent = 'Показано приборов: ' + count;
+            // Task 168: при активных фильтрах — «N из M» (как в Excel)
+            counter.textContent = (typeof total === 'number' && total !== count)
+                ? ('Показано приборов: ' + count + ' из ' + total)
+                : ('Показано приборов: ' + count);
             counter.title = sortState.key
                 ? ('Сортировка: ' + colLabel(sortState.key) + (sortState.dir === 1 ? ' ▲' : ' ▼'))
                 : 'Табличный вид приборов';
@@ -372,6 +459,8 @@
             // на первом открытии (страница стала видимой) переменная
             // --devt-group-w получит корректное значение
             updateHeaderGroup();
+            // Task 168: при выходе из табличного вида закрыть выпадающий фильтр
+            if (!tableMode) closeFilterDropdown();
         }
         if (mode === 'prod' && tableMode) {
             convertListToTable();
@@ -398,14 +487,39 @@
         });
 
         listEl.innerHTML = buildTableHtml(lastDevices);
+        afterTableRendered();
+        focusIndex = -1;
+        renderRows();
         // Task 163: таблица — на всю свободную площадь
         fitTableHeight();
     }
 
+    // ---------- Task 168: пересборка таблицы с сохранением прокрутки ----------
+    // (сортировка/фильтры не сбрасывают позицию просмотра)
+    function rebuildTable() {
+        var listEl = document.getElementById('devProdList');
+        if (!listEl || !lastDevices.length) return;
+        var wrap = listEl.querySelector('.dev-table-wrap');
+        var st = wrap ? wrap.scrollTop : 0;
+        listEl.innerHTML = buildTableHtml(lastDevices);
+        afterTableRendered();
+        var wrap2 = listEl.querySelector('.dev-table-wrap');
+        if (wrap2) wrap2.scrollTop = st;
+        renderRows();
+        fitTableHeight();
+    }
+
     // ---------- Построение таблицы ----------
+    // Task 168: ширина колонки — сохранённая пользователем или дефолт
+    function getColWidth(col) {
+        var w = colWidths[col.key];
+        return (typeof w === 'number' && w >= 40) ? w : (col.width || 120);
+    }
+
     function buildTableHtml(devices) {
         var cols = activeColumns();
-        var rows = devices.slice();
+        // Task 168: колоночные фильтры -> сортировка -> currentRows
+        var rows = applyColumnFilters(devices.slice());
         if (sortState.key) {
             var k = sortState.key, dir = sortState.dir;
             rows.sort(function (a, b) {
@@ -416,14 +530,20 @@
                 return 0;
             });
         }
+        currentRows = rows;
 
-        var html = '<div class="dev-table-wrap">';
-        // Task 163: счётчик и «Экспорт CSV» — в шапке (updateHeaderGroup),
-        // тулбар над таблицей удалён — таблица начинается сразу с шапки колонок
-        updateHeaderGroup(rows.length);
+        var html = '<div class="dev-table-wrap" tabindex="0">';
+        // Task 163: счётчик — в шапке; Task 168: «N из M» при активных фильтрах
+        updateHeaderGroup(rows.length, devices.length);
         // Task 165: текущий запрос — для подсветки совпадений в ячейках
         var query = currentSearchQuery();
-        html += '<table class="dev-table"><thead><tr>';
+        // Task 168: ширина первой (sticky) колонки — задаёт сдвиг второй sticky
+        var w1 = getColWidth(COLUMNS[0]);
+        // Task 168: явная ширина таблицы = сумме колонок (fixed-layout:
+        // без явного width Chromium сжимает колонки до ширины контейнера)
+        var sumWidth = 0;
+        cols.forEach(function (c) { sumWidth += getColWidth(c); });
+        html += '<table class="dev-table" style="width:' + sumWidth + 'px"><thead><tr>';
         cols.forEach(function (col) {
             var cls = 'dev-table-th';
             if (col.sticky) cls += ' dev-table-sticky-' + col.sticky;
@@ -434,23 +554,23 @@
                     ? (sortState.dir === 1 ? '<span class="dev-table-sort-icon">▲</span>' : '<span class="dev-table-sort-icon">▼</span>')
                     : '<span class="dev-table-sort-icon">⇅</span>';
             }
+            // Task 168: кнопка фильтра в заголовке (кроме порядкового №)
+            var filterBtn = '';
+            if (col.key !== '__num__') {
+                var hasF = Array.isArray(colFilters[col.key]);
+                filterBtn = '<span class="dev-table-filter-btn' + (hasF ? ' has-filter' : '') +
+                    '" data-filter-key="' + esc(col.key) + '" title="Фильтр по колонке">▾</span>';
+            }
+            // Task 168: ручка изменения ширины на правом краю заголовка
+            var grip = '<span class="dev-table-resize-grip" data-resize-key="' + esc(col.key) +
+                '" title="Потяните, чтобы изменить ширину колонки"></span>';
+            var style = 'width:' + getColWidth(col) + 'px;' + (col.sticky === 2 ? 'left:' + w1 + 'px;' : '');
             html += '<th class="' + cls + '"' + (col.sortable !== false ? ' data-sort-key="' + esc(col.key) + '"' : '') +
-                    (col.width ? ' style="width:' + col.width + 'px;' + (col.sticky === 2 ? 'left:48px;' : '') + '"' : '') +
-                    ' title="' + esc(col.label) + '">' + esc(col.label) + icon + '</th>';
+                    ' style="' + style + '"' +
+                    ' title="' + esc(col.label) + '">' + esc(col.label) + icon + filterBtn + grip + '</th>';
         });
-        html += '</tr></thead><tbody>';
-        rows.forEach(function (dev, i) {
-            html += '<tr class="dev-table-row" data-dev-id="' + esc(String(dev['ID'])) + '">';
-            cols.forEach(function (col) {
-                var val = (col.key === '__num__') ? String(i + 1) : String(dev[col.key] == null ? '' : dev[col.key]);
-                var cls = 'dev-table-td' + (col.sticky ? ' dev-table-sticky-' + col.sticky : '');
-                // Task 165: подсветка совпадений (кроме колонки № — это порядковый номер)
-                var cellHtml = (col.key === '__num__') ? esc(val) : markCell(val, query);
-                html += '<td class="' + cls + '" title="' + esc(val) + '">' + cellHtml + '</td>';
-            });
-            html += '</tr>';
-        });
-        html += '</tbody></table></div>';
+        html += '</tr></thead><tbody></tbody></table></div>';
+        // Task 168: тело заполняется виртуально (renderRows) — только видимое окно
         return html;
     }
 
@@ -463,8 +583,17 @@
 
     // ---------- Делегированные события таблицы ----------
     document.addEventListener('click', function (e) {
-        // Сортировка: клик по заголовку колонки
-        var th = e.target.closest ? e.target.closest('.dev-table th[data-sort-key]') : null;
+        // Task 168: кнопка фильтра в заголовке — открыть выпадающий список
+        var fbtn = e.target.closest ? e.target.closest('.dev-table-filter-btn') : null;
+        if (fbtn) {
+            e.stopPropagation();
+            toggleFilterDropdown(fbtn);
+            return;
+        }
+        // Task 168: клик вне выпадающего фильтра — закрыть его
+        if (ddEl && !ddEl.contains(e.target)) closeFilterDropdown();
+        // Сортировка: клик по заголовку колонки (не сразу после перетаскивания границы)
+        var th = (!_suppressSort && e.target.closest) ? e.target.closest('.dev-table th[data-sort-key]') : null;
         if (th) {
             var key = th.getAttribute('data-sort-key');
             if (sortState.key === key) {
@@ -473,16 +602,18 @@
                 sortState.key = key;
                 sortState.dir = 1;
             }
-            var listEl = document.getElementById('devProdList');
-            if (listEl && lastDevices.length) {
-                listEl.innerHTML = buildTableHtml(lastDevices);
-                fitTableHeight();   // Task 163: высота под свободную площадь
-            }
+            rebuildTable();   // Task 168: с сохранением прокрутки
             return;
         }
         // Клик по строке — открыть карточку прибора (detail-панель)
         var row = e.target.closest ? e.target.closest('.dev-table-row') : null;
         if (row && row.getAttribute('data-dev-id')) {
+            // Task 168: синхронизировать клавиатурный фокус с кликнутой строкой
+            var ri = parseInt(row.getAttribute('data-row-index'), 10);
+            if (!isNaN(ri)) focusIndex = ri;
+            // фокус на контейнер — стрелки работают сразу после клика
+            var wrapEl = row.closest('.dev-table-wrap');
+            if (wrapEl) try { wrapEl.focus({ preventScroll: true }); } catch (err) { wrapEl.focus(); }
             document.querySelectorAll('.dev-table-row.dev-table-row-selected').forEach(function (r) {
                 r.classList.remove('dev-table-row-selected');
             });
@@ -497,14 +628,20 @@
             exportCsv();
         }
     });
+    // Task 168: Escape закрывает выпадающий фильтр
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && ddEl) closeFilterDropdown();
+    });
 
     // ---------- Экспорт CSV ----------
     function exportCsv() {
-        if (!lastDevices.length) return;
+        // Task 168: экспорт — с учётом фильтров и сортировки (что видно, то и в файле)
+        var rows = currentRows.length ? currentRows : lastDevices;
+        if (!rows.length) return;
         var cols = activeColumns();
         // BOM — чтобы Excel корректно открыл UTF-8; разделитель «;» (русская локаль)
         var lines = ['\uFEFF' + cols.map(function (c) { return csvCell(c.label); }).join(';')];
-        lastDevices.forEach(function (dev) {
+        rows.forEach(function (dev) {
             lines.push(cols.map(function (c) {
                 return csvCell(c.key === '__num__' ? '' : String(dev[c.key] == null ? '' : dev[c.key]));
             }).join(';'));
@@ -528,8 +665,376 @@
         return v;
     }
 
+    // ============================================================
+    // Task 168: ФИЛЬТРЫ ПО КОЛОНКАМ (как в Excel)
+    // ============================================================
+    var ddEl = null;   // открытый выпадающий список фильтра
+    var ddKey = null;  // ключ колонки открытого фильтра
+
+    // Применить колоночные фильтры к массиву приборов
+    function applyColumnFilters(rows) {
+        var keys = Object.keys(colFilters).filter(function (k) { return Array.isArray(colFilters[k]); });
+        if (!keys.length) return rows;
+        return rows.filter(function (d) {
+            for (var i = 0; i < keys.length; i++) {
+                var v = String(d[keys[i]] == null ? '' : d[keys[i]]).trim();
+                if (colFilters[keys[i]].indexOf(v) === -1) return false;
+            }
+            return true;
+        });
+    }
+
+    function closeFilterDropdown() {
+        if (ddEl) { ddEl.remove(); ddEl = null; }
+        ddKey = null;
+    }
+
+    function toggleFilterDropdown(btn) {
+        var key = btn.getAttribute('data-filter-key');
+        if (ddEl && ddKey === key) { closeFilterDropdown(); return; }
+        closeFilterDropdown();
+        ddKey = key;
+        ddEl = buildFilterDropdown(key);
+        document.body.appendChild(ddEl);
+        positionFilterDropdown(ddEl, btn);
+        var search = ddEl.querySelector('.dtf-search');
+        if (search) setTimeout(function () { try { search.focus(); } catch (err) {} }, 30);
+    }
+
+    // Построить выпадающий список уникальных значений колонки.
+    // Список значений — по НЕотфильтрованному набору (lastDevices),
+    // чтобы комбинировать фильтры нескольких колонок (Excel-поведение).
+    function buildFilterDropdown(key) {
+        var counts = {};
+        lastDevices.forEach(function (d) {
+            var v = String(d[key] == null ? '' : d[key]).trim();
+            counts[v] = (counts[v] || 0) + 1;
+        });
+        var vals = Object.keys(counts).sort(function (a, b) {
+            var la = a.toLowerCase(), lb = b.toLowerCase();
+            return la < lb ? -1 : (la > lb ? 1 : 0);
+        });
+        var selected = Array.isArray(colFilters[key]) ? colFilters[key] : null;
+
+        // Состояние чекбоксов (все отмечены, если фильтра нет)
+        var checkedSet = {};
+        vals.forEach(function (v) { checkedSet[v] = !selected || selected.indexOf(v) !== -1; });
+
+        var dd = document.createElement('div');
+        dd.className = 'dev-table-filter-dd';
+
+        // Шапка: поиск по значениям + закрыть
+        var head = document.createElement('div');
+        head.className = 'dtf-head';
+        var search = document.createElement('input');
+        search.type = 'search';
+        search.className = 'dtf-search';
+        search.placeholder = 'Поиск значения…';
+        var closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'dtf-close';
+        closeBtn.textContent = '✕';
+        closeBtn.title = 'Закрыть';
+        closeBtn.addEventListener('click', closeFilterDropdown);
+        head.appendChild(search);
+        head.appendChild(closeBtn);
+
+        // Список значений с чекбоксами и счётчиками
+        var list = document.createElement('div');
+        list.className = 'dtf-list';
+
+        // Подвал: статус + сброс
+        var foot = document.createElement('div');
+        foot.className = 'dtf-foot';
+        var status = document.createElement('span');
+        status.className = 'dtf-status';
+        var resetBtn = document.createElement('button');
+        resetBtn.type = 'button';
+        resetBtn.className = 'dtf-reset';
+        resetBtn.textContent = 'Сбросить фильтр';
+        resetBtn.addEventListener('click', function () {
+            delete colFilters[key];
+            closeFilterDropdown();
+            rebuildTable();
+        });
+        foot.appendChild(status);
+        foot.appendChild(resetBtn);
+
+        dd.appendChild(head);
+        dd.appendChild(list);
+        dd.appendChild(foot);
+
+        function chosenCount() {
+            var n = 0;
+            vals.forEach(function (v) { if (checkedSet[v]) n++; });
+            return n;
+        }
+        function updateStatus() {
+            status.textContent = 'Выбрано: ' + chosenCount() + ' из ' + vals.length;
+        }
+        function applyFilter() {
+            var chosen = vals.filter(function (v) { return checkedSet[v]; });
+            if (chosen.length === vals.length) delete colFilters[key];   // все — фильтра нет
+            else colFilters[key] = chosen;
+            rebuildTable();   // живое применение (прокрутка сохраняется)
+        }
+
+        function renderList() {
+            var q = (search.value || '').trim().toLowerCase();
+            list.innerHTML = '';
+            vals.forEach(function (v) {
+                var label = v === '' ? '(пусто)' : v;
+                if (q && label.toLowerCase().indexOf(q) === -1) return;
+                var lab = document.createElement('label');
+                lab.className = 'dtf-item';
+                var cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.checked = !!checkedSet[v];
+                cb.addEventListener('change', function () {
+                    checkedSet[v] = cb.checked;
+                    applyFilter();
+                    updateStatus();
+                });
+                var text = document.createElement('span');
+                text.className = 'dtf-item-text';
+                text.textContent = label;
+                text.title = label;
+                var cnt = document.createElement('span');
+                cnt.className = 'dtf-count';
+                cnt.textContent = counts[v];
+                lab.appendChild(cb);
+                lab.appendChild(text);
+                lab.appendChild(cnt);
+                list.appendChild(lab);
+            });
+            if (!list.children.length) {
+                var empty = document.createElement('div');
+                empty.className = 'dtf-item';
+                empty.style.color = 'rgba(200,214,232,0.45)';
+                empty.textContent = 'Нет подходящих значений';
+                list.appendChild(empty);
+            }
+        }
+
+        search.addEventListener('input', renderList);
+        renderList();
+        updateStatus();
+        return dd;
+    }
+
+    function positionFilterDropdown(dd, btn) {
+        var r = btn.getBoundingClientRect();
+        dd.style.visibility = 'hidden';
+        var dw = dd.offsetWidth || 260, dh = dd.offsetHeight || 320;
+        var left = Math.min(window.innerWidth - dw - 8, Math.max(8, r.left));
+        var top = r.bottom + 4;
+        if (top + dh > window.innerHeight - 8) top = Math.max(8, r.top - dh - 4);
+        dd.style.left = left + 'px';
+        dd.style.top = top + 'px';
+        dd.style.visibility = '';
+    }
+
+    // ============================================================
+    // Task 168: ВИРТУАЛЬНЫЙ СКРОЛЛ
+    // ============================================================
+    function rowHtml(dev, i, cols, query, w1) {
+        var html = '<tr class="dev-table-row' + (i === focusIndex ? ' dev-table-row-focused' : '') +
+            '" data-dev-id="' + esc(String(dev['ID'])) + '" data-row-index="' + i + '">';
+        cols.forEach(function (col) {
+            var val = (col.key === '__num__') ? String(i + 1) : String(dev[col.key] == null ? '' : dev[col.key]);
+            var cls = 'dev-table-td' + (col.sticky ? ' dev-table-sticky-' + col.sticky : '');
+            // Task 168: sticky-2 сдвиг = ширине первой колонки (учитывает ресайз)
+            var style = (col.sticky === 2) ? ' style="left:' + w1 + 'px;"' : '';
+            // Task 165: подсветка совпадений (кроме колонки № — порядковый номер)
+            var cellHtml = (col.key === '__num__') ? esc(val) : markCell(val, query);
+            html += '<td class="' + cls + '"' + style + ' title="' + esc(val) + '">' + cellHtml + '</td>';
+        });
+        html += '</tr>';
+        return html;
+    }
+
+    function spacerHtml(h, colspan) {
+        return '<tr class="dev-table-vspacer"><td colspan="' + colspan + '" style="height:' + Math.round(h) + 'px"></td></tr>';
+    }
+
+    // Отрисовать только видимое окно строк (+ буфер) с спейсерами сверху/снизу
+    function renderRows() {
+        var listEl = document.getElementById('devProdList');
+        var wrap = listEl ? listEl.querySelector('.dev-table-wrap') : null;
+        var tbody = wrap ? wrap.querySelector('.dev-table tbody') : null;
+        if (!wrap || !tbody) return;
+        var cols = activeColumns();
+        var N = currentRows.length;
+        var query = currentSearchQuery();
+        var w1 = getColWidth(COLUMNS[0]);
+        if (N === 0) {
+            tbody.innerHTML = '<tr><td class="dev-table-td" colspan="' + cols.length +
+                '" style="text-align:center;padding:28px 12px;color:rgba(200,214,232,0.55)">Ничего не найдено — измените поиск или фильтры</td></tr>';
+            return;
+        }
+        var st = wrap.scrollTop;
+        var vh = wrap.clientHeight || 600;
+        var first = Math.max(0, Math.floor(st / rowH) - VBUF);
+        var last = Math.min(N, first + Math.ceil(vh / rowH) + VBUF * 2);
+        var html = '';
+        if (first > 0) html += spacerHtml(first * rowH, cols.length);
+        for (var i = first; i < last; i++) {
+            html += rowHtml(currentRows[i], i, cols, query, w1);
+        }
+        if (last < N) html += spacerHtml((N - last) * rowH, cols.length);
+        tbody.innerHTML = html;
+        // Однократный замер фактической высоты строки (после стилей/шрифтов)
+        if (!_rowHMeasured) {
+            var tr = tbody.querySelector('tr.dev-table-row');
+            if (tr) {
+                var h = tr.getBoundingClientRect().height;
+                if (h > 10 && Math.abs(h - rowH) > 0.5) {
+                    rowH = h;
+                    renderRows();   // перерендер с точной высотой
+                    return;
+                }
+                _rowHMeasured = true;
+            }
+        }
+    }
+
+    // rAF-троттлинг пересборки при прокрутке
+    var _scrollRaf = false;
+    function onVirtualScroll() {
+        if (_scrollRaf) return;
+        _scrollRaf = true;
+        requestAnimationFrame(function () { _scrollRaf = false; renderRows(); });
+    }
+
+    // ============================================================
+    // Task 168: НАВИГАЦИЯ С КЛАВИАТУРЫ
+    // ============================================================
+    function onTableKeyDown(e) {
+        var N = currentRows.length;
+        if (!N) return;
+        var key = e.key;
+        var old = focusIndex;
+        if (key === 'ArrowDown') {
+            focusIndex = Math.min(N - 1, (focusIndex < 0 ? -1 : focusIndex) + 1);
+        } else if (key === 'ArrowUp') {
+            focusIndex = Math.max(0, (focusIndex < 0 ? 1 : focusIndex) - 1);
+        } else if (key === 'Home') {
+            focusIndex = 0;
+        } else if (key === 'End') {
+            focusIndex = N - 1;
+        } else if (key === 'Enter') {
+            // Открыть карточку прибора из строки в фокусе
+            if (focusIndex >= 0 && currentRows[focusIndex] && typeof window.devOpenDetail === 'function') {
+                window.devOpenDetail(String(currentRows[focusIndex]['ID']));
+            }
+            e.preventDefault();
+            return;
+        } else {
+            return;   // остальные клавиши — стандартное поведение
+        }
+        e.preventDefault();   // стрелки не скроллят страницу (скролл — наш, виртуальный)
+        if (focusIndex !== old) ensureFocusedVisible();
+    }
+
+    // Прокрутить контейнер так, чтобы строка в фокусе была видна, и перерисовать окно
+    function ensureFocusedVisible() {
+        var listEl = document.getElementById('devProdList');
+        var wrap = listEl ? listEl.querySelector('.dev-table-wrap') : null;
+        if (!wrap) return;
+        if (focusIndex >= 0) {
+            var top = focusIndex * rowH;
+            var bottom = top + rowH;
+            if (top < wrap.scrollTop) wrap.scrollTop = top;
+            else if (bottom > wrap.scrollTop + wrap.clientHeight) wrap.scrollTop = bottom - wrap.clientHeight;
+        }
+        renderRows();
+    }
+
+    // ============================================================
+    // Task 168: ИЗМЕНЕНИЕ ШИРИНЫ КОЛОНОК МЫШЬЮ
+    // ============================================================
+    var _resize = null;          // активное перетаскивание границы
+    var _suppressSort = false;   // клик после перетаскивания не должен сортировать
+
+    function onResizePointerDown(e) {
+        var grip = e.target.closest ? e.target.closest('.dev-table-resize-grip') : null;
+        if (!grip) return;
+        var key = grip.getAttribute('data-resize-key');
+        var th = grip.closest('th');
+        if (!key || !th) return;
+        _resize = { key: key, th: th, startX: e.clientX, startW: th.getBoundingClientRect().width, grip: grip };
+        grip.classList.add('dragging');
+        try { grip.setPointerCapture(e.pointerId); } catch (err) {}
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        _suppressSort = true;
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    document.addEventListener('pointermove', function (e) {
+        if (!_resize) return;
+        // Минимальная ширина 40px (максимал не нужен — горизонтальный скролл)
+        var w = Math.max(40, Math.round(_resize.startW + (e.clientX - _resize.startX)));
+        _resize.th.style.width = w + 'px';
+        colWidths[_resize.key] = w;
+        // Task 168: пересчитать ЯВНУЮ ширину таблицы (fixed-layout требует
+        // точного width = сумме колонок, иначе колонки сожмутся)
+        var table = _resize.th.closest('table');
+        if (table) {
+            var sum = 0;
+            activeColumns().forEach(function (c) { sum += getColWidth(c); });
+            table.style.width = sum + 'px';
+        }
+        // Изменили первую (sticky) колонку — сдвинуть вторую sticky-колонку
+        if (_resize.key === COLUMNS[0].key) {
+            var listEl = document.getElementById('devProdList');
+            if (listEl) {
+                listEl.querySelectorAll('.dev-table-sticky-2').forEach(function (cell) {
+                    cell.style.left = w + 'px';
+                });
+            }
+        }
+    });
+
+    document.addEventListener('pointerup', function () {
+        if (!_resize) return;
+        _resize.grip.classList.remove('dragging');
+        _resize = null;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        saveColWidths();
+        // Снять блокировку сортировки чуть позже клика (click идёт за pointerup)
+        setTimeout(function () { _suppressSort = false; }, 60);
+    });
+
+    function saveColWidths() {
+        try { localStorage.setItem('devTableColWidths', JSON.stringify(colWidths)); } catch (e) {}
+    }
+
+    // Подключить события к свежесозданному контейнеру таблицы
+    // (innerHTML-пересборка создаёт новый .dev-table-wrap)
+    function afterTableRendered() {
+        var listEl = document.getElementById('devProdList');
+        var wrap = listEl ? listEl.querySelector('.dev-table-wrap') : null;
+        if (!wrap) return;
+        wrap.addEventListener('scroll', onVirtualScroll);
+        wrap.addEventListener('keydown', onTableKeyDown);
+        wrap.addEventListener('pointerdown', onResizePointerDown);
+    }
+
     // ---------- Инициализация ----------
     ensureButton();
+    // Task 168: закрывать выпадающий фильтр при уходе со страницы приборов
+    (function () {
+        var origNav = window.navigateTo;
+        if (typeof origNav === 'function') {
+            window.navigateTo = function () {
+                closeFilterDropdown();
+                return origNav.apply(window, arguments);
+            };
+        }
+    })();
     // Task 163: синхронизировать класс страницы и счётчик с сохранённым видом
     (function () {
         var page = document.getElementById('page-devices-prod');
