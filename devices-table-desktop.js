@@ -10,7 +10,7 @@
 //   - закреплённые: шапка таблицы + колонки «№» и «Наименование»;
 //   - сортировка по любой колонке (клик по заголовку, asc/desc);
 //   - чередование строк (зебра), подсветка строки при наведении;
-//   - клик по строке — карточка прибора (detail-панель);
+//   - клик по ячейке столбца «№» — карточка прибора (detail-панель);
 //   - поле «Поиск…» фильтрует строки таблицы (общий механизм);
 //   - подсказки (title) с полным текстом обрезанных ячеек;
 //   - состояние (карточки/таблица) запоминается в localStorage.
@@ -37,6 +37,13 @@
 //   - метки строк по условиям: «Дата старше N лет» (янтарная полоса)
 //     и «В гр. ППР: Нет» (красная полоса) — тонкие цветные метки
 //     слева у строки; условия настраиваются кнопкой ⚑ в шапке.
+// Task 172:
+//   - правая разделительная рамка столбца «№» чуть жирнее остальных;
+//   - кнопка «Сбросить все фильтры» (воронка с крестом) в шапке,
+//     слева от «Метки строк»: янтарная + счётчик установленных
+//     фильтров, клик — сброс всех фильтров по колонкам разом;
+//   - карточка прибора открывается ТОЛЬКО кликом по ячейкам
+//     столбца «№» (клик по другим ячейкам лишь выделяет строку).
 //
 // Модуль самодостаточен; зависимости — глобальные: devData,
 // devRenderSorted, devOpenDetail, KipAuth. Загружается loader'ом
@@ -291,6 +298,14 @@
         '[data-theme="light"] .dev-table tbody tr:nth-child(even) .dev-table-sticky-1 { background: #f6f8fb; }',
         '[data-theme="light"] .dev-table tbody tr:hover .dev-table-sticky-1 { background: #eaf1f9; }',
         '[data-theme="light"] .dev-table thead .dev-table-sticky-1 { background: #e8edf4; }',
+        /* Task 172: правая разделительная рамка столбца «№» — чуть жирнее
+           остальных (2px, в тон линии под шапкой таблицы) */
+        '.dev-table th.dev-table-col-num { border-right: 2px solid rgba(74,143,199,0.50); }',
+        '.dev-table td.dev-table-col-num { border-right: 2px solid rgba(74,143,199,0.38); }',
+        '[data-theme="light"] .dev-table th.dev-table-col-num { border-right-color: rgba(58,110,165,0.45); }',
+        '[data-theme="light"] .dev-table td.dev-table-col-num { border-right-color: rgba(58,110,165,0.35); }',
+        /* Task 172: клик по ячейке «№» открывает карточку — курсор-рука */
+        '.dev-table tbody td.dev-table-col-num { cursor: pointer; }',
         /* Task 163: счётчик приборов и «Экспорт CSV» — в шапке, справа от «Таблица».
            Видны только в табличном виде (класс .table-active на группе). */
         '.dev-table-header-group .dev-table-count,',
@@ -403,6 +418,22 @@
         '.dev-table tbody tr.dev-mark-old > td:first-child { box-shadow: inset 4px 0 0 #e0a030; }',
         '.dev-table tbody tr.dev-mark-noppr > td:first-child { box-shadow: inset 4px 0 0 #e05360; }',
         '.dev-table tbody tr.dev-mark-old.dev-mark-noppr > td:first-child { box-shadow: inset 8px 0 0 #e0a030, inset 4px 0 0 #e05360; }',
+        /* ===== Task 172: кнопка «Сбросить все фильтры» (воронка с ✕) ===== */
+        '.dev-table-header-group .dev-table-clear-btn { display: none; }',
+        '.dev-table-header-group.table-active .dev-table-clear-btn { display: inline-flex; }',
+        '.dev-table-clear-btn {',
+        '  align-items: center; gap: 5px; padding: 5px 9px;',
+        '  border: 1px solid rgba(74,143,199,0.35); border-radius: 7px;',
+        '  background: rgba(74,143,199,0.10); color: #6aa6e0; font-size: 13px; line-height: 1;',
+        '  font-family: inherit; cursor: pointer; transition: all 0.15s;',
+        '}',
+        '.dev-table-clear-btn:hover { background: rgba(74,143,199,0.2); }',
+        /* При установленных фильтрах — янтарная (как кнопка фильтра колонки) */
+        '.dev-table-clear-btn.has-filters { border-color: #e0a030; color: #e0a030; background: rgba(224,160,48,0.10); }',
+        '.dev-table-clear-btn svg { display: block; flex-shrink: 0; }',
+        '.dev-table-clear-btn .dev-table-clear-count { font-size: 11px; font-weight: 700; }',
+        '[data-theme="light"] .dev-table-clear-btn { background: rgba(74,143,199,0.08); color: #3a6ea5; }',
+        '[data-theme="light"] .dev-table-clear-btn.has-filters { border-color: #b8860b; color: #b8860b; background: rgba(184,134,11,0.08); }',
         /* ===== Task 169: кнопка «Метки строк» (⚑) в шапке ===== */
         '.dev-table-header-group .dev-table-marks-btn { display: none; }',
         '.dev-table-header-group.table-active .dev-table-marks-btn { display: inline-block; }',
@@ -477,6 +508,23 @@
         count.id = 'devTableCount';
         count.className = 'dev-table-count';
         group.appendChild(count);
+
+        // Task 172: кнопка «Сбросить все фильтры» (воронка с ✕) — слева
+        // от «Метки строк»; янтарная + счётчик при установленных фильтрах
+        var clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.id = 'devTableClearFiltersBtn';
+        clearBtn.className = 'dev-table-clear-btn';
+        clearBtn.title = 'Сбросить все фильтры по колонкам';
+        clearBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">' +
+            '<path d="M1.5 2.5h13l-5 5.5v5l-3 1.5v-6.5z" fill="currentColor"/>' +
+            '<path d="M3.8 3.8l8.4 8.4M12.2 3.8l-8.4 8.4" stroke="#e05360" stroke-width="1.8" stroke-linecap="round"/>' +
+            '</svg><span class="dev-table-clear-count"></span>';
+        clearBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            resetAllColumnFilters();
+        });
+        group.appendChild(clearBtn);
 
         // Task 169: кнопка «Метки строк» (⚑) — подсветка по условиям
         var marksBtn = document.createElement('button');
@@ -635,6 +683,10 @@
         currentRows = rows;
 
         var html = '<div class="dev-table-wrap" tabindex="0">';
+        // Task 172: состояние кнопки «Сбросить все фильтры» — ДО
+        // updateHeaderGroup: счётчик на кнопке меняет ширину группы,
+        // а updateHeaderGroup её замеряет (--devt-group-w для лупы)
+        updateClearFiltersBtn();
         // Task 163: счётчик — в шапке; Task 168: «N из M» при активных фильтрах
         updateHeaderGroup(rows.length, devices.length);
         // Task 165: текущий запрос — для подсветки совпадений в ячейках
@@ -647,6 +699,8 @@
         cols.forEach(function (col) {
             var cls = 'dev-table-th';
             if (col.sticky) cls += ' dev-table-sticky-' + col.sticky;
+            // Task 172: маркер колонки «№» — жирная рамка справа
+            if (col.key === '__num__') cls += ' dev-table-col-num';
             if (sortState.key === col.key) cls += (sortState.dir === 1 ? ' dev-table-col-sorted-asc' : ' dev-table-col-sorted-desc');
             var icon = '';
             if (col.sortable !== false) {
@@ -709,7 +763,9 @@
             rebuildTable();   // Task 168: с сохранением прокрутки
             return;
         }
-        // Клик по строке — открыть карточку прибора (detail-панель)
+        // Клик по строке: выделить её и синхронизировать клавиатурный
+        // фокус; карточка прибора (detail-панель) открывается ТОЛЬКО
+        // по ячейкам столбца «№» (Task 172)
         var row = e.target.closest ? e.target.closest('.dev-table-row') : null;
         if (row && row.getAttribute('data-dev-id')) {
             // Task 168: синхронизировать клавиатурный фокус с кликнутой строкой
@@ -722,7 +778,10 @@
                 r.classList.remove('dev-table-row-selected');
             });
             row.classList.add('dev-table-row-selected');
-            if (typeof window.devOpenDetail === 'function') {
+            // Task 172: карточка — только по клику на ячейку столбца «№»
+            var numTd = e.target.closest ? e.target.closest('td.dev-table-col-num') : null;
+            if (numTd && numTd.closest('.dev-table-row') === row &&
+                typeof window.devOpenDetail === 'function') {
                 window.devOpenDetail(row.getAttribute('data-dev-id'));
             }
             return;
@@ -790,6 +849,36 @@
             }
             return true;
         });
+    }
+
+    // ---------- Task 172: сброс ВСЕХ колоночных фильтров разом ----------
+    function activeFilterCount() {
+        return Object.keys(colFilters).filter(function (k) { return Array.isArray(colFilters[k]); }).length;
+    }
+
+    // Состояние кнопки «Сбросить все фильтры»: янтарная подсветка
+    // и счётчик установленных фильтров (число колонок)
+    function updateClearFiltersBtn() {
+        var btn = document.getElementById('devTableClearFiltersBtn');
+        if (!btn) return;
+        var n = activeFilterCount();
+        btn.classList.toggle('has-filters', n > 0);
+        btn.title = n > 0
+            ? 'Сбросить все фильтры по колонкам (установлено: ' + n + ')'
+            : 'Сбросить все фильтры по колонкам';
+        var badge = btn.querySelector('.dev-table-clear-count');
+        if (badge) badge.textContent = n > 0 ? String(n) : '';
+    }
+
+    function resetAllColumnFilters() {
+        var had = activeFilterCount() > 0;
+        colFilters = {};
+        closePanels();
+        if (had && lastDevices.length) {
+            rebuildTable();   // пересборка обновит кнопку, счётчик приборов и строки
+        } else {
+            updateClearFiltersBtn();
+        }
     }
 
     function closeFilterDropdown() {
@@ -991,6 +1080,8 @@
         cols.forEach(function (col) {
             var val = (col.key === '__num__') ? String(i + 1) : String(dev[col.key] == null ? '' : dev[col.key]);
             var cls = 'dev-table-td' + (col.sticky ? ' dev-table-sticky-' + col.sticky : '');
+            // Task 172: маркер колонки «№» — по её ячейкам открывается карточка
+            if (col.key === '__num__') cls += ' dev-table-col-num';
             // Task 165: подсветка совпадений (кроме колонки № — порядковый номер)
             var cellHtml = (col.key === '__num__') ? esc(val) : markCell(val, query);
             html += '<td class="' + cls + '" title="' + esc(val) + '">' + cellHtml + '</td>';
