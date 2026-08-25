@@ -8098,9 +8098,12 @@
                 display: none !important;
             }
             /* Task 127: скрыть кнопки ✕ (close) и ⇄ (swap) когда detail-panel НЕ открыт —
-               на странице расходомеров detail-panel не активен, эти кнопки не нужны */
+               на странице расходомеров detail-panel не активен, эти кнопки не нужны.
+               Task 173: кнопка поиска и разделитель — тоже только при открытой панели */
             body:not(:has(#detailPanel.active)) #detailBreadcrumbBar .detail-breadcrumb-close,
-            body:not(:has(#detailPanel.active)) #detailBreadcrumbBar .detail-breadcrumb-swap {
+            body:not(:has(#detailPanel.active)) #detailBreadcrumbBar .detail-breadcrumb-swap,
+            body:not(:has(#detailPanel.active)) #detailBreadcrumbBar .detail-breadcrumb-search,
+            body:not(:has(#detailPanel.active)) #detailBreadcrumbBar .detail-breadcrumb-divider {
                 display: none !important;
             }
         }
@@ -8173,6 +8176,73 @@
         .detail-breadcrumb-swap:active {
             transform: scale(0.88);
         }
+        /* ===== Task 173: кнопка поиска в строке крошек detail-панели ===== */
+        /* Стоит слева от ✕, отделена вертикальной линией (.detail-breadcrumb-divider).
+           Стиль — как .dev-search-toggle-btn шапок страниц, но позиция в flex-потоке */
+        .detail-breadcrumb-search {
+            width: 32px; height: 32px; padding: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px;
+            color: rgba(180,200,220,0.8);
+            cursor: pointer; flex-shrink: 0;
+            -webkit-user-select: none; user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: border-color 0.15s, color 0.15s, background 0.15s;
+        }
+        .detail-breadcrumb-search:hover { border-color: rgba(74,143,199,0.5); color: #6aa6e0; }
+        .detail-breadcrumb-search.active {
+            border-color: rgba(106,141,181,0.55);
+            color: #6aa6e0;
+            background: rgba(74,143,199,0.10);
+        }
+        .detail-breadcrumb-search:active { transform: scale(0.94); }
+        .detail-breadcrumb-search svg { pointer-events: none; }
+        [data-theme="light"] .detail-breadcrumb-search { border-color: rgba(20,20,19,0.15); color: rgba(60,70,80,0.9); }
+        [data-theme="light"] .detail-breadcrumb-search.active {
+            border-color: rgba(58,110,165,0.55);
+            color: #3a6ea5;
+            background: rgba(74,143,199,0.08);
+        }
+        /* Вертикальная линия между кнопкой поиска и ✕ (как .desktop-top-bar-divider) */
+        .detail-breadcrumb-divider {
+            width: 1px;
+            height: 24px;
+            flex-shrink: 0;
+            align-self: center;
+            background: var(--border-color, rgba(74,143,199,0.25));
+        }
+        /* Поле поиска: скрыто; разворачивается на месте крошек (flex:1) */
+        #detailBarSearchInput { display: none; }
+        #detailBarSearchInput.search-open {
+            display: block;
+            flex: 1;
+            min-width: 140px;
+            margin-left: 40px;  /* правее шеврона «назад» (absolute, left 4..24px) */
+            padding: 6px 10px 6px 30px;
+            border: 1px solid rgba(106,141,181,0.55);
+            border-radius: 8px;
+            background: #1a2233 url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a0b4c8' stroke-width='2'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>") no-repeat 8px center / 13px;
+            color: #e0e6f0;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+            animation: devSearchExpand 0.18s ease-out;
+        }
+        #detailBarSearchInput.search-open:focus { border-color: rgba(74,143,199,0.75); }
+        #detailBarSearchInput.search-open::placeholder { color: rgba(255,255,255,0.4); }
+        [data-theme="light"] #detailBarSearchInput.search-open {
+            background-color: #fbf6ea;
+            border-color: rgba(58,110,165,0.5);
+            color: #1a1a1a;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7a8d' stroke-width='2'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
+        }
+        [data-theme="light"] #detailBarSearchInput.search-open::placeholder { color: rgba(20,20,19,0.4); }
+        /* При открытом поиске крошки уступают место полю */
+        #detailBreadcrumbBar.search-open #detailBreadcrumbContent { display: none; }
+        #detailBreadcrumbBar.search-open #flowDesktopTabs { visibility: hidden; }
         /* Когда панели поменяли местами: детальная панель слева, список справа */
         #contentArea.panels-swapped {
             flex-direction: row-reverse;
@@ -9436,6 +9506,15 @@
             <button class="flow-tab active" data-flow-tab="all" onclick="FlowmeterData.setTab('all')">Все <span class="flow-tab-count" id="flowAllCountDesk">0</span></button>
             <button class="flow-tab" data-flow-tab="fav" onclick="FlowmeterData.setTab('fav')">Избранные <span class="flow-tab-count" id="flowFavCountDesk">0</span></button>
         </div>
+        <!-- Task 173: поиск по списку левой панели при открытой detail-панели.
+             Кнопка-лупа — слева от ✕, отделена вертикальной линией;
+             поле разворачивается на месте крошек и фильтрует список
+             активной страницы (запрос перенаправляется в её .dev-header-search) -->
+        <input type="search" id="detailBarSearchInput" class="detail-bar-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="detailBarSearchForward(this.value)" hidden>
+        <button type="button" id="detailBarSearchToggleBtn" class="detail-breadcrumb-search" onclick="detailBarToggleSearch()" aria-label="Поиск по списку" title="Поиск по списку">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+        <span class="detail-breadcrumb-divider" aria-hidden="true"></span>
         <button type="button" class="detail-breadcrumb-close" onclick="closeDetailPanel()" aria-label="Закрыть панель">
             <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:rgba(74,143,199,0.9);fill:none;stroke-width:2;stroke-linecap:round;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -18883,6 +18962,8 @@
         if (panel) panel.classList.add('active');
         const bcBar = document.getElementById('detailBreadcrumbBar');
         if (bcBar) bcBar.classList.add('active');
+        // Task 173: обновить кнопку поиска в строке крошек
+        detailBarUpdateSearchBtn();
 
         // Breadcrumbs
         const pageNames = { 'tickets-1000v': 'Билеты до 1000 В', 'tickets-4': 'Билеты на 4 разряд', 'tickets-5': 'Билеты на 5 разряд', 'tickets-6': 'Билеты на 6 разряд' };
@@ -19300,6 +19381,9 @@
         // Показываем полноэкранную строку breadcrumbs
         const bcBar = document.getElementById('detailBreadcrumbBar');
         if (bcBar) bcBar.classList.add('active');
+        // Task 173: обновить кнопку поиска в строке крошек — привязать
+        // к поиску активной страницы (или скрыть, если поиска там нет)
+        detailBarUpdateSearchBtn();
         // Подсветка активной карточки в списке
         document.querySelectorAll('.dev-card.detail-highlight, .lock-card.detail-highlight, .valve-card.detail-highlight, .regulator-card.detail-highlight, .project-card.detail-highlight, .ticket-list-item.detail-highlight, .flow-card.detail-highlight').forEach(el => el.classList.remove('detail-highlight'));
     }
@@ -19309,6 +19393,8 @@
         const panel = document.getElementById('detailPanel');
         if (!panel) return;
         panel.classList.remove('active');
+        // Task 173: свернуть поиск в строке крошек (сбросить запрос списка)
+        detailBarCloseSearch();
         document.getElementById('detailPanelBody').innerHTML = '';
         const footer = document.getElementById('detailPanelFooter');
         if (footer) footer.innerHTML = '';
@@ -19330,6 +19416,92 @@
         // Восстанавливаем breadcrumbs без виртуальной detail-страницы
         updateDesktopBreadcrumb();
     }
+
+    // ============================================================
+    // Task 173: поиск в строке крошек при открытой detail-панели.
+    // Кнопка-лупа стоит слева от ✕ (отделена вертикальной линией);
+    // поле разворачивается на месте крошек и фильтрует список
+    // активной страницы — запрос перенаправляется в её
+    // .dev-header-search (шапка скрыта при открытой панели,
+    // но oninput поля по-прежнему перерисует список).
+    // ============================================================
+
+    // Поисковый input активной страницы (левой панели)
+    function detailBarGetPageSearchInput() {
+        var page = document.querySelector('#contentArea > .page-content.active');
+        return page ? (page.querySelector('.dev-header-search') || null) : null;
+    }
+
+    // Обновить видимость кнопки поиска и разделителя:
+    // показываем, только если на активной странице есть поиск
+    function detailBarUpdateSearchBtn() {
+        var btn = document.getElementById('detailBarSearchToggleBtn');
+        var bar = document.getElementById('detailBreadcrumbBar');
+        if (!btn || !bar) return;
+        var divider = bar.querySelector('.detail-breadcrumb-divider');
+        var hasInput = !!detailBarGetPageSearchInput();
+        btn.style.display = hasInput ? '' : 'none';
+        if (divider) divider.style.display = hasInput ? '' : 'none';
+        if (!hasInput) detailBarCloseSearch();
+    }
+
+    function detailBarOpenSearch() {
+        var input = document.getElementById('detailBarSearchInput');
+        var btn = document.getElementById('detailBarSearchToggleBtn');
+        var bar = document.getElementById('detailBreadcrumbBar');
+        var pageInput = detailBarGetPageSearchInput();
+        if (!input || !btn || !bar || !pageInput) return;
+        input.value = pageInput.value || '';   // синхронизация с текущим запросом
+        input.removeAttribute('hidden');
+        void input.offsetWidth;                // force reflow для анимации
+        input.classList.add('search-open');
+        btn.classList.add('active');
+        bar.classList.add('search-open');
+        setTimeout(function () { try { input.focus(); } catch (e) {} }, 30);
+    }
+
+    function detailBarCloseSearch() {
+        var input = document.getElementById('detailBarSearchInput');
+        var btn = document.getElementById('detailBarSearchToggleBtn');
+        var bar = document.getElementById('detailBreadcrumbBar');
+        if (!input || !btn || !bar) return;
+        if (!input.classList.contains('search-open')) return;
+        input.classList.remove('search-open');
+        input.setAttribute('hidden', '');
+        input.value = '';
+        btn.classList.remove('active');
+        bar.classList.remove('search-open');
+        // Сбросить запрос активной страницы и перерисовать список
+        var pageInput = detailBarGetPageSearchInput();
+        if (pageInput && pageInput.value) {
+            pageInput.value = '';
+            pageInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    }
+
+    function detailBarToggleSearch() {
+        var input = document.getElementById('detailBarSearchInput');
+        if (input && input.classList.contains('search-open')) detailBarCloseSearch();
+        else detailBarOpenSearch();
+    }
+
+    // Ввод в поле крошек -> запрос активной страницы (её oninput
+    // перерисует список: карточки или таблицу, с подсветкой совпадений)
+    function detailBarSearchForward(value) {
+        var pageInput = detailBarGetPageSearchInput();
+        if (!pageInput) return;
+        pageInput.value = value;
+        pageInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    // Escape — свернуть поиск в строке крошек
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        var input = document.getElementById('detailBarSearchInput');
+        if (input && input.classList.contains('search-open')) {
+            detailBarCloseSearch();
+        }
+    });
 
     /** Поменять местами левую и правую панели на десктопе. */
     function swapDetailPanels() {
@@ -19717,6 +19889,8 @@
                 if (panel) panel.classList.add('active');
                 const bcBar = document.getElementById('detailBreadcrumbBar');
                 if (bcBar) bcBar.classList.add('active');
+                // Task 173: обновить кнопку поиска в строке крошек
+                detailBarUpdateSearchBtn();
             }
             // Обновляем breadcrumbs с виртуальной detail-страницей в конце пути
             updateDesktopBreadcrumb(page);
@@ -21926,6 +22100,8 @@
         bar.innerHTML = html;
         // Показываем полноэкранную строку breadcrumbs
         if (bcBar) bcBar.classList.add('active');
+        // Task 173: обновить кнопку поиска в строке крошек
+        detailBarUpdateSearchBtn();
     }
 
     function devRenderDetailInPanel() {
@@ -21949,6 +22125,8 @@
         // Показываем полноэкранную строку breadcrumbs
         const bcBar = document.getElementById('detailBreadcrumbBar');
         if (bcBar) bcBar.classList.add('active');
+        // Task 173: обновить кнопку поиска в строке крошек
+        detailBarUpdateSearchBtn();
         // Подсветка активной карточки в списке слева
         document.querySelectorAll('.dev-card.detail-highlight, .lock-card.detail-highlight, .valve-card.detail-highlight, .regulator-card.detail-highlight, .project-card.detail-highlight').forEach(el => el.classList.remove('detail-highlight'));
         const activeCard = document.querySelector('.dev-card[data-dev-id="' + devId + '"]');
@@ -21982,6 +22160,8 @@
         // Показываем полноэкранную строку breadcrumbs
         const bcBar = document.getElementById('detailBreadcrumbBar');
         if (bcBar) bcBar.classList.add('active');
+        // Task 173: обновить кнопку поиска в строке крошек
+        detailBarUpdateSearchBtn();
         // Подсветка активной карточки в списке слева
         document.querySelectorAll('.lock-card.detail-highlight').forEach(el => el.classList.remove('detail-highlight'));
         const activeLockCard = document.querySelector('.lock-card[data-lock-id="' + lockId + '"]');
@@ -22014,6 +22194,8 @@
         // Показываем полноэкранную строку breadcrumbs
         const bcBar = document.getElementById('detailBreadcrumbBar');
         if (bcBar) bcBar.classList.add('active');
+        // Task 173: обновить кнопку поиска в строке крошек
+        detailBarUpdateSearchBtn();
         // Подсветка активной карточки в списке слева
         document.querySelectorAll('.valve-card.detail-highlight').forEach(el => el.classList.remove('detail-highlight'));
         const activeValveCard = document.querySelector('.valve-card[data-valve-id="' + valveId + '"]');
@@ -22046,6 +22228,8 @@
         // Показываем полноэкранную строку breadcrumbs
         const bcBar = document.getElementById('detailBreadcrumbBar');
         if (bcBar) bcBar.classList.add('active');
+        // Task 173: обновить кнопку поиска в строке крошек
+        detailBarUpdateSearchBtn();
         // Подсветка активной карточки в списке слева
         document.querySelectorAll('.regulator-card.detail-highlight').forEach(el => el.classList.remove('detail-highlight'));
         const activeRegCard = document.querySelector('.regulator-card[data-regulator-id="' + regulatorId + '"]');
@@ -22078,6 +22262,8 @@
         // Показываем полноэкранную строку breadcrumbs
         const bcBar = document.getElementById('detailBreadcrumbBar');
         if (bcBar) bcBar.classList.add('active');
+        // Task 173: обновить кнопку поиска в строке крошек
+        detailBarUpdateSearchBtn();
         // Подсветка активной карточки в списке слева
         document.querySelectorAll('.project-card.detail-highlight').forEach(el => el.classList.remove('detail-highlight'));
         const activeProjCard = document.querySelector('.project-card[data-project-id="' + projectId + '"]');
@@ -22155,6 +22341,8 @@
         // Показываем полноэкранную строку breadcrumbs
         const bcBar = document.getElementById('detailBreadcrumbBar');
         if (bcBar) bcBar.classList.add('active');
+        // Task 173: обновить кнопку поиска в строке крошек
+        detailBarUpdateSearchBtn();
         // Breadcrumbs в заголовке detail-панели
         setDetailBreadcrumb('cable-journal-view', cableTitle, '', '');
     }
@@ -30231,6 +30419,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Показываем полноэкранную строку breadcrumbs
         var bcBar = document.getElementById('detailBreadcrumbBar');
         if (bcBar) bcBar.classList.add('active');
+        // Task 173: обновить кнопку поиска в строке крошек
+        detailBarUpdateSearchBtn();
 
         // Подсветка активной карточки в списке слева
         document.querySelectorAll('.flow-card.detail-highlight').forEach(function(el) { el.classList.remove('detail-highlight'); });
