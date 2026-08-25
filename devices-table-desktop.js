@@ -13,8 +13,12 @@
 //   - клик по строке — карточка прибора (detail-панель);
 //   - поле «Поиск…» фильтрует строки таблицы (общий механизм);
 //   - подсказки (title) с полным текстом обрезанных ячеек;
-//   - счётчик строк + экспорт в CSV (разделитель «;», BOM для Excel);
 //   - состояние (карточки/таблица) запоминается в localStorage.
+// Task 163:
+//   - счётчик «Показано приборов: N» и кнопка «Экспорт CSV» перенесены
+//     в шапку страницы, справа от кнопки «Таблица» (группа в один ряд);
+//   - таблица занимает всю свободную площадь без отступов от краёв
+//     (fitTableHeight подгоняет высоту; resize и detail-панель учтены).
 //
 // Модуль самодостаточен; зависимости — глобальные: devData,
 // devRenderSorted, devOpenDetail, KipAuth. Загружается loader'ом
@@ -79,9 +83,13 @@
     // ---------- CSS ----------
     var css = [
         '/* ===== Task 148: Таблица приборов (только десктоп) ===== */',
-        '.dev-table-toggle-btn {',
+        /* Task 163: группа в шапке — [Таблица][счётчик][Экспорт CSV], единый ряд */
+        '.dev-table-header-group {',
         '  position: absolute; top: 50%; right: 8px; transform: translateY(-50%);',
-        '  z-index: 2; padding: 6px 12px; min-width: 76px;',
+        '  display: flex; align-items: center; gap: 8px; z-index: 2;',
+        '}',
+        '.dev-table-toggle-btn {',
+        '  padding: 6px 12px; min-width: 76px;',
         '  border: 1px solid rgba(74,143,199,0.35); border-radius: 8px;',
         '  background: rgba(74,143,199,0.10); color: #6aa6e0;',
         '  font-size: 13px; font-weight: 600; font-family: inherit;',
@@ -91,19 +99,30 @@
         '.dev-table-toggle-btn.active {',
         '  background: rgba(74,143,199,0.25); border-color: rgba(74,143,199,0.65); color: #9ec6ec;',
         '}',
-        '.dev-table-toggle-btn:active { transform: translateY(-50%) scale(0.96); }',
+        '.dev-table-toggle-btn:active { transform: scale(0.96); }',
         '[data-theme="light"] .dev-table-toggle-btn { background: rgba(74,143,199,0.08); color: #3a6ea5; border-color: rgba(58,110,165,0.35); }',
         '[data-theme="light"] .dev-table-toggle-btn.active { background: rgba(74,143,199,0.2); color: #2a5885; }',
         /* Поиск сдвигается левее кнопки (только на странице «по производствам») */
         '#page-devices-prod .page-inline-header:has(.dev-table-toggle-btn) .dev-header-search { right: 92px; }',
+        /* Task 163: в табличном виде лупа и поле поиска — левее всей группы
+           (ширина группы транслируется в CSS-переменную --devt-group-w) */
+        '#page-devices-prod .page-inline-header:has(.dev-table-header-group.table-active) .dev-search-toggle-btn {',
+        '  right: var(--devt-group-w, 360px);',
+        '}',
+        '#page-devices-prod .page-inline-header:has(.dev-table-header-group.table-active) .dev-header-search {',
+        '  right: var(--devt-group-w, 360px);',
+        '}',
 
-        '/* Контейнер таблицы — собственная прокрутка, как лист Excel */',
+        '/* Контейнер таблицы — собственная прокрутка, как лист Excel.',
+        '   Task 163: на всю свободную площадь, без отступов от краёв */',
         '.dev-table-wrap {',
-        '  margin: 8px; border: 1px solid var(--border-color, rgba(255,255,255,0.1));',
-        '  border-radius: 10px; overflow: auto; background: rgba(22,28,38,0.96);',
-        '  max-height: calc(100vh - 180px);',
+        '  margin: 0; border: none; border-radius: 0;',
+        '  overflow: auto; background: rgba(22,28,38,0.96);',
+        '  height: calc(100vh - 132px); /* стартовое значение, уточняет fitTableHeight() */',
         '}',
         '[data-theme="light"] .dev-table-wrap { background: #ffffff; }',
+        '/* Task 163: в табличном виде — без нижнего паддинга страницы (таблица до низа) */',
+        '#page-devices-prod.dev-table-full { padding-bottom: 0 !important; }',
         '.dev-table { border-collapse: separate; border-spacing: 0; font-size: 12.5px; min-width: 100%; }',
         '.dev-table th {',
         '  position: sticky; top: 0; z-index: 3;',
@@ -149,13 +168,17 @@
         '[data-theme="light"] .dev-table tbody tr:hover .dev-table-sticky-1,',
         '[data-theme="light"] .dev-table tbody tr:hover .dev-table-sticky-2 { background: #eaf1f9; }',
         '[data-theme="light"] .dev-table thead .dev-table-sticky-1, [data-theme="light"] .dev-table thead .dev-table-sticky-2 { background: #e8edf4; }',
-        /* Панель над таблицей: счётчик + экспорт */
-        '.dev-table-toolbar {',
-        '  display: flex; align-items: center; justify-content: space-between;',
-        '  padding: 8px 14px; font-size: 12.5px; color: var(--text-secondary, rgba(255,255,255,0.55));',
-        '  border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1));',
-        '  position: sticky; left: 0;',
+        /* Task 163: счётчик приборов и «Экспорт CSV» — в шапке, справа от «Таблица».
+           Видны только в табличном виде (класс .table-active на группе). */
+        '.dev-table-header-group .dev-table-count,',
+        '.dev-table-header-group .dev-table-csv-btn { display: none; }',
+        '.dev-table-header-group.table-active .dev-table-count { display: inline-block; }',
+        '.dev-table-header-group.table-active .dev-table-csv-btn { display: inline-block; }',
+        '.dev-table-count {',
+        '  font-size: 12.5px; font-weight: 600; white-space: nowrap;',
+        '  color: var(--text-secondary, rgba(255,255,255,0.55));',
         '}',
+        '[data-theme="light"] .dev-table-count { color: rgba(20,20,19,0.6); }',
         '.dev-table-csv-btn {',
         '  padding: 5px 12px; border: 1px solid rgba(74,143,199,0.35); border-radius: 7px;',
         '  background: rgba(74,143,199,0.10); color: #6aa6e0; font-size: 12px; font-weight: 600;',
@@ -170,10 +193,15 @@
     styleEl.textContent = css;
     document.head.appendChild(styleEl);
 
-    // ---------- Кнопка «Таблица» в шапке страницы ----------
+    // ---------- Кнопка «Таблица» + счётчик + CSV в шапке страницы (Task 163) ----------
     function ensureButton() {
         var header = document.querySelector('#page-devices-prod .page-inline-header');
         if (!header || document.getElementById('devTableToggleBtn')) return;
+        // Task 163: группа [Таблица][Показано приборов: N][Экспорт CSV] — один ряд в шапке
+        var group = document.createElement('div');
+        group.id = 'devTableHeaderGroup';
+        group.className = 'dev-table-header-group' + (tableMode ? ' table-active' : '');
+
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.id = 'devTableToggleBtn';
@@ -184,10 +212,64 @@
             tableMode = !tableMode;
             try { localStorage.setItem('devTableMode', tableMode ? '1' : '0'); } catch (e) {}
             btn.classList.toggle('active', tableMode);
+            // Task 163: группа и страница синхронизируют видимость счётчика/CSV и паддинг
+            group.classList.toggle('table-active', tableMode);
+            var page = document.getElementById('page-devices-prod');
+            if (page) page.classList.toggle('dev-table-full', tableMode);
+            updateHeaderGroup();
             // Перезапустить рендер: патч devRenderSorted сам применит вид
             if (typeof window.devRenderSorted === 'function') window.devRenderSorted('prod');
         });
-        header.appendChild(btn);
+        group.appendChild(btn);
+
+        // Task 163: счётчик приборов (заполняется в buildTableHtml)
+        var count = document.createElement('span');
+        count.id = 'devTableCount';
+        count.className = 'dev-table-count';
+        group.appendChild(count);
+
+        // Task 163: кнопка экспорта CSV (клик — делегированный обработчик ниже)
+        var csvBtn = document.createElement('button');
+        csvBtn.type = 'button';
+        csvBtn.id = 'devTableCsvBtn';
+        csvBtn.className = 'dev-table-csv-btn';
+        csvBtn.textContent = 'Экспорт CSV';
+        csvBtn.title = 'Скачать показанные приборы в CSV (открывается в Excel)';
+        group.appendChild(csvBtn);
+
+        header.appendChild(group);
+    }
+
+    // ---------- Task 163: обновить счётчик в шапке и ширину группы ----------
+    // count — число показанных приборов (если задано); ширина группы
+    // транслируется в CSS-переменную --devt-group-w — от неё сдвигаются
+    // лупа и поле поиска (см. CSS выше), наездов на группу нет.
+    function updateHeaderGroup(count) {
+        var counter = document.getElementById('devTableCount');
+        if (counter && typeof count === 'number') {
+            counter.textContent = 'Показано приборов: ' + count;
+            counter.title = sortState.key
+                ? ('Сортировка: ' + colLabel(sortState.key) + (sortState.dir === 1 ? ' ▲' : ' ▼'))
+                : 'Табличный вид приборов';
+        }
+        var group = document.getElementById('devTableHeaderGroup');
+        var header = document.querySelector('#page-devices-prod .page-inline-header');
+        if (group && header && group.classList.contains('table-active')) {
+            header.style.setProperty('--devt-group-w', (group.offsetWidth + 16) + 'px');
+        }
+    }
+
+    // ---------- Task 163: подогнать высоту таблицы под свободную площадь ----------
+    // Таблица занимает всё место от своего верха до низа окна (без отступов).
+    // Верх считается через offsetTop внутри страницы + позиция самой страницы —
+    // стабильно и при скролле, и при открытии/закрытии detail-панели.
+    function fitTableHeight() {
+        if (!tableMode) return;
+        var page = document.getElementById('page-devices-prod');
+        var wrap = page ? page.querySelector('.dev-table-wrap') : null;
+        if (!page || !wrap) return;
+        var top = Math.round(page.getBoundingClientRect().top + wrap.offsetTop);
+        if (top >= 0) wrap.style.height = 'calc(100vh - ' + top + 'px)';
     }
 
     // ---------- Патч devRenderSorted ----------
@@ -222,6 +304,8 @@
         });
 
         listEl.innerHTML = buildTableHtml(lastDevices);
+        // Task 163: таблица — на всю свободную площадь
+        fitTableHeight();
     }
 
     // ---------- Построение таблицы ----------
@@ -240,11 +324,9 @@
         }
 
         var html = '<div class="dev-table-wrap">';
-        // Панель: счётчик + экспорт CSV
-        html += '<div class="dev-table-toolbar">';
-        html += '<span>Показано приборов: ' + rows.length + (sortState.key ? ' (сортировка: ' + esc(colLabel(sortState.key)) + ')' : '') + '</span>';
-        html += '<button type="button" class="dev-table-csv-btn" id="devTableCsvBtn">Экспорт CSV</button>';
-        html += '</div>';
+        // Task 163: счётчик и «Экспорт CSV» — в шапке (updateHeaderGroup),
+        // тулбар над таблицей удалён — таблица начинается сразу с шапки колонок
+        updateHeaderGroup(rows.length);
         html += '<table class="dev-table"><thead><tr>';
         cols.forEach(function (col) {
             var cls = 'dev-table-th';
@@ -296,6 +378,7 @@
             var listEl = document.getElementById('devProdList');
             if (listEl && lastDevices.length) {
                 listEl.innerHTML = buildTableHtml(lastDevices);
+                fitTableHeight();   // Task 163: высота под свободную площадь
             }
             return;
         }
@@ -349,6 +432,21 @@
 
     // ---------- Инициализация ----------
     ensureButton();
+    // Task 163: синхронизировать класс страницы и счётчик с сохранённым видом
+    (function () {
+        var page = document.getElementById('page-devices-prod');
+        if (page && tableMode) page.classList.add('dev-table-full');
+        updateHeaderGroup();
+    })();
+    // Task 163: пересчёт высоты при resize и при открытии/закрытии detail-панели
+    // (шапка страницы скрывается — верх таблицы меняется)
+    window.addEventListener('resize', fitTableHeight);
+    (function () {
+        var dp = document.getElementById('detailPanel');
+        if (dp && typeof MutationObserver !== 'undefined') {
+            new MutationObserver(fitTableHeight).observe(dp, { attributes: true, attributeFilter: ['class'] });
+        }
+    })();
     // Если включён табличный вид и список уже отрендерен (модуль загрузился
     // после первого рендера) — конвертировать сейчас
     if (tableMode) {
