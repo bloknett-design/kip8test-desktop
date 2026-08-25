@@ -8188,6 +8188,51 @@
             flex-direction: column;
             height: 100%;
         }
+        /* --- Task 162: перетаскиваемый разделитель панелей master-detail --- */
+        /* Границу разделения можно сместить от 1/4 до 3/4 ширины области
+           разделения (#contentArea). Разделитель сидит на border-left панели. */
+        .detail-panel-resizer {
+            position: absolute;
+            top: 0;
+            left: -3px;               /* центр на границе border-left: 2px */
+            width: 7px;
+            height: 100%;
+            cursor: col-resize;
+            z-index: 20;
+            background: transparent;
+            touch-action: none;        /* перетаскивание не скроллит страницу */
+            user-select: none;
+        }
+        /* Подсветка зоны захвата при наведении и во время перетаскивания */
+        .detail-panel-resizer:hover,
+        .detail-panel-resizer.dragging {
+            background: rgba(74, 143, 199, 0.28);
+        }
+        [data-theme="light"] .detail-panel-resizer:hover,
+        [data-theme="light"] .detail-panel-resizer.dragging {
+            background: rgba(74, 143, 199, 0.16);
+        }
+        /* Полоска-подсказка в центре разделителя */
+        .detail-panel-resizer::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 36px;
+            border-radius: 2px;
+            background: rgba(74, 143, 199, 0.4);
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .detail-panel-resizer:hover::after,
+        .detail-panel-resizer.dragging::after { opacity: 1; }
+        /* Swap-режим: детальная панель слева → разделитель на её правой грани */
+        #contentArea.panels-swapped > #detailPanel .detail-panel-resizer {
+            left: auto;
+            right: -3px;
+        }
         /* Header внутри detailPanel скрыт — breadcrumbs теперь в #detailBreadcrumbBar */
         #detailPanel .detail-panel-header {
             display: none;
@@ -11794,6 +11839,8 @@
 
         <!-- ===== Десктоп: правая панель деталей (master-detail) ===== -->
         <div id="detailPanel">
+            <!-- Task 162: перетаскиваемый разделитель панелей (граница — от 1/4 до 3/4 ширины области разделения) -->
+            <div id="detailPanelResizer" class="detail-panel-resizer" title="Потяните, чтобы изменить ширину панелей (двойной клик — сброс к 50%)"></div>
             <div class="detail-panel-header">
                 <div class="detail-panel-title" id="detailPanelTitle">Детали</div>
                 <button type="button" id="detailPanelFavBtn" class="dev-fav-header-btn" onclick="KipFav.toggleFromDetailPanel()" aria-label="Избранное" title="Добавить/убрать из избранного" style="display:none;"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>
@@ -19211,6 +19258,98 @@
         } catch(e) {}
     }
 
+    // ============================================================
+    // Task 162: перетаскивание границы разделения панелей master-detail.
+    // Границу можно сместить в пределах от 1/4 до 3/4 ширины области
+    // разделения (#contentArea) в любую сторону. Ширина детальной
+    // панели сохраняется в localStorage (в процентах — переживает
+    // resize окна). Двойной клик по разделителю — сброс к 50%.
+    // ============================================================
+    var DETAIL_RESIZER_MIN = 0.25;   // панель не уже 1/4 области разделения
+    var DETAIL_RESIZER_MAX = 0.75;   // и не шире 3/4 (список остаётся >= 1/4)
+    var DETAIL_RESIZER_KEY = 'kip8_detail_panel_width';
+
+    /** Применить сохранённую ширину детальной панели (или сбросить на CSS-умолчание). */
+    function _detailPanelApplyWidth() {
+        const panel = document.getElementById('detailPanel');
+        if (!panel) return;
+        let saved = null;
+        try { saved = localStorage.getItem(DETAIL_RESIZER_KEY); } catch (e) {}
+        if (saved !== null) {
+            panel.style.width = saved;
+            panel.style.minWidth = '0';   // снять CSS min-width: 400px для пользовательской ширины
+        } else {
+            panel.style.width = '';
+            panel.style.minWidth = '';
+        }
+    }
+
+    /** Инициализация перетаскиваемого разделителя (только десктоп: панель скрыта на мобильном). */
+    function initDetailPanelResizer() {
+        const resizer = document.getElementById('detailPanelResizer');
+        const panel = document.getElementById('detailPanel');
+        const contentArea = document.getElementById('contentArea');
+        if (!resizer || !panel || !contentArea) return;
+
+        // Восстановить сохранённую ширину
+        _detailPanelApplyWidth();
+
+        let dragging = false;
+
+        function pointerDown(e) {
+            dragging = true;
+            resizer.classList.add('dragging');
+            try { resizer.setPointerCapture(e.pointerId); } catch (err) {}
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        }
+
+        function pointerMove(e) {
+            if (!dragging) return;
+            const rect = contentArea.getBoundingClientRect();
+            if (rect.width <= 0) return;
+            const swapped = contentArea.classList.contains('panels-swapped');
+            // Ширина панели = расстояние от курсора до дальнего края области разделения
+            // (в swap-режиме панель слева — дальний край левый, иначе правый)
+            let width = swapped ? (e.clientX - rect.left) : (rect.right - e.clientX);
+            const minW = rect.width * DETAIL_RESIZER_MIN;
+            const maxW = rect.width * DETAIL_RESIZER_MAX;
+            width = Math.max(minW, Math.min(maxW, width));
+            panel.style.width = width + 'px';
+            panel.style.minWidth = '0';
+        }
+
+        function pointerUp(e) {
+            if (!dragging) return;
+            dragging = false;
+            resizer.classList.remove('dragging');
+            try { resizer.releasePointerCapture(e.pointerId); } catch (err) {}
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            // Сохранить в процентах — при resize окна клэмп 25-75% сохраняется сам
+            const rect = contentArea.getBoundingClientRect();
+            const w = parseFloat(panel.style.width);
+            if (!isNaN(w) && rect.width > 0) {
+                const pct = Math.round((w / rect.width) * 10000) / 100;  // 2 знака
+                try { localStorage.setItem(DETAIL_RESIZER_KEY, pct + '%'); } catch (err) {}
+            }
+        }
+
+        function dblClickReset() {
+            // Сброс к стандартной ширине из CSS (50%)
+            try { localStorage.removeItem(DETAIL_RESIZER_KEY); } catch (err) {}
+            panel.style.width = '';
+            panel.style.minWidth = '';
+        }
+
+        resizer.addEventListener('pointerdown', pointerDown);
+        resizer.addEventListener('pointermove', pointerMove);
+        resizer.addEventListener('pointerup', pointerUp);
+        resizer.addEventListener('pointercancel', pointerUp);
+        resizer.addEventListener('dblclick', dblClickReset);
+    }
+
     // Слушатель изменения размера окна — полная очистка при переходе между режимами
     window.matchMedia('(min-width: 1024px)').addEventListener('change', function(e) {
         const sidebar = document.getElementById('sidebar');
@@ -20831,6 +20970,7 @@
         renderPinnedItems();
         if (typeof KipFav !== 'undefined') KipFav.updateDashboardButton();
         restorePanelsSwapState();
+        initDetailPanelResizer();   // Task 162: перетаскиваемая граница панелей
     });
 
     // Обработчик системной кнопки «Назад»
