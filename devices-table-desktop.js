@@ -317,13 +317,18 @@
         header.appendChild(group);
     }
 
-    // ---------- Task 163/166: обновить счётчик в шапке и ширину группы ----------
+    // ---------- Task 163/166/167: обновить счётчик в шапке и ширину группы ----------
     // count — число показанных приборов (если задано); ширина группы
     // транслируется в CSS-переменную --devt-group-w — от неё сдвигаются
     // лупа и поле поиска (см. CSS выше), наездов на группу нет.
     // Task 166: переменная ставится ВСЕГДА (не только в табличном виде) —
     // зазор лупа→«Таблица» единый 8px в обоих режимах, полоса-разделитель
     // стоит по центру зазора.
+    // Task 167 (багфикс): при скрытой странице (display:none, напр. на
+    // старте приложения активен дашборд) group.offsetWidth === 0 —
+    // переменную НЕ ставим: иначе лупа съезжает на кнопку «Таблица»
+    // (регрессия Task 166). Пересчёт — при первом рендере страницы
+    // (патч devRenderSorted ниже вызывает эту функцию).
     function updateHeaderGroup(count) {
         var counter = document.getElementById('devTableCount');
         if (counter && typeof count === 'number') {
@@ -335,7 +340,10 @@
         var group = document.getElementById('devTableHeaderGroup');
         var header = document.querySelector('#page-devices-prod .page-inline-header');
         if (group && header) {
-            header.style.setProperty('--devt-group-w', (group.offsetWidth + 16) + 'px');
+            var w = group.offsetWidth;
+            if (w > 0) {   // Task 167: скрытая страница даёт 0 — не трогаем переменную
+                header.style.setProperty('--devt-group-w', (w + 16) + 'px');
+            }
         }
     }
 
@@ -359,6 +367,12 @@
     var origDevRenderSorted = window.devRenderSorted;
     window.devRenderSorted = function (mode) {
         origDevRenderSorted.apply(window, arguments);
+        if (mode === 'prod') {
+            // Task 167: пересчёт ширины группы при каждом рендере страницы —
+            // на первом открытии (страница стала видимой) переменная
+            // --devt-group-w получит корректное значение
+            updateHeaderGroup();
+        }
         if (mode === 'prod' && tableMode) {
             convertListToTable();
         }
