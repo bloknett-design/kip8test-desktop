@@ -28,6 +28,9 @@
         --active-bg: rgba(22, 27, 34, 0.15);
         --header-bg: rgba(23, 33, 43, 0.85);
         --nav-bg: rgba(23, 33, 43, 0.5);
+        /* Task 177: цвета текста инфоблока конвертера (тёмная тема) */
+        --conv-info-text: rgba(255,255,255,0.5);
+        --conv-info-bold: rgba(255,255,255,0.7);
         --bottom-nav-bg: rgba(23, 33, 43, 0.95);
         --sidebar-bg: rgba(23, 33, 43, 0.98);
         --warning-bg: rgba(199, 150, 74, 0.12);
@@ -67,6 +70,9 @@
         --active-bg: rgba(20, 20, 19, 0.06);
         --header-bg: rgba(240, 238, 230, 0.92);
         --nav-bg: rgba(240, 238, 230, 0.7);
+        /* Task 177: читаемость инфоблока конвертера в светлой теме */
+        --conv-info-text: rgba(20,20,19,0.55);
+        --conv-info-bold: rgba(20,20,19,0.78);
         --bottom-nav-bg: rgba(240, 238, 230, 0.96);
         --sidebar-bg: rgba(250, 249, 245, 0.98);
         --warning-bg: rgba(198, 97, 63, 0.06);
@@ -1059,6 +1065,10 @@
     }
     
     .converter-result-group { margin: 6px 0 10px; position: relative; z-index: 2; }
+    /* Task 177: заглушка средней колонки конвертера давления — показывается
+       только на десктопе, пока не построена таблица перевода (правило :has
+       в десктопном media-блоке); на мобильном всегда скрыта */
+    .conv-table-placeholder { display: none; }
     .converter-result-label-title { color: rgba(255,255,255,0.3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; padding-left: 4px; font-weight: 500; }
     .converter-result-item {
         display: flex; justify-content: space-between; align-items: center;
@@ -8833,6 +8843,75 @@
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 12px;
         }
+
+        /* ===== Task 177: конвертер давления — рабочая область из трёх
+           равных частей (десктоп >= 1024px). Слева — ввод значения и
+           единицы, кнопка «Перевести» и результаты; в центре — расчётная
+           таблица перевода; справа — блок справочной информации.
+           Колонки равной ширины, каждая прокручивается независимо;
+           мобильный вид не меняется (прежний одинарный поток) ===== */
+        #contentArea > #page-conv-pressure.active {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding-bottom: 0;
+        }
+        #page-conv-pressure .page-inline-header {
+            flex-shrink: 0;
+            position: static;
+        }
+        #page-conv-pressure .conv-columns {
+            flex: 1;
+            min-height: 0;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            padding: 12px 14px 14px;
+            overflow: hidden;
+        }
+        #page-conv-pressure .conv-col {
+            min-width: 0;
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(74,143,199,0.45) transparent;
+        }
+        #page-conv-pressure .conv-col::-webkit-scrollbar { width: 8px; }
+        #page-conv-pressure .conv-col::-webkit-scrollbar-thumb { background: rgba(74,143,199,0.4); border-radius: 4px; }
+        #page-conv-pressure .conv-col::-webkit-scrollbar-track { background: transparent; }
+        /* Колонка 1: форма -> кнопка -> результаты, общий верхний край */
+        #page-conv-pressure .conv-col-input .converter-form { margin: 0; }
+        #page-conv-pressure .conv-col-input .converter-convert-btn { margin: 10px 0 0; }
+        #page-conv-pressure .conv-col-input .converter-result-group { margin: 10px 0 0; }
+        #page-conv-pressure .conv-col-table .converter-result-group { margin: 0; }
+        /* Колонка 3: инфоблок — без мобильного отступа сверху */
+        #page-conv-pressure .conv-col-info > .conv-info-block { margin: 0 !important; }
+        /* Заглушка средней колонки: видна, пока таблица скрыта
+           (style*=none: исходное display:none и сброс при «Перевести») */
+        #page-conv-pressure:has(#conv-pressure-table[style*="none"]) .conv-table-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 260px;
+            padding: 24px 20px;
+            border: 1px dashed rgba(74,143,199,0.35);
+            border-radius: 14px;
+            text-align: center;
+        }
+        #page-conv-pressure .conv-table-placeholder svg {
+            width: 30px; height: 30px;
+            stroke: rgba(74,143,199,0.55);
+            fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+        }
+        #page-conv-pressure .conv-table-placeholder .ctp-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.55); }
+        #page-conv-pressure .conv-table-placeholder .ctp-text { font-size: 12px; line-height: 1.55; max-width: 280px; color: rgba(255,255,255,0.38); }
+        [data-theme="light"] #page-conv-pressure .conv-table-placeholder { border-color: rgba(58,110,165,0.35); background: rgba(74,143,199,0.05); }
+        [data-theme="light"] #page-conv-pressure .conv-table-placeholder .ctp-title { color: rgba(20,20,19,0.7); }
+        [data-theme="light"] #page-conv-pressure .conv-table-placeholder .ctp-text { color: rgba(20,20,19,0.5); }
+        [data-theme="light"] #page-conv-pressure .conv-table-placeholder svg { stroke: rgba(58,110,165,0.55); }
     }
 
     /* Tablet: 768-1023px — частичная адаптация */
@@ -10084,11 +10163,31 @@
         <div id="page-conv-pressure" class="page-content">
             <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Давление</div></div>
 
-            <div class="converter-form"><div class="form-label">Значение</div><input type="text" inputmode="numeric" id="conv-pressure-input" class="form-field" placeholder="Введите значение" autocomplete="off" enterkeyhint="done"><div class="form-label">Единица измерения</div><select id="conv-pressure-unit" class="form-field" autocomplete="off"><option value="Pa">Па</option><option value="kPa">кПа</option><option value="MPa" selected>МПа</option><option value="bar">бар</option><option value="mbar">мбар</option><option value="atm">атм</option><option value="kgf_cm2">кгс/см²</option><option value="kgf_m2">кгс/м²</option><option value="mmHg">мм рт. ст.</option><option value="PSI">PSI</option><option value="mmH2O">мм вод. ст.</option></select></div>
-            <button type="button" class="converter-convert-btn" onclick="convertUnits('pressure')"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>Перевести</button>
-            <div class="converter-result-group" id="conv-pressure-results"></div>
-            <div class="converter-result-group" id="conv-pressure-table" style="display:none;"></div>
-            <div style="margin:14px 0 10px;padding:14px 16px;background:var(--card-bg);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--card-border);border-radius:14px;position:relative;z-index:2;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--accent-blue);fill:none;stroke-width:2;stroke-linecap:round;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span style="font-size:14px;font-weight:700;color:var(--text-primary);letter-spacing:-0.2px;">Справочная информация</span></div><div style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.6;"><div style="margin-bottom:8px;"><b style="color:rgba(255,255,255,0.7);">Определение:</b> Давление — физическая величина, равная силе, действующей перпендикулярно на единицу площади: p = F/S. Единица СИ — паскаль (Па = Н/м²).</div><div style="margin-bottom:8px;"><b style="color:rgba(255,255,255,0.7);">Соотношения единиц:</b> 1 МПа = 10 бар = 10,197 кгс/см² = 9,869 атм = 7500,6 мм рт. ст. = 101971,6 мм вод. ст. = 145,04 PSI. 1 бар = 100 кПа = 0,1 МПа.</div><div style="margin-bottom:8px;"><b style="color:rgba(255,255,255,0.7);">Атмосферное давление:</b> Нормальное атмосферное давление: 1 атм = 101325 Па = 760 мм рт. ст. = 1,0332 кгс/см² = 1013,25 мбар. На высоте 1 км падает примерно на 12%.</div><div style="margin-bottom:8px;"><b style="color:rgba(255,255,255,0.7);">Абсолютное давление:</b> Давление, отсчитываемое от полного вакуума (нулевого давления). Обозначается индексом «абс» или «abs». Связь с избыточным: p_абс = p_изб + p_атм. Абсолютное давление всегда неотрицательно. Применяется в расчётах свойств газов, расходомерах переменного перепада, барометрах.</div><div style="margin-bottom:8px;"><b style="color:rgba(255,255,255,0.7);">Избыточное (манометрическое) давление:</b> Давление, отсчитываемое от атмосферного. Обозначается «изб» или «g» (gauge). p_изб = p_абс − p_атм. Большинство манометров показывает именно избыточное давление. При отрицательном значении говорят о разрежении.</div><div style="margin-bottom:8px;"><b style="color:rgba(255,255,255,0.7);">Дифференциальное давление (перепад):</b> Разность давлений между двумя точками, обозначается Δp. Применяется в расходомерах на сужающих устройствах (диафрагмах), гидростатических уровнемерах, системах контроля засорения фильтров. Типовые диапазоны: 0–100 кПа для диафрагм, 0–25 кПа для фильтров.</div><div style="margin-bottom:8px;"><b style="color:rgba(255,255,255,0.7);">Гидростатическое давление:</b> Давление столба жидкости, определяемое формулой p = ρgh, где ρ — плотность, g = 9,80665 м/с², h — высота столба. Для воды (ρ = 1000 кг/м³) столб высотой 1 м создаёт давление 9,80665 кПа (1000 мм вод. ст.). Лежит в основе работы гидростатических уровнемеров.</div><div style="margin-bottom:8px;"><b style="color:rgba(255,255,255,0.7);">Вакуум (разрежение):</b> Состояние, при котором абсолютное давление ниже атмосферного. Измеряется вакуумметрами в Па, кПа или мм рт. ст. Технический вакуум: до 100 кПа; низкий: 100 Па – 0,1 Па; средний: 0,1 Па – 1 мПа; высокий: < 1 мПа.</div><div style="margin-bottom:8px;"><b style="color:rgba(255,255,255,0.7);">Нормативный документ:</b> ГОСТ 8.417-2002 «ГСИ. Единицы величин»; ГОСТ Р 8.802-2012 «ГСИ. Государственная поверочная схема для средств измерений давления»; ГОСТ 6521-72 «Манометры, вакуумметры...».</div></div></div>
+            <!-- Task 177: на десктопе рабочая область делится на три равные
+                 части: слева — ввод значения/единицы, кнопка «Перевести» и
+                 результаты; в центре — расчётная таблица перевода; справа —
+                 справочная информация. Каждая колонка прокручивается сама.
+                 На мобильном виде колонки складываются в прежний поток -->
+            <div class="conv-columns">
+                <div class="conv-col conv-col-input">
+                    <div class="converter-form"><div class="form-label">Значение</div><input type="text" inputmode="numeric" id="conv-pressure-input" class="form-field" placeholder="Введите значение" autocomplete="off" enterkeyhint="done"><div class="form-label">Единица измерения</div><select id="conv-pressure-unit" class="form-field" autocomplete="off"><option value="Pa">Па</option><option value="kPa">кПа</option><option value="MPa" selected>МПа</option><option value="bar">бар</option><option value="mbar">мбар</option><option value="atm">атм</option><option value="kgf_cm2">кгс/см²</option><option value="kgf_m2">кгс/м²</option><option value="mmHg">мм рт. ст.</option><option value="PSI">PSI</option><option value="mmH2O">мм вод. ст.</option></select></div>
+                    <button type="button" class="converter-convert-btn" onclick="convertUnits('pressure')"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>Перевести</button>
+                    <div class="converter-result-group" id="conv-pressure-results"></div>
+                </div>
+                <div class="conv-col conv-col-table">
+                    <!-- Task 177: заглушка средней колонки — видна на десктопе,
+                         пока не построена таблица перевода -->
+                    <div class="conv-table-placeholder">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="10" y1="10" x2="10" y2="20"/></svg>
+                        <div class="ctp-title">Расчётная таблица перевода</div>
+                        <div class="ctp-text">Введите значение, нажмите «Перевести» и выберите единицу в результатах слева — здесь появится таблица перевода с шагом 5%.</div>
+                    </div>
+                    <div class="converter-result-group" id="conv-pressure-table" style="display:none;"></div>
+                </div>
+                <div class="conv-col conv-col-info">
+                    <div class="conv-info-block" style="margin:14px 0 10px;padding:14px 16px;background:var(--card-bg);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--card-border);border-radius:14px;position:relative;z-index:2;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--accent-blue);fill:none;stroke-width:2;stroke-linecap:round;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span style="font-size:14px;font-weight:700;color:var(--text-primary);letter-spacing:-0.2px;">Справочная информация</span></div><div style="font-size:12px;color:var(--conv-info-text);line-height:1.6;"><div style="margin-bottom:8px;"><b style="color:var(--conv-info-bold);">Определение:</b> Давление — физическая величина, равная силе, действующей перпендикулярно на единицу площади: p = F/S. Единица СИ — паскаль (Па = Н/м²).</div><div style="margin-bottom:8px;"><b style="color:var(--conv-info-bold);">Соотношения единиц:</b> 1 МПа = 10 бар = 10,197 кгс/см² = 9,869 атм = 7500,6 мм рт. ст. = 101971,6 мм вод. ст. = 145,04 PSI. 1 бар = 100 кПа = 0,1 МПа.</div><div style="margin-bottom:8px;"><b style="color:var(--conv-info-bold);">Атмосферное давление:</b> Нормальное атмосферное давление: 1 атм = 101325 Па = 760 мм рт. ст. = 1,0332 кгс/см² = 1013,25 мбар. На высоте 1 км падает примерно на 12%.</div><div style="margin-bottom:8px;"><b style="color:var(--conv-info-bold);">Абсолютное давление:</b> Давление, отсчитываемое от полного вакуума (нулевого давления). Обозначается индексом «абс» или «abs». Связь с избыточным: p_абс = p_изб + p_атм. Абсолютное давление всегда неотрицательно. Применяется в расчётах свойств газов, расходомерах переменного перепада, барометрах.</div><div style="margin-bottom:8px;"><b style="color:var(--conv-info-bold);">Избыточное (манометрическое) давление:</b> Давление, отсчитываемое от атмосферного. Обозначается «изб» или «g» (gauge). p_изб = p_абс − p_атм. Большинство манометров показывает именно избыточное давление. При отрицательном значении говорят о разрежении.</div><div style="margin-bottom:8px;"><b style="color:var(--conv-info-bold);">Дифференциальное давление (перепад):</b> Разность давлений между двумя точками, обозначается Δp. Применяется в расходомерах на сужающих устройствах (диафрагмах), гидростатических уровнемерах, системах контроля засорения фильтров. Типовые диапазоны: 0–100 кПа для диафрагм, 0–25 кПа для фильтров.</div><div style="margin-bottom:8px;"><b style="color:var(--conv-info-bold);">Гидростатическое давление:</b> Давление столба жидкости, определяемое формулой p = ρgh, где ρ — плотность, g = 9,80665 м/с², h — высота столба. Для воды (ρ = 1000 кг/м³) столб высотой 1 м создаёт давление 9,80665 кПа (1000 мм вод. ст.). Лежит в основе работы гидростатических уровнемеров.</div><div style="margin-bottom:8px;"><b style="color:var(--conv-info-bold);">Вакуум (разрежение):</b> Состояние, при котором абсолютное давление ниже атмосферного. Измеряется вакуумметрами в Па, кПа или мм рт. ст. Технический вакуум: до 100 кПа; низкий: 100 Па – 0,1 Па; средний: 0,1 Па – 1 мПа; высокий: < 1 мПа.</div><div style="margin-bottom:8px;"><b style="color:var(--conv-info-bold);">Нормативный документ:</b> ГОСТ 8.417-2002 «ГСИ. Единицы величин»; ГОСТ Р 8.802-2012 «ГСИ. Государственная поверочная схема для средств измерений давления»; ГОСТ 6521-72 «Манометры, вакуумметры...».</div></div></div>
+                </div>
+            </div>
         </div>
 
         <!-- Расход -->
@@ -22754,7 +22853,13 @@ function showConverterTable(cat, fromUnit, toUnit, baseValue) {
 
     tableDiv.innerHTML = html;
     tableDiv.style.display = 'block';
-    setTimeout(() => tableDiv.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    // Task 177: конвертер давления на десктопе — три колонки: таблица
+    // строится в средней колонке рядом с результатами, прокручивать
+    // страницу к ней не нужно; остальные конвертеры (одноколоночные)
+    // скроллят к таблице, как раньше
+    var skipScroll = (cat === 'pressure') && window.matchMedia &&
+        window.matchMedia('(min-width: 1024px)').matches;
+    if (!skipScroll) setTimeout(() => tableDiv.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 }
 
 function showTempTable(fromUnit, toUnit, baseCelsius) {
