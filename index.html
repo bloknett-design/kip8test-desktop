@@ -5905,9 +5905,15 @@
         letter-spacing: 0.3px;
     }
     [data-theme="light"] .pb-card-phone { color: #2a5d8f; }
+    /* Task 165: единая жёлтая подсветка точных совпадений поиска —
+       во всех списках (карточки, заголовки групп) и таблице приборов.
+       Явный стиль вместо браузерного дефолта: тёмный текст на жёлтом. */
+    mark,
     .pb-card mark {
-        background: rgba(199,150,74,0.25);
-        color: inherit; padding: 0 1px; border-radius: 2px;
+        background: #ffd60a;
+        color: #1a1a1a;
+        padding: 0 1px;
+        border-radius: 2px;
     }
     .pb-card-top {
         display: flex; align-items: flex-start; gap: 8px;
@@ -6551,9 +6557,11 @@
         word-wrap: break-word; overflow-wrap: break-word;
     }
     [data-theme="light"] .dev-card-value { color: #1a1a1a; }
+    /* Task 165: жёлтая подсветка и в значениях детальной карточки прибора
+       (единый стиль с подсветкой в списках) */
     .dev-card-value mark {
-        background: rgba(199, 150, 74, 0.3);
-        color: inherit; padding: 0 1px; border-radius: 2px;
+        background: #ffd60a;
+        color: #1a1a1a; padding: 0 1px; border-radius: 2px;
     }
     .dev-card-value.dev-card-id {
         color: #c7964a; font-weight: 600;
@@ -9643,13 +9651,13 @@
 
         <!-- ======================== СПИСОК ПРИБОРОВ ВНУТРИ ГРУППЫ ======================== -->
         <div id="page-dev-group" class="page-content">
-            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title" id="devGroupTitle">Приборы</div></div>
+            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title" id="devGroupTitle">Приборы</div><input type="search" id="devGroupSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="devRenderGroup()" hidden><button type="button" id="devGroupSearchInputToggleBtn" class="dev-search-toggle-btn" aria-label="Поиск" data-search-input="devGroupSearchInput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></div>
             <div id="devGroupList"></div>
         </div>
 
         <!-- ======================== СПИСОК БЛОКИРОВОК ВНУТРИ ГРУППЫ ======================== -->
         <div id="page-lock-group" class="page-content">
-            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title" id="lockGroupTitle">Блокировки</div></div>
+            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title" id="lockGroupTitle">Блокировки</div><input type="search" id="lockGroupSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="lockRenderGroup()" hidden><button type="button" id="lockGroupSearchInputToggleBtn" class="dev-search-toggle-btn" aria-label="Поиск" data-search-input="lockGroupSearchInput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></div>
             <div id="lockGroupList"></div>
         </div>
 
@@ -14578,6 +14586,17 @@
                 && kipMatchesSarFilter(d, 'devices')
             );
         }
+        // Task 165: поиск внутри группы (общий движок kipSearchFilter,
+        // тот же состав полей, что и в devRenderSorted)
+        const rawQuery = (document.getElementById('devGroupSearchInput')?.value || '').trim();
+        var __searchTotal = items.length;
+        if (rawQuery) {
+            items = kipSearchFilter(items, rawQuery, function (d) {
+                return DEV_FIELDS.map(f => d[f.key] || '').join(' ') + ' ' +
+                    (d['Тип'] || '') + ' ' + (d['№ прибора'] || '') + ' ' +
+                    (d['Место установки'] || '') + ' ' + (d['Наименование'] || '');
+            });
+        }
         items.sort((a, b) => {
             const va = (a['Наименование'] || '').toString().toLowerCase();
             const vb = (b['Наименование'] || '').toString().toLowerCase();
@@ -14597,10 +14616,14 @@
             } else if (kipIsSarLinkFilterActive('devices')) {
                 emptyHtml += kipRenderSarFilterBadge('devices');
                 emptyHtml += '<div class="pb-empty">В группе «' + devEsc(group) + '» по САР №«' + devEsc(kipSarLinkFilter.sarNo) + '» приборов не найдено.<br>Нажмите ✕ в бейдже, чтобы сбросить фильтр.</div>';
+            } else if (rawQuery) {
+                // Task 165: поисковый запрос не дал результатов в группе
+                emptyHtml = '<div class="pb-empty">По запросу «' + devEsc(rawQuery) + '» в группе ничего не найдено.</div>';
             } else {
                 emptyHtml = '<div class="pb-empty">В группе нет приборов.</div>';
             }
             list.innerHTML = emptyHtml;
+            kipRenderSearchCounter(list, items.length, __searchTotal, rawQuery);
             kipBindFilterBadge(list, 'devices', function() { devRenderGroup(); });
             kipBindSbsFilterBadge(list, 'devices', function() { devRenderGroup(); });
             kipBindSarFilterBadge(list, 'devices', function() { devRenderGroup(); });
@@ -14642,7 +14665,8 @@
             const gItems = groups[g];
             html += '<div class="pb-section dev-group dev-subgroup static">';
             html += '<div class="pb-section-title">';
-            html += '<span class="pb-section-title-text">' + devEsc(g) + '</span>';
+            // Task 165: подсветка совпадений в заголовке подгруппы
+            html += '<span class="pb-section-title-text">' + devMark(g, rawQuery) + '</span>';
             html += '<span class="pb-section-title-count">' + gItems.length + '</span>';
             html += '<span class="pb-section-arrow"></span>';
             html += '</div>';
@@ -14665,24 +14689,24 @@
                 html += KipFav._cardFavBtnHtml(devId);
                 // Если имя уже в заголовке подгруппы (mode='prod') — overlay не нужен.
                 if (!hideNameInCard) {
-                    html += '<div class="dev-card-name-overlay">' + devEsc(name) + '</div>';
+                    html += '<div class="dev-card-name-overlay">' + devMark(name, rawQuery) + '</div>';
                 }
                 html += '</div>';
                 html += '<div class="dev-card-text">';
                 // Имя показываем в карточке только если оно не дублирует заголовок подгруппы.
                 if (!hideNameInCard) {
-                    html += '<div class="dev-card-title">' + devEsc(name) + '</div>';
+                    html += '<div class="dev-card-title">' + devMark(name, rawQuery) + '</div>';
                 }
                 let subtitle = '';
                 if (type) subtitle += type;
                 if (number) subtitle += (subtitle ? ' · №' : '№') + number;
                 if (place) subtitle += (subtitle ? ' · ' : '') + place;
-                if (subtitle) html += '<div class="dev-card-subtitle">' + devEsc(subtitle) + '</div>';
+                if (subtitle) html += '<div class="dev-card-subtitle">' + devMark(subtitle, rawQuery) + '</div>';
                 html += '</div>';
                 html += '<div class="dev-card-info-block">';
-                if (type) html += '<div class="dev-card-info-row">' + devEsc(type) + '</div>';
-                if (number) html += '<div class="dev-card-info-row" style="color:#6aa6e0;font-weight:600;">№ ' + devEsc(number) + '</div>';
-                if (place) html += '<div class="dev-card-info-row">' + devEsc(place) + '</div>';
+                if (type) html += '<div class="dev-card-info-row">' + devMark(type, rawQuery) + '</div>';
+                if (number) html += '<div class="dev-card-info-row" style="color:#6aa6e0;font-weight:600;">№ ' + devMark(number, rawQuery) + '</div>';
+                if (place) html += '<div class="dev-card-info-row">' + devMark(place, rawQuery) + '</div>';
                 html += '</div>';
                 html += '</div>'; // header-inner
                 html += '</div>'; // header
@@ -14693,6 +14717,8 @@
         }
         html += '</div>';
         list.innerHTML = html;
+        // Task 165: счётчик «Найдено: N из M» при активном поиске
+        kipRenderSearchCounter(list, items.length, __searchTotal, rawQuery);
         if (typeof KipFav !== 'undefined') KipFav.wrapDevCardsForFavSwipe();
         // Привязка обработчиков к кнопкам ✕ в бейджах фильтра
         kipBindFilterBadge(list, 'devices', function() { devRenderGroup(); });
@@ -15003,6 +15029,14 @@
         if (kipIsProjectLinkFilterActive('lockouts')) {
             items = items.filter(d => kipMatchesProjectFilter(d, 'lockouts'));
         }
+        // Task 165: поиск внутри группы (общий движок kipSearchFilter)
+        const rawQuery = (document.getElementById('lockGroupSearchInput')?.value || '').trim();
+        var __searchTotal = items.length;
+        if (rawQuery) {
+            items = kipSearchFilter(items, rawQuery, function (d) {
+                return LOCK_FIELDS.map(f => d[f.key] || '').join(' ');
+            });
+        }
         items.sort((a, b) => {
             const va = (a['Параметр'] || '').toString().toLowerCase();
             const vb = (b['Параметр'] || '').toString().toLowerCase();
@@ -15016,10 +15050,14 @@
             if (kipIsProjectLinkFilterActive('lockouts')) {
                 emptyHtml += kipRenderFilterBadge('lockouts');
                 emptyHtml += '<div class="pb-empty">В группе «' + lockEsc(group) + '» по проекту №«' + lockEsc(kipProjectLinkFilter.projectNo) + '» блокировок не найдено.<br>Нажмите ✕ в бейдже, чтобы сбросить фильтр.</div>';
+            } else if (rawQuery) {
+                // Task 165: поисковый запрос не дал результатов в группе
+                emptyHtml = '<div class="pb-empty">По запросу «' + lockEsc(rawQuery) + '» в группе ничего не найдено.</div>';
             } else {
                 emptyHtml = '<div class="pb-empty">В группе нет блокировок.</div>';
             }
             list.innerHTML = emptyHtml;
+            kipRenderSearchCounter(list, items.length, __searchTotal, rawQuery);
             kipBindFilterBadge(list, 'lockouts', function() { lockRenderGroup(); });
             return;
         }
@@ -15051,7 +15089,8 @@
             const gItems = groups[g];
             html += '<div class="pb-section lock-group lock-subgroup static">';
             html += '<div class="pb-section-title">';
-            html += '<span class="pb-section-title-text">' + lockEsc(g) + '</span>';
+            // Task 165: подсветка совпадений в заголовке подгруппы
+            html += '<span class="pb-section-title-text">' + lockMark(g, rawQuery) + '</span>';
             html += '<span class="pb-section-title-count">' + gItems.length + '</span>';
             html += '<span class="pb-section-arrow"></span>';
             html += '</div>';
@@ -15067,11 +15106,11 @@
                 html += '<div class="lock-card-header" onclick="lockOpenDetail(\'' + lockEsc(itemId) + '\')">';
                 html += '<div class="lock-card-header-inner">';
                 html += '<div class="lock-card-text">';
-                html += '<div class="lock-card-title">' + lockEsc(name) + '</div>';
+                html += '<div class="lock-card-title">' + lockMark(name, rawQuery) + '</div>';
                 let subtitle = '';
                 if (type) subtitle += type;
                 if (place) subtitle += (subtitle ? ' · ' : '') + place;
-                if (subtitle) html += '<div class="lock-card-subtitle">' + lockEsc(subtitle) + '</div>';
+                if (subtitle) html += '<div class="lock-card-subtitle">' + lockMark(subtitle, rawQuery) + '</div>';
                 html += '</div>';
                 html += '</div>';
                 html += '</div>';
@@ -15082,6 +15121,8 @@
         }
         html += '</div>';
         list.innerHTML = html;
+        // Task 165: счётчик «Найдено: N из M» при активном поиске
+        kipRenderSearchCounter(list, items.length, __searchTotal, rawQuery);
         // Привязка обработчика к кнопке ✕ в бейдже фильтра
         kipBindFilterBadge(list, 'lockouts', function() { lockRenderGroup(); });
         // Свайп для добавления в избранное
@@ -15720,7 +15761,8 @@
             // Статичная (всегда раскрытая) подгруппа
             html += '<div class="pb-section valve-group valve-subgroup static">';
             html += '<div class="pb-section-title">';
-            html += '<span class="pb-section-title-text">' + valveEsc(sgLabel) + '</span>';
+            // Task 165: подсветка совпадений в заголовке подгруппы
+            html += '<span class="pb-section-title-text">' + valveMark(sgLabel, rawQuery) + '</span>';
             html += '<span class="pb-section-title-count">' + sgItems.length + '</span>';
             html += '<span class="pb-section-arrow"></span>';
             html += '</div>';
@@ -15741,7 +15783,8 @@
                 html += '<div class="valve-card-header" onclick="valveOpenDetail(\'' + valveEsc(itemId) + '\')">';
                 html += '<div class="valve-card-header-inner">';
                 html += '<div class="valve-card-text">';
-                html += '<div class="valve-card-title">' + valveEsc(name) + '</div>';
+                // Task 165: подсветка совпадений в карточке
+                html += '<div class="valve-card-title">' + valveMark(name, rawQuery) + '</div>';
                 // Подзаголовок зависит от режима:
                 //   • mode='prod' — DN в заголовке подгруппы, поэтому в подзаголовке
                 //     показываем «Тип запорной части» + «Тип, пропускная характеристика» + место
@@ -15758,7 +15801,8 @@
                 if (type) subtitleParts.push(type);
                 if (place) subtitleParts.push(place);
                 if (subtitleParts.length) {
-                    html += '<div class="valve-card-subtitle">' + valveEsc(subtitleParts.join(' · ')) + '</div>';
+                    // Task 165: подсветка совпадений в подзаголовке
+                    html += '<div class="valve-card-subtitle">' + valveMark(subtitleParts.join(' · '), rawQuery) + '</div>';
                 }
                 html += '</div>';
                 html += '</div>';
@@ -16411,7 +16455,8 @@
             const gItems = groups[g];
             html += '<div class="pb-section regulator-group regulator-subgroup static">';
             html += '<div class="pb-section-title">';
-            html += '<span class="pb-section-title-text">' + regulatorEsc(g) + '</span>';
+            // Task 165: подсветка совпадений в заголовке подгруппы
+            html += '<span class="pb-section-title-text">' + regulatorMark(g, rawQuery) + '</span>';
             html += '<span class="pb-section-title-count">' + gItems.length + '</span>';
             html += '<span class="pb-section-arrow"></span>';
             html += '</div>';
@@ -16427,11 +16472,12 @@
                 html += '<div class="regulator-card-header" onclick="regulatorOpenDetail(\'' + regulatorEsc(itemId) + '\')">';
                 html += '<div class="regulator-card-header-inner">';
                 html += '<div class="regulator-card-text">';
-                html += '<div class="regulator-card-title">' + regulatorEsc(name) + '</div>';
+                // Task 165: подсветка совпадений в карточке
+                html += '<div class="regulator-card-title">' + regulatorMark(name, rawQuery) + '</div>';
                 let subtitle = '';
                 if (type) subtitle += type;
                 if (place) subtitle += (subtitle ? ' · ' : '') + place;
-                if (subtitle) html += '<div class="regulator-card-subtitle">' + regulatorEsc(subtitle) + '</div>';
+                if (subtitle) html += '<div class="regulator-card-subtitle">' + regulatorMark(subtitle, rawQuery) + '</div>';
                 html += '</div>';
                 html += '</div>';
                 html += '</div>';
@@ -17019,10 +17065,10 @@
                 html += '<div class="project-card-header" onclick="projectOpenDetail(\'' + projectEsc(itemId) + '\')">';
                 html += '<div class="project-card-header-inner">';
                 html += '<div class="project-card-text">';
-                html += '<div class="project-card-title">' + projectEsc(name) + '</div>';
+                // Task 165: подсветка совпадений в карточке
+                html += '<div class="project-card-title">' + projectMark(name, rawQuery) + '</div>';
                 // № проекта — кликабельная ссылка (синяя, со стрелкой ↗), если есть
                 // рабочая ссылка на файл проекта. Иначе — обычный текст «№ {num}».
-                // В режиме группы (без поиска) query не передаётся — подсветка не нужна.
                 const numHtml = projectRenderCardNumber(num, item, '');
                 if (numHtml) html += '<div class="project-card-subtitle">' + numHtml + '</div>';
                 if (status) html += '<div class="project-card-status ' + statusCls + '">' + projectEsc(status) + '</div>';

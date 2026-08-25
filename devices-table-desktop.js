@@ -19,6 +19,9 @@
 //     в шапку страницы, справа от кнопки «Таблица» (группа в один ряд);
 //   - таблица занимает всю свободную площадь без отступов от краёв
 //     (fitTableHeight подгоняет высоту; resize и detail-панель учтены).
+// Task 165:
+//   - точные совпадения поискового запроса подсвечиваются жёлтым
+//     фоном <mark> в ячейках таблицы (по словам запроса, как в списках).
 //
 // Модуль самодостаточен; зависимости — глобальные: devData,
 // devRenderSorted, devOpenDetail, KipAuth. Загружается loader'ом
@@ -41,6 +44,50 @@
         return String(s == null ? '' : s)
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
+    }
+
+    // ---------- Task 165: подсветка точных совпадений в ячейках ----------
+    // Подсвечивает <mark> каждое слово запроса (нормализация: lowercase,
+    // ё->е, только буквы/цифры — как devMark в index.html).
+    function markCell(val, query) {
+        var text = String(val == null ? '' : val);
+        if (!query) return esc(text);
+        var words = String(query).trim().split(/\s+/).filter(Boolean);
+        if (!words.length) return esc(text);
+        var patterns = [];
+        words.forEach(function (w) {
+            var n = w.toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9]/gi, '');
+            if (!n) return;
+            // ВАЖНО: сначала экранируем спецсимволы, ПОТОМ «е» -> [её]
+            // (иначе скобки класса тоже экранируются и матчят буквальный текст)
+            n = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            n = n.replace(/е/g, '[её]');
+            patterns.push(n);
+        });
+        if (!patterns.length) return esc(text);
+        var regex;
+        try { regex = new RegExp('(' + patterns.join('|') + ')', 'gi'); }
+        catch (e) { return esc(text); }
+        var result = '';
+        var lastIdx = 0;
+        var m;
+        while ((m = regex.exec(text)) !== null) {
+            if (m[0].length === 0) { regex.lastIndex++; continue; }
+            result += esc(text.slice(lastIdx, m.index));
+            result += '<mark>' + esc(m[0]) + '</mark>';
+            lastIdx = m.index + m[0].length;
+        }
+        result += esc(text.slice(lastIdx));
+        return result;
+    }
+
+    // Текущий поисковый запрос со страницы «Приборы по производствам»
+    // (общее поле #devProdSearchInput — тот же запрос, что фильтрует карточки)
+    function currentSearchQuery() {
+        try {
+            var el = document.getElementById('devProdSearchInput');
+            return el ? String(el.value || '').trim() : '';
+        } catch (e) { return ''; }
     }
 
     // ---------- Колонки таблицы ----------
@@ -185,7 +232,9 @@
         '  font-family: inherit; cursor: pointer; transition: all 0.15s;',
         '}',
         '.dev-table-csv-btn:hover { background: rgba(74,143,199,0.2); }',
-        '[data-theme="light"] .dev-table-csv-btn { background: rgba(74,143,199,0.08); color: #3a6ea5; }'
+        '[data-theme="light"] .dev-table-csv-btn { background: rgba(74,143,199,0.08); color: #3a6ea5; }',
+        /* Task 165: жёлтая подсветка точных совпадений в ячейках таблицы */
+        '.dev-table td mark { background: #ffd60a; color: #1a1a1a; padding: 0 1px; border-radius: 2px; }'
     ].join('\n');
 
     var styleEl = document.createElement('style');
@@ -327,6 +376,8 @@
         // Task 163: счётчик и «Экспорт CSV» — в шапке (updateHeaderGroup),
         // тулбар над таблицей удалён — таблица начинается сразу с шапки колонок
         updateHeaderGroup(rows.length);
+        // Task 165: текущий запрос — для подсветки совпадений в ячейках
+        var query = currentSearchQuery();
         html += '<table class="dev-table"><thead><tr>';
         cols.forEach(function (col) {
             var cls = 'dev-table-th';
@@ -348,7 +399,9 @@
             cols.forEach(function (col) {
                 var val = (col.key === '__num__') ? String(i + 1) : String(dev[col.key] == null ? '' : dev[col.key]);
                 var cls = 'dev-table-td' + (col.sticky ? ' dev-table-sticky-' + col.sticky : '');
-                html += '<td class="' + cls + '" title="' + esc(val) + '">' + esc(val) + '</td>';
+                // Task 165: подсветка совпадений (кроме колонки № — это порядковый номер)
+                var cellHtml = (col.key === '__num__') ? esc(val) : markCell(val, query);
+                html += '<td class="' + cls + '" title="' + esc(val) + '">' + cellHtml + '</td>';
             });
             html += '</tr>';
         });
