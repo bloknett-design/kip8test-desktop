@@ -183,14 +183,22 @@
     // ---------- CSS ----------
     var css = [
         '/* ===== Task 148: Таблица приборов (только десктоп) ===== */',
-        /* Task 163: группа в шапке — [Таблица][счётчик][Экспорт CSV], единый ряд */
+        /* Task 163: группа в шапке; Task 175: в табличном виде — два ряда:
+           кнопки сверху (верхняя половина бара), счётчик под ними */
         '.dev-table-header-group {',
         '  position: absolute; top: 50%; right: 8px; transform: translateY(-50%);',
         '  display: flex; align-items: center; gap: 8px; z-index: 2;',
         '}',
+        '.dev-table-header-group.table-active {',
+        '  top: 4px; transform: none;',
+        '  flex-direction: column; align-items: flex-end; gap: 3px;',
+        '}',
+        /* Task 175: ряд кнопок [Таблица][сброс][метки][CSV] — единая высота 28px */
+        '.dev-table-btn-row { display: flex; align-items: center; gap: 8px; }',
         '.dev-table-toggle-btn {',
         '  position: relative;  /* Task 166: якорь для полосы-разделителя */',
-        '  padding: 6px 12px; min-width: 76px;',
+        /* Task 175: единая высота кнопок бара — 28px */
+        '  height: 28px; box-sizing: border-box; padding: 0 12px; min-width: 76px;',
         '  border: 1px solid rgba(74,143,199,0.35); border-radius: 8px;',
         '  background: rgba(74,143,199,0.10); color: #6aa6e0;',
         '  font-size: 13px; font-weight: 600; font-family: inherit;',
@@ -212,6 +220,22 @@
         '  background: var(--border-color, rgba(74,143,199,0.25));',
         '  pointer-events: none;',
         '}',
+        /* Task 175: в табличном виде кнопки подняты в верхнюю половину бара —
+           полоса центрируется по ГРУППЕ (группа — position: absolute,
+           якорит ::before), оставаясь напротив лупы; полоса самой
+           кнопки «Таблица» в этом режиме отключается */
+        '.dev-table-header-group.table-active::before {',
+        '  content: \'\';',
+        '  position: absolute;',
+        '  left: -4.5px;',
+        '  top: 50%;',
+        '  transform: translateY(-50%);',
+        '  width: 1px;',
+        '  height: 24px;',
+        '  background: var(--border-color, rgba(74,143,199,0.25));',
+        '  pointer-events: none;',
+        '}',
+        '.dev-table-header-group.table-active .dev-table-toggle-btn::before { display: none; }',
         '.dev-table-toggle-btn:hover { background: rgba(74,143,199,0.18); border-color: rgba(74,143,199,0.5); }',
         '.dev-table-toggle-btn.active {',
         '  background: rgba(74,143,199,0.25); border-color: rgba(74,143,199,0.65); color: #9ec6ec;',
@@ -313,12 +337,14 @@
         '.dev-table-header-group.table-active .dev-table-count { display: inline-block; }',
         '.dev-table-header-group.table-active .dev-table-csv-btn { display: inline-block; }',
         '.dev-table-count {',
-        '  font-size: 12.5px; font-weight: 600; white-space: nowrap;',
+        /* Task 175: счётчик — под рядом кнопок, компактнее */
+        '  font-size: 11.5px; font-weight: 600; white-space: nowrap; line-height: 1.2; text-align: right;',
         '  color: var(--text-secondary, rgba(255,255,255,0.55));',
         '}',
         '[data-theme="light"] .dev-table-count { color: rgba(20,20,19,0.6); }',
         '.dev-table-csv-btn {',
-        '  padding: 5px 12px; border: 1px solid rgba(74,143,199,0.35); border-radius: 7px;',
+        /* Task 175: единая высота 28px */
+        '  height: 28px; box-sizing: border-box; padding: 0 12px; border: 1px solid rgba(74,143,199,0.35); border-radius: 7px;',
         '  background: rgba(74,143,199,0.10); color: #6aa6e0; font-size: 12px; font-weight: 600;',
         '  font-family: inherit; cursor: pointer; transition: all 0.15s;',
         '}',
@@ -425,7 +451,9 @@
         '.dev-table-header-group .dev-table-clear-btn { display: none; }',
         '.dev-table-header-group.table-active .dev-table-clear-btn { display: inline-flex; }',
         '.dev-table-clear-btn {',
-        '  align-items: center; gap: 5px; padding: 5px 9px;',
+        /* Task 175: квадратная кнопка 28x28 (единая высота бара) */
+        '  align-items: center; justify-content: center; gap: 3px;',
+        '  width: 28px; height: 28px; padding: 0; box-sizing: border-box;',
         '  border: 1px solid rgba(74,143,199,0.35); border-radius: 7px;',
         '  background: rgba(74,143,199,0.10); color: #6aa6e0; font-size: 13px; line-height: 1;',
         '  font-family: inherit; cursor: pointer; transition: all 0.15s;',
@@ -435,14 +463,19 @@
         '.dev-table-clear-btn.has-filters { border-color: #e0a030; color: #e0a030; background: rgba(224,160,48,0.10); }',
         '.dev-table-clear-btn svg { display: block; flex-shrink: 0; }',
         '.dev-table-clear-btn .dev-table-clear-count { font-size: 11px; font-weight: 700; }',
+        /* Task 175: пустой бейдж не занимает место в квадратной кнопке */
+        '.dev-table-clear-btn .dev-table-clear-count:empty { display: none; }',
         '[data-theme="light"] .dev-table-clear-btn { background: rgba(74,143,199,0.08); color: #3a6ea5; }',
         '[data-theme="light"] .dev-table-clear-btn.has-filters { border-color: #b8860b; color: #b8860b; background: rgba(184,134,11,0.08); }',
         /* ===== Task 169: кнопка «Метки строк» (⚑) в шапке ===== */
         '.dev-table-header-group .dev-table-marks-btn { display: none; }',
-        '.dev-table-header-group.table-active .dev-table-marks-btn { display: inline-block; }',
+        '.dev-table-header-group.table-active .dev-table-marks-btn { display: inline-flex; }',
         '.dev-table-marks-btn {',
-        '  padding: 5px 10px; border: 1px solid rgba(74,143,199,0.35); border-radius: 7px;',
-        '  background: rgba(74,143,199,0.10); color: #6aa6e0; font-size: 13px; line-height: 1;',
+        /* Task 175: квадратная кнопка 28x28 (единая высота бара) */
+        '  display: inline-flex; align-items: center; justify-content: center;',
+        '  width: 28px; height: 28px; padding: 0; box-sizing: border-box;',
+        '  border: 1px solid rgba(74,143,199,0.35); border-radius: 7px;',
+        '  background: rgba(74,143,199,0.10); color: #6aa6e0; font-size: 14px; line-height: 1;',
         '  font-family: inherit; cursor: pointer; transition: all 0.15s;',
         '}',
         '.dev-table-marks-btn:hover { background: rgba(74,143,199,0.2); }',
@@ -479,10 +512,16 @@
     function ensureButton() {
         var header = document.querySelector('#page-devices-prod .page-inline-header');
         if (!header || document.getElementById('devTableToggleBtn')) return;
-        // Task 163: группа [Таблица][Показано приборов: N][Экспорт CSV] — один ряд в шапке
+        // Task 163: группа в шапке; Task 175: два ряда — ряд кнопок
+        // [Таблица][сброс][метки][CSV] в верхней половине бара,
+        // счётчик «Показано приборов: N» — под ними (CSS .table-active)
         var group = document.createElement('div');
         group.id = 'devTableHeaderGroup';
         group.className = 'dev-table-header-group' + (tableMode ? ' table-active' : '');
+
+        var btnRow = document.createElement('div');
+        btnRow.className = 'dev-table-btn-row';
+        group.appendChild(btnRow);
 
         var btn = document.createElement('button');
         btn.type = 'button';
@@ -504,9 +543,10 @@
             // Перезапустить рендер: патч devRenderSorted сам применит вид
             if (typeof window.devRenderSorted === 'function') window.devRenderSorted('prod');
         });
-        group.appendChild(btn);
+        btnRow.appendChild(btn);
 
-        // Task 163: счётчик приборов (заполняется в buildTableHtml)
+        // Task 163: счётчик приборов (заполняется в buildTableHtml);
+        // Task 175: стоит в группе ПОД рядом кнопок
         var count = document.createElement('span');
         count.id = 'devTableCount';
         count.className = 'dev-table-count';
@@ -519,7 +559,7 @@
         clearBtn.id = 'devTableClearFiltersBtn';
         clearBtn.className = 'dev-table-clear-btn';
         clearBtn.title = 'Сбросить все фильтры по колонкам';
-        clearBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">' +
+        clearBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">' +
             '<path d="M1.5 2.5h13l-5 5.5v5l-3 1.5v-6.5z" fill="currentColor"/>' +
             '<path d="M3.8 3.8l8.4 8.4M12.2 3.8l-8.4 8.4" stroke="#e05360" stroke-width="1.8" stroke-linecap="round"/>' +
             '</svg><span class="dev-table-clear-count"></span>';
@@ -527,7 +567,7 @@
             e.stopPropagation();
             resetAllColumnFilters();
         });
-        group.appendChild(clearBtn);
+        btnRow.appendChild(clearBtn);
 
         // Task 169: кнопка «Метки строк» (⚑) — подсветка по условиям
         var marksBtn = document.createElement('button');
@@ -540,7 +580,7 @@
             e.stopPropagation();
             toggleMarksDropdown(marksBtn);
         });
-        group.appendChild(marksBtn);
+        btnRow.appendChild(marksBtn);
 
         // Task 163: кнопка экспорта CSV (клик — делегированный обработчик ниже)
         var csvBtn = document.createElement('button');
@@ -549,7 +589,7 @@
         csvBtn.className = 'dev-table-csv-btn';
         csvBtn.textContent = 'Экспорт CSV';
         csvBtn.title = 'Скачать показанные приборы в CSV (открывается в Excel)';
-        group.appendChild(csvBtn);
+        btnRow.appendChild(csvBtn);
 
         header.appendChild(group);
     }
