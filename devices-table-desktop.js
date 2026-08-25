@@ -385,7 +385,9 @@
         '.dev-table-stats-dd .dts-count { font-weight: 700; color: #e0e6f0; flex-shrink: 0; }',
         '.dev-table-stats-dd .dts-pct { color: rgba(200,214,232,0.45); width: 40px; text-align: right; flex-shrink: 0; font-size: 11px; }',
         '.dev-table-stats-dd .dts-bar-wrap { width: 90px; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; flex-shrink: 0; overflow: hidden; }',
-        '.dev-table-stats-dd .dts-bar { height: 100%; background: linear-gradient(90deg, #6aa6e0, #8fc1ee); border-radius: 3px; }',
+        /* Task 170 (багфикс): display:block — span по умолчанию inline, width
+           игнорируется и бары не рендерились (был виден только фон-трек) */
+        '.dev-table-stats-dd .dts-bar { display: block; height: 100%; background: linear-gradient(90deg, #6aa6e0, #8fc1ee); border-radius: 3px; }',
         '.dev-table-stats-dd .dts-expand { display: block; width: 100%; padding: 6px; border: none; border-top: 1px solid rgba(255,255,255,0.08); background: transparent; color: #8ab4e0; font-size: 12px; cursor: pointer; font-family: inherit; }',
         '.dev-table-stats-dd .dts-expand:hover { background: rgba(74,143,199,0.10); }',
         '.dev-table-stats-dd .dts-hint { padding: 4px 12px 6px; color: rgba(200,214,232,0.4); font-size: 10.5px; }',
@@ -1238,12 +1240,17 @@
         dd.appendChild(list);
 
         // «Показать все N значений»
+        // Task 170 (багфикс): stopPropagation — раньше expand.remove() внутри
+        // обработчика отсоединял кнопку ДО всплытия клика до document-слушателя,
+        // statsEl.contains(e.target) становился false (узел уже вне DOM) и панель
+        // закрывалась сразу после клика — кнопка «не срабатывала»
         if (entries.length > TOP) {
             var expand = document.createElement('button');
             expand.type = 'button';
             expand.className = 'dts-expand';
             expand.textContent = 'Показать все ' + entries.length + ' значений';
-            expand.addEventListener('click', function () {
+            expand.addEventListener('click', function (e) {
+                e.stopPropagation();   // не давать document-обработчику закрыть панель
                 list.innerHTML = '';
                 entries.forEach(function (en) { addRow(en[0], en[1]); });
                 expand.remove();
