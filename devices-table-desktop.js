@@ -31,6 +31,12 @@
 //     карточку, Home/End — в начало/конец списка;
 //   - виртуальный скролл: рендерится только видимое окно строк
 //     (+ буфер) — быстрая прокрутка на слабых машинах.
+// Task 169:
+//   - статистика по колонке: правый клик по заголовку — панель
+//     «Количество по значениям» (значения + счётчики + % + бары);
+//   - метки строк по условиям: «Дата старше N лет» (янтарная полоса)
+//     и «В гр. ППР: Нет» (красная полоса) — тонкие цветные метки
+//     слева у строки; условия настраиваются кнопкой ⚑ в шапке.
 //
 // Модуль самодостаточен; зависимости — глобальные: devData,
 // devRenderSorted, devOpenDetail, KipAuth. Загружается loader'ом
@@ -60,6 +66,21 @@
     var rowH = 31;          // высота строки (замеряется после первого рендера)
     var VBUF = 14;          // буфер строк сверху/снизу видимого окна
     var _rowHMeasured = false;
+    // Task 169: метки строк по условиям (подсветка слева)
+    // oldDate: «Дата» старше N лет — янтарная полоса
+    // noPPR: «В гр. ППР» = «Нет» — красная полоса
+    // (в данных «В гр. ППР» только «Есть»/«Нет» — «пусто» трактуем как «Нет»)
+    var marksCfg = { oldDate: { on: false, years: 5 }, noPPR: { on: false } };
+    try {
+        var _savedM = localStorage.getItem('devTableMarks');
+        if (_savedM) {
+            var _m = JSON.parse(_savedM);
+            if (_m && typeof _m === 'object') {
+                if (_m.oldDate) marksCfg.oldDate = { on: !!_m.oldDate.on, years: Math.max(1, parseInt(_m.oldDate.years, 10) || 5) };
+                if (_m.noPPR) marksCfg.noPPR = { on: !!_m.noPPR.on };
+            }
+        }
+    } catch (e) {}
 
     // Восстановить сохранённое состояние вида
     try { tableMode = localStorage.getItem('devTableMode') === '1'; } catch (e) {}
@@ -344,7 +365,72 @@
         '[data-theme="light"] .dev-table tbody tr.dev-table-row-focused > td.dev-table-sticky-1,',
         '[data-theme="light"] .dev-table tbody tr.dev-table-row-focused > td.dev-table-sticky-2 { background: #dcebf8 !important; }',
         /* ===== Task 168: спейсеры виртуального скролла ===== */
-        '.dev-table tbody tr.dev-table-vspacer > td { padding: 0 !important; border: none !important; background: transparent !important; }'
+        '.dev-table tbody tr.dev-table-vspacer > td { padding: 0 !important; border: none !important; background: transparent !important; }',
+        /* ===== Task 169: панель статистики по колонке ===== */
+        '.dev-table-stats-dd {',
+        '  position: fixed; z-index: 1000; width: 380px;',
+        '  background: #1a2331; border: 1px solid rgba(74,143,199,0.4); border-radius: 8px;',
+        '  box-shadow: 0 8px 24px rgba(0,0,0,0.45); font-size: 12.5px; color: #c8d6e8;',
+        '  font-family: inherit; overflow: hidden;',
+        '}',
+        '.dev-table-stats-dd .dts-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.08); }',
+        '.dev-table-stats-dd .dts-title { flex: 1; font-weight: 600; color: #8fc1ee; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }',
+        '.dev-table-stats-dd .dts-close { padding: 2px 7px; border: none; background: transparent; color: #8ab4e0; cursor: pointer; font-size: 13px; line-height: 1; border-radius: 4px; }',
+        '.dev-table-stats-dd .dts-close:hover { background: rgba(74,143,199,0.15); }',
+        '.dev-table-stats-dd .dts-sub { padding: 6px 12px 4px; color: rgba(200,214,232,0.55); font-size: 11.5px; border-bottom: 1px solid rgba(255,255,255,0.06); }',
+        '.dev-table-stats-dd .dts-list { max-height: 340px; overflow-y: auto; padding: 4px 0; }',
+        '.dev-table-stats-dd .dts-row { display: flex; align-items: center; gap: 8px; padding: 3px 12px; cursor: pointer; }',
+        '.dev-table-stats-dd .dts-row:hover { background: rgba(74,143,199,0.10); }',
+        '.dev-table-stats-dd .dts-val { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }',
+        '.dev-table-stats-dd .dts-count { font-weight: 700; color: #e0e6f0; flex-shrink: 0; }',
+        '.dev-table-stats-dd .dts-pct { color: rgba(200,214,232,0.45); width: 40px; text-align: right; flex-shrink: 0; font-size: 11px; }',
+        '.dev-table-stats-dd .dts-bar-wrap { width: 90px; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; flex-shrink: 0; overflow: hidden; }',
+        '.dev-table-stats-dd .dts-bar { height: 100%; background: linear-gradient(90deg, #6aa6e0, #8fc1ee); border-radius: 3px; }',
+        '.dev-table-stats-dd .dts-expand { display: block; width: 100%; padding: 6px; border: none; border-top: 1px solid rgba(255,255,255,0.08); background: transparent; color: #8ab4e0; font-size: 12px; cursor: pointer; font-family: inherit; }',
+        '.dev-table-stats-dd .dts-expand:hover { background: rgba(74,143,199,0.10); }',
+        '.dev-table-stats-dd .dts-hint { padding: 4px 12px 6px; color: rgba(200,214,232,0.4); font-size: 10.5px; }',
+        '[data-theme="light"] .dev-table-stats-dd { background: #ffffff; border-color: rgba(58,110,165,0.35); color: #2c3a4c; box-shadow: 0 8px 24px rgba(0,0,0,0.18); }',
+        '[data-theme="light"] .dev-table-stats-dd .dts-title { color: #2a5885; }',
+        '[data-theme="light"] .dev-table-stats-dd .dts-sub { color: rgba(51,70,94,0.6); }',
+        '[data-theme="light"] .dev-table-stats-dd .dts-row:hover { background: rgba(74,143,199,0.08); }',
+        '[data-theme="light"] .dev-table-stats-dd .dts-count { color: #1a1a1a; }',
+        '[data-theme="light"] .dev-table-stats-dd .dts-pct { color: rgba(51,70,94,0.55); }',
+        '[data-theme="light"] .dev-table-stats-dd .dts-bar-wrap { background: rgba(0,0,0,0.07); }',
+        /* ===== Task 169: метки строк по условиям — цветные полосы слева ===== */
+        '.dev-table tbody tr.dev-mark-old > td:first-child { box-shadow: inset 4px 0 0 #e0a030; }',
+        '.dev-table tbody tr.dev-mark-noppr > td:first-child { box-shadow: inset 4px 0 0 #e05360; }',
+        '.dev-table tbody tr.dev-mark-old.dev-mark-noppr > td:first-child { box-shadow: inset 8px 0 0 #e0a030, inset 4px 0 0 #e05360; }',
+        /* ===== Task 169: кнопка «Метки строк» (⚑) в шапке ===== */
+        '.dev-table-header-group .dev-table-marks-btn { display: none; }',
+        '.dev-table-header-group.table-active .dev-table-marks-btn { display: inline-block; }',
+        '.dev-table-marks-btn {',
+        '  padding: 5px 10px; border: 1px solid rgba(74,143,199,0.35); border-radius: 7px;',
+        '  background: rgba(74,143,199,0.10); color: #6aa6e0; font-size: 13px; line-height: 1;',
+        '  font-family: inherit; cursor: pointer; transition: all 0.15s;',
+        '}',
+        '.dev-table-marks-btn:hover { background: rgba(74,143,199,0.2); }',
+        '.dev-table-marks-btn.has-marks { border-color: #e0a030; color: #e0a030; background: rgba(224,160,48,0.10); }',
+        '[data-theme="light"] .dev-table-marks-btn { background: rgba(74,143,199,0.08); color: #3a6ea5; }',
+        '[data-theme="light"] .dev-table-marks-btn.has-marks { border-color: #b8860b; color: #b8860b; background: rgba(184,134,11,0.08); }',
+        '.dev-table-marks-dd {',
+        '  position: fixed; z-index: 1000; width: 300px;',
+        '  background: #1a2331; border: 1px solid rgba(74,143,199,0.4); border-radius: 8px;',
+        '  box-shadow: 0 8px 24px rgba(0,0,0,0.45); font-size: 12.5px; color: #c8d6e8;',
+        '  font-family: inherit; overflow: hidden;',
+        '}',
+        '.dev-table-marks-dd .dms-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.08); }',
+        '.dev-table-marks-dd .dms-title { flex: 1; font-weight: 600; color: #8fc1ee; }',
+        '.dev-table-marks-dd .dms-close { padding: 2px 7px; border: none; background: transparent; color: #8ab4e0; cursor: pointer; font-size: 13px; line-height: 1; border-radius: 4px; }',
+        '.dev-table-marks-dd .dms-close:hover { background: rgba(74,143,199,0.15); }',
+        '.dev-table-marks-dd .dms-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; }',
+        '.dev-table-marks-dd .dms-item label { display: flex; align-items: center; gap: 8px; flex: 1; cursor: pointer; }',
+        '.dev-table-marks-dd .dms-item input[type="checkbox"] { accent-color: #6aa6e0; }',
+        '.dev-table-marks-dd .dms-years { width: 48px; padding: 3px 6px; border: 1px solid rgba(106,141,181,0.4); border-radius: 5px; background: #0f1622; color: #e0e6f0; font-size: 12px; font-family: inherit; text-align: center; outline: none; }',
+        '.dev-table-marks-dd .dms-swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }',
+        '.dev-table-marks-dd .dms-hint { padding: 4px 12px 8px; color: rgba(200,214,232,0.4); font-size: 10.5px; }',
+        '[data-theme="light"] .dev-table-marks-dd { background: #ffffff; border-color: rgba(58,110,165,0.35); color: #2c3a4c; box-shadow: 0 8px 24px rgba(0,0,0,0.18); }',
+        '[data-theme="light"] .dev-table-marks-dd .dms-title { color: #2a5885; }',
+        '[data-theme="light"] .dev-table-marks-dd .dms-years { background: #f4f7fa; color: #1a1a1a; border-color: rgba(58,110,165,0.3); }'
     ].join('\n');
 
     var styleEl = document.createElement('style');
@@ -376,8 +462,8 @@
             var page = document.getElementById('page-devices-prod');
             if (page) page.classList.toggle('dev-table-full', tableMode);
             updateHeaderGroup();
-            // Task 168: при переключении вида закрыть выпадающий фильтр
-            closeFilterDropdown();
+            // Task 168: при переключении вида закрыть выпадающий фильтр; Task 169: и остальные панели
+            closePanels();
             // Перезапустить рендер: патч devRenderSorted сам применит вид
             if (typeof window.devRenderSorted === 'function') window.devRenderSorted('prod');
         });
@@ -388,6 +474,19 @@
         count.id = 'devTableCount';
         count.className = 'dev-table-count';
         group.appendChild(count);
+
+        // Task 169: кнопка «Метки строк» (⚑) — подсветка по условиям
+        var marksBtn = document.createElement('button');
+        marksBtn.type = 'button';
+        marksBtn.id = 'devTableMarksBtn';
+        marksBtn.className = 'dev-table-marks-btn' + ((marksCfg.oldDate.on || marksCfg.noPPR.on) ? ' has-marks' : '');
+        marksBtn.textContent = '\u2691';
+        marksBtn.title = 'Метки строк: подсветка приборов по условиям (дата / ППР)';
+        marksBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            toggleMarksDropdown(marksBtn);
+        });
+        group.appendChild(marksBtn);
 
         // Task 163: кнопка экспорта CSV (клик — делегированный обработчик ниже)
         var csvBtn = document.createElement('button');
@@ -459,8 +558,8 @@
             // на первом открытии (страница стала видимой) переменная
             // --devt-group-w получит корректное значение
             updateHeaderGroup();
-            // Task 168: при выходе из табличного вида закрыть выпадающий фильтр
-            if (!tableMode) closeFilterDropdown();
+            // Task 168/169: при выходе из табличного вида закрыть всплывающие панели
+            if (!tableMode) closePanels();
         }
         if (mode === 'prod' && tableMode) {
             convertListToTable();
@@ -592,6 +691,9 @@
         }
         // Task 168: клик вне выпадающего фильтра — закрыть его
         if (ddEl && !ddEl.contains(e.target)) closeFilterDropdown();
+        // Task 169: клик вне панелей статистики/меток — закрыть их
+        if (statsEl && !statsEl.contains(e.target)) closeStatsPanel();
+        if (marksEl && !marksEl.contains(e.target)) closeMarksDropdown();
         // Сортировка: клик по заголовку колонки (не сразу после перетаскивания границы)
         var th = (!_suppressSort && e.target.closest) ? e.target.closest('.dev-table th[data-sort-key]') : null;
         if (th) {
@@ -628,9 +730,13 @@
             exportCsv();
         }
     });
-    // Task 168: Escape закрывает выпадающий фильтр
+    // Task 168: Escape закрывает выпадающий фильтр; Task 169: и остальные панели
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && ddEl) closeFilterDropdown();
+        if (e.key === 'Escape') {
+            if (ddEl) closeFilterDropdown();
+            if (statsEl) closeStatsPanel();
+            if (marksEl) closeMarksDropdown();
+        }
     });
 
     // ---------- Экспорт CSV ----------
@@ -839,6 +945,7 @@
     // ============================================================
     function rowHtml(dev, i, cols, query, w1) {
         var html = '<tr class="dev-table-row' + (i === focusIndex ? ' dev-table-row-focused' : '') +
+            rowMarkClasses(dev) +   // Task 169: цветные метки по условиям
             '" data-dev-id="' + esc(String(dev['ID'])) + '" data-row-index="' + i + '">';
         cols.forEach(function (col) {
             var val = (col.key === '__num__') ? String(i + 1) : String(dev[col.key] == null ? '' : dev[col.key]);
@@ -1021,16 +1128,301 @@
         wrap.addEventListener('scroll', onVirtualScroll);
         wrap.addEventListener('keydown', onTableKeyDown);
         wrap.addEventListener('pointerdown', onResizePointerDown);
+        // Task 169: правый клик по заголовку — статистика по колонке
+        wrap.addEventListener('contextmenu', onHeaderContextMenu);
+    }
+
+    // ============================================================
+    // Task 169: СТАТИСТИКА ПО КОЛОНКЕ (правый клик по заголовку)
+    // ============================================================
+    var statsEl = null;   // открытая панель статистики
+
+    function closeStatsPanel() {
+        if (statsEl) { statsEl.remove(); statsEl = null; }
+    }
+
+    // Правый клик по заголовку колонки -> «Количество по значениям».
+    // Статистика считается по currentRows — с учётом поиска и фильтров
+    // (что вижу — о том и статистика).
+    function onHeaderContextMenu(e) {
+        var th = e.target.closest ? e.target.closest('th') : null;
+        if (!th) return;
+        var key = th.getAttribute('data-sort-key');
+        if (!key) return;   // колонка № — не интересна
+        e.preventDefault();
+        openStatsPanel(key, th);
+    }
+
+    function openStatsPanel(key, anchorEl) {
+        closePanels();
+        // Подсчёт значений по текущему (отфильтрованному) набору
+        var counts = {};
+        var total = currentRows.length;
+        currentRows.forEach(function (d) {
+            var v = String(d[key] == null ? '' : d[key]).trim();
+            counts[v] = (counts[v] || 0) + 1;
+        });
+        var entries = Object.keys(counts).map(function (v) { return [v, counts[v]]; });
+        entries.sort(function (a, b) { return b[1] - a[1]; });
+        var maxCount = entries.length ? entries[0][1] : 1;
+        var TOP = 15;
+
+        var dd = document.createElement('div');
+        dd.className = 'dev-table-stats-dd';
+
+        // Шапка: «Статистика: {колонка}» + закрыть
+        var head = document.createElement('div');
+        head.className = 'dts-head';
+        var title = document.createElement('div');
+        title.className = 'dts-title';
+        title.textContent = 'Количество по значениям: ' + colLabel(key);
+        title.title = title.textContent;
+        var closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'dts-close';
+        closeBtn.textContent = '✕';
+        closeBtn.title = 'Закрыть';
+        closeBtn.addEventListener('click', closeStatsPanel);
+        head.appendChild(title);
+        head.appendChild(closeBtn);
+
+        // Подзаголовок: N приборов · M значений (по текущему набору)
+        var sub = document.createElement('div');
+        sub.className = 'dts-sub';
+        sub.textContent = total + ' ' + (total === 1 ? 'прибор' : 'приборов') +
+            ' · ' + entries.length + ' ' + (entries.length === 1 ? 'значение' : 'значений') +
+            (total !== lastDevices.length ? ' · с учётом фильтров' : '');
+
+        // Список: значение + счётчик + % + бар
+        var list = document.createElement('div');
+        list.className = 'dts-list';
+
+        function addRow(val, cnt) {
+            var row = document.createElement('div');
+            row.className = 'dts-row';
+            row.title = 'Клик — показать только это значение (фильтр)';
+            var valEl = document.createElement('span');
+            valEl.className = 'dts-val';
+            valEl.textContent = val === '' ? '(пусто)' : val;
+            var cntEl = document.createElement('span');
+            cntEl.className = 'dts-count';
+            cntEl.textContent = cnt;
+            var pctEl = document.createElement('span');
+            pctEl.className = 'dts-pct';
+            pctEl.textContent = total ? (Math.round(cnt / total * 1000) / 10) + '%' : '0%';
+            var barWrap = document.createElement('span');
+            barWrap.className = 'dts-bar-wrap';
+            var bar = document.createElement('span');
+            bar.className = 'dts-bar';
+            bar.style.width = Math.max(2, Math.round(cnt / maxCount * 100)) + '%';
+            barWrap.appendChild(bar);
+            row.appendChild(valEl);
+            row.appendChild(cntEl);
+            row.appendChild(pctEl);
+            row.appendChild(barWrap);
+            // Клик по значению — применить фильтр по нему (drill-down, как в Excel)
+            row.addEventListener('click', function () {
+                var cur = Array.isArray(colFilters[key]) ? colFilters[key] : null;
+                if (cur && cur.length === 1 && cur[0] === val) delete colFilters[key];   // повторный клик — сброс
+                else colFilters[key] = [val];
+                closeStatsPanel();
+                rebuildTable();
+            });
+            list.appendChild(row);
+        }
+
+        entries.slice(0, TOP).forEach(function (en) { addRow(en[0], en[1]); });
+
+        dd.appendChild(head);
+        dd.appendChild(sub);
+        dd.appendChild(list);
+
+        // «Показать все N значений»
+        if (entries.length > TOP) {
+            var expand = document.createElement('button');
+            expand.type = 'button';
+            expand.className = 'dts-expand';
+            expand.textContent = 'Показать все ' + entries.length + ' значений';
+            expand.addEventListener('click', function () {
+                list.innerHTML = '';
+                entries.forEach(function (en) { addRow(en[0], en[1]); });
+                expand.remove();
+            });
+            dd.appendChild(expand);
+        }
+
+        var hint = document.createElement('div');
+        hint.className = 'dts-hint';
+        hint.textContent = 'Клик по значению — фильтровать по нему';
+        dd.appendChild(hint);
+
+        statsEl = dd;
+        document.body.appendChild(dd);
+        // Позиционирование под заголовком (не вылезая за экран)
+        dd.style.visibility = 'hidden';
+        var r = anchorEl.getBoundingClientRect();
+        var dw = dd.offsetWidth || 380, dh = dd.offsetHeight || 320;
+        var left = Math.min(window.innerWidth - dw - 8, Math.max(8, r.left));
+        var top = r.bottom + 4;
+        if (top + dh > window.innerHeight - 8) top = Math.max(8, r.top - dh - 4);
+        dd.style.left = left + 'px';
+        dd.style.top = top + 'px';
+        dd.style.visibility = '';
+    }
+
+    // ============================================================
+    // Task 169: МЕТКИ СТРОК ПО УСЛОВИЯМ
+    // ============================================================
+    var marksEl = null;   // открытая панель настроек меток
+
+    // «Дата» старше N лет (формат данных: YYYY-MM-DD или пусто)
+    function isOldDate(v, years) {
+        var s = String(v == null ? '' : v).trim();
+        if (!s) return false;
+        var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!m) return false;
+        var d = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+        if (isNaN(d.getTime())) return false;
+        var limit = new Date();
+        limit.setFullYear(limit.getFullYear() - years);
+        return d < limit;
+    }
+
+    // Классы меток для строки (янтарная — старая дата, красная — вне ППР)
+    function rowMarkClasses(dev) {
+        var cls = '';
+        if (marksCfg.oldDate.on && isOldDate(dev['Дата'], marksCfg.oldDate.years)) cls += ' dev-mark-old';
+        if (marksCfg.noPPR.on && String(dev['В гр. ППР'] || '').trim().toLowerCase() === 'нет') cls += ' dev-mark-noppr';
+        return cls;
+    }
+
+    function saveMarksCfg() {
+        try { localStorage.setItem('devTableMarks', JSON.stringify(marksCfg)); } catch (e) {}
+        // Подсветка кнопки ⚑, если хоть одно условие активно
+        var btn = document.getElementById('devTableMarksBtn');
+        if (btn) btn.classList.toggle('has-marks', marksCfg.oldDate.on || marksCfg.noPPR.on);
+    }
+
+    function closeMarksDropdown() {
+        if (marksEl) { marksEl.remove(); marksEl = null; }
+    }
+
+    function toggleMarksDropdown(anchorBtn) {
+        if (marksEl) { closeMarksDropdown(); return; }
+        closePanels();
+
+        var dd = document.createElement('div');
+        dd.className = 'dev-table-marks-dd';
+
+        var head = document.createElement('div');
+        head.className = 'dms-head';
+        var title = document.createElement('div');
+        title.className = 'dms-title';
+        title.textContent = 'Метки строк';
+        var closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'dms-close';
+        closeBtn.textContent = '✕';
+        closeBtn.title = 'Закрыть';
+        closeBtn.addEventListener('click', closeMarksDropdown);
+        head.appendChild(title);
+        head.appendChild(closeBtn);
+
+        function applyAndRerender() {
+            saveMarksCfg();
+            renderRows();   // метки меняют только классы строк — пересборки не нужно
+        }
+
+        // Условие 1: «Дата» старше N лет — янтарная полоса
+        var item1 = document.createElement('div');
+        item1.className = 'dms-item';
+        var lab1 = document.createElement('label');
+        var cb1 = document.createElement('input');
+        cb1.type = 'checkbox';
+        cb1.checked = marksCfg.oldDate.on;
+        var sw1 = document.createElement('span');
+        sw1.className = 'dms-swatch';
+        sw1.style.background = '#e0a030';
+        var t1 = document.createElement('span');
+        t1.textContent = '«Дата» старше';
+        lab1.appendChild(cb1);
+        lab1.appendChild(sw1);
+        lab1.appendChild(t1);
+        var yearsInput = document.createElement('input');
+        yearsInput.type = 'number';
+        yearsInput.className = 'dms-years';
+        yearsInput.min = '1';
+        yearsInput.max = '50';
+        yearsInput.value = String(marksCfg.oldDate.years);
+        var t1b = document.createElement('span');
+        t1b.textContent = 'лет';
+        cb1.addEventListener('change', function () { marksCfg.oldDate.on = cb1.checked; applyAndRerender(); });
+        yearsInput.addEventListener('change', function () {
+            var v = Math.max(1, Math.min(50, parseInt(yearsInput.value, 10) || 5));
+            yearsInput.value = String(v);
+            marksCfg.oldDate.years = v;
+            applyAndRerender();
+        });
+        item1.appendChild(lab1);
+        item1.appendChild(yearsInput);
+        item1.appendChild(t1b);
+
+        // Условие 2: «В гр. ППР» = Нет — красная полоса
+        var item2 = document.createElement('div');
+        item2.className = 'dms-item';
+        var lab2 = document.createElement('label');
+        var cb2 = document.createElement('input');
+        cb2.type = 'checkbox';
+        cb2.checked = marksCfg.noPPR.on;
+        var sw2 = document.createElement('span');
+        sw2.className = 'dms-swatch';
+        sw2.style.background = '#e05360';
+        var t2 = document.createElement('span');
+        t2.textContent = '«В гр. ППР» — Нет';
+        lab2.appendChild(cb2);
+        lab2.appendChild(sw2);
+        lab2.appendChild(t2);
+        cb2.addEventListener('change', function () { marksCfg.noPPR.on = cb2.checked; applyAndRerender(); });
+        item2.appendChild(lab2);
+
+        var hint = document.createElement('div');
+        hint.className = 'dms-hint';
+        hint.textContent = 'Метки — тонкие цветные полосы слева у строки прибора';
+
+        dd.appendChild(head);
+        dd.appendChild(item1);
+        dd.appendChild(item2);
+        dd.appendChild(hint);
+
+        marksEl = dd;
+        document.body.appendChild(dd);
+        // Позиционирование под кнопкой ⚑
+        dd.style.visibility = 'hidden';
+        var r = anchorBtn.getBoundingClientRect();
+        var dw = dd.offsetWidth || 300, dh = dd.offsetHeight || 200;
+        var left = Math.min(window.innerWidth - dw - 8, Math.max(8, r.left));
+        var top = r.bottom + 4;
+        if (top + dh > window.innerHeight - 8) top = Math.max(8, r.top - dh - 4);
+        dd.style.left = left + 'px';
+        dd.style.top = top + 'px';
+        dd.style.visibility = '';
+    }
+
+    // Закрыть все всплывающие панели модуля
+    function closePanels() {
+        closeFilterDropdown();
+        closeStatsPanel();
+        closeMarksDropdown();
     }
 
     // ---------- Инициализация ----------
     ensureButton();
-    // Task 168: закрывать выпадающий фильтр при уходе со страницы приборов
+    // Task 168/169: закрывать всплывающие панели при уходе со страницы приборов
     (function () {
         var origNav = window.navigateTo;
         if (typeof origNav === 'function') {
             window.navigateTo = function () {
-                closeFilterDropdown();
+                closePanels();
                 return origNav.apply(window, arguments);
             };
         }
