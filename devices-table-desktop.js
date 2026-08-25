@@ -361,16 +361,22 @@
         '  position: absolute; top: 0; right: 0; bottom: 0;',
         '  width: 18px;',
         '  display: flex; align-items: center; justify-content: center;',
-        '  font-size: 9px; line-height: 1;',
+        '  font-size: 10px; line-height: 1;',
         /* Task 174: кнопка фильтра выделена ярче — насыщенный голубой
-           вместо тускло-серого полупрозрачного */
-        '  color: #7db9f5; cursor: pointer; user-select: none;',
+           вместо тускло-серого полупрозрачного.
+           Task 176: лёгкая цветная подложка и в покое + значок ▾ крупнее,
+           чтобы кнопка читалась без наведения; скругление слева — как вкладка */
+        '  color: #7db9f5; background: rgba(125,185,245,0.13);',
+        '  border-left: 1px solid rgba(125,185,245,0.20);',
+        '  border-radius: 4px 0 0 4px;',
+        '  cursor: pointer; user-select: none;',
         '}',
         /* Task 174: hover и активный фильтр — тоже ярче (синяя/янтарная плашка) */
         '.dev-table-filter-btn:hover { color: #d5e9fd; background: rgba(125,185,245,0.22); }',
         '.dev-table-filter-btn.has-filter { color: #ffd60a; background: rgba(255,214,10,0.22); }',
-        '[data-theme="light"] .dev-table-filter-btn { color: #3a6ea5; }',
-        '[data-theme="light"] .dev-table-filter-btn:hover { color: #1b5aa6; background: rgba(58,110,165,0.13); }',
+        /* Task 176: лёгкая подложка в покое — светлая тема */
+        '[data-theme="light"] .dev-table-filter-btn { color: #3a6ea5; background: rgba(58,110,165,0.10); border-left-color: rgba(58,110,165,0.16); }',
+        '[data-theme="light"] .dev-table-filter-btn:hover { color: #1b5aa6; background: rgba(58,110,165,0.18); }',
         '[data-theme="light"] .dev-table-filter-btn.has-filter { color: #c77e00; background: rgba(199,126,0,0.16); }',
         '.dev-table-filter-dd {',
         '  position: fixed; z-index: 1000; min-width: 250px; max-width: 330px;',

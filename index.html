@@ -8213,13 +8213,13 @@
             align-self: center;
             background: var(--border-color, rgba(74,143,199,0.25));
         }
-        /* Поле поиска: скрыто; разворачивается на месте крошек (flex:1) */
+        /* Поле поиска: скрыто; Task 176 — разворачивается РЯДОМ с крошками
+           (ограниченной ширины, не занимает их место) */
         #detailBarSearchInput { display: none; }
         #detailBarSearchInput.search-open {
             display: block;
-            flex: 1;
-            min-width: 140px;
-            margin-left: 40px;  /* правее шеврона «назад» (absolute, left 4..24px) */
+            flex: 0 1 250px;
+            min-width: 150px;
             padding: 6px 10px 6px 30px;
             border: 1px solid rgba(106,141,181,0.55);
             border-radius: 8px;
@@ -8240,8 +8240,16 @@
             background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7a8d' stroke-width='2'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
         }
         [data-theme="light"] #detailBarSearchInput.search-open::placeholder { color: rgba(20,20,19,0.4); }
-        /* При открытом поиске крошки уступают место полю */
-        #detailBreadcrumbBar.search-open #detailBreadcrumbContent { display: none; }
+        /* Task 176: при открытом поиске крошки ОСТАЮТСЯ видимыми — поле
+           не перекрывает их, а встаёт справа; длинный путь обрезается
+           многоточием, короткий занимает столько, сколько нужно */
+        #detailBreadcrumbBar.search-open #detailBreadcrumbContent {
+            flex: 0 1 auto;
+            min-width: 120px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
         #detailBreadcrumbBar.search-open #flowDesktopTabs { visibility: hidden; }
         /* Когда панели поменяли местами: детальная панель слева, список справа */
         #contentArea.panels-swapped {
