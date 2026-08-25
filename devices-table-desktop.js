@@ -140,7 +140,7 @@
     // width — начальная ширина; sticky — закрепить слева.
     var COLUMNS = [
         { key: '__num__',  label: '№',          width: 48,  sticky: 1, sortable: false },
-        { key: 'Наименование',                  label: 'Наименование',      width: 240, sticky: 2 },
+        { key: 'Наименование',                  label: 'Наименование',      width: 240 },
         { key: 'Тип',                           label: 'Тип',               width: 130 },
         { key: '№ прибора',                     label: '№ прибора',         width: 95 },
         { key: 'Предел измерения',              label: 'Предел измерения',  width: 150 },
@@ -273,28 +273,24 @@
         '.dev-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.025); }',
         '.dev-table tbody tr:hover { background: rgba(74,143,199,0.10); }',
         '.dev-table tbody tr.dev-table-row-selected { background: rgba(74,143,199,0.16) !important; }',
-        /* Закреплённые колонки: № (48px) и Наименование (240px) */
+        /* Закреплённые колонки: Task 171 — только «№» */
+        /* Task 171: закреплена ТОЛЬКО колонка «№» (sticky-2 «Наименование» —
+           откреплена по запросу); остальные колонки прокручиваются */
         '.dev-table .dev-table-sticky-1 { position: sticky; left: 0; z-index: 2; background: #1a2331; }',
-        '.dev-table .dev-table-sticky-2 { position: sticky; left: 48px; z-index: 2; background: #1a2331; }',
-        '.dev-table tbody tr:nth-child(even) .dev-table-sticky-1,',
-        '.dev-table tbody tr:nth-child(even) .dev-table-sticky-2 { background: #1f2937; }',
-        '.dev-table tbody tr:hover .dev-table-sticky-1,',
-        '.dev-table tbody tr:hover .dev-table-sticky-2 { background: #243246; }',
-        '.dev-table thead .dev-table-sticky-1, .dev-table thead .dev-table-sticky-2 { z-index: 4; background: #233043; }',
-        '.dev-table thead .dev-table-sticky-1:hover, .dev-table thead .dev-table-sticky-2:hover { background: #2a3a52; }',
-        '.dev-table .dev-table-sticky-2, .dev-table thead th:nth-child(2) { box-shadow: 1px 0 0 rgba(255,255,255,0.09); }',
+        '.dev-table tbody tr:nth-child(even) .dev-table-sticky-1 { background: #1f2937; }',
+        '.dev-table tbody tr:hover .dev-table-sticky-1 { background: #243246; }',
+        '.dev-table thead .dev-table-sticky-1 { z-index: 4; background: #233043; }',
+        '.dev-table thead .dev-table-sticky-1:hover { background: #2a3a52; }',
         /* Светлая тема */
         '[data-theme="light"] .dev-table th { background: #e8edf4; color: #33465e; border-right-color: rgba(0,0,0,0.07); }',
         '[data-theme="light"] .dev-table th:hover { background: #dde5f0; }',
         '[data-theme="light"] .dev-table td { color: #2c3a4c; border-right-color: rgba(0,0,0,0.05); border-bottom-color: rgba(0,0,0,0.05); }',
         '[data-theme="light"] .dev-table tbody tr:nth-child(even) { background: rgba(0,0,0,0.025); }',
         '[data-theme="light"] .dev-table tbody tr:hover { background: rgba(74,143,199,0.10); }',
-        '[data-theme="light"] .dev-table .dev-table-sticky-1, [data-theme="light"] .dev-table .dev-table-sticky-2 { background: #ffffff; }',
-        '[data-theme="light"] .dev-table tbody tr:nth-child(even) .dev-table-sticky-1,',
-        '[data-theme="light"] .dev-table tbody tr:nth-child(even) .dev-table-sticky-2 { background: #f6f8fb; }',
-        '[data-theme="light"] .dev-table tbody tr:hover .dev-table-sticky-1,',
-        '[data-theme="light"] .dev-table tbody tr:hover .dev-table-sticky-2 { background: #eaf1f9; }',
-        '[data-theme="light"] .dev-table thead .dev-table-sticky-1, [data-theme="light"] .dev-table thead .dev-table-sticky-2 { background: #e8edf4; }',
+        '[data-theme="light"] .dev-table .dev-table-sticky-1 { background: #ffffff; }',
+        '[data-theme="light"] .dev-table tbody tr:nth-child(even) .dev-table-sticky-1 { background: #f6f8fb; }',
+        '[data-theme="light"] .dev-table tbody tr:hover .dev-table-sticky-1 { background: #eaf1f9; }',
+        '[data-theme="light"] .dev-table thead .dev-table-sticky-1 { background: #e8edf4; }',
         /* Task 163: счётчик приборов и «Экспорт CSV» — в шапке, справа от «Таблица».
            Видны только в табличном виде (класс .table-active на группе). */
         '.dev-table-header-group .dev-table-count,',
@@ -316,18 +312,22 @@
         /* Task 165: жёлтая подсветка точных совпадений в ячейках таблицы */
         '.dev-table td mark { background: #ffd60a; color: #1a1a1a; padding: 0 1px; border-radius: 2px; }',
         /* ===== Task 168: фильтры по колонкам (как в Excel) ===== */
+        /* Task 171: отступ под квадратную кнопку фильтра справа */
         '.dev-table th { padding-right: 18px; }',
+        /* Task 171: кнопка фильтра — квадрат справа во всю высоту шапки,
+           без отступов от краёв (th position:sticky — якорит absolute) */
         '.dev-table-filter-btn {',
-        '  display: inline-block; margin-left: 5px; padding: 1px 4px;',
-        '  font-size: 9px; line-height: 1; vertical-align: middle;',
+        '  position: absolute; top: 0; right: 0; bottom: 0;',
+        '  width: 18px;',
+        '  display: flex; align-items: center; justify-content: center;',
+        '  font-size: 9px; line-height: 1;',
         '  color: rgba(200,214,232,0.5); cursor: pointer; user-select: none;',
-        '  border-radius: 3px;',
         '}',
         '.dev-table-filter-btn:hover { color: #8fc1ee; background: rgba(255,255,255,0.08); }',
-        '.dev-table-filter-btn.has-filter { color: #ffd60a; }',
+        '.dev-table-filter-btn.has-filter { color: #ffd60a; background: rgba(255,214,10,0.10); }',
         '[data-theme="light"] .dev-table-filter-btn { color: rgba(51,70,94,0.55); }',
         '[data-theme="light"] .dev-table-filter-btn:hover { color: #2a5885; background: rgba(0,0,0,0.06); }',
-        '[data-theme="light"] .dev-table-filter-btn.has-filter { color: #b8860b; }',
+        '[data-theme="light"] .dev-table-filter-btn.has-filter { color: #b8860b; background: rgba(184,134,11,0.10); }',
         '.dev-table-filter-dd {',
         '  position: fixed; z-index: 1000; min-width: 250px; max-width: 330px;',
         '  background: #1a2331; border: 1px solid rgba(74,143,199,0.4); border-radius: 8px;',
@@ -339,6 +339,9 @@
         '.dev-table-filter-dd .dtf-close { padding: 2px 7px; border: none; background: transparent; color: #8ab4e0; cursor: pointer; font-size: 13px; line-height: 1; border-radius: 4px; }',
         '.dev-table-filter-dd .dtf-close:hover { background: rgba(74,143,199,0.15); }',
         '.dev-table-filter-dd .dtf-list { max-height: 280px; overflow-y: auto; padding: 4px 0; }',
+        /* Task 171: строка «Выделить всё» — визуально отделена от значений */
+        '.dev-table-filter-dd label.dtf-all { border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 4px; padding-bottom: 6px; }',
+        '[data-theme="light"] .dev-table-filter-dd label.dtf-all { border-bottom-color: rgba(0,0,0,0.08); }',
         '.dev-table-filter-dd label.dtf-item { display: flex; align-items: center; gap: 8px; padding: 4px 12px; cursor: pointer; white-space: nowrap; }',
         '.dev-table-filter-dd label.dtf-item:hover { background: rgba(74,143,199,0.10); }',
         '.dev-table-filter-dd label.dtf-item input { accent-color: #6aa6e0; flex-shrink: 0; }',
@@ -359,11 +362,9 @@
         '.dev-table th .dev-table-resize-grip:hover, .dev-table th .dev-table-resize-grip.dragging { background: rgba(74,143,199,0.35); }',
         /* ===== Task 168: строка в фокусе клавиатурной навигации ===== */
         '.dev-table tbody tr.dev-table-row-focused > td { background: rgba(74,143,199,0.12) !important; }',
-        '.dev-table tbody tr.dev-table-row-focused > td.dev-table-sticky-1,',
-        '.dev-table tbody tr.dev-table-row-focused > td.dev-table-sticky-2 { background: #23405e !important; }',
+        '.dev-table tbody tr.dev-table-row-focused > td.dev-table-sticky-1 { background: #23405e !important; }',
         '[data-theme="light"] .dev-table tbody tr.dev-table-row-focused > td { background: rgba(74,143,199,0.10) !important; }',
-        '[data-theme="light"] .dev-table tbody tr.dev-table-row-focused > td.dev-table-sticky-1,',
-        '[data-theme="light"] .dev-table tbody tr.dev-table-row-focused > td.dev-table-sticky-2 { background: #dcebf8 !important; }',
+        '[data-theme="light"] .dev-table tbody tr.dev-table-row-focused > td.dev-table-sticky-1 { background: #dcebf8 !important; }',
         /* ===== Task 168: спейсеры виртуального скролла ===== */
         '.dev-table tbody tr.dev-table-vspacer > td { padding: 0 !important; border: none !important; background: transparent !important; }',
         /* ===== Task 169: панель статистики по колонке ===== */
@@ -638,8 +639,6 @@
         updateHeaderGroup(rows.length, devices.length);
         // Task 165: текущий запрос — для подсветки совпадений в ячейках
         var query = currentSearchQuery();
-        // Task 168: ширина первой (sticky) колонки — задаёт сдвиг второй sticky
-        var w1 = getColWidth(COLUMNS[0]);
         // Task 168: явная ширина таблицы = сумме колонок (fixed-layout:
         // без явного width Chromium сжимает колонки до ширины контейнера)
         var sumWidth = 0;
@@ -665,7 +664,8 @@
             // Task 168: ручка изменения ширины на правом краю заголовка
             var grip = '<span class="dev-table-resize-grip" data-resize-key="' + esc(col.key) +
                 '" title="Потяните, чтобы изменить ширину колонки"></span>';
-            var style = 'width:' + getColWidth(col) + 'px;' + (col.sticky === 2 ? 'left:' + w1 + 'px;' : '');
+            // Task 171: sticky-2 откреплена — left-сдвиг больше не нужен
+            var style = 'width:' + getColWidth(col) + 'px;';
             html += '<th class="' + cls + '"' + (col.sortable !== false ? ' data-sort-key="' + esc(col.key) + '"' : '') +
                     ' style="' + style + '"' +
                     ' title="' + esc(col.label) + '">' + esc(col.label) + icon + filterBtn + grip + '</th>';
@@ -890,6 +890,38 @@
         function renderList() {
             var q = (search.value || '').trim().toLowerCase();
             list.innerHTML = '';
+            // Task 171: «Выделить всё» — управляет всеми значениями
+            // (в т.ч. отфильтрованными поиском); состояние: галочка — все
+            // выбраны, квадрат (indeterminate) — выбрана часть
+            var visibleVals = vals.filter(function (v) {
+                var label = v === '' ? '(пусто)' : v;
+                return !q || label.toLowerCase().indexOf(q) !== -1;
+            });
+            var allRow = document.createElement('label');
+            allRow.className = 'dtf-item dtf-all';
+            var allCb = document.createElement('input');
+            allCb.type = 'checkbox';
+            var nChosen = 0;
+            visibleVals.forEach(function (v) { if (checkedSet[v]) nChosen++; });
+            allCb.checked = visibleVals.length > 0 && nChosen === visibleVals.length;
+            allCb.indeterminate = nChosen > 0 && nChosen < visibleVals.length;
+            allCb.addEventListener('change', function () {
+                visibleVals.forEach(function (v) { checkedSet[v] = allCb.checked; });
+                applyFilter();
+                renderList();
+                updateStatus();
+            });
+            var allText = document.createElement('span');
+            allText.className = 'dtf-item-text';
+            allText.style.fontWeight = '600';
+            allText.textContent = 'Выделить всё' + (q ? ' (' + visibleVals.length + ')' : '');
+            var allCount = document.createElement('span');
+            allCount.className = 'dtf-count';
+            allCount.textContent = nChosen + '/' + visibleVals.length;
+            allRow.appendChild(allCb);
+            allRow.appendChild(allText);
+            allRow.appendChild(allCount);
+            list.appendChild(allRow);
             vals.forEach(function (v) {
                 var label = v === '' ? '(пусто)' : v;
                 if (q && label.toLowerCase().indexOf(q) === -1) return;
@@ -902,6 +934,13 @@
                     checkedSet[v] = cb.checked;
                     applyFilter();
                     updateStatus();
+                    // Task 171: синхронизировать состояние «Выделить всё»
+                    // (без полного ре-рендера списка)
+                    var n = 0;
+                    visibleVals.forEach(function (vv) { if (checkedSet[vv]) n++; });
+                    allCb.checked = visibleVals.length > 0 && n === visibleVals.length;
+                    allCb.indeterminate = n > 0 && n < visibleVals.length;
+                    allCount.textContent = n + '/' + visibleVals.length;
                 });
                 var text = document.createElement('span');
                 text.className = 'dtf-item-text';
@@ -945,18 +984,16 @@
     // ============================================================
     // Task 168: ВИРТУАЛЬНЫЙ СКРОЛЛ
     // ============================================================
-    function rowHtml(dev, i, cols, query, w1) {
+    function rowHtml(dev, i, cols, query) {
         var html = '<tr class="dev-table-row' + (i === focusIndex ? ' dev-table-row-focused' : '') +
             rowMarkClasses(dev) +   // Task 169: цветные метки по условиям
             '" data-dev-id="' + esc(String(dev['ID'])) + '" data-row-index="' + i + '">';
         cols.forEach(function (col) {
             var val = (col.key === '__num__') ? String(i + 1) : String(dev[col.key] == null ? '' : dev[col.key]);
             var cls = 'dev-table-td' + (col.sticky ? ' dev-table-sticky-' + col.sticky : '');
-            // Task 168: sticky-2 сдвиг = ширине первой колонки (учитывает ресайз)
-            var style = (col.sticky === 2) ? ' style="left:' + w1 + 'px;"' : '';
             // Task 165: подсветка совпадений (кроме колонки № — порядковый номер)
             var cellHtml = (col.key === '__num__') ? esc(val) : markCell(val, query);
-            html += '<td class="' + cls + '"' + style + ' title="' + esc(val) + '">' + cellHtml + '</td>';
+            html += '<td class="' + cls + '" title="' + esc(val) + '">' + cellHtml + '</td>';
         });
         html += '</tr>';
         return html;
@@ -975,7 +1012,6 @@
         var cols = activeColumns();
         var N = currentRows.length;
         var query = currentSearchQuery();
-        var w1 = getColWidth(COLUMNS[0]);
         if (N === 0) {
             tbody.innerHTML = '<tr><td class="dev-table-td" colspan="' + cols.length +
                 '" style="text-align:center;padding:28px 12px;color:rgba(200,214,232,0.55)">Ничего не найдено — измените поиск или фильтры</td></tr>';
@@ -988,7 +1024,7 @@
         var html = '';
         if (first > 0) html += spacerHtml(first * rowH, cols.length);
         for (var i = first; i < last; i++) {
-            html += rowHtml(currentRows[i], i, cols, query, w1);
+            html += rowHtml(currentRows[i], i, cols, query);
         }
         if (last < N) html += spacerHtml((N - last) * rowH, cols.length);
         tbody.innerHTML = html;
@@ -1094,15 +1130,6 @@
             var sum = 0;
             activeColumns().forEach(function (c) { sum += getColWidth(c); });
             table.style.width = sum + 'px';
-        }
-        // Изменили первую (sticky) колонку — сдвинуть вторую sticky-колонку
-        if (_resize.key === COLUMNS[0].key) {
-            var listEl = document.getElementById('devProdList');
-            if (listEl) {
-                listEl.querySelectorAll('.dev-table-sticky-2').forEach(function (cell) {
-                    cell.style.left = w + 'px';
-                });
-            }
         }
     });
 
