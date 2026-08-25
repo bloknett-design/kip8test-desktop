@@ -136,11 +136,28 @@
         '  display: flex; align-items: center; gap: 8px; z-index: 2;',
         '}',
         '.dev-table-toggle-btn {',
+        '  position: relative;  /* Task 166: якорь для полосы-разделителя */',
         '  padding: 6px 12px; min-width: 76px;',
         '  border: 1px solid rgba(74,143,199,0.35); border-radius: 8px;',
         '  background: rgba(74,143,199,0.10); color: #6aa6e0;',
         '  font-size: 13px; font-weight: 600; font-family: inherit;',
         '  cursor: pointer; white-space: nowrap; transition: all 0.15s;',
+        '}',
+        /* Task 166: вертикальная полоса между лупой поиска и «Таблица» —
+           по образцу разделителя вкладок верхнего бара
+           (.desktop-top-bar-divider: 1px x 24px, var(--border-color)).
+           Полоса — псевдоэлемент кнопки «Таблица», стоит по центру 8px-зазора
+           до лупы; работает и в карточном, и в табличном виде (зазор везде 8px) */
+        '.dev-table-toggle-btn::before {',
+        '  content: \'\';',
+        '  position: absolute;',
+        '  left: -4.5px;   /* центр 8px-зазора между лупой и кнопкой */',
+        '  top: 50%;',
+        '  transform: translateY(-50%);',
+        '  width: 1px;',
+        '  height: 24px;',
+        '  background: var(--border-color, rgba(74,143,199,0.25));',
+        '  pointer-events: none;',
         '}',
         '.dev-table-toggle-btn:hover { background: rgba(74,143,199,0.18); border-color: rgba(74,143,199,0.5); }',
         '.dev-table-toggle-btn.active {',
@@ -158,6 +175,17 @@
         '}',
         '#page-devices-prod .page-inline-header:has(.dev-table-header-group.table-active) .dev-header-search {',
         '  right: var(--devt-group-w, 360px);',
+        '}',
+        /* Task 166: и в КАРТОЧНОМ виде лупа — на том же расстоянии от группы
+           (правило перекрывает статичное right: 92px из Task 149 специфичностью:
+           :has(.dev-table-header-group:not(.table-active)) > :has(.dev-table-toggle-btn)).
+           Зазор лупа→«Таблица» становится единым 8px в обоих режимах —
+           полоса-разделитель ::before всегда по центру зазора */
+        '#page-devices-prod .page-inline-header:has(.dev-table-header-group:not(.table-active)) .dev-search-toggle-btn {',
+        '  right: var(--devt-group-w, 92px);',
+        '}',
+        '#page-devices-prod .page-inline-header:has(.dev-table-header-group:not(.table-active)) .dev-header-search {',
+        '  right: var(--devt-group-w, 92px);',
         '}',
 
         '/* Контейнер таблицы — собственная прокрутка, как лист Excel.',
@@ -289,10 +317,13 @@
         header.appendChild(group);
     }
 
-    // ---------- Task 163: обновить счётчик в шапке и ширину группы ----------
+    // ---------- Task 163/166: обновить счётчик в шапке и ширину группы ----------
     // count — число показанных приборов (если задано); ширина группы
     // транслируется в CSS-переменную --devt-group-w — от неё сдвигаются
     // лупа и поле поиска (см. CSS выше), наездов на группу нет.
+    // Task 166: переменная ставится ВСЕГДА (не только в табличном виде) —
+    // зазор лупа→«Таблица» единый 8px в обоих режимах, полоса-разделитель
+    // стоит по центру зазора.
     function updateHeaderGroup(count) {
         var counter = document.getElementById('devTableCount');
         if (counter && typeof count === 'number') {
@@ -303,7 +334,7 @@
         }
         var group = document.getElementById('devTableHeaderGroup');
         var header = document.querySelector('#page-devices-prod .page-inline-header');
-        if (group && header && group.classList.contains('table-active')) {
+        if (group && header) {
             header.style.setProperty('--devt-group-w', (group.offsetWidth + 16) + 'px');
         }
     }
