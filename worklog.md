@@ -1141,3 +1141,35 @@ Stage Summary:
 - Пользователю: перезапустить десктопное приложение (1 раз) — на
   разделительной линии панелей master-detail будут просто три
   вертикальные точки по центру линии, без какого-либо выступа
+
+---
+Task ID: 187
+Agent: AI Assistant (GLM)
+Task: Десктоп — точки на разделителе панелей немного крупнее и реже
+
+Что сделано:
+- kip8test@bd73b48 (kipia-test-v453): правка CSS у .detail-panel-resizer::after
+  в index.html:
+    • диаметр точек увеличен ~2.8px → ~3.8px:
+        - radial-gradient: 1.4px/1.5px → 1.9px/2px
+        - размер градиент-слоя (background-size): 4px → 6px,
+          ширина ::after: 4px → 6px — слои не обрезают увеличенные точки
+    • шаг между центрами точек увеличен 7px → 10px (реже):
+        - высота колонки ::after: 30px → 40px
+        - background-position: 6px / calc(100% - 6px) → 10px /
+          calc(100% - 10px) — центры точек на 13px, 23px, 33px
+          от верха ::after (середина между точками увеличена)
+    • точки по-прежнему центрированы НА самой 2px линии
+      (translate(-50%, -50%)), без выступа (Task 186)
+    • видны в обеих раскладках — обычной и swap
+- sw.js: CACHE_VERSION kipia-test-v452 → kipia-test-v453 (сброс кэша PWA)
+- index.html синхронизирован в kip8test-desktop автоматически
+  (GitHub Action sync-to-desktop.yml: commit ee76481 «auto: sync
+  index.html from kip8test@bd73b48»)
+- Тесты: 498 passed, 0 failed
+- Промт не менялся; electron/main.js и package.json не менялись (2.1.7)
+
+Stage Summary:
+- Пользователю: перезапустить десктопное приложение (1 раз) — точки на
+  разделительной линии станут заметно крупнее (~3.8px) и будут расположены
+  реже (шаг 10px между центрами вместо 7px)
