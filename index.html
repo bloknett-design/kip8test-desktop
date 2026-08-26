@@ -8326,29 +8326,31 @@
             background: rgba(74, 143, 199, 0.16);
             --dpr-dot: rgba(255, 255, 255, 0.95);
         }
-        /* Task 186: подсказка на разделителе — просто ТРИ ВЕРТИКАЛЬНЫЕ ТОЧКИ,
+        /* Task 186/187: подсказка на разделителе — просто ТРИ ВЕРТИКАЛЬНЫЕ ТОЧКИ,
            расположенные по центру НА САМОЙ разделительной линии. Без выступа:
            pill-фон, рамка, box-shadow и mask-градиент из Task 182-185 убраны.
            Центр ::after совпадает с центром resizer (= центр 2px линии):
            translate(-50%, -50%) ставит колонку точек точно на линию —
            и в обычной раскладке (детали справа), и в swap-режиме
-           (детали слева, разделитель на правой грани #detailPanel). */
+           (детали слева, разделитель на правой грани #detailPanel).
+           Task 187: точки немного КРУПНЕЕ (~3.8px вместо ~2.8px в диаметре)
+           и РЕЖЕ (шаг 10px вместо 7px) — колонка выше: 40px вместо 30px. */
         .detail-panel-resizer::after {
             content: '';
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);  /* точки ЦЕНТРИРОВАНЫ на линии */
-            width: 4px;
-            height: 30px;
+            width: 6px;
+            height: 40px;
             /* Три вертикальные точки: stacked top/center/bottom
-               (шаг 7px: центры на 8px, 15px, 22px от верха ::after) */
+               (шаг 10px: центры на 13px, 23px, 33px от верха ::after) */
             background-image:
-                radial-gradient(circle, var(--dpr-dot) 1.4px, transparent 1.5px),
-                radial-gradient(circle, var(--dpr-dot) 1.4px, transparent 1.5px),
-                radial-gradient(circle, var(--dpr-dot) 1.4px, transparent 1.5px);
-            background-position: center 6px, center center, center calc(100% - 6px);
-            background-size: 4px 4px, 4px 4px, 4px 4px;
+                radial-gradient(circle, var(--dpr-dot) 1.9px, transparent 2px),
+                radial-gradient(circle, var(--dpr-dot) 1.9px, transparent 2px),
+                radial-gradient(circle, var(--dpr-dot) 1.9px, transparent 2px);
+            background-position: center 10px, center center, center calc(100% - 10px);
+            background-size: 6px 6px, 6px 6px, 6px 6px;
             background-repeat: no-repeat;
             pointer-events: none;  /* чтобы не мешало pointer-capture на родителе */
         }
