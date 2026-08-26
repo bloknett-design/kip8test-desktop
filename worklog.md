@@ -1284,3 +1284,35 @@ Stage Summary:
   счётчик и «Удалить все» справа); секретные кнопки (2 тапа по заголовку)
   — полноширинные как остальные на мобильном, плитки 453px в сетке 3
   колонки на десктопе; перезапустить десктопное приложение
+
+---
+Task ID: 190
+Agent: AI Assistant (GLM)
+Task: Пуш kip8test v455, перенос Tasks 180-189 в kip8 (kipia-v393), синхронизация десктоп-репозиториев, обновление промтов 4 репозиториев (PAT передан пользователем)
+
+Work Log:
+- Пуш kip8test@16d466b (v455, Task 189 — коммит прошлой сессии без PAT):
+  sync-to-desktop.yml → автокоммит 81784d6 «auto: sync index.html
+  from kip8test@16d466b» в kip8test-desktop; CI Tests: success
+- Чистка kip8test-desktop: удалён мусорный коммит df58d57 (UUID-сообщение,
+  gitlink kip8test + диагностические файлы scripts/task189_*) —
+  git reset --hard origin/main + cherry-pick чистого docs-коммита Task 189
+  (58fb8d2); gitlink в git больше нет (проверено git ls-files -s)
+- Перенос kip8test → kip8: скрипт prepare-kip8-transfer.py (удаление
+  isolateLocalStorage + замены префиксов kip8test:*); kip8@672fa8d
+  (kipia-v393, 294 строки диффа = только Tasks 180-189), 498 тестов OK
+- Автосинк kip8-desktop: e95bc37 (CI Tests: success, Build Desktop App:
+  success — триггерится изменением index.html, это штатно)
+- Системные промты ВСЕХ 4 репозиториев обновлены до post-Task 189:
+  версии кэшей (kipia-test-v455 / kipia-v393), 498 тестов, раздел
+  «Десктоп: строка крошек и разделитель панелей (Tasks 180-189)»
+- Worklog kip8test дополнен записями Tasks 182-189 (велись только здесь)
+
+Stage Summary:
+- 4 репозитория синхронны: kip8test@9432f26 (v455),
+  kip8test-desktop@58fb8d2 (2.1.7), kip8@bfcacbb (v393),
+  kip8-desktop (e95bc37 + коммит промта/тестов)
+- Десктоп-приложения получат правки Tasks 180-189 при следующем
+  перезапуске (cleanCacheOnStartup); релиз 2.1.7 остаётся актуальным —
+  изменения только в index.html
+- Следующий Task ID — 191
