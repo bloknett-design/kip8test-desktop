@@ -7462,6 +7462,16 @@
         .ms-board { padding: 4px; }
     }
 
+    /* Task 191: десктоп — компактное игровое поле по центру.
+       Клетки ограничены 40px в msCalcCellSize(), поэтому контейнер
+       ограничиваем по ширине и центрируем; touch-спейсер прокрутки
+       справа не нужен (мышь), поле центрируем в ряд. */
+    @media (min-width: 1024px) {
+        #page-minesweeper .ms-container { max-width: 520px; margin-left: auto; margin-right: auto; }
+        #page-minesweeper .ms-board-row { justify-content: center; }
+        #page-minesweeper .ms-board-scroll-spacer { display: none; }
+    }
+
     /* Prefers-reduced-motion: disable animations */
     @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after {
@@ -10089,7 +10099,7 @@
                         <option value="hard">9x28</option>
                     </select>
                 </div>
-                <div style="display:flex;">
+                <div class="ms-board-row" style="display:flex;">
                     <div class="ms-board-center" style="position:relative; flex-shrink:0;">
                         <div class="ms-board" id="msBoard"></div>
                         <div class="ms-game-over-overlay" id="msOverlay" style="display:none;">
@@ -12874,12 +12884,22 @@
     }
 
     function msCalcCellSize() {
+        const isDesktop = window.innerWidth >= 1024; // Task 191: десктопный лейаут
         const containerPad = 32;  // ms-container: padding 10px*2 + margin
         const boardPad = window.innerWidth <= 400 ? 8 : 16; // ms-board padding 4px*2 or 8px*2
         const gapSize = window.innerWidth <= 400 ? 1 : 2;
-        const scrollSpace = 36;   // scroll-spacer width for touch scrolling
-        const availW = window.innerWidth - containerPad - boardPad - scrollSpace;
-        const cellSz = Math.floor((availW - (msCols - 1) * gapSize) / msCols);
+        // Task 191: на десктопе scroll-spacer скрыт (не нужен для мыши)
+        const scrollSpace = isDesktop ? 0 : 36;
+        // Task 191: базовая ширина — реальная ширина страницы (на десктопе она
+        // может быть уже окна из-за открытой detail-панели), с fallback на окно
+        let baseW = window.innerWidth;
+        const msPage = document.getElementById('page-minesweeper');
+        if (msPage && msPage.clientWidth > 0) baseW = msPage.clientWidth;
+        const availW = baseW - containerPad - boardPad - scrollSpace;
+        let cellSz = Math.floor((availW - (msCols - 1) * gapSize) / msCols);
+        // Task 191: на десктопе ограничиваем клетку сверху (40px), иначе поле
+        // растягивается почти на весь экран и выглядит гигантским
+        if (isDesktop && cellSz > 40) cellSz = 40;
         return Math.max(cellSz, 20); // minimum 20px for tappability
     }
 
