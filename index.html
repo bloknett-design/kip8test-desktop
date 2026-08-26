@@ -8309,92 +8309,53 @@
             background: transparent;
             touch-action: none;        /* перетаскивание не скроллит страницу */
             user-select: none;
-            /* Task 182: переменные для ручки-подсказки (3 вертикальные точки
-               с небольшим выступом по центру разделительной линии). */
+            /* Task 182/186: цвет трёх точек-подсказки на разделительной линии */
             --dpr-dot: rgba(74, 143, 199, 0.65);
-            --dpr-pill-bg: rgba(74, 143, 199, 0.10);
-            --dpr-pill-border: rgba(74, 143, 199, 0.22);
-            --dpr-glow: 0 0 0 0 rgba(74, 143, 199, 0);
         }
         /* Подсветка зоны захвата при наведении и во время перетаскивания */
         .detail-panel-resizer:hover,
         .detail-panel-resizer.dragging {
             background: rgba(74, 143, 199, 0.28);
             --dpr-dot: rgba(255, 255, 255, 0.95);
-            --dpr-pill-bg: rgba(74, 143, 199, 0.32);
-            --dpr-pill-border: rgba(74, 143, 199, 0.5);
-            --dpr-glow: 0 0 0 2px rgba(74, 143, 199, 0.18);
         }
         [data-theme="light"] .detail-panel-resizer {
             --dpr-dot: rgba(74, 143, 199, 0.75);
-            --dpr-pill-bg: rgba(74, 143, 199, 0.08);
-            --dpr-pill-border: rgba(74, 143, 199, 0.18);
         }
         [data-theme="light"] .detail-panel-resizer:hover,
         [data-theme="light"] .detail-panel-resizer.dragging {
             background: rgba(74, 143, 199, 0.16);
             --dpr-dot: rgba(255, 255, 255, 0.95);
-            --dpr-pill-bg: rgba(74, 143, 199, 0.28);
-            --dpr-pill-border: rgba(74, 143, 199, 0.5);
-            --dpr-glow: 0 0 0 2px rgba(74, 143, 199, 0.12);
         }
-        /* Task 182/183/184/185: ручка-подсказка на разделителе — 3 вертикальные
-           точки, плавно вырастающие из линии ВПРАВО от неё. Task 184: выступ
-           наполовину через mask-градиент. Task 185: переход заметно плавнее —
-           вместо линейного затухания на левой половине теперь S-образная
-           кривая (smoothstep) на 68% ширины pill: у самой линии ручка почти
-           невидима и проявляется очень мягко, к правому краю — полностью.
-           Выступ ВСЕГДА вправо от линии — и в обычной раскладке (детали
-           справа), и в swap-режиме (детали слева, разделитель на правой
-           грани #detailPanel): левый край pill лежит на линии, маска режет
-           только прилегающую к линии часть, правая половина с точками
-           всегда видна СПРАВА от разделительной линии. */
+        /* Task 186: подсказка на разделителе — просто ТРИ ВЕРТИКАЛЬНЫЕ ТОЧКИ,
+           расположенные по центру НА САМОЙ разделительной линии. Без выступа:
+           pill-фон, рамка, box-shadow и mask-градиент из Task 182-185 убраны.
+           Центр ::after совпадает с центром resizer (= центр 2px линии):
+           translate(-50%, -50%) ставит колонку точек точно на линию —
+           и в обычной раскладке (детали справа), и в swap-режиме
+           (детали слева, разделитель на правой грани #detailPanel). */
         .detail-panel-resizer::after {
             content: '';
             position: absolute;
             top: 50%;
             left: 50%;
-            transform: translateY(-50%);   /* левый край pill на линии */
-            width: 14px;
+            transform: translate(-50%, -50%);  /* точки ЦЕНТРИРОВАНЫ на линии */
+            width: 4px;
             height: 30px;
-            border-radius: 7px;
-            background-color: var(--dpr-pill-bg);
-            border: 1px solid var(--dpr-pill-border);
-            /* Три вертикальные точки в непрозрачной зоне pill (справа):
-               X = 9.5px → фон-слой 9.5..13.5px, центр точки 11.5px (82%),
-               полностью правее конца маски-перехода (68% = 9.5px) —
-               точки не растворяются и не тускнеют */
+            /* Три вертикальные точки: stacked top/center/bottom
+               (шаг 7px: центры на 8px, 15px, 22px от верха ::after) */
             background-image:
                 radial-gradient(circle, var(--dpr-dot) 1.4px, transparent 1.5px),
                 radial-gradient(circle, var(--dpr-dot) 1.4px, transparent 1.5px),
                 radial-gradient(circle, var(--dpr-dot) 1.4px, transparent 1.5px);
-            background-position: 9.5px 6px, 9.5px center, 9.5px calc(100% - 6px);
+            background-position: center 6px, center center, center calc(100% - 6px);
             background-size: 4px 4px, 4px 4px, 4px 4px;
             background-repeat: no-repeat;
-            /* Task 185: S-образная маска (smoothstep, ease-in-out) —
-               плавное проявление ИЗ линии: 0% → прозрачно, 17% → 16%,
-               34% → 50%, 51% → 84%, 68% → непрозрачно. Переход длиннее
-               (68% ширины вместо 50%) и мягче прежнего линейного:
-               у линии ручка появляется почти незаметно, без резкой
-               границы начала/конца затухания */
-            -webkit-mask-image: linear-gradient(to right,
-                transparent 0%, rgba(0, 0, 0, 0.16) 17%, rgba(0, 0, 0, 0.5) 34%,
-                rgba(0, 0, 0, 0.84) 51%, #000 68%, #000 100%);
-            -webkit-mask-size: 100% 100%;
-            mask-image: linear-gradient(to right,
-                transparent 0%, rgba(0, 0, 0, 0.16) 17%, rgba(0, 0, 0, 0.5) 34%,
-                rgba(0, 0, 0, 0.84) 51%, #000 68%, #000 100%);
-            mask-size: 100% 100%;
-            box-shadow: var(--dpr-glow);
-            transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
             pointer-events: none;  /* чтобы не мешало pointer-capture на родителе */
         }
-        /* В состояниях :hover/.dragging ручка уже подсвечена через CSS-переменные
+        /* В состояниях :hover/.dragging точки подсвечиваются через --dpr-dot
            — отдельное правило не требуется. */
         /* Swap-режим: детальная панель слева → разделитель на её правой грани.
-           Task 185: геометрия ::after НЕ меняется — left: 50% +
-           translateY(-50%) отсчитывается от самого resizer, поэтому pill
-           и в swap-режиме уходит ВПРАВО от линии (в зону списка) */
+           Геометрия ::after не меняется — точки остаются по центру линии */
         #contentArea.panels-swapped > #detailPanel .detail-panel-resizer {
             left: auto;
             right: -3px;
