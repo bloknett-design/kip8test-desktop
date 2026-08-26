@@ -9599,7 +9599,7 @@
 
     <!-- ===== Десктоп: полноэкранная строка breadcrumbs для detail-панели ===== -->
     <div id="detailBreadcrumbBar">
-        <div class="detail-breadcrumb-chevron" onclick="closeDetailPanel()" aria-label="Назад">
+        <div class="detail-breadcrumb-chevron" onclick="detailBarChevronClick(event)" aria-label="Назад / Главная">
             <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
         </div>
         <div id="detailBreadcrumbContent"></div>
@@ -19796,6 +19796,28 @@
         _ticketSelectedIndex = -1;
         // Восстанавливаем breadcrumbs без виртуальной detail-страницы
         updateDesktopBreadcrumb();
+        // Task 181: если после закрытия detail-панели мы остаёмся на странице
+        // flowmeter-data (CSS body:has(#page-flowmeter-data.active) держит бар
+        // видимым) — восстановить захардкоженные крошки «Главная / Документация /
+        // Документация ИОС / Расходомеры хозрасчётные» и переключатель «Все / Избранные».
+        // Используем setTimeout(0) — если closeDetailPanel вызвана из navigateTo(),
+        // то к моменту вызова все .page-content уже потеряли .active, и проверка
+        // не сработает (страница всё равно сменится); если вызвана напрямую кликом
+        // по ✕ — активная страница сохранится, крошки восстановятся.
+        setTimeout(function () {
+            var _act = document.querySelector('.page-content.active');
+            if (_act && _act.id === 'page-flowmeter-data') {
+                var _bcBar2 = document.getElementById('detailBreadcrumbBar');
+                if (_bcBar2) _bcBar2.classList.add('active');
+                if (typeof setFlowmeterBreadcrumbContent === 'function') setFlowmeterBreadcrumbContent();
+                var _flowTabs2 = document.getElementById('flowDesktopTabs');
+                if (_flowTabs2) _flowTabs2.style.display = '';
+                if (typeof detailBarUpdateSearchBtn === 'function') detailBarUpdateSearchBtn();
+            }
+            // Task 181: обновить шеврон в строке крошек — после закрытия панели
+            // на flowmeter-data должен быть многострелочный, иначе — однострелочный.
+            if (typeof updateChevronArrows === 'function') updateChevronArrows();
+        }, 0);
     }
 
     // ============================================================
@@ -20285,20 +20307,14 @@
         // (раньше только если isDesktop(), но в Electron isDesktop() возвращает false)
         closeDetailPanel();
         // Task 130: если мы идём на flowmeter-data — заполнить крошки заново
-        // (closeDetailPanel() очищает #detailBreadcrumbContent.innerHTML)
+        // (closeDetailPanel() очищает #detailBreadcrumbContent.innerHTML).
+        // Task 181: HTML крошек вынесен в setFlowmeterBreadcrumbContent() —
+        // та же функция вызывается из closeDetailPanel() при возврате на
+        // страницу расходомеров после закрытия detail-панели.
         if (page === 'flowmeter-data') {
             var _bcBar = document.getElementById('detailBreadcrumbBar');
             if (_bcBar) _bcBar.classList.add('active');
-            var _bcContent = document.getElementById('detailBreadcrumbContent');
-            if (_bcContent) {
-                _bcContent.innerHTML = '<span class="breadcrumb-link" onclick="navigateTo(\'dashboard\')">Главная</span>' +
-                    '<span class="breadcrumb-sep">/</span>' +
-                    '<span class="breadcrumb-link" onclick="navigateTo(\'docs\')">Документация</span>' +
-                    '<span class="breadcrumb-sep">/</span>' +
-                    '<span class="breadcrumb-link" onclick="navigateTo(\'docs-ios\')">Документация ИОС</span>' +
-                    '<span class="breadcrumb-sep">/</span>' +
-                    '<span class="breadcrumb-current">Расходомеры хозрасчётные</span>';
-            }
+            if (typeof setFlowmeterBreadcrumbContent === 'function') setFlowmeterBreadcrumbContent();
             // Task 130: показать переключатель «Все / Избранные»
             var _flowTabs = document.getElementById('flowDesktopTabs');
             if (_flowTabs) _flowTabs.style.display = '';
@@ -20393,6 +20409,31 @@
         }
     }
 
+    // ============================================================
+    // Task 181: шеврон в строке крошек #detailBreadcrumbBar.
+    // На странице flowmeter-data без открытой detail-панели шеврон
+    // должен вести себя как page-inline-header-chevron — показывать
+    // несколько стрелок (по глубине навигации) и обрабатывать
+    // одиночный тап = назад / двойной = на главную через chevronTap().
+    // Если detail-панель открыта — старое поведение: один клик закрывает
+    // панель (closeDetailPanel).
+    // До Task 181 onclick был жёстко closeDetailPanel() — на flowmeter-data
+    // без панели клик ничего не делал (CSS :has(#page-flowmeter-data.active)
+    // сразу же пересоздавал бар), и пользователь не мог вернуться на главную.
+    // ============================================================
+    function detailBarChevronClick(event) {
+        if (event && event.stopPropagation) event.stopPropagation();
+        var panel = document.getElementById('detailPanel');
+        if (panel && panel.classList.contains('active')) {
+            // Detail-панель открыта — закрыть её (однострелочный шеврон)
+            closeDetailPanel();
+        } else {
+            // Без detail-панели (например, на flowmeter-data) — делегируем
+            // в chevronTap: 1 тап = goBack (popstate), 2 тапа = на главную.
+            chevronTap();
+        }
+    }
+
     // ===== Просмотр PDF из Google Drive (раздел «Библиотека») =====
     // Внутренний просмотрщик удалён (Task 67) — все PDF-карточки в разделах
     // «Библиотека КИП и А» / «Электробезопасность» теперь открываются прямыми
@@ -20414,12 +20455,27 @@
     // SVG-разметка та же, что использовалась в захардкоженных шевронах.
     // Стрелки очень компактные (14×14px) и плотно сгруппированы (margin-left:-8px),
     // чтобы визуально занимать минимум места в углу бара поверх заголовка.
+    // Task 181: вспомогательная функция — захардкоженные крошки для страницы
+    // расходомеров (используется из navigateTo('flowmeter-data') и из
+    // closeDetailPanel при возврате на эту страницу после закрытия панели).
+    // Вынесена в функцию, чтобы не дублировать HTML-строку в двух местах.
+    function setFlowmeterBreadcrumbContent() {
+        var bcContent = document.getElementById('detailBreadcrumbContent');
+        if (!bcContent) return;
+        bcContent.innerHTML = '<span class="breadcrumb-link" onclick="navigateTo(\'dashboard\')">Главная</span>' +
+            '<span class="breadcrumb-sep">/</span>' +
+            '<span class="breadcrumb-link" onclick="navigateTo(\'docs\')">Документация</span>' +
+            '<span class="breadcrumb-sep">/</span>' +
+            '<span class="breadcrumb-link" onclick="navigateTo(\'docs-ios\')">Документация ИОС</span>' +
+            '<span class="breadcrumb-sep">/</span>' +
+            '<span class="breadcrumb-current">Расходомеры хозрасчётные</span>';
+    }
+
     function updateChevronArrows() {
         try {
             const active = document.querySelector('.page-content.active');
             if (!active) return;
             const chevron = active.querySelector('.page-inline-header-chevron');
-            if (!chevron) return;
             const n = Math.min(Math.max(pageHistory.length, 0), 4);
             // Сгенерировать n SVG-стрелок. Первая — без margin, остальные с margin-left:-8px.
             let html = '';
@@ -20427,9 +20483,30 @@
                 const style = (i === 0) ? '' : ' style="margin-left:-8px;"';
                 html += '<svg viewBox="0 0 24 24"' + style + '><polyline points="15 18 9 12 15 6"/></svg>';
             }
-            // Если n === 0 (например, мы на главной, но там нет chevron — этот случай не наступит),
-            // оставляем пусто.
-            chevron.innerHTML = html;
+            // Одиночная стрелка для шеврона в строке крошек detailBreadcrumbBar
+            // (используется, когда detail-панель открыта или страница не flowmeter-data).
+            const singleArrow = '<svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>';
+            // 1. Шеврон в заголовке активной страницы (если есть) — многострелочный.
+            // На flowmeter-data этот шеврон скрыт через CSS :has(), но innerHTML
+            // всё равно обновляется (на случай, если CSS-правило изменится).
+            if (chevron) chevron.innerHTML = html;
+            // Task 181: 2. Шеврон в строке крошек #detailBreadcrumbBar.
+            // На странице flowmeter-data без открытой detail-панели показываем
+            // многострелочный шеврон (как в заголовке страницы) — чтобы пользователь
+            // видел глубину навигации и мог вернуться одиночным/двойным тапом
+            // (поведение обеспечивается detailBarChevronClick → chevronTap).
+            // В остальных случаях (detail-панель открыта) — одиночная стрелка
+            // (поведение detailBarChevronClick → closeDetailPanel).
+            const bcChevron = document.querySelector('#detailBreadcrumbBar .detail-breadcrumb-chevron');
+            if (bcChevron) {
+                const detailPanel = document.getElementById('detailPanel');
+                const isDetailOpen = detailPanel && detailPanel.classList.contains('active');
+                if (active.id === 'page-flowmeter-data' && !isDetailOpen) {
+                    bcChevron.innerHTML = html;
+                } else {
+                    bcChevron.innerHTML = singleArrow;
+                }
+            }
         } catch (e) {
             // Тихо игнорируем — обновление шеврона не должно ломать навигацию.
         }
@@ -22483,6 +22560,12 @@
         if (bcBar) bcBar.classList.add('active');
         // Task 173: обновить кнопку поиска в строке крошек
         detailBarUpdateSearchBtn();
+        // Task 181: обновить шеврон в строке крошек — после открытия detail-панели
+        // он должен стать однострелочным (был многострелочным, если мы на flowmeter-data).
+        // Без этого вызова шеврон оставался бы многострелочным до следующей
+        // навигации, что вводило в заблуждение (визуально — глубина есть,
+        // фактически — клик закрывает панель, а не идёт назад по истории).
+        if (typeof updateChevronArrows === 'function') updateChevronArrows();
     }
 
     function devRenderDetailInPanel() {
