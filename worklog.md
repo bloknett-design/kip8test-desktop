@@ -1173,3 +1173,40 @@ Stage Summary:
 - Пользователю: перезапустить десктопное приложение (1 раз) — точки на
   разделительной линии станут заметно крупнее (~3.8px) и будут расположены
   реже (шаг 10px между центрами вместо 7px)
+
+---
+Task ID: 188
+Agent: AI Assistant (GLM)
+Task: Мобильная версия — убрать кнопку поиска в разделе «Избранное» (на главной странице)
+
+Что сделано:
+- kip8test@25e4047 (kipia-test-v454): CSS-правка в index.html
+  (после правил Task 164 у #page-device-favorites):
+    • @media (max-width: 1023px) — только мобильная версия:
+        - display: none для .dev-search-toggle-btn (лупа
+          favSearchInputToggleBtn) и .dev-header-search / .search-open
+          (поле favSearchInput, в т.ч. открытое — на случай resize
+          десктоп → мобильный)
+        - отменён сдвиг правого кластера из Task 164:
+          #page-device-favorites .page-inline-header:has(...) —
+          padding-right: 48px → 20px; счётчик «N элементов» и кнопка
+          «Удалить все» прижаты к правому краю как в обычной шапке
+    • на десктопе (>= 1024px) поиск в «Избранном» сохранён без
+      изменений (Task 164)
+    • JS не менялся: делегированный клик-обработчик
+      .dev-search-toggle-btn просто не срабатывает по скрытой кнопке;
+      DOM-элементы остаются на месте — ничего не ломается
+    • страница device-favorites открывается с главной (кнопка
+      «Избранное» в закреплённых / динамическая на дашборде)
+- sw.js: CACHE_VERSION kipia-test-v453 → kipia-test-v454 (сброс кэша PWA)
+- index.html синхронизирован в kip8test-desktop автоматически
+  (GitHub Action sync-to-desktop.yml: commit bd6e876 «auto: sync
+  index.html from kip8test@25e4047»)
+- Тесты: 498 passed, 0 failed
+- Промт не менялся; electron/main.js и package.json не менялись (2.1.7)
+
+Stage Summary:
+- Пользователю: обновить PWA на телефоне (перезагрузить страницу/
+  дождаться обновления Service Worker — v454) — в разделе «Избранное»
+  кнопка поиска (лупа) в шапке пропадёт; в десктопной версии поиск
+  в «Избранном» остаётся
