@@ -8309,32 +8309,65 @@
             background: transparent;
             touch-action: none;        /* перетаскивание не скроллит страницу */
             user-select: none;
+            /* Task 182: переменные для ручки-подсказки (3 вертикальные точки
+               с небольшим выступом по центру разделительной линии). */
+            --dpr-dot: rgba(74, 143, 199, 0.65);
+            --dpr-pill-bg: rgba(74, 143, 199, 0.10);
+            --dpr-pill-border: rgba(74, 143, 199, 0.22);
+            --dpr-glow: 0 0 0 0 rgba(74, 143, 199, 0);
         }
         /* Подсветка зоны захвата при наведении и во время перетаскивания */
         .detail-panel-resizer:hover,
         .detail-panel-resizer.dragging {
             background: rgba(74, 143, 199, 0.28);
+            --dpr-dot: rgba(255, 255, 255, 0.95);
+            --dpr-pill-bg: rgba(74, 143, 199, 0.32);
+            --dpr-pill-border: rgba(74, 143, 199, 0.5);
+            --dpr-glow: 0 0 0 2px rgba(74, 143, 199, 0.18);
+        }
+        [data-theme="light"] .detail-panel-resizer {
+            --dpr-dot: rgba(74, 143, 199, 0.75);
+            --dpr-pill-bg: rgba(74, 143, 199, 0.08);
+            --dpr-pill-border: rgba(74, 143, 199, 0.18);
         }
         [data-theme="light"] .detail-panel-resizer:hover,
         [data-theme="light"] .detail-panel-resizer.dragging {
             background: rgba(74, 143, 199, 0.16);
+            --dpr-dot: rgba(255, 255, 255, 0.95);
+            --dpr-pill-bg: rgba(74, 143, 199, 0.28);
+            --dpr-pill-border: rgba(74, 143, 199, 0.5);
+            --dpr-glow: 0 0 0 2px rgba(74, 143, 199, 0.12);
         }
-        /* Полоска-подсказка в центре разделителя */
+        /* Task 182: ручка-подсказка в центре разделителя — 3 вертикальные точки
+           с небольшим выступом (pill шире линии, поэтому визуально «выступает»
+           влево и вправо от тонкой разделительной полосы). Всегда видна —
+           пользователь сразу понимает, что границу можно тянуть. */
         .detail-panel-resizer::after {
             content: '';
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 2px;
-            height: 36px;
-            border-radius: 2px;
-            background: rgba(74, 143, 199, 0.4);
-            opacity: 0;
-            transition: opacity 0.15s;
+            width: 14px;       /* шире 7px родителя → выступает с обеих сторон */
+            height: 30px;
+            border-radius: 7px;
+            background-color: var(--dpr-pill-bg);
+            border: 1px solid var(--dpr-pill-border);
+            /* Три вертикальные точки: stacked top/center/bottom через
+               несколько radial-gradient-слоёв (центр каждого — 4px-квадрат). */
+            background-image:
+                radial-gradient(circle, var(--dpr-dot) 1.4px, transparent 1.5px),
+                radial-gradient(circle, var(--dpr-dot) 1.4px, transparent 1.5px),
+                radial-gradient(circle, var(--dpr-dot) 1.4px, transparent 1.5px);
+            background-position: center 6px, center center, center calc(100% - 6px);
+            background-size: 4px 4px, 4px 4px, 4px 4px;
+            background-repeat: no-repeat;
+            box-shadow: var(--dpr-glow);
+            transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+            pointer-events: none;  /* чтобы не мешало pointer-capture на родителе */
         }
-        .detail-panel-resizer:hover::after,
-        .detail-panel-resizer.dragging::after { opacity: 1; }
+        /* В состояниях :hover/.dragging ручка уже подсвечена через CSS-переменные
+           — отдельное правило не требуется. */
         /* Swap-режим: детальная панель слева → разделитель на её правой грани */
         #contentArea.panels-swapped > #detailPanel .detail-panel-resizer {
             left: auto;
