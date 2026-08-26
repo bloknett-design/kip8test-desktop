@@ -7043,6 +7043,23 @@
     #page-device-favorites .page-inline-header:has(.dev-search-toggle-btn) {
         padding-right: 48px;
     }
+    /* Task 188: в МОБИЛЬНОЙ версии кнопка поиска в «Избранном» не нужна —
+       список обычно короткий, поиск только загромождает шапку. Прячем
+       лупу и поле (в т.ч. открытое — на случай resize десктоп→мобильный),
+       отменяем сдвиг правого кластера из Task 164.
+       На десктопе (>= 1024px) поиск в «Избранном» сохранён без изменений. */
+    @media (max-width: 1023px) {
+        #page-device-favorites .page-inline-header .dev-search-toggle-btn {
+            display: none;
+        }
+        #page-device-favorites .page-inline-header .dev-header-search,
+        #page-device-favorites .page-inline-header .dev-header-search.search-open {
+            display: none;
+        }
+        #page-device-favorites .page-inline-header:has(.dev-search-toggle-btn) {
+            padding-right: 20px;   /* обычный отступ шапки без лупы */
+        }
+    }
     .dev-fav-clear-btn {
         font-size: 12px; padding: 5px 12px;
         border: 1px solid rgba(220,80,80,0.35); border-radius: 6px;
