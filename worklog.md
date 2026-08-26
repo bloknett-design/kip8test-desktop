@@ -1101,3 +1101,43 @@ Stage Summary:
   выступа из линии станет заметно мягче (S-кривая вместо линейной),
   выступ по-прежнему всегда справа от линии, в том числе после
   замены панелей местами
+
+---
+Task ID: 186
+Agent: AI Assistant (GLM)
+Task: Десктоп — на разделителе панелей без выступа: просто три вертикальные точки на самой линии
+
+Что сделано:
+- kip8test@0d75914 (kipia-test-v452): правка CSS у .detail-panel-resizer::after
+  в index.html:
+    • выступ/pill полностью убран — удалены background-color, border,
+      border-radius, box-shadow, mask-градиент и transition
+      (наработки Task 182-185 откатаны)
+    • осталось только три вертикальные точки, центрированные НА САМОЙ
+      разделительной линии:
+        - transform: translate(-50%, -50%) — центр колонки точек совпадает
+          с центром resizer (= центр 2px линии)
+        - background-position: center 6px / center center / center
+          calc(100% - 6px) — точки сверху/центр/снизу, шаг 7px
+          (центры на 8px, 15px, 22px от верха ::after высотой 30px)
+        - каждая точка ~2.8px в диаметре, чуть шире 2px линии — читается
+          как «три точки на линии»
+    • вычищены неиспользуемые CSS-переменные --dpr-pill-bg /
+      --dpr-pill-border / --dpr-glow из всех правил (тёмная/светлая тема,
+      hover/dragging) — осталась только --dpr-dot
+    • на :hover/.dragging точки подсвечиваются (--dpr-dot -> белый),
+      полоса подсветки зоны захвата сохранена
+    • точки видны на линии в обеих раскладках — обычной и swap
+      (геометрия ::after не зависит от расположения панелей;
+      swap-правило right: -3px не меняет центрирование ::after)
+- sw.js: CACHE_VERSION kipia-test-v451 → kipia-test-v452 (сброс кэша PWA)
+- index.html синхронизирован в kip8test-desktop автоматически
+  (GitHub Action sync-to-desktop.yml: commit 5abc384 «auto: sync
+  index.html from kip8test@0d75914»)
+- Тесты: 498 passed, 0 failed
+- Промт не менялся; electron/main.js и package.json не менялись (2.1.7)
+
+Stage Summary:
+- Пользователю: перезапустить десктопное приложение (1 раз) — на
+  разделительной линии панелей master-detail будут просто три
+  вертикальные точки по центру линии, без какого-либо выступа
