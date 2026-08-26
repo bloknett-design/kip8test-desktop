@@ -1316,3 +1316,37 @@ Stage Summary:
   перезапуске (cleanCacheOnStartup); релиз 2.1.7 остаётся актуальным —
   изменения только в index.html
 - Следующий Task ID — 191
+
+---
+Task ID: 190 (дополнение)
+Agent: AI Assistant (GLM)
+Task: Дополнительные фиксы по итогам проверки синхронизации 4 репозиториев
+
+Work Log:
+- Обнаружен и устранён ПРОПУСК в автосинке kip8 → kip8-desktop:
+  sync-to-desktop.yml в kip8 синхронизировал только index.html, тогда
+  как workflow kip8test синхронизирует 3 файла (index.html,
+  charts-desktop.js, devices-table-desktop.js) — из-за этого в
+  kip8-desktop devices-table-desktop.js застрял на версии v371
+  (360 строк, Task 148) без фильтров колонок / ширины мышью /
+  клавиатуры / виртуального скролла / CSV / статистики (Tasks 163-176)
+- kip8-desktop@8dae2eb: devices-table-desktop.js (1627 строк) и
+  charts-desktop.js скопированы из kip8; tests/test-role-access.js
+  синхронизирован (446 passed со старым файлом → 498 passed, 0 failed);
+  промт post-Task 189
+- kip8@f7fc284: sync-to-desktop.yml исправлен — синхронизирует все
+  3 файла (теперь при изменении десктоп-модулей автосинк доедет до
+  kip8-desktop автоматически, как в паре kip8test → kip8test-desktop)
+- Обновлены офлайн-fallback данные: kip8test-desktop@8700ede
+  (devices.json, valves.json — авто-синки Google Sheets),
+  kip8-desktop@fe5da7e (devices.json)
+- Проверено: images/ во всех 4 репозиториях идентичны; CI Tests —
+  success везде; Build Desktop App собирается (релизы только по тегам v*)
+
+Stage Summary:
+- Итоговые HEAD: kip8test@9432f26 (v455), kip8@f7fc284 (v393),
+  kip8test-desktop@8700ede, kip8-desktop@fe5da7e — все промты
+  post-Task 189, все тесты зелёные (498 в PWA-репо)
+- Пользователям десктопа kip8-desktop: после перезапуска приложения
+  таблица приборов получит все функции Tasks 163-176 (раньше их не было
+  в боевом десктопе — только в тестовом)
