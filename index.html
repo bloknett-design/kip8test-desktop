@@ -336,19 +336,12 @@
     #page-library-internal .menu-btn,
     #page-library-electro .menu-btn { min-height: 80px; align-items: center; }
     #page-docs-ios .menu-btn { min-height: 80px; align-items: center; }
-    /* Секретные кнопки (Сапёр + Телефонный справочник) — две в ряд */
-    .menu-btn-row-secret-pair {
-        grid-template-columns: 1fr 1fr !important;
-        gap: 4px !important;
-    }
-    /* На узких экранах кнопки могут стать слишком маленькими — переключаем в 1 колонку */
-    @media (max-width: 360px) {
-        .menu-btn-row-secret-pair { grid-template-columns: 1fr !important; }
-    }
-    /* На телефонах горизонтальные кнопки должны переносить текст аккуратно */
+    /* Секретные кнопки (Сапёр + Телефонный справочник).
+       Task 189: специальные правила «две в ряд» убраны — на мобильном
+       ряд ведёт себя как обычный #page-dashboard .menu-btn-row
+       (одна колонка на всю ширину, gap 2px), кнопки совпадают
+       по расположению и габаритам с остальными кнопками главной. */
     .menu-btn-row-secret-pair .menu-btn { min-width: 0; }
-    .menu-btn-row-secret-pair .menu-btn-label { font-size: 13px; line-height: 1.2; }
-    .menu-btn-row-secret-pair .menu-btn-sublabel { font-size: 10px; }
 
     /* Контейнер для SVG-схем в разделах Геометрии — точно по шаблону: */
     /* светло-голубые линии, белые подписи, двусторонние стрелки, тёмный фон */
@@ -7059,6 +7052,15 @@
         #page-device-favorites .page-inline-header:has(.dev-search-toggle-btn) {
             padding-right: 20px;   /* обычный отступ шапки без лупы */
         }
+        /* Task 189: поле поиска скрыто (правила выше), но :has(.dev-header-search)
+           выше по файлу всё ещё матчится по скрытому элементу и оставляет у
+           заголовка padding-right: 130px (110px на <360px). Из-за него адаптивный
+           скрипт сжатия заголовков уменьшал «Избранное» до 12px, и элементы
+           шапки выглядели перекошенными. Возвращаем заголовку стандартный
+           правый отступ — шапка выровнена как на остальных страницах. */
+        #page-device-favorites .page-inline-header .page-inline-header-title {
+            padding-right: 16px;
+        }
     }
     .dev-fav-clear-btn {
         font-size: 12px; padding: 5px 12px;
@@ -8562,11 +8564,8 @@
             gap: 6px;
         }
 
-        /* --- Секретные кнопки: в одну строку --- */
-        .menu-btn-row-secret-pair {
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: 8px;
-        }
+        /* --- Секретные кнопки: стили сетки Task 189 заданы ниже
+             (правило #page-dashboard .menu-btn-row-secret-pair) --- */
 
         /* --- Кнопки разделов: прямоугольные (квадраты), сетка слева направо, сверху вниз --- */
         #page-calculators .menu-btn-row,
@@ -8845,30 +8844,64 @@
             top: 10px;
             right: 10px;
         }
-        /* Секретные кнопки — тоже в сетке */
+        /* Task 189: секретные кнопки — та же сетка и те же габариты, что у
+           закреплённых плиток главной страницы (3 колонки, gap 20px,
+           padding 16px 20px, левое выравнивание, label 17px / sublabel 13px).
+           Раньше: repeat(auto-fill, minmax(150px, 1fr)) — узкие квадратные
+           плитки по 167px, не похожие на остальные кнопки главной. */
         #page-dashboard .menu-btn-row-secret-pair {
             display: grid !important;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
-            gap: 10px !important;
-            padding: 4px 16px 8px !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 20px !important;
+            padding: 16px 20px !important;
         }
         #page-dashboard .menu-btn-row-secret-pair .menu-btn {
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
-            justify-content: center;
-            text-align: center;
-            min-height: 70px;
-            padding: 12px 10px;
+            justify-content: flex-start;
+            text-align: left;
+            min-height: auto;
+            padding: 20px 16px;
+            border-radius: 14px;
+            max-width: none;
+            background: var(--card-bg, rgba(255,255,255,0.06));
+            border: 1px solid var(--card-border, rgba(255,255,255,0.08)) !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            position: relative;
+        }
+        #page-dashboard .menu-btn-row-secret-pair .menu-btn:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
         }
         #page-dashboard .menu-btn-row-secret-pair .menu-btn-text {
-            text-align: center;
-            flex: 0;
+            text-align: left;
+            flex: 1;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: flex-start;
+            min-width: 0;
+        }
+        #page-dashboard .menu-btn-row-secret-pair .menu-btn-label {
+            font-size: 17px;
+            font-weight: 600;
+            line-height: 1.3;
+            margin-bottom: 4px;
+        }
+        #page-dashboard .menu-btn-row-secret-pair .menu-btn-sublabel {
+            font-size: 13px;
+            color: var(--text-secondary, rgba(255,255,255,0.45));
+            line-height: 1.4;
         }
         #page-dashboard .menu-btn-row-secret-pair .menu-btn-arrow {
             display: none;
+        }
+        [data-theme="light"] #page-dashboard .menu-btn-row-secret-pair .menu-btn {
+            background: #FFFFFF;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        [data-theme="light"] #page-dashboard .menu-btn-row-secret-pair .menu-btn:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
         }
 
         /* --- Контент страниц: ограничение ширины --- */
@@ -8993,10 +9026,8 @@
         #page-docs .menu-btn {
             max-width: none;
         }
-        .menu-btn-row-secret-pair {
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: 8px;
-        }
+        /* Task 189: отдельное правило для секретной пары на планшете удалено —
+           ряд наследует #page-dashboard .menu-btn-row (2 колонки, gap 8px) */
     }
 
     /* Подсветка активной карточки при открытом detail-panel (мобильная / базовая) */
@@ -9677,9 +9708,11 @@
             <!-- Секретные кнопки «Сапёр» и «Телефонный справочник» — скрыты по умолчанию.
                  Открываются 2 тапами по заголовку приложения.
                  Объединены в один menu-btn-row, чтобы стояли рядом друг с другом.
-                 Раздел «Приборы» перенесён в Документацию (не секретный). -->
+                 Раздел «Приборы» перенесён в Документацию (не секретный).
+                 Task 189: подзаголовок «Сапёру» — та же двухстрочная структура
+                 (label + sublabel), что у остальных кнопок главной страницы. -->
             <div class="menu-btn-row menu-btn-row-secret-pair">
-                <div class="menu-btn menu-btn-secret" id="minesweeperBtn" onclick="navigateTo('minesweeper')" style="border-color:rgba(199,150,74,0.35);"><div class="menu-btn-text"><div class="menu-btn-label" style="color:#c7964a;">Сапёр</div></div></div>
+                <div class="menu-btn menu-btn-secret" id="minesweeperBtn" onclick="navigateTo('minesweeper')" style="border-color:rgba(199,150,74,0.35);"><div class="menu-btn-text"><div class="menu-btn-label" style="color:#c7964a;">Сапёр</div><div class="menu-btn-sublabel">Три уровня сложности</div></div></div>
                 <div class="menu-btn menu-btn-secret" id="phonebookBtn" onclick="navigateTo('phonebook')" style="border-color:rgba(74,143,199,0.35);"><div class="menu-btn-text"><div class="menu-btn-label" style="color:#6aa6e0;">Телефонный справочник</div><div class="menu-btn-sublabel">ООО ПО «ТОКЕМ»</div></div><i class="menu-btn-arrow" style="color:rgba(74,143,199,0.4);">›</i></div>
             </div>
         </div>
