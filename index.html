@@ -4493,7 +4493,6 @@
         background: var(--card-bg); border: 1px solid var(--card-border);
     }
     .ms-ach-slot.win { background: rgba(74, 199, 113, 0.08); border-color: rgba(74, 199, 113, 0.35); }
-    .ms-ach-slot.loss { background: rgba(199, 74, 74, 0.08); border-color: rgba(199, 74, 74, 0.35); }
     .ms-ach-slot.empty { opacity: 0.45; }
     .ms-ach-icon { font-size: 15px; line-height: 1; flex-shrink: 0; }
     .ms-ach-diff { font-size: 12px; font-weight: 600; color: var(--text-primary); white-space: nowrap; }
@@ -7491,7 +7490,6 @@
     [data-theme="light"] .ms-ach-sub { color: rgba(20,20,19,0.35); }
     [data-theme="light"] .ms-ach-slot { background: rgba(232,230,220,0.5); border-color: rgba(20,20,19,0.1); }
     [data-theme="light"] .ms-ach-slot.win { background: rgba(74,199,113,0.1); border-color: rgba(74,199,113,0.4); }
-    [data-theme="light"] .ms-ach-slot.loss { background: rgba(199,74,74,0.08); border-color: rgba(199,74,74,0.4); }
     [data-theme="light"] .ms-ach-diff { color: #141413; }
     [data-theme="light"] .ms-ach-time { color: rgba(20,20,19,0.5); }
 
@@ -10150,9 +10148,9 @@
                     </div>
                     <div class="ms-board-scroll-spacer"></div>
                 </div>
-                <!-- Task 192: счёт достижений — три последних результата -->
+                <!-- Task 193: счёт достижений — лучшие результаты по времени -->
                 <div class="ms-achievements">
-                    <div class="ms-ach-title">Достижения <span class="ms-ach-sub">· три последних результата</span><span class="ms-ach-score" id="msAchScore" style="display:none;"></span></div>
+                    <div class="ms-ach-title">Достижения <span class="ms-ach-sub">· лучшие результаты по времени</span><span class="ms-ach-score" id="msAchScore" style="display:none;"></span></div>
                     <div class="ms-ach-row" id="msAchRow"></div>
                 </div>
                 <div class="ms-hint">Нажмите — открыть клетку · Долгое нажатие — поставить флаг</div>
@@ -12943,7 +12941,8 @@
         }
         msUpdateDiffLabels();    // Task 192: подписи под ориентацию
         msApplyContainerWidth(); // Task 192: ширина панели под поле
-        msRenderAchievements();  // Task 192: счёт достижений
+        msMigrateResults();      // Task 193: разовый перенос побед из старого ключа
+        msRenderAchievements();  // Task 193: лучшие результаты по времени
         msUpdateHint();          // Task 192: подсказка под устройство (мышь/тач)
         msRender();
     }
@@ -13206,58 +13205,97 @@
             sub.textContent = 'Попробуйте ещё раз';
         }
         overlay.style.display = 'flex';
-        // Task 192: фиксируем завершённую игру в счёте достижений
+        // Task 193: фиксируем победу в счёте лучших результатов
         msRecordResult(won, msSeconds, msCurrentDiff);
         msRenderAchievements();
     }
 
-    // ===== Task 192: счёт достижений — три последних результата =====
-    // Хранится в localStorage (в тестовом репо ключ автоматически получает
-    // префикс kip8test: через isolateLocalStorage). Каждый слот — победа /
-    // взрыв + время партии + сложность. Отображаются хронологически слева
-    // направо: самый свежий результат — справа, старые вытесняются.
-    const MS_RESULTS_KEY = 'msRecentResults';
+    // ===== Task 193: счёт достижений — лучшие результаты по времени =====
+    // (ранее Task 192 хранил три последних результата). В «лучшие»
+    // попадают только победы — поражение не может быть лучшим
+    // результатом. Список отсортирован по времени партии (быстрее —
+    // выше) и ограничен тремя записями: медленная победа, не входящая
+    // в топ-3, не вытесняет более быстрые. Хранится в localStorage
+    // (в тестовом репо ключ автоматически получает префикс kip8test:
+    // через isolateLocalStorage). При первом запуске победы из старого
+    // ключа msRecentResults (Task 192) переносятся в новый ключ
+    // msBestResults, старый ключ удаляется.
+    const MS_RESULTS_KEY = 'msBestResults';
+    const MS_RESULTS_LEGACY_KEY = 'msRecentResults';
     const MS_RESULTS_MAX = 3;
 
+    // Возвращает топ-3 побед по времени (лучшая — первая)
     function msLoadResults() {
         try {
             const raw = localStorage.getItem(MS_RESULTS_KEY);
             const arr = raw ? JSON.parse(raw) : [];
-            return Array.isArray(arr) ? arr.slice(-MS_RESULTS_MAX) : [];
+            if (!Array.isArray(arr)) return [];
+            return arr
+                .filter(function (r) { return r && r.won && typeof r.time === 'number'; })
+                .sort(function (a, b) { return a.time - b.time || (a.ts || 0) - (b.ts || 0); })
+                .slice(0, MS_RESULTS_MAX);
         } catch (e) { return []; }
     }
 
+    // Сохраняет только победы, отсортированные по времени, максимум 3
     function msSaveResults(arr) {
         try {
-            localStorage.setItem(MS_RESULTS_KEY, JSON.stringify(arr.slice(-MS_RESULTS_MAX)));
+            const wins = (Array.isArray(arr) ? arr : [])
+                .filter(function (r) { return r && r.won && typeof r.time === 'number'; })
+                .sort(function (a, b) { return a.time - b.time || (a.ts || 0) - (b.ts || 0); })
+                .slice(0, MS_RESULTS_MAX);
+            localStorage.setItem(MS_RESULTS_KEY, JSON.stringify(wins));
         } catch (e) { /* приватный режим — счёт просто не сохранится */ }
     }
 
-    // Записывает завершённую партию (победа/взрыв, секунды, сложность),
-    // оставляет только MS_RESULTS_MAX последних. Возвращает итоговый список.
+    // Записывает завершённую партию. В топ попадают только победы —
+    // чем меньше время, тем выше место. Возвращает итоговый список.
     function msRecordResult(won, seconds, diff) {
         const arr = msLoadResults();
-        arr.push({
-            won: !!won,
-            time: Math.max(0, seconds | 0),
-            diff: msDifficulties[diff] ? diff : msCurrentDiff,
-            ts: Date.now()
-        });
+        if (won) {
+            arr.push({
+                won: true,
+                time: Math.max(0, seconds | 0),
+                diff: msDifficulties[diff] ? diff : msCurrentDiff,
+                ts: Date.now()
+            });
+        }
         msSaveResults(arr);
         return msLoadResults();
     }
 
-    // Рендер счёта: 3 слота (победа — зелёный, взрыв — красный,
-    // пустой — приглушённый) + бейдж «победы/игры» в заголовке
+    // Task 193: разовая миграция — переносит победы из старого ключа
+    // «последних результатов» (Task 192) в новый «лучших результатов»
+    // и удаляет старый ключ. Поражения не переносятся; существующий
+    // новый счёт не затирается. Вызывается из msInit().
+    function msMigrateResults() {
+        try {
+            const legacyRaw = localStorage.getItem(MS_RESULTS_LEGACY_KEY);
+            if (legacyRaw === null) return;
+            let legacy = [];
+            try { legacy = JSON.parse(legacyRaw) || []; } catch (e) { legacy = []; }
+            if (!Array.isArray(legacy)) legacy = [];
+            const wins = legacy.filter(function (r) {
+                return r && r.won && typeof r.time === 'number';
+            });
+            if (wins.length && localStorage.getItem(MS_RESULTS_KEY) === null) {
+                msSaveResults(wins);
+            }
+            localStorage.removeItem(MS_RESULTS_LEGACY_KEY);
+        } catch (e) { /* миграция не критична */ }
+    }
+
+    // Рендер счёта: 3 слота — лучшие победы по времени (🥇🥈🥉),
+    // пустые слоты приглушены. Бейдж — рекордное время.
     function msRenderAchievements() {
         const row = document.getElementById('msAchRow');
         if (!row) return;
         const results = msLoadResults();
+        const medals = ['🥇', '🥈', '🥉'];
         const score = document.getElementById('msAchScore');
         if (score) {
             if (results.length) {
-                const wins = results.filter(function (r) { return r && r.won; }).length;
-                score.textContent = wins + '/' + results.length;
+                score.textContent = 'рекорд ' + results[0].time + ' с';
                 score.style.display = '';
             } else {
                 score.style.display = 'none';
@@ -13267,10 +13305,8 @@
         for (let i = 0; i < MS_RESULTS_MAX; i++) {
             const r = results[i];
             if (r) {
-                const cls = r.won ? 'win' : 'loss';
-                const icon = r.won ? '🏆' : '💥';
-                html += '<div class="ms-ach-slot ' + cls + '">' +
-                    '<span class="ms-ach-icon">' + icon + '</span>' +
+                html += '<div class="ms-ach-slot win">' +
+                    '<span class="ms-ach-icon">' + medals[i] + '</span>' +
                     '<span class="ms-ach-diff">' + msDiffLabel(r.diff) + '</span>' +
                     '<span class="ms-ach-time">' + r.time + ' с</span></div>';
             } else {
