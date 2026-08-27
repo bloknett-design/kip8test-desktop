@@ -3301,6 +3301,38 @@
         color: var(--text-secondary);
         white-space: nowrap;
     }
+    /* Task 197: строка «Последний архивный комментарий» в карточке расходомера */
+    .flow-archived-comment-row .flow-detail-value {
+        font-size: 14px;
+        color: var(--text-secondary);
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+    .flow-archived-comment-row .flow-archived-meta {
+        font-size: 12px; color: var(--text-tertiary);
+        font-style: italic;
+    }
+    .flow-archived-comment-row .flow-archived-text {
+        display: block;
+        color: var(--text-secondary);
+        line-height: 1.35;
+    }
+    [data-theme="light"] .flow-archived-comment-row .flow-archived-meta {
+        color: #6c7a8a;
+    }
+    [data-theme="light"] .flow-archived-comment-row .flow-archived-text {
+        color: #5b6a7d;
+    }
+    /* Task 197: ячейка комментария в архивной таблице */
+    .flow-archive-table .flow-archive-comment {
+        font-size: 13px; color: var(--text-secondary);
+        max-width: 220px; white-space: normal; word-break: break-word;
+        line-height: 1.3;
+    }
+    [data-theme="light"] .flow-archive-table .flow-archive-comment {
+        color: #5b6a7d;
+    }
     /* Sheet ввода комментария (по паттерну flow-input-sheet) */
     .flow-comment-field {
         width: 100%; min-height: 100px; padding: 12px 14px;
@@ -30257,6 +30289,48 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                '</div>';
     }
 
+    /** HTML строки «Последний архивный комментарий» (Task 197, виден всем).
+     *  archivedComment — значение meters.P, формат:
+     *  «[ISO-timestamp | email]: текст».
+     *  Разбираем формат, показываем дату+email и текст в карточке. */
+    function flowBuildArchivedCommentRowHtml(archivedComment) {
+        var s = archivedComment ? String(archivedComment).trim() : '';
+        if (!s) return '';
+        // Парсим формат «[ISO | email]: текст». Если не совпал — показываем как есть.
+        var meta = '';
+        var text = s;
+        var m = s.match(/^\[([^\]]+)\]:?\s*(.*)$/);
+        if (m) {
+            meta = m[1];          // «2026-08-27T05:47:39.123Z | email@x.local»
+            text = m[2] || '';
+            // Заменяем « | » на красивый разделитель при показе
+            meta = meta.replace(/\s*\|\s*/, ' · ');
+            // Форматируем ISO-дату в локальный dd.mm.yyyy HH:MM
+            var isoMatch = meta.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
+            if (isoMatch) {
+                var iso = isoMatch[0];
+                var d = new Date(iso);
+                if (!isNaN(d.getTime())) {
+                    var dd = String(d.getDate()).padStart(2, '0');
+                    var mm = String(d.getMonth() + 1).padStart(2, '0');
+                    var yyyy = d.getFullYear();
+                    var hh = String(d.getHours()).padStart(2, '0');
+                    var mi = String(d.getMinutes()).padStart(2, '0');
+                    var rest = meta.substring(iso.length);
+                    meta = dd + '.' + mm + '.' + yyyy + ' ' + hh + ':' + mi + rest;
+                }
+            }
+        }
+        var metaHtml = meta ? '<span class="flow-archived-meta">' + escHtml(meta) + '</span>' : '';
+        return '<div class="flow-detail-row flow-archived-comment-row">' +
+               '<span class="flow-detail-label" style="color:#6c7a8a;">Последний архивный комментарий</span>' +
+               '<span class="flow-detail-value flow-archived-comment-body">' +
+               metaHtml +
+               '<span class="flow-archived-text">' + escHtml(text) + '</span>' +
+               '</span>' +
+               '</div>';
+    }
+
     /** Fallback-хранилище комментариев (localStorage, ключ kip8_flow_comments_v1).
      *  Используется только пока серверный патч Task 195 не задеплоен. */
     function flowLocalCommentsLoad() {
@@ -30849,6 +30923,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 '</div>';
             // Комментарий к показаниям — виден всем пользователям раздела
             html += flowBuildCommentRowHtml(commentText, isLocalComment);
+            // Task 197: последний архивный комментарий (meters.P) — preview.
+            // Виден всем. Если нет — строки нет (функция возвращает '').
+            html += flowBuildArchivedCommentRowHtml(m.archivedComment);
             // Расход
             html += '<div class="flow-detail-row flow-detail-highlight"><span class="flow-detail-label">Расход</span><span class="flow-detail-value">' + consStr + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> за ' + this._daysBetween(m.datePrev, m.dateCurr) + ' дн.</span></span></div>';
 
@@ -31483,6 +31560,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (showGcalCol) {
                 html += '<th>Гкал</th>';
             }
+            // Task 197: колонка «Комментарий» — если хоть в одной записи есть comment
+            var hasAnyComment = false;
+            for (var k = 0; k < displayRecords.length; k++) {
+                if (displayRecords[k].comment && String(displayRecords[k].comment).trim() !== '') {
+                    hasAnyComment = true;
+                    break;
+                }
+            }
+            if (hasAnyComment) {
+                html += '<th>Комментарий</th>';
+            }
             html += '<th>Внёс</th>';
             html += '</tr></thead>';
             html += '<tbody>';
@@ -31503,6 +31591,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (showGcalCol) {
                     var gcalStr = (r.gcal !== null && r.gcal !== undefined) ? r.gcal.toFixed(3).replace('.', ',') : '—';
                     html += '<td class="flow-archive-gcal">' + gcalStr + '</td>';
+                }
+                // Task 197: комментарий к этой архивной записи
+                if (hasAnyComment) {
+                    var cmtStr = (r.comment && String(r.comment).trim() !== '')
+                        ? String(r.comment).trim() : '—';
+                    html += '<td class="flow-archive-comment">' + this._esc(cmtStr) + '</td>';
                 }
                 var modStr = r.modName || r.modRole || '';
                 html += '<td class="flow-archive-mod">' + this._esc(modStr) + '</td>';
