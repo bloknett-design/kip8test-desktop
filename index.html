@@ -3265,7 +3265,7 @@
         gap: 8px;
     }
     .flow-detail-row-head .flow-detail-label { margin-bottom: 0; }
-    /* Кнопка ввода комментария — видна только автору последних показаний */
+    /* Кнопка ввода комментария — видна автору последних показаний ИЛИ админу */
     .flow-comment-btn {
         flex-shrink: 0;
         display: inline-flex; align-items: center; justify-content: center;
@@ -30172,31 +30172,40 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     //   • кнопка ввода комментария (в правой части строки «Последние
     //     показания» детальной карточки) видна ТОЛЬКО пользователю,
     //     который ввёл последние показания (автору, m.modName);
-    //   • автор может добавить/изменить/удалить текстовый комментарий
-    //     к данным в любой момент — БЕЗ ограничения по времени
+    //     дополнительно — кнопка видна АДМИНУ (роль «Админ») всегда,
+    //     даже если он не автор последних показаний (Task 195 update);
+    //   • автор и админ могут добавить/изменить/удалить текстовый
+    //     комментарий в любой момент — БЕЗ ограничения по времени
     //     (в отличие от правки показаний, где окно 1 час);
-    //   • возможность длится, пока последний ввод показаний остаётся
-    //     за этим пользователем: как только другой пользователь внёс
-    //     новые показания — кнопка исчезает, а комментарий к прежним
-    //     показаниям очищается (сервер: updateReading при смене автора);
+    //   • возможность комментировать для автора длится, пока последний
+    //     ввод показаний остаётся за ним: как только другой пользователь
+    //     внёс новые показания — кнопка у автора исчезает, а комментарий
+    //     к прежним показаниям очищается (сервер: updateReading при
+    //     смене автора); у админа кнопка остаётся видимой всегда;
     //   • сам комментарий (строка «Комментарий» под показаниями) виден
     //     ВСЕМ пользователям раздела — это пояснение к данным.
     //
     // Хранение — двухуровневое:
     //   1. Сервер (основной): столбец O «comment» листа hozraschet_meters,
     //      эндпоинт flowmeter.setComment (см. scripts/Flowmeter.gs, Task 195).
-    //      Валидация авторства — на сервере (not_your_input).
+    //      Валидация авторства — на сервере (not_your_input); для админа
+    //      проверка авторства пропускается (см. Flowmeter.gs setComment).
     //   2. localStorage (fallback): если серверный патч ещё не задеплоен
     //      (ответ «Unknown action»), комментарий сохраняется локально
-    //      в kip8_flow_comments_v1 и виден только на устройстве автора
+    //      в kip8_flow_comments_v1 и виден только на устройстве автора/админа
     //      (с пометкой). При успешной серверной записи локальная копия
     //      удаляется; при смене автора показаний — устаревает и удаляется.
     // ============================================================
 
     /** Право комментирования: текущий пользователь — автор последних
-     *  показаний (сравнение email без учёта регистра/пробелов). */
-    function flowCanComment(m, userEmail) {
-        if (!m || !m.modName) return false;
+     *  показаний (сравнение email без учёта регистра/пробелов) ИЛИ админ
+     *  (role === 'Админ', без сравнения email). userRole — опциональный
+     *  3-й параметр для обратной совместимости со старыми вызовами. */
+    function flowCanComment(m, userEmail, userRole) {
+        if (!m) return false;
+        // Админ видит кнопку всегда (Task 195 update)
+        if (userRole && String(userRole).toLowerCase().trim() === 'админ') return true;
+        if (!m.modName) return false;
         if (!userEmail) return false;
         return String(m.modName).toLowerCase().trim() === String(userEmail).toLowerCase().trim();
     }
@@ -30221,9 +30230,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     }
 
     /** HTML кнопки комментария для шапки строки «Последние показания»
-     *  (только автору показаний; при наличии комментария — подсвечена). */
-    function flowBuildCommentBtnHtml(m, userEmail, commentText) {
-        if (!flowCanComment(m, userEmail)) return '';
+     *  (автору показаний или админу; при наличии комментария — подсвечена).
+     *  userRole — опциональный 4-й параметр (для обратной совместимости). */
+    function flowBuildCommentBtnHtml(m, userEmail, commentText, userRole) {
+        if (!flowCanComment(m, userEmail, userRole)) return '';
         var has = !!(commentText && String(commentText).trim() !== '');
         var label = has ? 'Изменить комментарий к показаниям' : 'Добавить комментарий к показаниям';
         var svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
@@ -30824,13 +30834,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             html += '<div class="flow-detail-row"><span class="flow-detail-label">Предыдущие показания</span><span class="flow-detail-value">' + this._fmtNum(m.prev) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.datePrev) + ' г.</span></span></div>';
 
             // Task 195: последние показания + кнопка комментария в правой части
-            // строки (видна только автору показаний) + подстрока комментария (всем).
-            var canComment = flowCanComment(m, (typeof KipAuth !== 'undefined' ? KipAuth._cachedEmail : null));
-            // Локальные fallback-комментарии показываем только автору
+            // строки (видна автору показаний ИЛИ админу) + подстрока комментария (всем).
+            var _email = (typeof KipAuth !== 'undefined' ? KipAuth._cachedEmail : null);
+            var _role = (typeof KipAuth !== 'undefined' ? KipAuth._cachedRole : null);
+            var canComment = flowCanComment(m, _email, _role);
+            // Локальные fallback-комментарии показываем только автору/админу
             var commentText = flowCommentText(m, canComment ? this._getLocalComments() : null);
             var isLocalComment = !!commentText &&
                 !(m.comment !== undefined && m.comment !== null && String(m.comment).trim() !== '');
-            var commentBtnHtml = flowBuildCommentBtnHtml(m, (typeof KipAuth !== 'undefined' ? KipAuth._cachedEmail : null), commentText);
+            var commentBtnHtml = flowBuildCommentBtnHtml(m, _email, commentText, _role);
             html += '<div class="flow-detail-row">' +
                 '<div class="flow-detail-row-head"><span class="flow-detail-label">Последние показания</span>' + commentBtnHtml + '</div>' +
                 '<span class="flow-detail-value flow-detail-curr">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.dateCurr) + ' г.</span></span>' +
@@ -31031,7 +31043,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!m) return;
 
             var userEmail = (typeof KipAuth !== 'undefined' ? KipAuth._cachedEmail : null);
-            if (!flowCanComment(m, userEmail)) return;  // защита: только автор
+            var userRole = (typeof KipAuth !== 'undefined' ? KipAuth._cachedRole : null);
+            if (!flowCanComment(m, userEmail, userRole)) return;  // защита: только автор/админ
 
             var titleEl = document.getElementById('flowCommentTitle');
             if (titleEl) titleEl.textContent = m.hoz + ' — комментарий к показаниям';
@@ -31075,8 +31088,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Сохранить комментарий (пустой текст = удалить).
         // Основной путь — сервер (flowmeter.setComment, валидация авторства
-        // на сервере). Если серверный патч Task 195 ещё не задеплоен
-        // («Unknown action») — fallback в localStorage (только это устройство).
+        // на сервере; админ обходит not_your_input). Если серверный патч
+        // Task 195 ещё не задеплоен («Unknown action») — fallback в
+        // localStorage (только это устройство).
         submitComment: function() {
             var id = window._flowDetailId;
             var m = null;
@@ -31086,7 +31100,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!m) return;
 
             var userEmail = (typeof KipAuth !== 'undefined' ? KipAuth._cachedEmail : null);
-            if (!flowCanComment(m, userEmail)) return;
+            var userRole = (typeof KipAuth !== 'undefined' ? KipAuth._cachedRole : null);
+            if (!flowCanComment(m, userEmail, userRole)) return;
 
             var field = document.getElementById('flowCommentField');
             var text = field ? field.value.trim() : '';
