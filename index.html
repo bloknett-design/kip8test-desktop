@@ -30455,13 +30455,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
      *  показания валидны, можно отправлять без модалки.
      *
      *  Параметры:
-     *    meter       — объект из FlowmeterData._METERS (с allowNegative);
-     *    payload     — { id, prev, curr, datePrev, dateCurr, temp, gcal };
-     *    rules       — объект из flowmeter.getValidationRules для этого
-     *                   meterId (или null = правила не заданы);
-     *    lastArchive — последняя запись архива (или null) — для DUPLICATE.
+     *    meter           — объект из FlowmeterData._METERS (с allowNegative);
+     *    payload         — { id, prev, curr, datePrev, dateCurr, temp, gcal };
+     *    rules           — объект из flowmeter.getValidationRules для этого
+     *                      meterId (или null = правила не заданы);
+     *    lastArchive     — последняя запись архива (или null) — для DUPLICATE;
+     *    recentAllMeters — (Task 200) последние записи архива всех счётчиков
+     *                      за 7 дней (или null) — для WRONG_METER.
      */
-    function flowValidateReading(meter, payload, rules, lastArchive) {
+    function flowValidateReading(meter, payload, rules, lastArchive, recentAllMeters) {
         var codes = [];
         var hardBlock = null;
 
@@ -30581,6 +30583,46 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (sameAuthor && recent) {
                 codes.push('DUPLICATE: те же показания prev=' + prev +
                            ', curr=' + curr + ' уже введены этим же автором менее 5 минут назад');
+            }
+        }
+
+        // #5 WRONG_METER (Task 200, Фаза 2)
+        // Эвристика: exact-match по consumption + swap по паре (prev, curr)
+        // с другим счётчиком за последние 7 дней. Близкое совпадение
+        // (уровень 2) отключено — слишком много false positives.
+        var WM_THRESHOLD = 0.01;
+        var WM_MIN_CONS = 1.0;
+        var WM_SWAP = true;
+        if (recentAllMeters && recentAllMeters.length > 0 &&
+            consumption >= WM_MIN_CONS) {
+            var myMeterId = meter && meter.id ? parseInt(meter.id, 10) : null;
+            for (var ri = 0; ri < recentAllMeters.length; ri++) {
+                var other = recentAllMeters[ri];
+                var otherId = parseInt(other.meterId, 10);
+                if (otherId === myMeterId) continue;
+
+                // Уровень 1: exact-match по consumption
+                var otherCons = parseFloat(other.consumption);
+                if (!isNaN(otherCons) && Math.abs(otherCons - consumption) < WM_THRESHOLD) {
+                    codes.push('WRONG_METER: расход ' + _flowFmt(consumption) +
+                               ' совпадает с расходомером id=' + otherId +
+                               ' (' + (other.hoz || '?') + '), расход ' + _flowFmt(otherCons) +
+                               ' — возможно, оператор ввёл показания не в тот счётчик');
+                    break;
+                }
+
+                // Уровень 3: swap — пара (prev, curr) совпадает с последней
+                // записью другого счётчика = оператор ввёл чужие показания целиком
+                if (WM_SWAP &&
+                    !isNaN(parseFloat(other.prev)) && !isNaN(parseFloat(other.curr)) &&
+                    Math.abs(parseFloat(other.prev) - prev) < WM_THRESHOLD &&
+                    Math.abs(parseFloat(other.curr) - curr) < WM_THRESHOLD) {
+                    codes.push('WRONG_METER: пара (prev=' + prev + ', curr=' + curr +
+                               ') совпадает с последней записью расходомера id=' + otherId +
+                               ' (' + (other.hoz || '?') +
+                               ') — оператор, вероятно, ввёл чужие показания целиком');
+                    break;
+                }
             }
         }
 
@@ -31768,29 +31810,58 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
                 var rules = this._getRulesForMeter(id);
                 var lastArch = this._getLastArchiveForValidation(id, meter);
-                var validation = flowValidateReading(meter, apiPayload, rules, lastArch);
+                var self = this;
 
-                if (validation.hardBlock) {
-                    // Hard-block: показываем toast, ничего не отправляем.
-                    // Оптимистичное обновление UI нужно откатить — данные
-                    // не сохранены на сервере, поэтому перезагружаем.
-                    if (typeof KipToast !== 'undefined' && KipToast.show) {
-                        KipToast.show(validation.hardBlock.message || 'Ошибка валидации');
-                    }
-                    setTimeout(function() { self.load(); }, 200);
-                    return;
-                }
-
-                if (validation.codes && validation.codes.length > 0) {
-                    // Soft-confirm: показываем модалку, отправку откладываем
-                    this._pendingApiPayload = apiPayload;
-                    this._pendingAnomalyCodes = validation.codes;
-                    this._showAnomalyModal(meter, validation.codes);
-                    return;
-                }
-
-                // Ошибок нет — отправляем сразу
-                this._sendUpdateReading(apiPayload, isEdit);
+                // Task 200: lazy-fetch recentAllMeters для WRONG_METER.
+                // Один доп-запрос перед валидацией — его стоимость оправдана
+                // тем, что WRONG_METER спасает от серьёзной ошибки вводода.
+                // Сервер всё равно валидирует независимо (даже если fetch упадёт).
+                this._api('flowmeter.getRecentAllMeters', { daysBack: 7 })
+                    .then(function(res) {
+                        var recentAll = (res && res.ok && res.data && res.data.records)
+                                        ? res.data.records : null;
+                        return flowValidateReading(meter, apiPayload, rules, lastArch, recentAll);
+                    })
+                    .then(function(validation) {
+                        if (validation.hardBlock) {
+                            // Hard-block: показываем toast, ничего не отправляем.
+                            // Оптимистичное обновление UI откатываем перезагрузкой.
+                            if (typeof KipToast !== 'undefined' && KipToast.show) {
+                                KipToast.show(validation.hardBlock.message || 'Ошибка валидации');
+                            }
+                            setTimeout(function() { self.load(); }, 200);
+                            return;
+                        }
+                        if (validation.codes && validation.codes.length > 0) {
+                            // Soft-confirm: показываем модалку, отправку откладываем
+                            self._pendingApiPayload = apiPayload;
+                            self._pendingAnomalyCodes = validation.codes;
+                            self._showAnomalyModal(meter, validation.codes);
+                            return;
+                        }
+                        // Ошибок нет — отправляем сразу
+                        self._sendUpdateReading(apiPayload, isEdit);
+                    })
+                    .catch(function(err) {
+                        // Fallback: fetch упал — валидируем без recentAllMeters
+                        // (WRONG_METER пропустится; сервер всё равно проверит)
+                        console.error('flowmeter.getRecentAllMeters failed:', err);
+                        var validation = flowValidateReading(meter, apiPayload, rules, lastArch, null);
+                        if (validation.hardBlock) {
+                            if (typeof KipToast !== 'undefined' && KipToast.show) {
+                                KipToast.show(validation.hardBlock.message || 'Ошибка валидации');
+                            }
+                            setTimeout(function() { self.load(); }, 200);
+                            return;
+                        }
+                        if (validation.codes && validation.codes.length > 0) {
+                            self._pendingApiPayload = apiPayload;
+                            self._pendingAnomalyCodes = validation.codes;
+                            self._showAnomalyModal(meter, validation.codes);
+                            return;
+                        }
+                        self._sendUpdateReading(apiPayload, isEdit);
+                    });
             }
         },
 
