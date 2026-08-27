@@ -3337,6 +3337,108 @@
     [data-theme="light"] .flow-archive-table .flow-archive-comment {
         color: #5b6a7d;
     }
+    /* Task 199: ячейка аномалий в архивной таблице — значки с кодами */
+    .flow-archive-table .flow-archive-anomaly {
+        max-width: 220px; white-space: normal; word-break: break-word;
+        line-height: 1.3;
+    }
+    .flow-archive-table .flow-archive-anomaly .flow-anomaly-badge {
+        display: inline-block; padding: 2px 6px; margin: 1px 2px 1px 0;
+        font-size: 11px; font-weight: 600; border-radius: 4px;
+        background: rgba(220, 80, 50, 0.18); color: #e08060;
+        border: 1px solid rgba(220, 80, 50, 0.35);
+        line-height: 1.2;
+    }
+    .flow-archive-table .flow-archive-anomaly .flow-anomaly-badge-detail {
+        display: block; font-size: 11px; color: var(--text-tertiary);
+        margin: 1px 0 3px 0; font-style: italic;
+    }
+    [data-theme="light"] .flow-archive-table .flow-archive-anomaly .flow-anomaly-badge {
+        background: rgba(220, 80, 50, 0.10); color: #a05030;
+        border-color: rgba(220, 80, 50, 0.30);
+    }
+    /* Task 199: модалка подтверждения аномалий */
+    .flow-anomaly-modal-overlay {
+        position: fixed; inset: 0; z-index: 2000;
+        background: rgba(0, 0, 0, 0.55);
+        display: flex; align-items: center; justify-content: center;
+        padding: 16px;
+        animation: flowAnomalyFadeIn 0.18s ease-out;
+    }
+    @keyframes flowAnomalyFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .flow-anomaly-modal {
+        background: var(--bg-card, #2a2521); color: var(--text-primary);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 14px; padding: 18px 18px 14px;
+        max-width: 460px; width: 100%; max-height: 90vh; overflow-y: auto;
+        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+    }
+    .flow-anomaly-modal-header {
+        font-size: 17px; font-weight: 700;
+        color: #e08060; margin-bottom: 6px;
+    }
+    .flow-anomaly-modal-meter {
+        font-size: 13px; color: var(--text-secondary);
+        margin-bottom: 12px;
+    }
+    .flow-anomaly-list {
+        list-style: none; padding: 0; margin: 0 0 14px 0;
+    }
+    .flow-anomaly-item {
+        display: flex; flex-direction: column; gap: 2px;
+        padding: 8px 10px; margin-bottom: 6px;
+        background: rgba(220, 80, 50, 0.08);
+        border-left: 3px solid rgba(220, 80, 50, 0.55);
+        border-radius: 4px;
+    }
+    .flow-anomaly-code {
+        font-size: 12px; font-weight: 700; color: #e08060;
+        letter-spacing: 0.4px;
+    }
+    .flow-anomaly-detail {
+        font-size: 13px; color: var(--text-secondary);
+        line-height: 1.4;
+    }
+    [data-theme="light"] .flow-anomaly-modal {
+        background: #ffffff; color: #1a1a1a;
+        border-color: rgba(0, 0, 0, 0.12);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    }
+    [data-theme="light"] .flow-anomaly-modal-header { color: #c54a2a; }
+    [data-theme="light"] .flow-anomaly-modal-meter { color: #5b6a7d; }
+    [data-theme="light"] .flow-anomaly-item {
+        background: rgba(220, 80, 50, 0.06);
+        border-left-color: rgba(220, 80, 50, 0.55);
+    }
+    [data-theme="light"] .flow-anomaly-code { color: #c54a2a; }
+    [data-theme="light"] .flow-anomaly-detail { color: #5b6a7d; }
+    .flow-anomaly-modal-actions {
+        display: flex; gap: 10px; justify-content: flex-end;
+    }
+    .flow-anomaly-btn {
+        padding: 10px 18px; border-radius: 8px; border: none;
+        font-size: 14px; font-weight: 600; cursor: pointer;
+        transition: background 0.15s, opacity 0.15s;
+        font-family: 'Inter', sans-serif;
+    }
+    .flow-anomaly-btn:active { transform: scale(0.96); }
+    .flow-anomaly-cancel {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text-secondary);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .flow-anomaly-confirm {
+        background: #e08060; color: #fff;
+    }
+    .flow-anomaly-confirm:hover { background: #c66a48; }
+    [data-theme="light"] .flow-anomaly-cancel {
+        background: rgba(0, 0, 0, 0.05); color: #5b6a7d;
+        border-color: rgba(0, 0, 0, 0.12);
+    }
+    [data-theme="light"] .flow-anomaly-confirm {
+        background: #c54a2a; color: #fff;
+    }
+    [data-theme="light"] .flow-anomaly-confirm:hover { background: #a04020; }
     /* Sheet ввода комментария (по паттерну flow-input-sheet) */
     .flow-comment-field {
         width: 100%; min-height: 100px; padding: 12px 14px;
@@ -30346,6 +30448,205 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                '</div>';
     }
 
+    /** Task 199: Клиентская валидация показаний (UX only — сервер тоже
+     *  валидирует независимо). Зеркалит логику ValidationRules.compute на
+     *  стороне сервера. Возвращает { codes: [...], hardBlock: null|{code,
+     *  message}, detail: '...' }. Если codes пустой и hardBlock null —
+     *  показания валидны, можно отправлять без модалки.
+     *
+     *  Параметры:
+     *    meter       — объект из FlowmeterData._METERS (с allowNegative);
+     *    payload     — { id, prev, curr, datePrev, dateCurr, temp, gcal };
+     *    rules       — объект из flowmeter.getValidationRules для этого
+     *                   meterId (или null = правила не заданы);
+     *    lastArchive — последняя запись архива (или null) — для DUPLICATE.
+     */
+    function flowValidateReading(meter, payload, rules, lastArchive) {
+        var codes = [];
+        var hardBlock = null;
+
+        var prev = parseFloat(payload.prev);
+        var curr = parseFloat(payload.curr);
+        if (isNaN(prev)) prev = 0;
+        if (isNaN(curr)) curr = 0;
+        var consumption = curr - prev;
+
+        // #12 SIGN_NEG — hard-block
+        if (prev < 0 || curr < 0) {
+            codes.push('SIGN_NEG: prev=' + prev + ', curr=' + curr);
+            hardBlock = { code: 'SIGN_NEG',
+                          message: 'Отрицательное значение показания: prev=' + prev +
+                                   ', curr=' + curr + '. Проверьте, не введён ли знак «минус» случайно.' };
+            return { codes: codes, hardBlock: hardBlock };
+        }
+
+        // #6 DATE_INCONSISTENT — hard-block
+        var dp = _flowParseDate(payload.datePrev);
+        var dc = _flowParseDate(payload.dateCurr);
+        if (dp && dc && dc < dp) {
+            codes.push('DATE_INCONSISTENT: prev=' + payload.datePrev + ', curr=' + payload.dateCurr);
+            hardBlock = { code: 'DATE_INCONSISTENT',
+                          message: 'Дата текущая раньше предыдущей: prev=' + payload.datePrev +
+                                   ', curr=' + payload.dateCurr + '. Проверьте даты.' };
+            return { codes: codes, hardBlock: hardBlock };
+        }
+
+        // Дальше — только soft-confirm правила (если rules заданы)
+        if (!rules) return { codes: codes, hardBlock: hardBlock };
+
+        var allowNegative = String((meter && meter.allowNegative) || '').toLowerCase() === 'yes';
+
+        // #4 → JUMP_NEGATIVE (merged): для не-конденсатных счётчиков
+        if (consumption < 0 && !allowNegative) {
+            codes.push('JUMP_NEGATIVE: расход ' + _flowFmt(consumption) +
+                       ' < 0 (curr < prev), allowNegative!=' + (allowNegative ? 'yes' : 'no'));
+        }
+
+        // #3/#10 JUMP_HIGH — consumption > max_cons × 3
+        if (rules.max_cons !== null && !isNaN(rules.max_cons)) {
+            var highThr = rules.max_cons * 3;
+            if (consumption > highThr) {
+                var factor = rules.max_cons > 0 ? (consumption / rules.max_cons) : 0;
+                codes.push('JUMP_HIGH: расход ' + _flowFmt(consumption) +
+                           ' > max×3=' + _flowFmt(highThr) +
+                           ' (превышение в ' + _flowFmt(factor) +
+                           ' раз от max_cons=' + _flowFmt(rules.max_cons) + ')');
+            }
+            // #10 JUMP_LOW — 0 ≤ consumption < min_cons / 10
+            if (consumption >= 0 && rules.min_cons !== null && !isNaN(rules.min_cons)) {
+                var lowThr = rules.min_cons / 10;
+                if (consumption < lowThr) {
+                    codes.push('JUMP_LOW: расход ' + _flowFmt(consumption) +
+                               ' < min/10=' + _flowFmt(lowThr) +
+                               ' (ожидается не менее ' + _flowFmt(rules.min_cons) + ')');
+                }
+            }
+        }
+
+        // #7 PERIOD_MISMATCH — daysBetween != expected_days (±tolerance)
+        if (rules.expected_days !== null && !isNaN(rules.expected_days) && dp && dc) {
+            var daysBetween = Math.round((dc - dp) / 86400000);
+            if (daysBetween < 0) daysBetween = 0;
+            var tolerance = (rules.expected_days === 1) ? 1 :
+                             Math.max(1, Math.round(rules.expected_days * 0.1));
+            if (Math.abs(daysBetween - rules.expected_days) > tolerance) {
+                codes.push('PERIOD_MISMATCH: дней между показаниями ' + daysBetween +
+                           ', ожидается ' + rules.expected_days +
+                           ' (допуск ±' + tolerance + ')');
+            }
+        }
+
+        // #8 TEMP_OUT_OF_RANGE
+        if (payload.temp !== null && payload.temp !== undefined && payload.temp !== '' &&
+            rules.temp_min !== null && rules.temp_max !== null) {
+            var t = parseFloat(payload.temp);
+            if (!isNaN(t) && (t < rules.temp_min || t > rules.temp_max)) {
+                codes.push('TEMP_OUT_OF_RANGE: температура ' + t +
+                           '°C вне [' + rules.temp_min + ', ' + rules.temp_max + ']');
+            }
+        }
+
+        // #9 GCAL_RATIO (только для расходомеров пара: payload.gcal задан)
+        if (consumption > 0 && payload.gcal !== null && payload.gcal !== undefined &&
+            payload.gcal !== '' && rules.gcal_ratio_min !== null && rules.gcal_ratio_max !== null) {
+            var g = parseFloat(payload.gcal);
+            if (!isNaN(g) && g > 0) {
+                var ratio = g / consumption;
+                if (ratio < rules.gcal_ratio_min || ratio > rules.gcal_ratio_max) {
+                    codes.push('GCAL_RATIO: отношение Gcal/consumption=' + _flowFmt(ratio) +
+                               ' вне [' + rules.gcal_ratio_min + ', ' + rules.gcal_ratio_max +
+                               '] (consumption=' + _flowFmt(consumption) +
+                               ', Gcal=' + _flowFmt(g) + ')');
+                }
+            }
+        }
+
+        // #11 DUPLICATE — те же (prev, curr) в последней записи архива,
+        // тем же автором, в течение 5 минут
+        if (lastArchive && lastArchive.prev === prev && lastArchive.curr === curr) {
+            var sameAuthor = false;
+            var recent = false;
+            if (lastArchive.modName && meter && meter.modName) {
+                sameAuthor = String(lastArchive.modName).toLowerCase() ===
+                             String(meter.modName).toLowerCase();
+            }
+            if (lastArchive.timestamp) {
+                var lastTs = new Date(lastArchive.timestamp);
+                var nowTs = new Date();
+                if (!isNaN(lastTs.getTime())) {
+                    var elapsed = nowTs - lastTs;
+                    recent = elapsed >= 0 && elapsed < 300000;
+                }
+            }
+            if (sameAuthor && recent) {
+                codes.push('DUPLICATE: те же показания prev=' + prev +
+                           ', curr=' + curr + ' уже введены этим же автором менее 5 минут назад');
+            }
+        }
+
+        return { codes: codes, hardBlock: hardBlock, detail: codes.join('; ') };
+    }
+
+    /** Task 199: парсинг даты M/D/YYYY → Date object (для валидации) */
+    function _flowParseDate(s) {
+        if (!s) return null;
+        var str = String(s).trim();
+        var m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (m) {
+            var d = new Date(+m[3], +m[1] - 1, +m[2]);
+            return isNaN(d.getTime()) ? null : d;
+        }
+        // YYYY-MM-DD (из input type="date")
+        var m2 = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (m2) {
+            var d2 = new Date(+m2[1], +m2[2] - 1, +m2[3]);
+            return isNaN(d2.getTime()) ? null : d2;
+        }
+        // DD.MM.YYYY
+        var m3 = str.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+        if (m3) {
+            var d3 = new Date(+m3[3], +m3[2] - 1, +m3[1]);
+            return isNaN(d3.getTime()) ? null : d3;
+        }
+        return null;
+    }
+
+    /** Task 199: форматирование числа для detail (2 знака) */
+    function _flowFmt(n) {
+        if (typeof n !== 'number' || isNaN(n)) return String(n);
+        return n.toFixed(2);
+    }
+
+    /** Task 199: построить HTML модалки подтверждения аномалий.
+     *  codes — массив строк вида 'CODE: detail'. meter — для шапки. */
+    function flowBuildAnomalyModalHtml(meter, codes) {
+        var items = '';
+        for (var i = 0; i < codes.length; i++) {
+            var c = String(codes[i] || '');
+            var colon = c.indexOf(':');
+            var code = colon > 0 ? c.substring(0, colon) : c;
+            var detail = colon > 0 ? c.substring(colon + 1).trim() : '';
+            items += '<li class="flow-anomaly-item">' +
+                     '<span class="flow-anomaly-code">' + escHtml(code) + '</span>' +
+                     '<span class="flow-anomaly-detail">' + escHtml(detail) + '</span>' +
+                     '</li>';
+        }
+        var meterTitle = meter ? (escHtml(meter.hoz || '') + ' — ' + escHtml(meter.param || '')) : '';
+        return '<div id="flowAnomalyModal" class="flow-anomaly-modal-overlay">' +
+               '<div class="flow-anomaly-modal">' +
+                 '<div class="flow-anomaly-modal-header">⚠ Проверьте показания</div>' +
+                 '<div class="flow-anomaly-modal-meter">' + meterTitle + '</div>' +
+                 '<ul class="flow-anomaly-list">' + items + '</ul>' +
+                 '<div class="flow-anomaly-modal-actions">' +
+                   '<button type="button" class="flow-anomaly-btn flow-anomaly-cancel" ' +
+                           'onclick="FlowmeterData.cancelAnomalyModal()">Отменить</button>' +
+                   '<button type="button" class="flow-anomaly-btn flow-anomaly-confirm" ' +
+                           'onclick="FlowmeterData.confirmAnomalyModal()">Сохранить с пометкой</button>' +
+                 '</div>' +
+               '</div>' +
+               '</div>';
+    }
+
     /** Fallback-хранилище комментариев (localStorage, ключ kip8_flow_comments_v1).
      *  Используется только пока серверный патч Task 195 не задеплоен. */
     function flowLocalCommentsLoad() {
@@ -31009,6 +31310,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             window._flowDetailId = id;
 
+            // Task 199: предзагрузить правила валидации (для UX-модалки).
+            // Ставим ДО ветвления desktop/mobile, чтобы и десктопный
+            // flowmeterRenderDetailInPanel тоже имел правила наготове.
+            // Не блокирует UI — фоновый запрос, при ошибке тихо пропускаем.
+            try { this.loadValidationRules(); } catch (e) { /* ignore */ }
+
             // На десктопе — рендерим в правую панель
             if (isDesktop()) {
                 flowmeterRenderDetailInPanel();
@@ -31435,13 +31742,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             this.closeInput();
 
-            // Перерендерить список и текущую карточку
+            // Перерендерить список и текущую карточку (оптимистичное UI)
             this.renderList();
-            this.openDetail(id, false);  // Task 106: без pushState — мы уже на flowmeter-detail
+            this.openDetail(id, false);  // Task 106: без pushState
 
-            // Отправить обновление на сервер (в Google Sheets через Apps Script)
+            // Task 199: клиентская валидация показаний. Если сработали
+            // soft-confirm правила — показываем модалку, пользователь
+            // подтверждает или отменяет. Если hard-block — показываем
+            // toast, ничего не отправляем на сервер. Если ошибок нет —
+            // сразу отправляем. Сервер в любом случае валидирует
+            // независимо и пишет аномалии в archive.Q.
             if (meter) {
-                // Для расходомеров пара добавляем gcal в payload (Task 100)
                 var apiPayload = {
                     id: id,
                     prev: meter.prev,
@@ -31454,29 +31765,145 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (this._isSteamMeter(meter)) {
                     apiPayload.gcal = (gcalVal !== null) ? gcalVal : (meter.gcal || '');
                 }
-                this._api('flowmeter.updateReading', apiPayload).then(function(res) {
-                    if (res && res.ok === false) {
-                        // Task 108: серверная ошибка (edit_window_expired / not_your_input)
-                        var msg = res.message || res.error || 'Ошибка сохранения';
-                        if (typeof KipToast !== 'undefined' && KipToast.show) {
-                            KipToast.show(msg);
-                        }
-                        // Перезагрузить данные с сервера — откатить оптимистичное обновление
-                        setTimeout(function() { self.load(); }, 200);
-                    } else {
-                        if (typeof KipToast !== 'undefined' && KipToast.show) {
-                            KipToast.show(isEdit ? 'Показания изменены' : 'Показания сохранены');
-                        }
-                        // Перезагрузить данные с сервера, чтобы убедиться в синхронизации
-                        setTimeout(function() { self.load(); }, 200);
-                    }
-                }).catch(function(err) {
-                    console.error('flowmeter.updateReading:', err);
+
+                var rules = this._getRulesForMeter(id);
+                var lastArch = this._getLastArchiveForValidation(id, meter);
+                var validation = flowValidateReading(meter, apiPayload, rules, lastArch);
+
+                if (validation.hardBlock) {
+                    // Hard-block: показываем toast, ничего не отправляем.
+                    // Оптимистичное обновление UI нужно откатить — данные
+                    // не сохранены на сервере, поэтому перезагружаем.
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
-                        KipToast.show('Ошибка сохранения: ' + (err.message || 'сеть'));
+                        KipToast.show(validation.hardBlock.message || 'Ошибка валидации');
                     }
-                });
+                    setTimeout(function() { self.load(); }, 200);
+                    return;
+                }
+
+                if (validation.codes && validation.codes.length > 0) {
+                    // Soft-confirm: показываем модалку, отправку откладываем
+                    this._pendingApiPayload = apiPayload;
+                    this._pendingAnomalyCodes = validation.codes;
+                    this._showAnomalyModal(meter, validation.codes);
+                    return;
+                }
+
+                // Ошибок нет — отправляем сразу
+                this._sendUpdateReading(apiPayload, isEdit);
             }
+        },
+
+        // Task 199: получить правила валидации для meterId (с кэшем в памяти)
+        _rulesCache: {},
+        _getRulesForMeter: function(meterId) {
+            if (this._rulesCache[meterId]) return this._rulesCache[meterId];
+            // Синхронно вернуть не можем — правила грузятся с сервера.
+            // Если кэша нет, возвращаем null (валидация soft-confirm
+            // пропустится; сервер всё равно валидирует).
+            // Для предзагрузки используй loadValidationRules().
+            return null;
+        },
+
+        // Task 199: асинхронно загрузить все правила с сервера и
+        // закэшировать в памяти. Вызывать при открытии карточки.
+        loadValidationRules: function() {
+            var self = this;
+            return this._api('flowmeter.getValidationRules', {}).then(function(data) {
+                if (data && Array.isArray(data.rules)) {
+                    for (var i = 0; i < data.rules.length; i++) {
+                        var r = data.rules[i];
+                        if (r && r.meterId) {
+                            self._rulesCache[r.meterId] = r;
+                        }
+                    }
+                }
+                return self._rulesCache;
+            }).catch(function(err) {
+                // Сервер не поддерживает getValidationRules — тихо пропускаем,
+                // валидация soft-confirm будет недоступна (только hard-block
+                // на клиенте и независимая серверная).
+                return null;
+            });
+        },
+
+        // Task 199: получить последнюю запись архива (для DUPLICATE).
+        // Берём из кэша архива (loadArchive сохраняет в localStorage).
+        _getLastArchiveForValidation: function(meterId, meter) {
+            var cached = this._restoreArchiveCache(meterId);
+            if (cached && cached.length > 0) {
+                // Архив отсортирован новейшие-первыми в listArchive.
+                // Кэш сохраняется в этом же порядке.
+                var last = cached[0];
+                // author: из meter.modName (текущий автор последних показаний)
+                return {
+                    prev: last.prev,
+                    curr: last.curr,
+                    modName: meter ? meter.modName : (last.modName || ''),
+                    timestamp: last.timestamp
+                };
+            }
+            return null;
+        },
+
+        // Task 199: показать модалку аномалий
+        _showAnomalyModal: function(meter, codes) {
+            // Удалить старую модалку если есть
+            var old = document.getElementById('flowAnomalyModal');
+            if (old) old.remove();
+            var html = flowBuildAnomalyModalHtml(meter, codes);
+            var container = document.createElement('div');
+            container.innerHTML = html;
+            document.body.appendChild(container.firstChild);
+        },
+
+        // Task 199: пользователь нажал «Отменить» в модалке
+        cancelAnomalyModal: function() {
+            var modal = document.getElementById('flowAnomalyModal');
+            if (modal) modal.remove();
+            this._pendingApiPayload = null;
+            this._pendingAnomalyCodes = null;
+            // Оптимистичное обновление UI нужно откатить
+            this.load();
+        },
+
+        // Task 199: пользователь нажал «Сохранить с пометкой»
+        confirmAnomalyModal: function() {
+            var modal = document.getElementById('flowAnomalyModal');
+            if (modal) modal.remove();
+            if (!this._pendingApiPayload) return;
+            var payload = this._pendingApiPayload;
+            var isEdit = !!payload.isEdit;
+            this._pendingApiPayload = null;
+            this._pendingAnomalyCodes = null;
+            this._sendUpdateReading(payload, isEdit);
+        },
+
+        // Task 199: фактическая отправка updateReading на сервер
+        // (используется и при отсутствии аномалий, и после confirm)
+        _sendUpdateReading: function(apiPayload, isEdit) {
+            var self = this;
+            this._api('flowmeter.updateReading', apiPayload).then(function(res) {
+                if (res && res.ok === false) {
+                    // Task 108/199: серверная ошибка (edit_window_expired /
+                    // not_your_input / sign_neg / date_inconsistent / ...)
+                    var msg = res.message || res.error || 'Ошибка сохранения';
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show(msg);
+                    }
+                    setTimeout(function() { self.load(); }, 200);
+                } else {
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show(isEdit ? 'Показания изменены' : 'Показания сохранены');
+                    }
+                    setTimeout(function() { self.load(); }, 200);
+                }
+            }).catch(function(err) {
+                console.error('flowmeter.updateReading:', err);
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Ошибка сохранения: ' + (err.message || 'сеть'));
+                }
+            });
         },
 
         // ============================================================
@@ -31586,6 +32013,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (hasAnyComment) {
                 html += '<th>Комментарий</th>';
             }
+            // Task 199: колонка «Аномалии» — если хоть в одной записи есть anomaly
+            var hasAnyAnomaly = false;
+            for (var ka = 0; ka < displayRecords.length; ka++) {
+                if (displayRecords[ka].anomaly && String(displayRecords[ka].anomaly).trim() !== '') {
+                    hasAnyAnomaly = true;
+                    break;
+                }
+            }
+            if (hasAnyAnomaly) {
+                html += '<th>⚠</th>';
+            }
             html += '<th>Внёс</th>';
             html += '</tr></thead>';
             html += '<tbody>';
@@ -31612,6 +32050,30 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var cmtStr = (r.comment && String(r.comment).trim() !== '')
                         ? String(r.comment).trim() : '—';
                     html += '<td class="flow-archive-comment">' + this._esc(cmtStr) + '</td>';
+                }
+                // Task 199: флаги аномалий — значки с кодами
+                if (hasAnyAnomaly) {
+                    var anStr = (r.anomaly && String(r.anomaly).trim() !== '')
+                        ? String(r.anomaly).trim() : '';
+                    if (anStr) {
+                        // Парсим формат «CODE1: detail; CODE2: detail; ...»
+                        var parts = anStr.split(';');
+                        var badges = '';
+                        for (var p = 0; p < parts.length; p++) {
+                            var part = parts[p].trim();
+                            if (!part) continue;
+                            var colonIdx = part.indexOf(':');
+                            var code = colonIdx > 0 ? part.substring(0, colonIdx).trim() : part;
+                            var detail = colonIdx > 0 ? part.substring(colonIdx + 1).trim() : '';
+                            badges += '<span class="flow-anomaly-badge">' + this._esc(code) + '</span>';
+                            if (detail) {
+                                badges += '<span class="flow-anomaly-badge-detail">' + this._esc(detail) + '</span>';
+                            }
+                        }
+                        html += '<td class="flow-archive-anomaly">' + badges + '</td>';
+                    } else {
+                        html += '<td class="flow-archive-anomaly">—</td>';
+                    }
                 }
                 var modStr = r.modName || r.modRole || '';
                 html += '<td class="flow-archive-mod">' + this._esc(modStr) + '</td>';
