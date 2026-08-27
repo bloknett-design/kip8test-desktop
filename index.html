@@ -32002,28 +32002,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (showGcalCol) {
                 html += '<th>Гкал</th>';
             }
-            // Task 197: колонка «Комментарий» — если хоть в одной записи есть comment
-            var hasAnyComment = false;
-            for (var k = 0; k < displayRecords.length; k++) {
-                if (displayRecords[k].comment && String(displayRecords[k].comment).trim() !== '') {
-                    hasAnyComment = true;
-                    break;
-                }
-            }
-            if (hasAnyComment) {
-                html += '<th>Комментарий</th>';
-            }
-            // Task 199: колонка «Аномалии» — если хоть в одной записи есть anomaly
-            var hasAnyAnomaly = false;
-            for (var ka = 0; ka < displayRecords.length; ka++) {
-                if (displayRecords[ka].anomaly && String(displayRecords[ka].anomaly).trim() !== '') {
-                    hasAnyAnomaly = true;
-                    break;
-                }
-            }
-            if (hasAnyAnomaly) {
-                html += '<th>⚠</th>';
-            }
+            // Task 197: колонка «Комментарий» — показываем всегда (Task 199.2)
+            // (раньше скрывалась, если ни в одной записи нет комментария)
+            html += '<th>Комментарий</th>';
+            // Task 199: колонка «Замечания» — показываем всегда (Task 199.2)
+            // (раньше скрывалась, если ни в одной записи нет anomaly)
+            html += '<th>⚠ Замечания</th>';
             html += '<th>Внёс</th>';
             html += '</tr></thead>';
             html += '<tbody>';
@@ -32045,35 +32029,31 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var gcalStr = (r.gcal !== null && r.gcal !== undefined) ? r.gcal.toFixed(3).replace('.', ',') : '—';
                     html += '<td class="flow-archive-gcal">' + gcalStr + '</td>';
                 }
-                // Task 197: комментарий к этой архивной записи
-                if (hasAnyComment) {
-                    var cmtStr = (r.comment && String(r.comment).trim() !== '')
-                        ? String(r.comment).trim() : '—';
-                    html += '<td class="flow-archive-comment">' + this._esc(cmtStr) + '</td>';
-                }
-                // Task 199: флаги аномалий — значки с кодами
-                if (hasAnyAnomaly) {
-                    var anStr = (r.anomaly && String(r.anomaly).trim() !== '')
-                        ? String(r.anomaly).trim() : '';
-                    if (anStr) {
-                        // Парсим формат «CODE1: detail; CODE2: detail; ...»
-                        var parts = anStr.split(';');
-                        var badges = '';
-                        for (var p = 0; p < parts.length; p++) {
-                            var part = parts[p].trim();
-                            if (!part) continue;
-                            var colonIdx = part.indexOf(':');
-                            var code = colonIdx > 0 ? part.substring(0, colonIdx).trim() : part;
-                            var detail = colonIdx > 0 ? part.substring(colonIdx + 1).trim() : '';
-                            badges += '<span class="flow-anomaly-badge">' + this._esc(code) + '</span>';
-                            if (detail) {
-                                badges += '<span class="flow-anomaly-badge-detail">' + this._esc(detail) + '</span>';
-                            }
+                // Task 197: комментарий к этой архивной записи (колонка видна всегда)
+                var cmtStr = (r.comment && String(r.comment).trim() !== '')
+                    ? String(r.comment).trim() : '—';
+                html += '<td class="flow-archive-comment">' + this._esc(cmtStr) + '</td>';
+                // Task 199: флаги аномалий — значки с кодами (колонка видна всегда)
+                var anStr = (r.anomaly && String(r.anomaly).trim() !== '')
+                    ? String(r.anomaly).trim() : '';
+                if (anStr) {
+                    // Парсим формат «CODE1: detail; CODE2: detail; ...»
+                    var parts = anStr.split(';');
+                    var badges = '';
+                    for (var p = 0; p < parts.length; p++) {
+                        var part = parts[p].trim();
+                        if (!part) continue;
+                        var colonIdx = part.indexOf(':');
+                        var code = colonIdx > 0 ? part.substring(0, colonIdx).trim() : part;
+                        var detail = colonIdx > 0 ? part.substring(colonIdx + 1).trim() : '';
+                        badges += '<span class="flow-anomaly-badge">' + this._esc(code) + '</span>';
+                        if (detail) {
+                            badges += '<span class="flow-anomaly-badge-detail">' + this._esc(detail) + '</span>';
                         }
-                        html += '<td class="flow-archive-anomaly">' + badges + '</td>';
-                    } else {
-                        html += '<td class="flow-archive-anomaly">—</td>';
                     }
+                    html += '<td class="flow-archive-anomaly">' + badges + '</td>';
+                } else {
+                    html += '<td class="flow-archive-anomaly">—</td>';
                 }
                 var modStr = r.modName || r.modRole || '';
                 html += '<td class="flow-archive-mod">' + this._esc(modStr) + '</td>';
