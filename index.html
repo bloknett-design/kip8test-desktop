@@ -4472,6 +4472,35 @@
     .ms-game-over-sub {
         font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 16px;
     }
+    /* ===== Task 192: счёт достижений — три последних результата ===== */
+    .ms-achievements { margin-top: 14px; }
+    .ms-ach-title {
+        display: flex; align-items: center; gap: 6px;
+        font-size: 12px; font-weight: 600; letter-spacing: 0.3px;
+        color: var(--text-secondary); margin-bottom: 8px;
+    }
+    .ms-ach-sub { font-weight: 400; color: var(--text-faint); }
+    .ms-ach-score {
+        margin-left: auto; padding: 1px 8px; border-radius: 8px;
+        font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+        background: rgba(74, 199, 113, 0.12); color: var(--accent-green);
+        border: 1px solid rgba(74, 199, 113, 0.25);
+    }
+    .ms-ach-row { display: flex; gap: 8px; }
+    .ms-ach-slot {
+        flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px;
+        padding: 8px 10px; border-radius: 10px;
+        background: var(--card-bg); border: 1px solid var(--card-border);
+    }
+    .ms-ach-slot.win { background: rgba(74, 199, 113, 0.08); border-color: rgba(74, 199, 113, 0.35); }
+    .ms-ach-slot.loss { background: rgba(199, 74, 74, 0.08); border-color: rgba(199, 74, 74, 0.35); }
+    .ms-ach-slot.empty { opacity: 0.45; }
+    .ms-ach-icon { font-size: 15px; line-height: 1; flex-shrink: 0; }
+    .ms-ach-diff { font-size: 12px; font-weight: 600; color: var(--text-primary); white-space: nowrap; }
+    .ms-ach-time {
+        margin-left: auto; font-size: 12px; color: var(--text-secondary);
+        font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
     /* ===== Placeholder button (раздел в разработке) ===== */
     .menu-btn-placeholder {
         opacity: 0.55;
@@ -7457,6 +7486,14 @@
     [data-theme="light"] .ms-game-over-text { color: #141413; }
     [data-theme="light"] .ms-hint { background: rgba(232,230,220,0.5); color: rgba(20,20,19,0.45); }
     [data-theme="light"] .ms-face-btn { background: rgba(255,255,255,0.5); border-color: rgba(20,20,19,0.12); }
+    /* Task 192: счёт достижений — светлая тема */
+    [data-theme="light"] .ms-ach-title { color: rgba(20,20,19,0.55); }
+    [data-theme="light"] .ms-ach-sub { color: rgba(20,20,19,0.35); }
+    [data-theme="light"] .ms-ach-slot { background: rgba(232,230,220,0.5); border-color: rgba(20,20,19,0.1); }
+    [data-theme="light"] .ms-ach-slot.win { background: rgba(74,199,113,0.1); border-color: rgba(74,199,113,0.4); }
+    [data-theme="light"] .ms-ach-slot.loss { background: rgba(199,74,74,0.08); border-color: rgba(199,74,74,0.4); }
+    [data-theme="light"] .ms-ach-diff { color: #141413; }
+    [data-theme="light"] .ms-ach-time { color: rgba(20,20,19,0.5); }
 
     @media (max-width: 400px) {
         .ms-board { padding: 4px; }
@@ -7465,10 +7502,13 @@
     /* Task 191: десктоп — компактное игровое поле по центру.
        Клетки ограничены 40px в msCalcCellSize(), поэтому контейнер
        ограничиваем по ширине и центрируем; touch-спейсер прокрутки
-       справа не нужен (мышь), поле центрируем в ряд. */
+       справа не нужен (мышь), поле центрируем в ряд.
+       Task 192: поля на десктопе горизонтальные (16x9, 28x9) — точную
+       ширину панели под сложность задаёт msApplyContainerWidth()
+       инлайн-стилем; 1240px — потолок для 28x9 при клетке 40px. */
     @media (min-width: 1024px) {
-        #page-minesweeper .ms-container { max-width: 520px; margin-left: auto; margin-right: auto; }
-        #page-minesweeper .ms-board-row { justify-content: center; }
+        #page-minesweeper .ms-container { max-width: 1240px; margin-left: auto; margin-right: auto; }
+        #page-minesweeper .ms-board-row { justify-content: center; overflow-x: auto; }
         #page-minesweeper .ms-board-scroll-spacer { display: none; }
     }
 
@@ -10109,6 +10149,11 @@
                         </div>
                     </div>
                     <div class="ms-board-scroll-spacer"></div>
+                </div>
+                <!-- Task 192: счёт достижений — три последних результата -->
+                <div class="ms-achievements">
+                    <div class="ms-ach-title">Достижения <span class="ms-ach-sub">· три последних результата</span><span class="ms-ach-score" id="msAchScore" style="display:none;"></span></div>
+                    <div class="ms-ach-row" id="msAchRow"></div>
                 </div>
                 <div class="ms-hint">Нажмите — открыть клетку · Долгое нажатие — поставить флаг</div>
             </div>
@@ -12821,6 +12866,8 @@
 
     // ======================== ИГРА САПЁР ========================
     let msCols = 9, msRows = 9, msMines = 10;
+    let msCurrentDiff = 'easy';    // Task 192: активная сложность
+    let msLayoutWasDesktop = null; // Task 192: ориентация поля при прошлом рендере
     let msBoard = [], msRevealed = [], msFlagged = [], msGameOver = false, msFirstClick = true;
     let msTimerInterval = null, msSeconds = 0;
     let msLongPressTimer = null, msLongPressFired = false;
@@ -12831,16 +12878,55 @@
         hard: { cols: 9, rows: 28, mines: 45 }
     };
 
-    function msSetDifficulty(diff) {
+    // Task 192: десктопный лейаут (>= 1024px) — игровые поля
+    // горизонтальные; на мобильном/планшете — вертикальные, как раньше
+    function msIsDesktopLayout() {
+        return window.innerWidth >= 1024;
+    }
+
+    // Task 192: эффективные размеры поля — на десктопе medium/hard
+    // разворачиваются горизонтально (16x9, 28x9), easy остаётся квадратом
+    function msEffectiveDims(diff) {
+        const d = msDifficulties[diff] || msDifficulties.easy;
+        if (msIsDesktopLayout() && d.rows > d.cols) {
+            return { cols: d.rows, rows: d.cols, mines: d.mines };
+        }
+        return { cols: d.cols, rows: d.rows, mines: d.mines };
+    }
+
+    // Task 192: подпись сложности в селекторе — «ширина x высота»
+    // текущей ориентации: на десктопе «16x9» / «28x9», на мобильном «9x16» / «9x28»
+    function msDiffLabel(diff) {
         const d = msDifficulties[diff];
-        if (!d) return;
-        msCols = d.cols; msRows = d.rows; msMines = d.mines;
+        if (!d) return '';
+        const w = msIsDesktopLayout() ? Math.max(d.cols, d.rows) : d.cols;
+        const h = msIsDesktopLayout() ? Math.min(d.cols, d.rows) : d.rows;
+        return w + 'x' + h;
+    }
+
+    // Task 192: обновить подписи сложностей в селекторе под ориентацию
+    function msUpdateDiffLabels() {
+        const sel = document.getElementById('msDiffSelect');
+        if (!sel) return;
+        Object.keys(msDifficulties).forEach(function (k) {
+            const opt = sel.querySelector('option[value="' + k + '"]');
+            if (opt) opt.textContent = msDiffLabel(k);
+        });
+    }
+
+    function msSetDifficulty(diff) {
+        if (!msDifficulties[diff]) return;
+        msCurrentDiff = diff;
         const sel = document.getElementById('msDiffSelect');
         if (sel) sel.value = diff;
         msInit();
     }
 
     function msInit() {
+        // Task 192: размеры поля зависят от ориентации (десктоп — горизонталь)
+        const dims = msEffectiveDims(msCurrentDiff);
+        msCols = dims.cols; msRows = dims.rows; msMines = dims.mines;
+        msLayoutWasDesktop = msIsDesktopLayout();
         msBoard = []; msRevealed = []; msFlagged = [];
         msGameOver = false; msFirstClick = true; msSeconds = 0;
         if (msTimerInterval) { clearInterval(msTimerInterval); msTimerInterval = null; }
@@ -12855,6 +12941,10 @@
                 msBoard[r][c] = 0; msRevealed[r][c] = false; msFlagged[r][c] = false;
             }
         }
+        msUpdateDiffLabels();    // Task 192: подписи под ориентацию
+        msApplyContainerWidth(); // Task 192: ширина панели под поле
+        msRenderAchievements();  // Task 192: счёт достижений
+        msUpdateHint();          // Task 192: подсказка под устройство (мышь/тач)
         msRender();
     }
 
@@ -12883,7 +12973,10 @@
         }
     }
 
-    function msCalcCellSize() {
+    function msCalcCellSize(colsParam) {
+        // Task 192: количество колонок можно передать явно (для тестов и
+        // расчёта ширины панели); по умолчанию — активные msCols
+        const cols = (typeof colsParam === 'number' && colsParam > 0) ? colsParam : msCols;
         const isDesktop = window.innerWidth >= 1024; // Task 191: десктопный лейаут
         const containerPad = 32;  // ms-container: padding 10px*2 + margin
         const boardPad = window.innerWidth <= 400 ? 8 : 16; // ms-board padding 4px*2 or 8px*2
@@ -12896,11 +12989,38 @@
         const msPage = document.getElementById('page-minesweeper');
         if (msPage && msPage.clientWidth > 0) baseW = msPage.clientWidth;
         const availW = baseW - containerPad - boardPad - scrollSpace;
-        let cellSz = Math.floor((availW - (msCols - 1) * gapSize) / msCols);
+        let cellSz = Math.floor((availW - (cols - 1) * gapSize) / cols);
         // Task 191: на десктопе ограничиваем клетку сверху (40px), иначе поле
         // растягивается почти на весь экран и выглядит гигантским
         if (isDesktop && cellSz > 40) cellSz = 40;
         return Math.max(cellSz, 20); // minimum 20px for tappability
+    }
+
+    // Task 192: ширина панели игры на десктопе — под фактическую ширину
+    // горизонтального поля при клетке 40px (9x9 → 520px, 16x9 → ~710px,
+    // 28x9 → ~1225px). На мобильном инлайн-ширина сбрасывается — там панель
+    // и так на всю ширину экрана.
+    function msApplyContainerWidth() {
+        const cont = document.querySelector('#page-minesweeper .ms-container');
+        if (!cont) return;
+        if (msIsDesktopLayout()) {
+            const gapSize = 2;
+            // клетка 40px + гэпы + паддинги доски (8px*2 + border 1px*2) и панели (16px*2)
+            const w = msCols * 40 + (msCols - 1) * gapSize + 18 + 32;
+            cont.style.maxWidth = Math.max(w, 520) + 'px';
+        } else {
+            cont.style.maxWidth = '';
+        }
+    }
+
+    // Task 192: подсказка управления под устройство: на десктопе флаг —
+    // правый клик мышью, на тач-устройстве — долгое нажатие
+    function msUpdateHint() {
+        const hint = document.querySelector('#page-minesweeper .ms-hint');
+        if (!hint) return;
+        hint.textContent = msIsDesktopLayout()
+            ? 'Клик — открыть клетку · Правый клик — поставить флаг'
+            : 'Нажмите — открыть клетку · Долгое нажатие — поставить флаг';
     }
 
     function msRender() {
@@ -12983,7 +13103,14 @@
 
     // Recalculate cell sizes on resize/orientation change
     window.addEventListener('resize', function() {
-        if (document.getElementById('page-minesweeper').classList.contains('active')) {
+        const page = document.getElementById('page-minesweeper');
+        if (!page || !page.classList.contains('active')) return;
+        // Task 192: при переходе десктоп↔мобиль поле меняет ориентацию —
+        // перезапускаем игру с новыми размерами (транспонировать живое поле
+        // нельзя), иначе просто пересчитываем размер клеток
+        if (msLayoutWasDesktop !== null && msIsDesktopLayout() !== msLayoutWasDesktop) {
+            msInit();
+        } else {
             msRender();
         }
     });
@@ -13079,6 +13206,81 @@
             sub.textContent = 'Попробуйте ещё раз';
         }
         overlay.style.display = 'flex';
+        // Task 192: фиксируем завершённую игру в счёте достижений
+        msRecordResult(won, msSeconds, msCurrentDiff);
+        msRenderAchievements();
+    }
+
+    // ===== Task 192: счёт достижений — три последних результата =====
+    // Хранится в localStorage (в тестовом репо ключ автоматически получает
+    // префикс kip8test: через isolateLocalStorage). Каждый слот — победа /
+    // взрыв + время партии + сложность. Отображаются хронологически слева
+    // направо: самый свежий результат — справа, старые вытесняются.
+    const MS_RESULTS_KEY = 'msRecentResults';
+    const MS_RESULTS_MAX = 3;
+
+    function msLoadResults() {
+        try {
+            const raw = localStorage.getItem(MS_RESULTS_KEY);
+            const arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr.slice(-MS_RESULTS_MAX) : [];
+        } catch (e) { return []; }
+    }
+
+    function msSaveResults(arr) {
+        try {
+            localStorage.setItem(MS_RESULTS_KEY, JSON.stringify(arr.slice(-MS_RESULTS_MAX)));
+        } catch (e) { /* приватный режим — счёт просто не сохранится */ }
+    }
+
+    // Записывает завершённую партию (победа/взрыв, секунды, сложность),
+    // оставляет только MS_RESULTS_MAX последних. Возвращает итоговый список.
+    function msRecordResult(won, seconds, diff) {
+        const arr = msLoadResults();
+        arr.push({
+            won: !!won,
+            time: Math.max(0, seconds | 0),
+            diff: msDifficulties[diff] ? diff : msCurrentDiff,
+            ts: Date.now()
+        });
+        msSaveResults(arr);
+        return msLoadResults();
+    }
+
+    // Рендер счёта: 3 слота (победа — зелёный, взрыв — красный,
+    // пустой — приглушённый) + бейдж «победы/игры» в заголовке
+    function msRenderAchievements() {
+        const row = document.getElementById('msAchRow');
+        if (!row) return;
+        const results = msLoadResults();
+        const score = document.getElementById('msAchScore');
+        if (score) {
+            if (results.length) {
+                const wins = results.filter(function (r) { return r && r.won; }).length;
+                score.textContent = wins + '/' + results.length;
+                score.style.display = '';
+            } else {
+                score.style.display = 'none';
+            }
+        }
+        let html = '';
+        for (let i = 0; i < MS_RESULTS_MAX; i++) {
+            const r = results[i];
+            if (r) {
+                const cls = r.won ? 'win' : 'loss';
+                const icon = r.won ? '🏆' : '💥';
+                html += '<div class="ms-ach-slot ' + cls + '">' +
+                    '<span class="ms-ach-icon">' + icon + '</span>' +
+                    '<span class="ms-ach-diff">' + msDiffLabel(r.diff) + '</span>' +
+                    '<span class="ms-ach-time">' + r.time + ' с</span></div>';
+            } else {
+                html += '<div class="ms-ach-slot empty">' +
+                    '<span class="ms-ach-icon">·</span>' +
+                    '<span class="ms-ach-diff">—</span>' +
+                    '<span class="ms-ach-time">—</span></div>';
+            }
+        }
+        row.innerHTML = html;
     }
 
     // ===== СЕКРЕТНЫЕ КНОПКИ (САПЁР + ТЕЛЕФОННЫЙ СПРАВОЧНИК) =====
