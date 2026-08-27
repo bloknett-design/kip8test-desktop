@@ -3256,6 +3256,77 @@
     [data-theme="light"] .flow-detail-curr { color: #1a5a8a; }
     /* Подсветка строки «Расход» — фон и лейбл как у обычной строки, зелёным только значение */
     .flow-detail-highlight .flow-detail-value { color: #5ab870; font-weight: 700; }
+    /* ========== Task 195: комментарий к последним показаниям ========== */
+    /* Шапка строки «Последние показания»: label слева, кнопка комментария справа */
+    .flow-detail-row-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+    .flow-detail-row-head .flow-detail-label { margin-bottom: 0; }
+    /* Кнопка ввода комментария — видна только автору последних показаний */
+    .flow-comment-btn {
+        flex-shrink: 0;
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 30px; height: 30px; padding: 0;
+        border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
+        background: rgba(255,255,255,0.05);
+        color: rgba(200,180,170,0.55);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: all 0.15s;
+    }
+    .flow-comment-btn svg { width: 15px; height: 15px; }
+    .flow-comment-btn:active { transform: scale(0.92); }
+    .flow-comment-btn.has-comment {
+        color: #c87048;
+        border-color: rgba(200,112,72,0.45);
+        background: rgba(200,112,72,0.12);
+    }
+    [data-theme="light"] .flow-comment-btn {
+        border-color: rgba(0,0,0,0.15);
+        background: rgba(0,0,0,0.03);
+        color: rgba(20,20,19,0.5);
+    }
+    [data-theme="light"] .flow-comment-btn.has-comment {
+        color: #a05a34;
+        border-color: rgba(200,112,72,0.45);
+        background: rgba(200,112,72,0.10);
+    }
+    /* Подстрока комментария — видна всем пользователям раздела */
+    .flow-detail-comment-row .flow-detail-value { font-size: 15px; }
+    .flow-comment-local {
+        font-size: 12px; font-style: italic;
+        color: var(--text-secondary);
+        white-space: nowrap;
+    }
+    /* Sheet ввода комментария (по паттерну flow-input-sheet) */
+    .flow-comment-field {
+        width: 100%; min-height: 100px; padding: 12px 14px;
+        resize: vertical;
+        border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+        background: rgba(255,255,255,0.05);
+        color: var(--text-primary); font-size: 16px;
+        font-family: 'Inter', sans-serif; line-height: 1.45;
+        box-sizing: border-box; outline: none;
+        transition: border-color 0.15s;
+    }
+    .flow-comment-field:focus { border-color: #6aa6e0; }
+    [data-theme="light"] .flow-comment-field { border-color: rgba(0,0,0,0.15); background: rgba(0,0,0,0.03); }
+    .flow-comment-counter {
+        font-size: 11px; color: var(--text-secondary);
+        text-align: right; margin-top: 4px;
+    }
+    .flow-comment-delete {
+        display: block; width: 100%; padding: 12px; margin-top: 8px;
+        border: none; background: transparent;
+        font-size: 14px; color: #e07a7a;
+        font-family: 'Inter', sans-serif; cursor: pointer;
+        text-align: center;
+        -webkit-tap-highlight-color: transparent;
+    }
+    [data-theme="light"] .flow-comment-delete { color: #b04a4a; }
     /* [data-theme="light"] .flow-card — убрано: зебра задана выше */
     [data-theme="light"] .flow-sheet-link { background: rgba(74,143,199,0.06); border-color: rgba(74,143,199,0.15); }
     /* [data-theme="light"] .flow-card:active — убрано: задано выше */
@@ -12505,6 +12576,20 @@
     <button type="button" class="flow-input-cancel" onclick="FlowmeterData.closeInput()">Отмена</button>
 </div>
 
+<!-- Task 195: sheet ввода комментария к последним показаниям.
+     Кнопка открытия есть только у автора последних показаний;
+     комментарий виден всем, пока другой пользователь не внесёт новые данные. -->
+<div id="flowCommentOverlay" class="pin-sheet-overlay" onclick="FlowmeterData.closeComment()"></div>
+<div id="flowCommentSheet" class="flow-input-sheet">
+    <div class="flow-input-sheet-handle"></div>
+    <div class="flow-input-sheet-title" id="flowCommentTitle">Комментарий к показаниям</div>
+    <textarea id="flowCommentField" class="flow-comment-field" rows="4" maxlength="500" placeholder="Пояснение к последним показаниям (необязательно)" autocomplete="off" oninput="FlowmeterData._updateCommentCounter()"></textarea>
+    <div class="flow-comment-counter" id="flowCommentCounter">0 / 500</div>
+    <button type="button" class="flow-input-submit" onclick="FlowmeterData.submitComment()">Сохранить</button>
+    <button type="button" class="flow-comment-delete" id="flowCommentDelete" style="display:none;" onclick="FlowmeterData.deleteComment()">Удалить комментарий</button>
+    <button type="button" class="flow-input-cancel" onclick="FlowmeterData.closeComment()">Отмена</button>
+</div>
+
 <script>
     // ============================================================
     // ELECTRON: ПРИНУДИТЕЛЬНЫЙ ДЕСКТОПНЫЙ РЕЖИМ (Task 131)
@@ -20442,6 +20527,17 @@
                 if (_flowOverlay) _flowOverlay.classList.remove('active');
             }
         }
+        // Task 195: комментарий к показаниям — тот же сценарий, что и Task 105.
+        var _flowCommentSheet = document.getElementById('flowCommentSheet');
+        if (_flowCommentSheet && _flowCommentSheet.classList.contains('active')) {
+            if (typeof FlowmeterData !== 'undefined' && FlowmeterData.closeComment) {
+                FlowmeterData.closeComment();
+            } else {
+                _flowCommentSheet.classList.remove('active');
+                var _flowCommentOverlay = document.getElementById('flowCommentOverlay');
+                if (_flowCommentOverlay) _flowCommentOverlay.classList.remove('active');
+            }
+        }
         // Проверка доступа (если KipAuth инициализирован).
         if (typeof KipAuth !== 'undefined' && KipAuth._cachedRole && !KipAuth.canAccess(page)) {
             KipAuth._showNoAccess(page);
@@ -22037,6 +22133,13 @@
 
     // Обработчик системной кнопки «Назад»
     window.addEventListener('popstate', function(e) {
+        // Если открыт sheet комментария к показаниям — закрыть без сохранения (Task 195)
+        var flowCommentSheet = document.getElementById('flowCommentSheet');
+        if (flowCommentSheet && flowCommentSheet.classList.contains('active')) {
+            FlowmeterData.closeComment();
+            history.pushState({ page: e.state ? e.state.page : 'dashboard' }, '', location.hash || '#dashboard');
+            return;
+        }
         // Если открыта форма ввода показаний расходомера — закрыть её без сохранения (Task 104)
         var flowInputSheet = document.getElementById('flowInputSheet');
         if (flowInputSheet && flowInputSheet.classList.contains('active')) {
@@ -30062,6 +30165,102 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         }
     };
 
+    // ============================================================
+    // Task 195: комментарий к «Последним показаниям» расходомера.
+    //
+    // Правила (по требованию):
+    //   • кнопка ввода комментария (в правой части строки «Последние
+    //     показания» детальной карточки) видна ТОЛЬКО пользователю,
+    //     который ввёл последние показания (автору, m.modName);
+    //   • автор может добавить/изменить/удалить текстовый комментарий
+    //     к данным в любой момент — БЕЗ ограничения по времени
+    //     (в отличие от правки показаний, где окно 1 час);
+    //   • возможность длится, пока последний ввод показаний остаётся
+    //     за этим пользователем: как только другой пользователь внёс
+    //     новые показания — кнопка исчезает, а комментарий к прежним
+    //     показаниям очищается (сервер: updateReading при смене автора);
+    //   • сам комментарий (строка «Комментарий» под показаниями) виден
+    //     ВСЕМ пользователям раздела — это пояснение к данным.
+    //
+    // Хранение — двухуровневое:
+    //   1. Сервер (основной): столбец O «comment» листа hozraschet_meters,
+    //      эндпоинт flowmeter.setComment (см. scripts/Flowmeter.gs, Task 195).
+    //      Валидация авторства — на сервере (not_your_input).
+    //   2. localStorage (fallback): если серверный патч ещё не задеплоен
+    //      (ответ «Unknown action»), комментарий сохраняется локально
+    //      в kip8_flow_comments_v1 и виден только на устройстве автора
+    //      (с пометкой). При успешной серверной записи локальная копия
+    //      удаляется; при смене автора показаний — устаревает и удаляется.
+    // ============================================================
+
+    /** Право комментирования: текущий пользователь — автор последних
+     *  показаний (сравнение email без учёта регистра/пробелов). */
+    function flowCanComment(m, userEmail) {
+        if (!m || !m.modName) return false;
+        if (!userEmail) return false;
+        return String(m.modName).toLowerCase().trim() === String(userEmail).toLowerCase().trim();
+    }
+
+    /** Текст комментария к показаниям для отображения.
+     *  Приоритет: серверное поле m.comment → локальный fallback.
+     *  localComments — карта { meterId: { text, ts } } или null.
+     *  Локальные комментарии показываются только автору (передавать
+     *  карту лишь когда flowCanComment === true). */
+    function flowCommentText(m, localComments) {
+        if (m && m.comment !== undefined && m.comment !== null &&
+            String(m.comment).trim() !== '') {
+            return String(m.comment).trim();
+        }
+        if (m && localComments) {
+            var e = localComments[String(m.id)];
+            if (e && e.text && String(e.text).trim() !== '') {
+                return String(e.text).trim();
+            }
+        }
+        return '';
+    }
+
+    /** HTML кнопки комментария для шапки строки «Последние показания»
+     *  (только автору показаний; при наличии комментария — подсвечена). */
+    function flowBuildCommentBtnHtml(m, userEmail, commentText) {
+        if (!flowCanComment(m, userEmail)) return '';
+        var has = !!(commentText && String(commentText).trim() !== '');
+        var label = has ? 'Изменить комментарий к показаниям' : 'Добавить комментарий к показаниям';
+        var svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+        return '<button type="button" class="flow-comment-btn' + (has ? ' has-comment' : '') + '" ' +
+               'onclick="event.stopPropagation(); FlowmeterData.openComment()" ' +
+               'aria-label="' + label + '" title="' + label + '">' + svg + '</button>';
+    }
+
+    /** HTML подстроки «Комментарий» (видна всем пользователям раздела).
+     *  isLocal=true — пометка «только на этом устройстве» (fallback,
+     *  серверный патч Task 195 ещё не задеплоен). */
+    function flowBuildCommentRowHtml(commentText, isLocal) {
+        var t = commentText ? String(commentText).trim() : '';
+        if (!t) return '';
+        var localMark = isLocal
+            ? ' <span class="flow-comment-local">· только на этом устройстве</span>'
+            : '';
+        return '<div class="flow-detail-row flow-detail-comment-row">' +
+               '<span class="flow-detail-label" style="color:#7a8fa6;">Комментарий</span>' +
+               '<span class="flow-detail-value flow-comment-text">' + escHtml(t) + localMark + '</span>' +
+               '</div>';
+    }
+
+    /** Fallback-хранилище комментариев (localStorage, ключ kip8_flow_comments_v1).
+     *  Используется только пока серверный патч Task 195 не задеплоен. */
+    function flowLocalCommentsLoad() {
+        try {
+            var raw = localStorage.getItem('kip8_flow_comments_v1');
+            var parsed = raw ? JSON.parse(raw) : {};
+            return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
+        } catch (e) { return {}; }
+    }
+
+    function flowLocalCommentsSave(map) {
+        try { localStorage.setItem('kip8_flow_comments_v1', JSON.stringify(map || {})); } catch (e) { /* quota */ }
+    }
+
     var FlowmeterData = {
         _GOOGLE_SHEET_URL: 'https://docs.google.com/spreadsheets/d/1enZSq7K8pwJVzaAI_tbXZtvATqARTxH0lSU4c-wc1eY/edit?usp=sharing',
 
@@ -30081,6 +30280,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Флаг: данные загружены с сервера (true) или это fallback
         _loaded: false,
+
+        // Task 195: ленивый кэш fallback-комментариев (localStorage),
+        // используется пока серверный патч flowmeter.setComment не задеплоен
+        _localComments: null,
 
         // 12 позиций хозрасчётных расходомеров
         // Заполняются из data/flowmeters.json (_loadFallback),
@@ -30619,8 +30822,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             // Предыдущие показания
             html += '<div class="flow-detail-row"><span class="flow-detail-label">Предыдущие показания</span><span class="flow-detail-value">' + this._fmtNum(m.prev) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.datePrev) + ' г.</span></span></div>';
-            // Последние показания
-            html += '<div class="flow-detail-row"><span class="flow-detail-label">Последние показания</span><span class="flow-detail-value flow-detail-curr">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.dateCurr) + ' г.</span></span></div>';
+
+            // Task 195: последние показания + кнопка комментария в правой части
+            // строки (видна только автору показаний) + подстрока комментария (всем).
+            var canComment = flowCanComment(m, (typeof KipAuth !== 'undefined' ? KipAuth._cachedEmail : null));
+            // Локальные fallback-комментарии показываем только автору
+            var commentText = flowCommentText(m, canComment ? this._getLocalComments() : null);
+            var isLocalComment = !!commentText &&
+                !(m.comment !== undefined && m.comment !== null && String(m.comment).trim() !== '');
+            var commentBtnHtml = flowBuildCommentBtnHtml(m, (typeof KipAuth !== 'undefined' ? KipAuth._cachedEmail : null), commentText);
+            html += '<div class="flow-detail-row">' +
+                '<div class="flow-detail-row-head"><span class="flow-detail-label">Последние показания</span>' + commentBtnHtml + '</div>' +
+                '<span class="flow-detail-value flow-detail-curr">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.dateCurr) + ' г.</span></span>' +
+                '</div>';
+            // Комментарий к показаниям — виден всем пользователям раздела
+            html += flowBuildCommentRowHtml(commentText, isLocalComment);
             // Расход
             html += '<div class="flow-detail-row flow-detail-highlight"><span class="flow-detail-label">Расход</span><span class="flow-detail-value">' + consStr + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> за ' + this._daysBetween(m.datePrev, m.dateCurr) + ' дн.</span></span></div>';
 
@@ -30682,6 +30898,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (this._METERS[i].id === id) { m = this._METERS[i]; break; }
             }
             if (!m) return;
+
+            // Task 195: если показания теперь за другим пользователем —
+            // локальный fallback-комментарий устарел, удалить его
+            this._pruneStaleLocalComment(m);
 
             window._flowDetailId = id;
 
@@ -30774,6 +30994,151 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var elapsedMin = (Date.now() - ts.getTime()) / 1000 / 60;
                 return elapsedMin <= 60;
             } catch(e) { return false; }
+        },
+
+        // ============================================================
+        // Task 195: комментарий к последним показаниям
+        // ============================================================
+
+        // Ленивая загрузка fallback-комментариев из localStorage
+        _getLocalComments: function() {
+            if (this._localComments === null) {
+                this._localComments = flowLocalCommentsLoad();
+            }
+            return this._localComments;
+        },
+
+        // Удалить локальный fallback-комментарий, если авторство показаний
+        // сменилось (другой пользователь внёс новые данные — срок истёк)
+        _pruneStaleLocalComment: function(m) {
+            if (!m) return;
+            var map = this._getLocalComments();
+            var key = String(m.id);
+            if (map.hasOwnProperty(key) && !flowCanComment(m, (typeof KipAuth !== 'undefined' ? KipAuth._cachedEmail : null))) {
+                delete map[key];
+                flowLocalCommentsSave(map);
+                this._localComments = map;
+            }
+        },
+
+        // Открыть sheet ввода комментария (только автор последних показаний)
+        openComment: function() {
+            var id = window._flowDetailId;
+            var m = null;
+            for (var i = 0; i < this._METERS.length; i++) {
+                if (this._METERS[i].id === id) { m = this._METERS[i]; break; }
+            }
+            if (!m) return;
+
+            var userEmail = (typeof KipAuth !== 'undefined' ? KipAuth._cachedEmail : null);
+            if (!flowCanComment(m, userEmail)) return;  // защита: только автор
+
+            var titleEl = document.getElementById('flowCommentTitle');
+            if (titleEl) titleEl.textContent = m.hoz + ' — комментарий к показаниям';
+
+            // Предзаполнение: серверный комментарий, иначе локальный fallback
+            var text = flowCommentText(m, this._getLocalComments());
+
+            var field = document.getElementById('flowCommentField');
+            if (field) field.value = text;
+            this._updateCommentCounter();
+
+            // Кнопка «Удалить» — только если комментарий уже есть
+            var delBtn = document.getElementById('flowCommentDelete');
+            if (delBtn) delBtn.style.display = text ? '' : 'none';
+
+            document.getElementById('flowCommentOverlay').classList.add('active');
+            document.getElementById('flowCommentSheet').classList.add('active');
+
+            var self = this;
+            setTimeout(function() { if (field) field.focus(); }, 350);
+        },
+
+        // Закрыть sheet комментария
+        closeComment: function() {
+            var field = document.getElementById('flowCommentField');
+            if (field) field.blur();
+            var overlay = document.getElementById('flowCommentOverlay');
+            var sheet = document.getElementById('flowCommentSheet');
+            if (overlay) overlay.classList.remove('active');
+            if (sheet) sheet.classList.remove('active');
+        },
+
+        // Счётчик символов (maxlength=500)
+        _updateCommentCounter: function() {
+            var field = document.getElementById('flowCommentField');
+            var counter = document.getElementById('flowCommentCounter');
+            if (field && counter) {
+                counter.textContent = field.value.length + ' / 500';
+            }
+        },
+
+        // Сохранить комментарий (пустой текст = удалить).
+        // Основной путь — сервер (flowmeter.setComment, валидация авторства
+        // на сервере). Если серверный патч Task 195 ещё не задеплоен
+        // («Unknown action») — fallback в localStorage (только это устройство).
+        submitComment: function() {
+            var id = window._flowDetailId;
+            var m = null;
+            for (var i = 0; i < this._METERS.length; i++) {
+                if (this._METERS[i].id === id) { m = this._METERS[i]; break; }
+            }
+            if (!m) return;
+
+            var userEmail = (typeof KipAuth !== 'undefined' ? KipAuth._cachedEmail : null);
+            if (!flowCanComment(m, userEmail)) return;
+
+            var field = document.getElementById('flowCommentField');
+            var text = field ? field.value.trim() : '';
+            if (text.length > 500) text = text.slice(0, 500);  // подстраховка
+
+            var self = this;
+
+            this._api('flowmeter.setComment', { id: id, comment: text }).then(function() {
+                // Успех: серверный комментарий; локальную копию убрать
+                m.comment = text;
+                var map = self._getLocalComments();
+                if (map.hasOwnProperty(String(id))) {
+                    delete map[String(id)];
+                    flowLocalCommentsSave(map);
+                }
+                self.closeComment();
+                self.renderList();
+                self.openDetail(id, false);  // перерендер карточки без pushState
+                try { showToast(text ? 'Комментарий сохранён' : 'Комментарий удалён'); } catch (e) {}
+            }).catch(function(err) {
+                var msg = (err && err.message) ? String(err.message) : '';
+                if (msg.indexOf('Unknown action') !== -1) {
+                    // Серверный патч Task 195 не задеплоен → локальный fallback
+                    var map = self._getLocalComments();
+                    if (text) {
+                        map[String(id)] = { text: text, ts: new Date().toISOString() };
+                    } else {
+                        delete map[String(id)];
+                    }
+                    flowLocalCommentsSave(map);
+                    self.closeComment();
+                    self.renderList();
+                    self.openDetail(id, false);
+                    try { showToast(text
+                        ? 'Сохранено только на этом устройстве (сервер без поддержки комментариев)'
+                        : 'Комментарий удалён'); } catch (e) {}
+                } else if (msg.indexOf('not_your_input') !== -1) {
+                    // Авторство показаний уже сменилось (кто-то внёс новые данные)
+                    try { showToast('Комментарий доступен только тому, кто вводил последние показания'); } catch (e) {}
+                    self.load();  // актуализировать данные и карточку
+                } else {
+                    // Сеть/сессия — sheet не закрываем, текст не теряется
+                    try { showToast('Ошибка сохранения: ' + (msg || 'сеть')); } catch (e) {}
+                }
+            });
+        },
+
+        // Удалить комментарий (кнопка «Удалить» в sheet)
+        deleteComment: function() {
+            var field = document.getElementById('flowCommentField');
+            if (field) field.value = '';
+            this.submitComment();
         },
 
         // Открыть sheet ввода новых показаний
