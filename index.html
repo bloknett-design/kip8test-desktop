@@ -3266,10 +3266,14 @@
     }
     .flow-detail-row-head .flow-detail-label { margin-bottom: 0; }
     /* Кнопка ввода комментария — видна автору последних показаний ИЛИ админу */
+    /* Task 198: margin-right:16px симметричен padding-left:16px строки
+       (.flow-detail-row), чтобы кнопка-значок имела такой же отступ от
+       правого края строки, как текст метки от левого. */
     .flow-comment-btn {
         flex-shrink: 0;
         display: inline-flex; align-items: center; justify-content: center;
         width: 30px; height: 30px; padding: 0;
+        margin-right: 16px;
         border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
         background: rgba(255,255,255,0.05);
         color: rgba(200,180,170,0.55);
@@ -30263,12 +30267,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
     /** HTML кнопки комментария для шапки строки «Последние показания»
      *  (автору показаний или админу; при наличии комментария — подсвечена).
-     *  userRole — опциональный 4-й параметр (для обратной совместимости). */
+     *  userRole — опциональный 4-й параметр (для обратной совместимости).
+     *
+     *  Task 198: внутрь иконки-пузыря добавлены три точки (заполненные
+     *  circle, fill=currentColor, без stroke) — обозначение «есть контент»
+     *  или «комментарий/обсуждение». Размер и положение точек: r=1.1, по
+     *  горизонтали cx=8/12/16, по вертикали cy=9 — примерно по центру
+     *  внутренней области пузыря (путь пузыря M21 15… охватывает y=1..17). */
     function flowBuildCommentBtnHtml(m, userEmail, commentText, userRole) {
         if (!flowCanComment(m, userEmail, userRole)) return '';
         var has = !!(commentText && String(commentText).trim() !== '');
         var label = has ? 'Изменить комментарий к показаниям' : 'Добавить комментарий к показаниям';
-        var svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+        var svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                  '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' +
+                  '<circle cx="8" cy="9" r="1.1" fill="currentColor" stroke="none"/>' +
+                  '<circle cx="12" cy="9" r="1.1" fill="currentColor" stroke="none"/>' +
+                  '<circle cx="16" cy="9" r="1.1" fill="currentColor" stroke="none"/>' +
+                  '</svg>';
         return '<button type="button" class="flow-comment-btn' + (has ? ' has-comment' : '') + '" ' +
                'onclick="event.stopPropagation(); FlowmeterData.openComment()" ' +
                'aria-label="' + label + '" title="' + label + '">' + svg + '</button>';
