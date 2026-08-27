@@ -3745,6 +3745,287 @@
        показывается только когда активна page-flowmeter-data.
        В режиме «Избранные» карточки можно перетаскивать (long-press 500ms + клон). */
 
+    /* === График работы: шахматка на месяц (Task 201) === */
+
+    /* Тулбар: месяц / год / кнопка «Сформировать» */
+    .ws-toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 12px;
+        background: var(--card-bg, rgba(30, 42, 56, 0.55));
+        border-bottom: 1px solid var(--card-border, rgba(255,255,255,0.06));
+    }
+    .ws-month-sel, .ws-year-sel {
+        background: var(--bg-tertiary, #0e1621);
+        color: var(--text-primary, #e0e0e0);
+        border: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 14px;
+        font-family: inherit;
+    }
+    .ws-generate-btn {
+        margin-left: auto;
+        background: var(--accent-blue, #4a8fc7);
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 6px 14px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .ws-generate-btn:active { opacity: 0.85; }
+
+    /* Контейнер шахматки — горизонтальный скролл */
+    .ws-grid-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 0 0 12px 0;
+    }
+    .ws-grid {
+        border-collapse: collapse;
+        font-size: 12px;
+        color: var(--text-primary, #e0e0e0);
+        width: max-content;
+        min-width: 100%;
+    }
+    .ws-grid thead th {
+        background: var(--bg-tertiary, #0e1621);
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+        padding: 6px 4px;
+        text-align: center;
+        font-weight: 600;
+        border-bottom: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+    .ws-grid thead th.ws-emp-col {
+        position: sticky;
+        left: 0;
+        z-index: 3;
+        text-align: left;
+        min-width: 130px;
+        max-width: 180px;
+        padding: 6px 10px;
+    }
+    .ws-grid thead th.ws-day-col {
+        min-width: 30px;
+        max-width: 36px;
+        white-space: nowrap;
+    }
+    .ws-grid thead th.ws-day-col.ws-holiday {
+        color: #ff8a8a;
+    }
+    .ws-grid thead th.ws-day-col .ws-dow {
+        display: block;
+        font-size: 9px;
+        color: var(--text-secondary, rgba(255,255,255,0.4));
+        font-weight: 400;
+    }
+    .ws-grid tbody td {
+        border: 1px solid var(--card-border, rgba(255,255,255,0.06));
+        padding: 0;
+        text-align: center;
+        vertical-align: middle;
+        height: 32px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: default;
+    }
+    .ws-grid tbody td.ws-emp-col {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background: var(--bg-tertiary, #0e1621);
+        text-align: left;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: default;
+    }
+    .ws-grid tbody td.ws-emp-col .ws-tab-no {
+        font-family: Consolas, monospace;
+        font-size: 11px;
+        color: var(--accent-blue, #4a8fc7);
+        margin-right: 6px;
+    }
+    .ws-grid tbody td.ws-cell {
+        cursor: pointer;
+    }
+    .ws-grid tbody td.ws-cell[data-editable="1"]:hover {
+        outline: 2px solid var(--accent-blue, #4a8fc7);
+        outline-offset: -2px;
+    }
+    /* Подсветка ячейки по источнику: ручные записи — рамка темнее */
+    .ws-grid tbody td.ws-cell.ws-source-manual {
+        box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    .ws-grid tbody td.ws-cell.ws-status-empty {
+        color: var(--text-secondary, rgba(255,255,255,0.25));
+    }
+
+    /* Легенда кодов под шахматкой */
+    .ws-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 8px;
+        padding: 8px 12px 16px;
+        font-size: 11px;
+        color: var(--text-secondary, rgba(255,255,255,0.6));
+    }
+    .ws-legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .ws-legend-swatch {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    /* Информационный блок в sheet правки ячейки */
+    .ws-cell-info {
+        font-size: 12px;
+        color: var(--text-secondary, rgba(255,255,255,0.6));
+        margin: 4px 0 10px;
+        padding: 6px 10px;
+        background: var(--bg-tertiary, rgba(14,22,33,0.5));
+        border-radius: 6px;
+    }
+
+    /* Список сотрудников */
+    .ws-employees-list, .ws-trainings-list {
+        padding: 8px 12px 80px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .ws-emp-card, .ws-tr-card {
+        background: var(--card-bg, rgba(30, 42, 56, 0.55));
+        border: 1px solid var(--card-border, rgba(255,255,255,0.06));
+        border-radius: 8px;
+        padding: 10px 12px;
+    }
+    .ws-emp-card-header {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+    .ws-emp-card .ws-tab-no {
+        font-family: Consolas, monospace;
+        color: var(--accent-blue, #4a8fc7);
+        font-weight: 700;
+        font-size: 13px;
+    }
+    .ws-emp-card .ws-fio {
+        color: var(--text-primary, #e0e0e0);
+        font-weight: 600;
+        font-size: 14px;
+    }
+    .ws-emp-card .ws-meta {
+        font-size: 12px;
+        color: var(--text-secondary, rgba(255,255,255,0.6));
+    }
+    .ws-emp-card .ws-meta .ws-tag {
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 3px;
+        background: rgba(74, 143, 199, 0.18);
+        color: var(--accent-blue, #4a8fc7);
+        margin-right: 6px;
+    }
+    .ws-emp-card .ws-meta .ws-tag.ws-tag-day {
+        background: rgba(255, 193, 7, 0.18);
+        color: #ffc107;
+    }
+
+    .ws-tr-card .ws-tr-type {
+        display: inline-block;
+        padding: 1px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        margin-right: 8px;
+    }
+    .ws-tr-card .ws-tr-type.ws-type-И { background: #B3E5FC; color: #01579b; }
+    .ws-tr-card .ws-tr-type.ws-type-ОБ { background: #D1C4E9; color: #4a148c; }
+    .ws-tr-card .ws-tr-type.ws-type-ПЗ { background: #FFCDD2; color: #b71c1c; }
+    .ws-tr-card .ws-tr-title {
+        color: var(--text-primary, #e0e0e0);
+        font-weight: 600;
+        font-size: 13px;
+        margin-bottom: 4px;
+    }
+    .ws-tr-card .ws-tr-meta {
+        font-size: 11px;
+        color: var(--text-secondary, rgba(255,255,255,0.6));
+    }
+    .ws-tr-delete-btn {
+        float: right;
+        background: transparent;
+        border: 1px solid rgba(239, 83, 80, 0.4);
+        color: #ef5350;
+        border-radius: 4px;
+        padding: 2px 8px;
+        font-size: 11px;
+        cursor: pointer;
+    }
+
+    /* Нижняя плавающая кнопка «Добавить» */
+    .ws-add-bar {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+        background: var(--bottom-nav-bg, rgba(23, 33, 43, 0.95));
+        backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        border-top: 1px solid var(--card-border, rgba(255,255,255,0.06));
+        z-index: 80;
+    }
+    .ws-add-btn {
+        width: 100%;
+        background: var(--accent-blue, #4a8fc7);
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    /* Светлая тема: график */
+    [data-theme="light"] .ws-month-sel,
+    [data-theme="light"] .ws-year-sel,
+    [data-theme="light"] .ws-grid thead th,
+    [data-theme="light"] .ws-grid tbody td.ws-emp-col {
+        background: rgba(240, 240, 240, 0.95);
+        color: #333;
+    }
+    [data-theme="light"] .ws-grid {
+        color: #333;
+    }
+    [data-theme="light"] .ws-grid tbody td {
+        border-color: rgba(0, 0, 0, 0.08);
+    }
+    [data-theme="light"] .ws-emp-card .ws-meta,
+    [data-theme="light"] .ws-tr-card .ws-tr-meta {
+        color: #666;
+    }
+    [data-theme="light"] .ws-cell-info {
+        background: rgba(0, 0, 0, 0.04);
+        color: #555;
+    }
+
+    /* === Конец CSS графика работы (Task 201) === */
+
     /* Нижний бар с табами — позиционируется fixed внизу, как dashboard-bottom-bar */
     .flow-bottom-bar {
         position: fixed;
@@ -10005,6 +10286,9 @@
                 <div class="menu-btn-row">
                     <div id="flowmeterMenuBtn" class="menu-btn" onclick="navigateTo('flowmeter-data')" style="cursor: pointer;"><div class="menu-btn-text"><div class="menu-btn-label">Расходомеры хозрасчётные</div><div class="menu-btn-sublabel">Накопительные расходы и показания</div></div><svg class="menu-btn-arrow" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: rgba(255,255,255,0.12); fill: none; stroke-width: 2; stroke-linecap: round;"><polyline points="9 18 15 12 9 6"/></svg></div>
                 </div>
+                <div class="menu-btn-row">
+                    <div id="workScheduleMenuBtn" class="menu-btn" onclick="navigateTo('work-schedule')" style="cursor: pointer;"><div class="menu-btn-text"><div class="menu-btn-label">График работы</div><div class="menu-btn-sublabel">Шахматка сменного и дневного персонала</div></div><svg class="menu-btn-arrow" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: rgba(255,255,255,0.12); fill: none; stroke-width: 2; stroke-linecap: round;"><polyline points="9 18 15 12 9 6"/></svg></div>
+                </div>
             </div>
         </div>
 
@@ -10035,6 +10319,51 @@
             </div>
             <div id="flowDetailBody" class="flow-detail-body"></div>
             <div class="flow-detail-bottom-bar" id="flowDetailBottomBar"></div>
+        </div>
+
+        <!-- ======================== ГРАФИК РАБОТЫ — шахматка на месяц ======================== -->
+        <div id="page-work-schedule" class="page-content">
+            <div class="page-inline-header">
+                <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
+                <div class="page-inline-header-title">График работы</div>
+            </div>
+            <div class="ws-toolbar">
+                <select id="wsMonthSel" class="ws-month-sel" onchange="WorkSchedule.onMonthChange()"></select>
+                <select id="wsYearSel" class="ws-year-sel" onchange="WorkSchedule.onMonthChange()"></select>
+                <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateMonth()" hidden>Сформировать</button>
+            </div>
+            <div id="wsGridWrap" class="ws-grid-wrap">
+                <div class="admin-empty" id="wsEmpty">Загрузка…</div>
+            </div>
+            <div class="ws-legend" id="wsLegend"></div>
+        </div>
+
+        <!-- ======================== ГРАФИК РАБОТЫ — справочник сотрудников ======================== -->
+        <div id="page-work-schedule-employees" class="page-content">
+            <div class="page-inline-header">
+                <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
+                <div class="page-inline-header-title">Сотрудники</div>
+            </div>
+            <div id="wsEmployeesList" class="ws-employees-list">
+                <div class="admin-empty" id="wsEmployeesEmpty">Загрузка…</div>
+            </div>
+            <div class="ws-add-bar" id="wsAddEmployeeBar" hidden>
+                <button type="button" class="ws-add-btn" onclick="WorkSchedule.openEmployeeForm()">+ Добавить сотрудника</button>
+            </div>
+        </div>
+
+        <!-- ======================== ГРАФИК РАБОТЫ — инструктажи/обучения/проверки ======================== -->
+        <div id="page-work-schedule-trainings" class="page-content">
+            <div class="page-inline-header">
+                <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
+                <div class="page-inline-header-title">Инструктажи и обучения</div>
+            </div>
+            <div id="wsTrainingsList" class="ws-trainings-list">
+                <div class="admin-empty" id="wsTrainingsEmpty">Загрузка…</div>
+            </div>
+            <div class="ws-add-bar" id="wsAddTrainingBar" hidden>
+                <button type="button" class="ws-add-btn" onclick="WorkSchedule.openTrainingForm()">+ Добавить мероприятие</button>
+            </div>
         </div>
 
         <!-- ======================== КИП ИОС (родительское меню) ======================== -->
@@ -12726,6 +13055,153 @@
     <button type="button" class="flow-input-submit" onclick="FlowmeterData.submitComment()">Сохранить</button>
     <button type="button" class="flow-comment-delete" id="flowCommentDelete" style="display:none;" onclick="FlowmeterData.deleteComment()">Удалить комментарий</button>
     <button type="button" class="flow-input-cancel" onclick="FlowmeterData.closeComment()">Отмена</button>
+</div>
+
+<!-- ===== Bottom sheet: правка ячейки шахматки (workSchedule) ===== -->
+<div id="wsCellOverlay" class="pin-sheet-overlay" onclick="WorkSchedule.closeCellForm()"></div>
+<div id="wsCellSheet" class="flow-input-sheet">
+    <div class="flow-input-sheet-handle"></div>
+    <div class="flow-input-sheet-title" id="wsCellTitle">Правка записи</div>
+    <div class="ws-cell-info" id="wsCellInfo"></div>
+    <div class="flow-input-row">
+        <div class="flow-input-group" style="flex:1 1 100%;">
+            <label class="flow-input-label" for="wsCellStatus">Статус</label>
+            <select id="wsCellStatus" class="flow-input-field-small">
+                <option value="">— выходной —</option>
+                <option value="Д">Д — День</option>
+                <option value="Н">Н — Ночь</option>
+                <option value="О">О — Отпуск</option>
+                <option value="Б">Б — Больничный</option>
+                <option value="ОТ">ОТ — Отгул</option>
+                <option value="П">П — Прогул</option>
+                <option value="*">* — Работа в праздник</option>
+                <option value="И">И — Инструктаж</option>
+                <option value="ОБ">ОБ — Обучение</option>
+                <option value="ПЗ">ПЗ — Проверка знаний</option>
+            </select>
+        </div>
+    </div>
+    <div class="flow-input-row">
+        <div class="flow-input-group">
+            <label class="flow-input-label" for="wsCellOvertime">Переработка</label>
+            <select id="wsCellOvertime" class="flow-input-field-small">
+                <option value="0">нет</option>
+                <option value="1">да</option>
+            </select>
+        </div>
+        <div class="flow-input-group">
+            <label class="flow-input-label" for="wsCellSubstitute">Замещает (таб. №)</label>
+            <input type="text" id="wsCellSubstitute" class="flow-input-field-small" placeholder="— (необязательно)" autocomplete="off">
+        </div>
+    </div>
+    <textarea id="wsCellComment" class="flow-comment-field" rows="2" maxlength="500" placeholder="Комментарий (необязательно)" autocomplete="off"></textarea>
+    <button type="button" class="flow-input-submit" onclick="WorkSchedule.submitCellForm()">Сохранить</button>
+    <button type="button" class="flow-comment-delete" id="wsCellDelete" style="display:none;" onclick="WorkSchedule.deleteCell()">Удалить запись</button>
+    <button type="button" class="flow-input-cancel" onclick="WorkSchedule.closeCellForm()">Отмена</button>
+</div>
+
+<!-- ===== Bottom sheet: добавление сотрудника (workSchedule) ===== -->
+<div id="wsEmpOverlay" class="pin-sheet-overlay" onclick="WorkSchedule.closeEmployeeForm()"></div>
+<div id="wsEmpSheet" class="flow-input-sheet" style="max-height: 90vh; overflow-y: auto;">
+    <div class="flow-input-sheet-handle"></div>
+    <div class="flow-input-sheet-title">Новый сотрудник</div>
+    <div class="flow-input-row">
+        <div class="flow-input-group" style="flex:0 0 35%;">
+            <label class="flow-input-label" for="wsEmpTabNo">Таб. №</label>
+            <input type="text" id="wsEmpTabNo" class="flow-input-field-small" placeholder="2706" autocomplete="off">
+        </div>
+        <div class="flow-input-group" style="flex:1 1 65%;">
+            <label class="flow-input-label" for="wsEmpFio">ФИО</label>
+            <input type="text" id="wsEmpFio" class="flow-input-field-small" placeholder="Галкин Д. Н." autocomplete="off">
+        </div>
+    </div>
+    <div class="flow-input-row">
+        <div class="flow-input-group">
+            <label class="flow-input-label" for="wsEmpType">Тип</label>
+            <select id="wsEmpType" class="flow-input-field-small" onchange="WorkSchedule.onEmpTypeChange()">
+                <option value="сменный">сменный</option>
+                <option value="дневной">дневной</option>
+            </select>
+        </div>
+        <div class="flow-input-group" id="wsEmpShiftGroup">
+            <label class="flow-input-label" for="wsEmpShift">Смена</label>
+            <select id="wsEmpShift" class="flow-input-field-small">
+                <option value="">—</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+            </select>
+        </div>
+        <div class="flow-input-group">
+            <label class="flow-input-label" for="wsEmpPattern">Шаблон ротации</label>
+            <select id="wsEmpPattern" class="flow-input-field-small"></select>
+        </div>
+    </div>
+    <div class="flow-input-row">
+        <div class="flow-input-group">
+            <label class="flow-input-label" for="wsEmpStart">Старт цикла</label>
+            <input type="date" id="wsEmpStart" class="flow-input-field-small">
+        </div>
+        <div class="flow-input-group">
+            <label class="flow-input-label" for="wsEmpHire">Дата приёма</label>
+            <input type="date" id="wsEmpHire" class="flow-input-field-small">
+        </div>
+    </div>
+    <div class="flow-input-row">
+        <div class="flow-input-group" style="flex:0 0 60%;">
+            <label class="flow-input-label" for="wsEmpPosition">Должность</label>
+            <input type="text" id="wsEmpPosition" class="flow-input-field-small" placeholder="Слесарь по КИПиА" autocomplete="off">
+        </div>
+    </div>
+    <textarea id="wsEmpComment" class="flow-comment-field" rows="2" maxlength="500" placeholder="Комментарий (необязательно)" autocomplete="off"></textarea>
+    <button type="button" class="flow-input-submit" onclick="WorkSchedule.submitEmployeeForm()">Добавить</button>
+    <button type="button" class="flow-input-cancel" onclick="WorkSchedule.closeEmployeeForm()">Отмена</button>
+</div>
+
+<!-- ===== Bottom sheet: добавление мероприятия (workSchedule) ===== -->
+<div id="wsTrOverlay" class="pin-sheet-overlay" onclick="WorkSchedule.closeTrainingForm()"></div>
+<div id="wsTrSheet" class="flow-input-sheet" style="max-height: 90vh; overflow-y: auto;">
+    <div class="flow-input-sheet-handle"></div>
+    <div class="flow-input-sheet-title">Новое мероприятие</div>
+    <div class="flow-input-row">
+        <div class="flow-input-group" style="flex:0 0 35%;">
+            <label class="flow-input-label" for="wsTrTabNo">Таб. №</label>
+            <select id="wsTrTabNo" class="flow-input-field-small"></select>
+        </div>
+        <div class="flow-input-group" style="flex:1 1 65%;">
+            <label class="flow-input-label" for="wsTrType">Тип</label>
+            <select id="wsTrType" class="flow-input-field-small">
+                <option value="инструктаж">инструктаж</option>
+                <option value="обучение">обучение</option>
+                <option value="проверка_знаний">проверка знаний</option>
+            </select>
+        </div>
+    </div>
+    <div class="flow-input-row">
+        <div class="flow-input-group" style="flex:1 1 100%;">
+            <label class="flow-input-label" for="wsTrTitle">Тема</label>
+            <input type="text" id="wsTrTitle" class="flow-input-field-small" placeholder="Повторный инструктаж по ОТ (Q3 2026)" autocomplete="off">
+        </div>
+    </div>
+    <div class="flow-input-row">
+        <div class="flow-input-group">
+            <label class="flow-input-label" for="wsTrStart">Дата начала</label>
+            <input type="date" id="wsTrStart" class="flow-input-field-small">
+        </div>
+        <div class="flow-input-group">
+            <label class="flow-input-label" for="wsTrEnd">Дата окончания</label>
+            <input type="date" id="wsTrEnd" class="flow-input-field-small">
+        </div>
+        <div class="flow-input-group">
+            <label class="flow-input-label" for="wsTrDays">Длит., дн</label>
+            <input type="number" id="wsTrDays" class="flow-input-field-small" min="1" value="1">
+        </div>
+    </div>
+    <textarea id="wsTrComment" class="flow-comment-field" rows="2" maxlength="500" placeholder="Комментарий (необязательно)" autocomplete="off"></textarea>
+    <button type="button" class="flow-input-submit" onclick="WorkSchedule.submitTrainingForm()">Добавить</button>
+    <button type="button" class="flow-input-cancel" onclick="WorkSchedule.closeTrainingForm()">Отмена</button>
 </div>
 
 <script>
@@ -20789,6 +21265,16 @@
             setTimeout(() => { if (typeof FlowmeterData !== 'undefined') FlowmeterData.init(); }, 30);
             // Task 130: крошки и .active класс уже установлены выше (перед сменой active страницы)
         }
+        // Task 201: График работы — инициализация страниц модуля
+        if (page === 'work-schedule') {
+            setTimeout(() => { if (typeof WorkSchedule !== 'undefined') WorkSchedule.init(); }, 30);
+        }
+        if (page === 'work-schedule-employees') {
+            setTimeout(() => { if (typeof WorkSchedule !== 'undefined') WorkSchedule.initEmployeesPage(); }, 30);
+        }
+        if (page === 'work-schedule-trainings') {
+            setTimeout(() => { if (typeof WorkSchedule !== 'undefined') WorkSchedule.initTrainingsPage(); }, 30);
+        }
         if (page === 'plan-114') { setTimeout(() => { if (typeof plan114RenderList === 'function') plan114RenderList(); }, 30); }
         if (page === 'charts') { setTimeout(() => { if (typeof KipCharts !== 'undefined') KipCharts.onPageOpen(); }, 30); }
         if (TICKET_IDS.includes(page)) { setTimeout(() => initTicketsPage(page), 30); }
@@ -26395,6 +26881,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Расходомеры хозрасчётные — отдельная группа доступа
         // (просмотр: ИТР8+, КИП ИОС дежурный; НЕ входит в базовый КИП ИОС)
         _FLOWMETER_PAGES: ['flowmeter-data', 'flowmeter-detail'],
+        // Task 201: График работы — 3 страницы (шахматка + сотрудники + инструктажи)
+        // Доступен для просмотра ролям КИП ИОС и выше (как КИП ИОС дежурный, ИТР8+).
+        _WORK_SCHEDULE_PAGES: ['work-schedule', 'work-schedule-employees', 'work-schedule-trainings'],
         // Графики КИП ИОС — отдельная группа доступа (только Админ)
         _CHARTS_PAGES: ['charts'],
         _SECRET_PAGES: ['minesweeper', 'phonebook'],
@@ -26417,6 +26906,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Уровни доступа (по карте ролей из Excel, актуальная 2026-08-15):
             const FLOWMETER = this._FLOWMETER_PAGES;
             const CHARTS = this._CHARTS_PAGES;
+            const WORK_SCHEDULE = this._WORK_SCHEDULE_PAGES;
 
             const LVL_OBSHCHIJ = [].concat(BASE, CALC);
             // Task 113: ИТР ТОКЕМ — фильтр 4 (ограниченные данные КИП ИОС)
@@ -26433,9 +26923,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // (приборы, блокировки, клапаны, регуляторы, проекты, каб. журнал, план 114)
             // скрыты, т.к. KIP_IOS не включён в allowed.
             const LVL_KIP8_PRO = [].concat(BASE, CALC, LIB, SECRET, WHATS_NEW, FLOWMETER, ['docs-ios']);
-            const LVL_KIP_IOS = [].concat(BASE, CALC, LIB, KIP_IOS, SECRET, WHATS_NEW);
-            // ИТР8+ и КИП ИОС дежурный: КИП ИОС + расходомеры (просмотр)
-            const LVL_KIP_IOS_WITH_FLOW = [].concat(BASE, CALC, LIB, KIP_IOS, FLOWMETER, SECRET, WHATS_NEW);
+            // Task 201: КИП ИОС — базовый уровень + график работы (просмотр/правка)
+            const LVL_KIP_IOS = [].concat(BASE, CALC, LIB, KIP_IOS, SECRET, WHATS_NEW, WORK_SCHEDULE);
+            // ИТР8+ и КИП ИОС дежурный: КИП ИОС + расходомеры (просмотр) + график работы
+            const LVL_KIP_IOS_WITH_FLOW = [].concat(BASE, CALC, LIB, KIP_IOS, FLOWMETER, SECRET, WHATS_NEW, WORK_SCHEDULE);
 
             this.ROLE_ACCESS = {
                 'Запрет': BASE,                   // только главная
@@ -32187,6 +32678,768 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var m = (+p[0] < 10 ? '0' : '') + +p[0];
                 return d + '.' + m;
             } catch (e) { return dateStr; }
+        }
+    };
+
+    // ============================================================
+    // WorkSchedule — модуль «График работы» (Task 201)
+    // ============================================================
+    // Серверный бэкенд: scripts/WorkSchedule.gs (Apps Script Web App).
+    // Эндпоинты (через KipAuth.api):
+    //   workSchedule.listEmployees      — список сотрудников
+    //   workSchedule.listEntries        — записи графика за месяц
+    //   workSchedule.listTrainings      — плановые инструктажи
+    //   workSchedule.getStatusCodes     — легенда
+    //   workSchedule.getPatterns        — шаблоны ротации
+    //   workSchedule.generateMonth      — СФОРМИРОВАТЬ шахматку
+    //   workSchedule.setManualEntry      — upsert ручной правки
+    //   workSchedule.deleteEntry         — удалить ручную запись
+    //   workSchedule.addEmployee         — добавить сотрудника
+    //   workSchedule.addTraining         — добавить мероприятие
+    //   workSchedule.deleteTraining      — удалить мероприятие
+    //
+    // Страницы:
+    //   #page-work-schedule              — шахматка на месяц
+    //   #page-work-schedule-employees    — справочник сотрудников
+    //   #page-work-schedule-trainings     — инструктажи/обучения/проверки
+    // ============================================================
+
+    var WorkSchedule = {
+
+        // Роли с правом записи (массив русских строк)
+        _WRITE_ROLES: ['КИП ИОС', 'КИП ИОС pro', 'КИП ИОС дежурный', 'Админ'],
+
+        // Кэш данных
+        _EMPLOYEES: [],
+        _ENTRIES: [],
+        _TRAININGS: [],
+        _PATTERNS: [],
+        _STATUS_CODES: [],
+
+        _year: null,
+        _month: null,
+        _canEdit: false,
+        _initialized: false,
+
+        _editingCell: null,
+
+        init: function() {
+            if (this._initialized) {
+                this._refreshFromUrlState();
+                return;
+            }
+            this._initialized = true;
+
+            var now = new Date();
+            this._year  = now.getFullYear();
+            this._month = now.getMonth() + 1;
+
+            var monthSel = document.getElementById('wsMonthSel');
+            var yearSel  = document.getElementById('wsYearSel');
+            if (monthSel) {
+                var months = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                              'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+                var html = '';
+                for (var i = 0; i < 12; i++) {
+                    html += '<option value="' + (i+1) + '"' +
+                            (i+1 === this._month ? ' selected' : '') + '>' + months[i] + '</option>';
+                }
+                monthSel.innerHTML = html;
+            }
+            if (yearSel) {
+                var yHtml = '';
+                for (var y = this._year - 1; y <= this._year + 2; y++) {
+                    yHtml += '<option value="' + y + '"' + (y === this._year ? ' selected' : '') + '>' + y + '</option>';
+                }
+                yearSel.innerHTML = yHtml;
+            }
+
+            var role = null;
+            try {
+                if (typeof KipAuth !== 'undefined' && KipAuth._cachedRole) role = KipAuth._cachedRole;
+            } catch (e) {}
+            this._canEdit = (role === 'Админ') || (role && this._WRITE_ROLES.indexOf(role) !== -1);
+
+            var genBtn = document.getElementById('wsGenerateBtn');
+            if (genBtn) genBtn.hidden = !this._canEdit;
+
+            var self = this;
+            this._loadStatusCodes().then(function() {
+                self._loadPatterns().then(function() {
+                    self._renderLegend();
+                    self._refreshFromUrlState();
+                });
+            });
+        },
+
+        _refreshFromUrlState: function() {
+            var monthSel = document.getElementById('wsMonthSel');
+            var yearSel  = document.getElementById('wsYearSel');
+            if (monthSel && yearSel) {
+                this._month = parseInt(monthSel.value, 10);
+                this._year  = parseInt(yearSel.value, 10);
+            }
+            this.loadGrid();
+        },
+
+        onMonthChange: function() {
+            var monthSel = document.getElementById('wsMonthSel');
+            var yearSel  = document.getElementById('wsYearSel');
+            if (monthSel && yearSel) {
+                this._month = parseInt(monthSel.value, 10);
+                this._year  = parseInt(yearSel.value, 10);
+            }
+            this.loadGrid();
+        },
+
+        _api: function(action, payload) {
+            if (typeof KipAuth === 'undefined' || !KipAuth.api) {
+                return Promise.reject(new Error('KipAuth не загружен'));
+            }
+            return KipAuth.api(action, payload || {});
+        },
+
+        _loadStatusCodes: function() {
+            var self = this;
+            return this._api('workSchedule.getStatusCodes', {})
+                .then(function(data) {
+                    self._STATUS_CODES = data.codes || [];
+                })
+                .catch(function() {
+                    self._STATUS_CODES = [
+                        {code:'Д', name:'День', color:'#FFE082'},
+                        {code:'Н', name:'Ночь', color:'#B0BEC5'},
+                        {code:'О', name:'Отпуск', color:'#ECEFF1'},
+                        {code:'Б', name:'Больничный', color:'#F8BBD0'},
+                        {code:'ОТ', name:'Отгул', color:'#C5E1A5'},
+                        {code:'П', name:'Прогул', color:'#EF5350'},
+                        {code:'*', name:'Праздник', color:'#FFD54F'},
+                        {code:'И', name:'Инструктаж', color:'#B3E5FC'},
+                        {code:'ОБ', name:'Обучение', color:'#D1C4E9'},
+                        {code:'ПЗ', name:'Проверка знаний', color:'#FFCDD2'}
+                    ];
+                });
+        },
+
+        _loadPatterns: function() {
+            var self = this;
+            return this._api('workSchedule.getPatterns', {})
+                .then(function(data) {
+                    self._PATTERNS = data.patterns || [];
+                })
+                .catch(function() {
+                    self._PATTERNS = [];
+                });
+        },
+
+        _loadEmployees: function() {
+            var self = this;
+            return this._api('workSchedule.listEmployees', { includeArchived: false })
+                .then(function(data) {
+                    self._EMPLOYEES = data.employees || [];
+                });
+        },
+
+        _loadEntries: function() {
+            var self = this;
+            return this._api('workSchedule.listEntries', { year: this._year, month: this._month })
+                .then(function(data) {
+                    self._ENTRIES = data.entries || [];
+                });
+        },
+
+        _loadTrainings: function() {
+            var self = this;
+            return this._api('workSchedule.listTrainings', { year: this._year, month: this._month })
+                .then(function(data) {
+                    self._TRAININGS = data.trainings || [];
+                });
+        },
+
+        loadGrid: function() {
+            var self = this;
+            var wrapEl = document.getElementById('wsGridWrap');
+            if (wrapEl) wrapEl.innerHTML = '<div class="admin-empty" id="wsEmpty">Загрузка…</div>';
+
+            Promise.all([
+                this._loadEmployees(),
+                this._loadEntries(),
+                this._loadTrainings()
+            ]).then(function() {
+                self._renderGrid();
+            }).catch(function(err) {
+                if (wrapEl) wrapEl.innerHTML = '<div class="admin-empty">Ошибка загрузки: ' + (err.message || err) + '</div>';
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Ошибка загрузки графика: ' + (err.message || err));
+                }
+            });
+        },
+
+        _buildEntryIndex: function() {
+            var idx = {};
+            for (var i = 0; i < this._ENTRIES.length; i++) {
+                var e = this._ENTRIES[i];
+                idx[e['дата'] + '|' + e['таб_№']] = e;
+            }
+            return idx;
+        },
+
+        _renderGrid: function() {
+            var wrap = document.getElementById('wsGridWrap');
+            if (!wrap) return;
+            if (!this._EMPLOYEES.length) {
+                wrap.innerHTML = '<div class="admin-empty">Нет активных сотрудников. Добавьте их на странице «Сотрудники».</div>';
+                return;
+            }
+
+            var entryIdx = this._buildEntryIndex();
+            var daysInMonth = new Date(this._year, this._month, 0).getDate();
+            var todayIso = this._isoDate(new Date());
+
+            var html = '<table class="ws-grid"><thead><tr>';
+            html += '<th class="ws-emp-col">Сотрудник</th>';
+            for (var d = 1; d <= daysInMonth; d++) {
+                var dt = new Date(this._year, this._month - 1, d);
+                var dow = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][dt.getDay()];
+                var isHoliday = (dt.getDay() === 0 || dt.getDay() === 6);
+                html += '<th class="ws-day-col' + (isHoliday ? ' ws-holiday' : '') + '">' +
+                        d + '<span class="ws-dow">' + dow + '</span></th>';
+            }
+            html += '</tr></thead><tbody>';
+
+            for (var ei = 0; ei < this._EMPLOYEES.length; ei++) {
+                var emp = this._EMPLOYEES[ei];
+                html += '<tr>';
+                html += '<td class="ws-emp-col"><span class="ws-tab-no">' + this._esc(emp['таб_№']) + '</span>' + this._esc(emp['ФИО']) + '</td>';
+                for (var day = 1; day <= daysInMonth; day++) {
+                    var ddt = new Date(this._year, this._month - 1, day);
+                    var isoDate = this._isoDate(ddt);
+                    var key = isoDate + '|' + emp['таб_№'];
+                    var entry = entryIdx[key];
+                    html += this._renderCell(day, isoDate, emp, entry);
+                }
+                html += '</tr>';
+            }
+            html += '</tbody></table>';
+            wrap.innerHTML = html;
+        },
+
+        _renderCell: function(day, isoDate, emp, entry) {
+            var status = entry ? entry.статус : '';
+            var source = entry ? entry.источник : '';
+            var substitute = entry ? entry.замещает : null;
+            var instructionId = entry ? entry.инструкция : null;
+            var isManual = (source === 'руч');
+            var isOvertime = entry && entry.переработка === 1;
+
+            var color = '#3a3a3a';
+            var textColor = '#fff';
+            if (status) {
+                for (var i = 0; i < this._STATUS_CODES.length; i++) {
+                    if (this._STATUS_CODES[i].code === status) {
+                        color = this._STATUS_CODES[i].color || color;
+                        break;
+                    }
+                }
+            }
+
+            var classes = ['ws-cell'];
+            if (isManual) classes.push('ws-source-manual');
+            if (!status) classes.push('ws-status-empty');
+
+            var style = 'background:' + (status ? color : 'transparent') + ';';
+            if (status) style += 'color:' + textColor + ';';
+            if (isOvertime) style += 'text-decoration:underline;';
+
+            var titleParts = [isoDate, emp['ФИО']];
+            if (entry) {
+                titleParts.push('статус: ' + (status || '—'));
+                if (isOvertime) titleParts.push('переработка');
+                if (source) titleParts.push('источник: ' + source);
+                if (substitute) titleParts.push('замещает таб. №' + substitute);
+                if (instructionId) titleParts.push('инструктаж id=' + instructionId);
+                if (entry.комментарий) titleParts.push('«' + entry.комментарий + '»');
+            }
+
+            var editable = this._canEdit ? '1' : '0';
+            var safeTabNo = (emp['таб_№'] || '').replace(/'/g, '');
+            var clickHandler = 'WorkSchedule.openCellForm(\'' + isoDate + '\',\'' + safeTabNo + '\')';
+            return '<td class="' + classes.join(' ') + '" ' +
+                   'style="' + style + '" ' +
+                   'data-editable="' + editable + '" ' +
+                   'onclick="' + clickHandler + '" ' +
+                   'title="' + this._escAttr(titleParts.join(' / ')) + '">' +
+                   (status || '·') +
+                   '</td>';
+        },
+
+        _renderLegend: function() {
+            var el = document.getElementById('wsLegend');
+            if (!el) return;
+            if (!this._STATUS_CODES.length) { el.innerHTML = ''; return; }
+            var html = '';
+            for (var i = 0; i < this._STATUS_CODES.length; i++) {
+                var c = this._STATUS_CODES[i];
+                html += '<span class="ws-legend-item">' +
+                        '<span class="ws-legend-swatch" style="background:' + (c.color || '#3a3a3a') + ';"></span>' +
+                        '<b>' + this._esc(c.code) + '</b> — ' + this._esc(c.name) +
+                        '</span>';
+            }
+            el.innerHTML = html;
+        },
+
+        generateMonth: function() {
+            if (!this._canEdit) return;
+            var self = this;
+            var monthName = ['','Январь','Февраль','Март','Апрель','Май','Июнь',
+                              'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            if (typeof kipConfirm === 'function') {
+                kipConfirm('Сформировать шахматку на ' + monthName[this._month] + ' ' + this._year + '?\n' +
+                           'Существующие ручные правки будут сохранены. Плановые смены и инструктажи заполнятся автоматически.')
+                    .then(function(ok) {
+                        if (!ok) return;
+                        self._doGenerate();
+                    });
+            } else {
+                if (!confirm('Сформировать шахматку на ' + monthName[this._month] + ' ' + this._year + '?')) return;
+                self._doGenerate();
+            }
+        },
+
+        _doGenerate: function() {
+            var self = this;
+            var genBtn = document.getElementById('wsGenerateBtn');
+            if (genBtn) { genBtn.disabled = true; genBtn.textContent = 'Формируется…'; }
+
+            this._api('workSchedule.generateMonth', { year: this._year, month: this._month })
+                .then(function(data) {
+                    if (genBtn) { genBtn.disabled = false; genBtn.textContent = 'Сформировать'; }
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Сформировано: ' + data.generated + ' зап., обновлено: ' + data.updated);
+                    }
+                    self.loadGrid();
+                })
+                .catch(function(err) {
+                    if (genBtn) { genBtn.disabled = false; genBtn.textContent = 'Сформировать'; }
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Ошибка: ' + (err.message || err));
+                    }
+                });
+        },
+
+        openCellForm: function(isoDate, tabNo) {
+            if (!this._canEdit) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('У вас нет прав на правку графика');
+                }
+                return;
+            }
+            var entry = null;
+            for (var i = 0; i < this._ENTRIES.length; i++) {
+                if (this._ENTRIES[i]['дата'] === isoDate && this._ENTRIES[i]['таб_№'] === tabNo) {
+                    entry = this._ENTRIES[i];
+                    break;
+                }
+            }
+            var emp = null;
+            for (var j = 0; j < this._EMPLOYEES.length; j++) {
+                if (this._EMPLOYEES[j]['таб_№'] === tabNo) { emp = this._EMPLOYEES[j]; break; }
+            }
+
+            this._editingCell = {
+                date: isoDate,
+                'таб_№': tabNo,
+                ФИО: emp ? emp['ФИО'] : '',
+                entry: entry
+            };
+
+            document.getElementById('wsCellInfo').textContent =
+                isoDate + ' · ' + (emp ? emp['ФИО'] : 'таб. №' + tabNo) +
+                (entry ? (entry.источник === 'руч' ? ' · ручная запись' : ' · авто-запись') : ' · нет записи');
+            document.getElementById('wsCellStatus').value = entry ? entry.статус : '';
+            document.getElementById('wsCellOvertime').value = entry && entry.переработка === 1 ? '1' : '0';
+            document.getElementById('wsCellSubstitute').value = entry && entry.замещает ? entry.замещает : '';
+            document.getElementById('wsCellComment').value = entry ? (entry.комментарий || '') : '';
+
+            var delBtn = document.getElementById('wsCellDelete');
+            if (delBtn) delBtn.style.display = (entry && entry.источник === 'руч') ? 'block' : 'none';
+
+            document.getElementById('wsCellOverlay').classList.add('active');
+            document.getElementById('wsCellSheet').classList.add('active');
+            setTimeout(function() {
+                var s = document.getElementById('wsCellStatus');
+                if (s) s.focus();
+            }, 350);
+        },
+
+        closeCellForm: function() {
+            document.getElementById('wsCellOverlay').classList.remove('active');
+            document.getElementById('wsCellSheet').classList.remove('active');
+            this._editingCell = null;
+        },
+
+        submitCellForm: function() {
+            if (!this._editingCell) return;
+            var status = document.getElementById('wsCellStatus').value;
+            var overtime = parseInt(document.getElementById('wsCellOvertime').value, 10) === 1 ? 1 : 0;
+            var substitute = document.getElementById('wsCellSubstitute').value.trim();
+            var comment = document.getElementById('wsCellComment').value.slice(0, 500);
+            var cell = this._editingCell;
+            var self = this;
+
+            if (!status) {
+                if (cell.entry && cell.entry.источник === 'руч') {
+                    this._api('workSchedule.deleteEntry', { date: cell.date, 'таб_№': cell['таб_№'] })
+                        .then(function() { self._afterCellSubmit(); })
+                        .catch(function(err) { self._onCellError(err); });
+                } else if (cell.entry && cell.entry.источник === 'авто') {
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Нельзя очистить авто-запись. Установите статус вручную.');
+                    }
+                } else {
+                    this.closeCellForm();
+                }
+                return;
+            }
+
+            var payload = {
+                date: cell.date,
+                'таб_№': cell['таб_№'],
+                статус: status,
+                переработка: overtime,
+                замещает: substitute || null,
+                комментарий: comment
+            };
+            this._api('workSchedule.setManualEntry', payload)
+                .then(function() { self._afterCellSubmit(); })
+                .catch(function(err) { self._onCellError(err); });
+        },
+
+        _afterCellSubmit: function() {
+            this.closeCellForm();
+            if (typeof KipToast !== 'undefined' && KipToast.show) {
+                KipToast.show('Запись сохранена');
+            }
+            this.loadGrid();
+        },
+
+        _onCellError: function(err) {
+            if (typeof KipToast !== 'undefined' && KipToast.show) {
+                KipToast.show('Ошибка: ' + (err.message || err));
+            }
+        },
+
+        deleteCell: function() {
+            if (!this._editingCell || !this._editingCell.entry) return;
+            if (this._editingCell.entry.источник !== 'руч') {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Можно удалять только ручные записи');
+                }
+                return;
+            }
+            var self = this;
+            this._api('workSchedule.deleteEntry', {
+                date: this._editingCell.date,
+                'таб_№': this._editingCell['таб_№']
+            }).then(function() {
+                self.closeCellForm();
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Запись удалена');
+                }
+                self.loadGrid();
+            }).catch(function(err) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Ошибка: ' + (err.message || err));
+                }
+            });
+        },
+
+        initEmployeesPage: function() {
+            var addBar = document.getElementById('wsAddEmployeeBar');
+            if (addBar) addBar.hidden = !this._canEdit;
+            this.loadEmployees();
+        },
+
+        loadEmployees: function() {
+            var self = this;
+            var listEl = document.getElementById('wsEmployeesList');
+            if (listEl) listEl.innerHTML = '<div class="admin-empty">Загрузка…</div>';
+            this._loadEmployees().then(function() {
+                self._renderEmployees();
+            }).catch(function(err) {
+                if (listEl) listEl.innerHTML = '<div class="admin-empty">Ошибка: ' + (err.message || err) + '</div>';
+            });
+        },
+
+        _renderEmployees: function() {
+            var listEl = document.getElementById('wsEmployeesList');
+            if (!listEl) return;
+            if (!this._EMPLOYEES.length) {
+                listEl.innerHTML = '<div class="admin-empty">Сотрудники не найдены. Добавьте первого.</div>';
+                return;
+            }
+            var html = '';
+            for (var i = 0; i < this._EMPLOYEES.length; i++) {
+                var e = this._EMPLOYEES[i];
+                var tagClass = e.тип === 'сменный' ? 'ws-tag' : 'ws-tag ws-tag-day';
+                var shiftStr = e.тип === 'сменный' ? (e.смена ? '· смена ' + e.смена : '· смена не задана') : '';
+                html += '<div class="ws-emp-card">' +
+                        '<div class="ws-emp-card-header">' +
+                            '<span class="ws-tab-no">' + this._esc(e['таб_№']) + '</span>' +
+                            '<span class="ws-fio">' + this._esc(e['ФИО']) + '</span>' +
+                        '</div>' +
+                        '<div class="ws-meta">' +
+                            '<span class="' + tagClass + '">' + this._esc(e.тип) + '</span> ' +
+                            shiftStr +
+                            (e.должность ? ' · ' + this._esc(e.должность) : '') +
+                            (e.старт_цикла ? ' · старт: ' + this._esc(e.старт_цикла) : '') +
+                        '</div>' +
+                        (e.комментарий ? '<div class="ws-meta" style="margin-top:4px;">' + this._esc(e.комментарий) + '</div>' : '') +
+                        '</div>';
+            }
+            listEl.innerHTML = html;
+        },
+
+        openEmployeeForm: function() {
+            if (!this._canEdit) return;
+            var patSel = document.getElementById('wsEmpPattern');
+            if (patSel) {
+                var html = '<option value="">— выберите —</option>';
+                for (var i = 0; i < this._PATTERNS.length; i++) {
+                    html += '<option value="' + this._PATTERNS[i].id + '">' +
+                            this._esc(this._PATTERNS[i].name) + ' (цикл ' + this._PATTERNS[i].cycle + ' дн)</option>';
+                }
+                patSel.innerHTML = html;
+            }
+            var today = this._isoDate(new Date());
+            document.getElementById('wsEmpStart').value = today;
+            document.getElementById('wsEmpHire').value  = today;
+            document.getElementById('wsEmpTabNo').value = '';
+            document.getElementById('wsEmpFio').value = '';
+            document.getElementById('wsEmpType').value = 'сменный';
+            document.getElementById('wsEmpShift').value = '';
+            document.getElementById('wsEmpPosition').value = '';
+            document.getElementById('wsEmpComment').value = '';
+            this.onEmpTypeChange();
+
+            document.getElementById('wsEmpOverlay').classList.add('active');
+            document.getElementById('wsEmpSheet').classList.add('active');
+            setTimeout(function() {
+                var f = document.getElementById('wsEmpTabNo');
+                if (f) f.focus();
+            }, 350);
+        },
+
+        closeEmployeeForm: function() {
+            document.getElementById('wsEmpOverlay').classList.remove('active');
+            document.getElementById('wsEmpSheet').classList.remove('active');
+        },
+
+        onEmpTypeChange: function() {
+            var typeSel = document.getElementById('wsEmpType');
+            var shiftGroup = document.getElementById('wsEmpShiftGroup');
+            if (!typeSel || !shiftGroup) return;
+            shiftGroup.style.display = (typeSel.value === 'сменный') ? '' : 'none';
+            if (typeSel.value !== 'сменный') {
+                document.getElementById('wsEmpShift').value = '';
+            }
+        },
+
+        submitEmployeeForm: function() {
+            var tabNo = document.getElementById('wsEmpTabNo').value.trim();
+            var fio = document.getElementById('wsEmpFio').value.trim();
+            var type = document.getElementById('wsEmpType').value;
+            var shift = document.getElementById('wsEmpShift').value;
+            var patId = document.getElementById('wsEmpPattern').value;
+            var startCycle = document.getElementById('wsEmpStart').value;
+            var hireDate = document.getElementById('wsEmpHire').value;
+            var position = document.getElementById('wsEmpPosition').value.trim();
+            var comment = document.getElementById('wsEmpComment').value.slice(0, 500);
+            var self = this;
+
+            if (!tabNo) { if (typeof KipToast !== 'undefined') KipToast.show('Введите таб. №'); return; }
+            if (!fio)   { if (typeof KipToast !== 'undefined') KipToast.show('Введите ФИО'); return; }
+            if (!startCycle) { if (typeof KipToast !== 'undefined') KipToast.show('Укажите дату старта цикла'); return; }
+
+            this._api('workSchedule.addEmployee', {
+                'таб_№': tabNo, 'ФИО': fio, тип: type,
+                смена: shift || null,
+                шаблон_ротации: patId ? parseInt(patId, 10) : null,
+                старт_цикла: startCycle,
+                дата_приёма: hireDate || null,
+                должность: position,
+                комментарий: comment
+            }).then(function() {
+                self.closeEmployeeForm();
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Сотрудник добавлен');
+                }
+                self.loadEmployees();
+            }).catch(function(err) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Ошибка: ' + (err.message || err));
+                }
+            });
+        },
+
+        initTrainingsPage: function() {
+            var addBar = document.getElementById('wsAddTrainingBar');
+            if (addBar) addBar.hidden = !this._canEdit;
+            this.loadTrainings();
+        },
+
+        loadTrainings: function() {
+            var self = this;
+            var listEl = document.getElementById('wsTrainingsList');
+            if (listEl) listEl.innerHTML = '<div class="admin-empty">Загрузка…</div>';
+            this._loadTrainings().then(function() {
+                self._renderTrainings();
+            }).catch(function(err) {
+                if (listEl) listEl.innerHTML = '<div class="admin-empty">Ошибка: ' + (err.message || err) + '</div>';
+            });
+        },
+
+        _renderTrainings: function() {
+            var listEl = document.getElementById('wsTrainingsList');
+            if (!listEl) return;
+            if (!this._TRAININGS.length) {
+                listEl.innerHTML = '<div class="admin-empty">Мероприятий в этом месяце нет. Нажмите «Добавить мероприятие».</div>';
+                return;
+            }
+            var html = '';
+            for (var i = 0; i < this._TRAININGS.length; i++) {
+                var t = this._TRAININGS[i];
+                var code = t.тип === 'инструктаж' ? 'И' : (t.тип === 'обучение' ? 'ОБ' : 'ПЗ');
+                var typeClass = 'ws-type-' + code;
+                var emp = null;
+                for (var j = 0; j < this._EMPLOYEES.length; j++) {
+                    if (this._EMPLOYEES[j]['таб_№'] === t['таб_№']) { emp = this._EMPLOYEES[j]; break; }
+                }
+                var empName = emp ? emp['ФИО'] : 'таб. №' + t['таб_№'];
+                var dateStr = t.дата_начала + (t.дата_окончания && t.дата_окончания !== t.дата_начала ? ' — ' + t.дата_окончания : '');
+                var delBtn = this._canEdit ? '<button type="button" class="ws-tr-delete-btn" onclick="WorkSchedule.deleteTraining(' + t.id + ')">Удалить</button>' : '';
+                html += '<div class="ws-tr-card">' + delBtn +
+                        '<div><span class="ws-tr-type ' + typeClass + '">' + code + '</span>' +
+                        '<span class="ws-tr-title">' + this._esc(t.тема) + '</span></div>' +
+                        '<div class="ws-tr-meta">таб. № ' + this._esc(t['таб_№']) + ' · ' + this._esc(empName) + '</div>' +
+                        '<div class="ws-tr-meta">' + dateStr + ' · ' + t.длительность_дней + ' дн.</div>' +
+                        (t.комментарий ? '<div class="ws-tr-meta" style="margin-top:4px;">' + this._esc(t.комментарий) + '</div>' : '') +
+                        '</div>';
+            }
+            listEl.innerHTML = html;
+        },
+
+        openTrainingForm: function() {
+            if (!this._canEdit) return;
+            var empSel = document.getElementById('wsTrTabNo');
+            if (empSel) {
+                var html = '<option value="">— выберите —</option>';
+                for (var i = 0; i < this._EMPLOYEES.length; i++) {
+                    html += '<option value="' + this._esc(this._EMPLOYEES[i]['таб_№']) + '">' +
+                            this._esc(this._EMPLOYEES[i]['таб_№']) + ' — ' + this._esc(this._EMPLOYEES[i]['ФИО']) +
+                            '</option>';
+                }
+                empSel.innerHTML = html;
+            }
+            var today = this._isoDate(new Date());
+            document.getElementById('wsTrStart').value = today;
+            document.getElementById('wsTrEnd').value = today;
+            document.getElementById('wsTrDays').value = 1;
+            document.getElementById('wsTrType').value = 'инструктаж';
+            document.getElementById('wsTrTitle').value = '';
+            document.getElementById('wsTrComment').value = '';
+
+            document.getElementById('wsTrOverlay').classList.add('active');
+            document.getElementById('wsTrSheet').classList.add('active');
+            setTimeout(function() {
+                var f = document.getElementById('wsTrTabNo');
+                if (f) f.focus();
+            }, 350);
+        },
+
+        closeTrainingForm: function() {
+            document.getElementById('wsTrOverlay').classList.remove('active');
+            document.getElementById('wsTrSheet').classList.remove('active');
+        },
+
+        submitTrainingForm: function() {
+            var tabNo = document.getElementById('wsTrTabNo').value.trim();
+            var tip = document.getElementById('wsTrType').value;
+            var tema = document.getElementById('wsTrTitle').value.trim();
+            var startDate = document.getElementById('wsTrStart').value;
+            var endDate = document.getElementById('wsTrEnd').value || startDate;
+            var days = parseInt(document.getElementById('wsTrDays').value, 10) || 1;
+            var comment = document.getElementById('wsTrComment').value.slice(0, 500);
+            var self = this;
+
+            if (!tabNo) { if (typeof KipToast !== 'undefined') KipToast.show('Выберите сотрудника'); return; }
+            if (!tema) { if (typeof KipToast !== 'undefined') KipToast.show('Введите тему мероприятия'); return; }
+            if (!startDate) { if (typeof KipToast !== 'undefined') KipToast.show('Укажите дату начала'); return; }
+
+            this._api('workSchedule.addTraining', {
+                'таб_№': tabNo, тип: tip, тема: tema,
+                дата_начала: startDate, дата_окончания: endDate,
+                длительность_дней: days, комментарий: comment
+            }).then(function() {
+                self.closeTrainingForm();
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Мероприятие добавлено');
+                }
+                self.loadTrainings();
+            }).catch(function(err) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Ошибка: ' + (err.message || err));
+                }
+            });
+        },
+
+        deleteTraining: function(id) {
+            if (!this._canEdit) return;
+            var self = this;
+            if (typeof kipConfirm === 'function') {
+                kipConfirm('Удалить мероприятие id=' + id + '?', { danger: true })
+                    .then(function(ok) { if (ok) self._doDeleteTraining(id); });
+            } else {
+                if (confirm('Удалить мероприятие id=' + id + '?')) self._doDeleteTraining(id);
+            }
+        },
+
+        _doDeleteTraining: function(id) {
+            var self = this;
+            this._api('workSchedule.deleteTraining', { id: id })
+                .then(function() {
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Мероприятие удалено');
+                    }
+                    self.loadTrainings();
+                })
+                .catch(function(err) {
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Ошибка: ' + (err.message || err));
+                    }
+                });
+        },
+
+        _isoDate: function(dt) {
+            if (!dt) return null;
+            var y = dt.getFullYear();
+            var m = ('' + (dt.getMonth() + 1)).padStart(2, '0');
+            var d = ('' + dt.getDate()).padStart(2, '0');
+            return y + '-' + m + '-' + d;
+        },
+
+        _esc: function(s) {
+            if (s === null || s === undefined) return '';
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        },
+
+        _escAttr: function(s) {
+            return this._esc(s).replace(/"/g, '&quot;');
         }
     };
 
