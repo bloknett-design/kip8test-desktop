@@ -26882,7 +26882,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // (просмотр: ИТР8+, КИП ИОС дежурный; НЕ входит в базовый КИП ИОС)
         _FLOWMETER_PAGES: ['flowmeter-data', 'flowmeter-detail'],
         // Task 201: График работы — 3 страницы (шахматка + сотрудники + инструктажи)
-        // Доступен для просмотра ролям КИП ИОС и выше (как КИП ИОС дежурный, ИТР8+).
+        // Task 204: доступен ТОЛЬКО Админу (как и _CHARTS_PAGES).
+        // READ_ROLES/WRITE_ROLES в WorkSchedule.gs также ограничены до ['Админ'].
         _WORK_SCHEDULE_PAGES: ['work-schedule', 'work-schedule-employees', 'work-schedule-trainings'],
         // Графики КИП ИОС — отдельная группа доступа (только Админ)
         _CHARTS_PAGES: ['charts'],
@@ -26923,10 +26924,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // (приборы, блокировки, клапаны, регуляторы, проекты, каб. журнал, план 114)
             // скрыты, т.к. KIP_IOS не включён в allowed.
             const LVL_KIP8_PRO = [].concat(BASE, CALC, LIB, SECRET, WHATS_NEW, FLOWMETER, ['docs-ios']);
-            // Task 201: КИП ИОС — базовый уровень + график работы (просмотр/правка)
-            const LVL_KIP_IOS = [].concat(BASE, CALC, LIB, KIP_IOS, SECRET, WHATS_NEW, WORK_SCHEDULE);
-            // ИТР8+ и КИП ИОС дежурный: КИП ИОС + расходомеры (просмотр) + график работы
-            const LVL_KIP_IOS_WITH_FLOW = [].concat(BASE, CALC, LIB, KIP_IOS, FLOWMETER, SECRET, WHATS_NEW, WORK_SCHEDULE);
+            // Task 201/204: КИП ИОС — базовый уровень (без графика работы)
+            // Task 204: WORK_SCHEDULE убран из всех уровней, кроме 'Админ' (через ['*'])
+            const LVL_KIP_IOS = [].concat(BASE, CALC, LIB, KIP_IOS, SECRET, WHATS_NEW);
+            // ИТР8+ и КИП ИОС дежурный: КИП ИОС + расходомеры (просмотр)
+            const LVL_KIP_IOS_WITH_FLOW = [].concat(BASE, CALC, LIB, KIP_IOS, FLOWMETER, SECRET, WHATS_NEW);
 
             this.ROLE_ACCESS = {
                 'Запрет': BASE,                   // только главная
