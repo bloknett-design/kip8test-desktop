@@ -13025,17 +13025,22 @@
     <div class="flow-input-sheet-handle"></div>
     <div class="flow-input-sheet-title" id="flowInputTitle">Ввести показания</div>
     <input type="text" inputmode="decimal" id="flowInputField" class="flow-input-field" placeholder="Текущие показания" autocomplete="off" enterkeyhint="done" onkeydown="if(event.key==='Enter')FlowmeterData.submitInput()">
+    <!-- Task 208: поля уложены построчно столбиком (каждая в своём .flow-input-row) -->
     <div class="flow-input-row">
         <div class="flow-input-group">
             <label class="flow-input-label" for="flowInputTemp">Температура, °C</label>
             <input type="text" inputmode="decimal" id="flowInputTemp" class="flow-input-field-small" placeholder="— (необязательно)" autocomplete="off" enterkeyhint="done" onkeydown="if(event.key==='Enter')FlowmeterData.submitInput()">
         </div>
+    </div>
+    <div class="flow-input-row">
         <div class="flow-input-group" id="flowInputGcalGroup" style="display:none;">
             <label class="flow-input-label" for="flowInputGcal">Гкал</label>
             <input type="text" inputmode="decimal" id="flowInputGcal" class="flow-input-field-small" placeholder="— (необязательно)" autocomplete="off" enterkeyhint="done" onkeydown="if(event.key==='Enter')FlowmeterData.submitInput()">
         </div>
+    </div>
+    <div class="flow-input-row">
         <div class="flow-input-group">
-            <label class="flow-input-label" for="flowInputDate">Дата снятия</label>
+            <label class="flow-input-label" for="flowInputDate">Дата за сутки снятия</label>
             <input type="date" id="flowInputDate" class="flow-input-field-small">
         </div>
     </div>
@@ -31442,7 +31447,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 html += '</div>';
                 html += '<div class="flow-card-param" onclick="FlowmeterData.openDetail(' + m.id + ')">' + this._esc(m.param) + '</div>';
                 html += '<div class="flow-card-summary" onclick="FlowmeterData.openDetail(' + m.id + ')">';
-                html += '<span class="flow-summary-item"><span class="flow-summary-label">Последние показания</span><span class="flow-summary-val">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.dateCurr) + ' г.</span></span></span>';
+                html += '<span class="flow-summary-item"><span class="flow-summary-label">Последние показания</span><span class="flow-summary-val">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> за ' + this._fmtDate(m.dateCurr) + ' г.</span></span></span>';
                 if (m.temp !== null && m.temp !== undefined) { html += '<span class="flow-summary-item"><span class="flow-summary-label">T среды</span><span class="flow-summary-val">' + tempStr + '</span></span>'; }
                 if (m.gcal !== null && m.gcal !== undefined) { html += '<span class="flow-summary-item"><span class="flow-summary-label">Гкал</span><span class="flow-summary-val">' + gcalStr + '</span></span>'; }
                 html += '</div>';
