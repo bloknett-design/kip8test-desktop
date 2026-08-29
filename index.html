@@ -34899,22 +34899,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         </div>
         </div>
 
-        <!-- ===== Группа: Документация ИОС (расходомеры) =====
-             Task 139: data-requires="kip-ios" УБРАН — он неправильно скрывал
-             группу для КИП8 pro (роль имеет доступ к flowmeter-data по фильтру 10,
-             но не имеет kip-ios по фильтру 3). Видимость группы определяется
-             общей логикой _applyRoleToUI: группа видна, если виден её единственный
-             пункт «Расходомеры хозрасчётные» (flowmeter-data), т.е. для ролей
-             с доступом к расходомерам. -->
-        <div class="sidebar-group" data-group="docs-ios">
-        <div class="sidebar-group-title sidebar-group-title-docs" onclick="toggleSidebarGroup(this.parentElement)">
-            <span class="sidebar-group-title-text">Документация ИОС</span>
-            <span class="sidebar-group-title-count">1</span>
-            <svg class="sidebar-group-title-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-        </div>
-        <div class="sidebar-item sidebar-item-extra" onclick="navigateTo('flowmeter-data'); toggleSidebar();">
+        <!-- ===== Расходомеры хозрасчётные (top-level) =====
+             Task 239: ранее этот раздел был единственным пунктом внутри
+             сворачиваемой группы «Документация ИОС» с CSS-классом
+             sidebar-item-extra (display:none пока группу не развернули).
+             Из-за этого пользователь не видел раздел в сайдбаре, пока не
+             кликнет на заголовок группы. Так как в группе всего один пункт,
+             раскрывать её ради него неудобно → вынесли как самостоятельный
+             top-level sidebar-item (без sidebar-item-extra → display:flex
+             по умолчанию, всегда виден ролям с доступом к flowmeter-data).
+             Видимость управляется общей логикой _applyRoleToUI (как у всех
+             sidebar-item с navigateTo): role has 'flowmeter-data' → виден. -->
+        <div class="sidebar-item" onclick="navigateTo('flowmeter-data'); toggleSidebar();">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(200,112,72,0.9);">
+                <path d="M12 19V5"/><path d="M5 12l7-7 7 7"/><path d="M5 19h14"/>
+            </svg>
             <span style="color:rgba(200,112,72,0.9);">Расходомеры хозрасчётные</span>
-        </div>
         </div>
 
         <!-- ===== Тонкий разделитель ===== -->
