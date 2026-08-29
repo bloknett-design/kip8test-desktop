@@ -3626,7 +3626,23 @@
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         padding: 0 0 8px;
-        /* touch-action задаётся классом .pinch-zoom-target */
+        /* Task 230: touch-action задаётся НИЖЕ, переопределяет .pinch-zoom-target.
+           Без этого горизонтальный скролл таблицы не работает в НЕ-zoomed
+           состоянии — пользователь обязан сначала сделать pinch-zoom, и только
+           потом таблица начинает скроллиться по горизонтали. Это связано с тем,
+           что .pinch-zoom-target имеет touch-action: pan-y (только вертикаль),
+           и лишь после добавления класса .zoomed (через pinch-zoom) touch-action
+           становится pan-x pan-y. Для таблицы хронологии мы хотим, чтобы
+           горизонтальный скролл работал СРАЗУ, без необходимости зумить. */
+    }
+    /* Task 230: разрешаем horizontal pan для таблицы хронологии с самого начала.
+       Селектор .flow-archive-table-wrap.pinch-zoom-target более специфичен, чем
+       .pinch-zoom-target — переопределяет базовое правило.
+       pan-x pan-y разрешает: 1 палец → горизонтальный+вертикальный скролл,
+       2 пальца → передаётся в JS-обработчик pinch-zoom (preventDefault в
+       touchstart/touchmove/gesturechange). */
+    .flow-archive-table-wrap.pinch-zoom-target {
+        touch-action: pan-x pan-y;
     }
     .flow-archive-table {
         width: 100%;
