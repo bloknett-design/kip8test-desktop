@@ -10832,6 +10832,7 @@
             </div>
             <div class="admin-footer">
                 <button type="button" class="admin-refresh-btn" onclick="KipAdmin.refreshAll()">Обновить данные</button>
+                <button type="button" class="admin-refresh-btn" onclick="KipAdmin.refreshValidationRules()">Обновить правила</button>
             </div>
         </div>
 
@@ -34096,6 +34097,63 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this.loadSessions();
             this.loadLogs();
             if (typeof showToast === 'function') showToast('Данные обновляются…');
+        },
+
+        // Task 236: принудительное обновление кэша правил валидации.
+        // Обнуляет _rulesCacheTs (чтобы loadValidationRules не пропустил
+        // запрос по TTL-проверке) и вызывает loadValidationRules(), который
+        // фоновым запросом тянет свежие правила с сервера и обновляет
+        // localStorage. После этого все сабмиты показаний в течение 24ч
+        // используют свежие правила (моментальная модалка аномалий).
+        // Кнопка живет в админ-панели (page-admin, .admin-footer) рядом
+        // с «Обновить данные» — видна только админу (как и вся страница).
+        refreshValidationRules: function() {
+            try {
+                if (typeof FlowmeterData === 'undefined' || !FlowmeterData) {
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('FlowmeterData недоступен');
+                    }
+                    return;
+                }
+                // Принудительный re-fetch: обнуляем timestamp последней
+                // синхронизации. После этого loadValidationRules не сработает
+                // TTL-пропуск (24ч) и пойдёт на сервер.
+                FlowmeterData._rulesCacheTs = 0;
+                var promise = FlowmeterData.loadValidationRules();
+                if (promise && typeof promise.then === 'function') {
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Обновляем правила…');
+                    }
+                    promise.then(function(rules) {
+                        var count = (rules && typeof rules === 'object')
+                                    ? Object.keys(rules).length : 0;
+                        if (typeof KipToast !== 'undefined' && KipToast.show) {
+                            if (count > 0) {
+                                KipToast.show('Правила обновлены: ' + count + ' шт.');
+                            } else {
+                                KipToast.show('Правила не получены (сеть/сервер)');
+                            }
+                        }
+                    }).catch(function(err) {
+                        console.error('refreshValidationRules:', err);
+                        if (typeof KipToast !== 'undefined' && KipToast.show) {
+                            KipToast.show('Ошибка обновления правил: ' +
+                                          (err && err.message || 'сеть'));
+                        }
+                    });
+                } else {
+                    // loadValidationRules не вернул Promise —
+                    // странная ситуация, сообщаем.
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Не удалось запустить обновление правил');
+                    }
+                }
+            } catch (e) {
+                console.error('refreshValidationRules:', e);
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Ошибка: ' + (e.message || 'неизвестная'));
+                }
+            }
         },
 
         // ============================================================
