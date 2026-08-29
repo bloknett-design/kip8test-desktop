@@ -3082,7 +3082,7 @@
     /* Зебра: тёмная тема — тёплые тона в палитру расходомеров (#c87048) */
     .flow-card:nth-child(odd)  { background: rgba(35, 30, 28, 0.96); }
     .flow-card:nth-child(even) { background: rgba(48, 42, 38, 0.96); }
-    [data-theme="light"] .flow-card:nth-child(odd)  { background: rgba(248, 242, 238, 0.96); }
+    [data-theme="light"] .flow-card:nth-child(odd)  { background: rgba(243, 233, 223, 0.96); }
     [data-theme="light"] .flow-card:nth-child(even) { background: rgba(252, 248, 244, 0.97); }
     [data-theme="light"] .flow-card { border-bottom-color: rgba(20,20,19,0.08); }
     .flow-card:active { background: rgba(200,112,72,0.12); }
@@ -34899,21 +34899,35 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         </div>
         </div>
 
-        <!-- ===== Группа: Документация ИОС (расходомеры) =====
+        <!-- ===== Группа: Документация ИОС (расходомеры + график работы) =====
              Task 139: data-requires="kip-ios" УБРАН — он неправильно скрывал
              группу для КИП8 pro (роль имеет доступ к flowmeter-data по фильтру 10,
              но не имеет kip-ios по фильтру 3). Видимость группы определяется
-             общей логикой _applyRoleToUI: группа видна, если виден её единственный
-             пункт «Расходомеры хозрасчётные» (flowmeter-data), т.е. для ролей
-             с доступом к расходомерам. -->
+             общей логикой _applyRoleToUI: группа видна, если виден хотя бы один
+             её пункт.
+             Task 241: «График работы» (work-schedule) перемещён из top-level
+             сервисной секции (после разделителя) в эту группу. Виден только
+             роли «Админ» (WORK_SCHEDULE_PAGES отсутствует в LVL_* массивах,
+             доступ через ['*']). Для не-Админ ролей с доступом к расходомерам
+             группа показывает 1 видимый пункт («Расходомеры»), для Админа — 2.
+             Счётчик группы пересчитывается в _applyRoleToUI (видимые пункты). -->
         <div class="sidebar-group" data-group="docs-ios">
         <div class="sidebar-group-title sidebar-group-title-docs" onclick="toggleSidebarGroup(this.parentElement)">
             <span class="sidebar-group-title-text">Документация ИОС</span>
-            <span class="sidebar-group-title-count">1</span>
+            <span class="sidebar-group-title-count">2</span>
             <svg class="sidebar-group-title-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="sidebar-item sidebar-item-extra" onclick="navigateTo('flowmeter-data'); toggleSidebar();">
             <span style="color:rgba(200,112,72,0.9);">Расходомеры хозрасчётные</span>
+        </div>
+        <!-- id="sidebarWorkScheduleBtn" — виден только роли «Админ»
+             (WORK_SCHEDULE_PAGES отсутствует в LVL_* массивах; доступ
+             через ['*']). Скрывается общей логикой _applyRoleToUI (цикл
+             по .sidebar-item с navigateTo('work-schedule')).
+             style="display:none" — чтобы не мелькал до первого запуска
+             _applyRoleToUI (как sidebarAdminBtn). -->
+        <div class="sidebar-item sidebar-item-extra" id="sidebarWorkScheduleBtn" onclick="navigateTo('work-schedule'); toggleSidebar();" style="display:none;">
+            <span style="color:rgba(200,112,72,0.9);">График работы</span>
         </div>
         </div>
 
@@ -34927,22 +34941,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         <div id="sidebarUserInfo" class="sidebar-user-info"></div>
 
         <!-- ===== Сервисные кнопки (внизу шторки) ===== -->
-        <!-- id="sidebarWorkScheduleBtn" — виден только роли "Админ"
-             (WORK_SCHEDULE_PAGES отсутствует в LVL_* массивах; доступ
-             к «График работы» имеют только Админ через ['*']).
-             Скрывается общей логикой _applyRoleToUI (цикл по .sidebar-item
-             с navigateTo('work-schedule')).
-             style="display:none" — чтобы не мелькал до первого запуска
-             _applyRoleToUI (как sidebarAdminBtn). -->
-        <div class="sidebar-item" id="sidebarWorkScheduleBtn" onclick="navigateTo('work-schedule'); toggleSidebar();" style="display:none;">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#7ec699;">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-            <span>График работы</span>
-        </div>
         <!-- id="sidebarAdminBtn" — виден только роли "Админ".
              Скрывается в _applyRoleToUI(). -->
         <div class="sidebar-item" id="sidebarAdminBtn" onclick="navigateTo('admin'); toggleSidebar();" style="display:none;">
