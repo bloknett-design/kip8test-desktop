@@ -34927,6 +34927,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         <div id="sidebarUserInfo" class="sidebar-user-info"></div>
 
         <!-- ===== Сервисные кнопки (внизу шторки) ===== -->
+        <!-- id="sidebarWorkScheduleBtn" — виден только роли "Админ"
+             (WORK_SCHEDULE_PAGES отсутствует в LVL_* массивах; доступ
+             к «График работы» имеют только Админ через ['*']).
+             Скрывается общей логикой _applyRoleToUI (цикл по .sidebar-item
+             с navigateTo('work-schedule')).
+             style="display:none" — чтобы не мелькал до первого запуска
+             _applyRoleToUI (как sidebarAdminBtn). -->
+        <div class="sidebar-item" id="sidebarWorkScheduleBtn" onclick="navigateTo('work-schedule'); toggleSidebar();" style="display:none;">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#7ec699;">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span>График работы</span>
+        </div>
         <!-- id="sidebarAdminBtn" — виден только роли "Админ".
              Скрывается в _applyRoleToUI(). -->
         <div class="sidebar-item" id="sidebarAdminBtn" onclick="navigateTo('admin'); toggleSidebar();" style="display:none;">
