@@ -1350,3 +1350,34 @@ Stage Summary:
 - Пользователям десктопа kip8-desktop: после перезапуска приложения
   таблица приборов получит все функции Tasks 163-176 (раньше их не было
   в боевом десктопе — только в тестовом)
+---
+Task ID: 240-241 (auto-sync из kip8test)
+Agent: main (Super Z) + kip-bot (auto)
+Task: Перенос в тестовый десктоп kip8test-desktop изменений Tasks 240+241
+      (через GitHub Action sync-to-desktop.yml из kip8test). В kip8test
+      WorkSchedule модуль уже есть, поэтому Task 241 применён ПОЛНОСТЬЮ
+      (sidebar-move + zebra).
+
+Work Log:
+- Источник: kip8test@96039d0 (Task 241: «График работы» в группу
+  «Документация ИОС» сайдбара; светлая зебра расходомеров контрастней).
+- Auto-sync коммит 6f29b23 «auto: sync index.html from kip8test@96039d0»
+  (через GitHub Action sync-to-desktop.yml).
+- index.html: «График работы» — sidebar-item-extra внутри группы docs-ios
+  (оранжевый цвет группы, без иконки). Виден только Админу. Статичный
+  счётчик группы: «1» → «2».
+- index.html: светлая тема зебры карточек расходомеров — odd-ряд
+  потемнее (rgba(243,233,223,0.96)), even без изменений. Разница
+  R-канала 4 → 9 (контрастней, но не «полосато»).
+- sw.js: в kip8test-desktop НЕТ (Electron). Версия PWA в kip8test:
+  kipia-test-v503 → v504.
+
+Stage Summary:
+- В kip8test-desktop применён ПОЛНЫЙ результат Tasks 240+241
+  (auto-sync из kip8test@96039d0). WorkSchedule модуль уже присутствует
+  в index.html (перенесён ранее через Tasks 201-239).
+- Источник: auto-sync коммит 6f29b23 (GitHub Action sync-to-desktop.yml).
+- Файлы изменены: index.html (sidebar + zebra). sw.js отсутствует.
+- Версия PWA в kip8test: kipia-test-v504. Версия десктопа: 2.1.7.
+- Пользователю: после пересборки Electron-приложения «График работы»
+  будет в сворачиваемой группе «Документация ИОС» сайдбара.
