@@ -32859,43 +32859,56 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
         },
 
-        // График показаний — вертикальные бары (даты по X, показание по Y), зебра, без Y-оси.
-        // Task 223: график строится из фактических показаний (r.curr),
-        // а не из вычисленного расхода (r.consumption = curr - prev). Для
-        // накапливающих счётчиков (вода, пар, газ) это нагляднее — видно
-        // монотонный рост показаний по датам.
-        // Task 224: нормализация по диапазону — bar = (curr − min) / (max − min) × 100.
-        // Все бары масштабируются так, чтобы минимальное показание → 0% (но не
-        // меньше 1% для видимости), максимальное → 100%. Это позволяет увидеть
-        // относительные изменения даже при больших абсолютных значениях счётчика
-        // (например, когда показания 100 000+ и разница в 50 единиц невооружённым
-        // глазом на «сырой» шкале 0..max не видна).
+        // График архива — вертикальные бары (даты по X, значение по Y), зебра, без Y-оси.
+        // Task 223: для Хозрасчёт №1 (dailyMode) график строится из фактических
+        // показаний (r.curr) — счётчик работает в режиме «расход за предыдущие
+        // сутки» и значения не накапливаются, поэтому показания = расход.
+        // Task 228: для остальных хозрасчётов (НЕ dailyMode) график строится
+        // из вычисленного расхода (r.consumption = curr − prev), т.к. счётчики
+        // накапливающие (вода, пар, газ) и показания монотонно растут —
+        // расход даёт более наглядную картину фактического потребления.
+        // Task 224: нормализация по диапазону — bar = (val − min) / (max − min) × 100.
+        // Task 226: минимальная высота бара 5% — чтобы минимальное за период
+        // значение было видно как «тонкая полоска».
         _buildArchiveChart: function(records, meter) {
             if (records.length < 2) return '';
 
-            var unit = meter ? meter.unit : (records[0].unit || '');
-            var minReading = Infinity;
-            var maxReading = -Infinity;
-            for (var i = 0; i < records.length; i++) {
-                var v = Math.abs(parseFloat(records[i].curr) || 0);
-                if (v < minReading) minReading = v;
-                if (v > maxReading) maxReading = v;
+            var dailyMode = this._isDailyMode(meter);
+            // Источник данных графика: dailyMode → показания (r.curr),
+            // иначе → расход (r.consumption = curr − prev).
+            function pickValue(r) {
+                if (dailyMode) {
+                    return Math.abs(parseFloat(r.curr) || 0);
+                }
+                return Math.abs(parseFloat(r.consumption) || 0);
             }
-            if (maxReading === 0 || !isFinite(maxReading)) return '';
 
-            // Размах: если все показания одинаковы (max === min), нормализация
+            var unit = meter ? meter.unit : (records[0].unit || '');
+            var minVal = Infinity;
+            var maxVal = -Infinity;
+            for (var i = 0; i < records.length; i++) {
+                var v = pickValue(records[i]);
+                if (v < minVal) minVal = v;
+                if (v > maxVal) maxVal = v;
+            }
+            if (maxVal === 0 || !isFinite(maxVal)) return '';
+
+            // Размах: если все значения одинаковы (max === min), нормализация
             // даст деление на ноль. В этом случае ставим всем барам одинаковую
-            // высоту (среднюю — 60%, чтобы было визуально заметно, но не 100%,
-            // т.к. это просто плоская линия без динамики).
-            var range = maxReading - minReading;
+            // высоту (60% — заметно, но не 100%, т.к. это плоская линия без
+            // динамики).
+            var range = maxVal - minVal;
             var flat = (range === 0);
 
             // Записи от старых к новым (по X слева направо)
             var chartRecords = records.slice(0, 31).reverse();
 
+            // Заголовок графика зависит от источника данных
+            var chartTitle = dailyMode ? 'Показания' : 'Расход';
+
             var html = '';
             html += '<div class="flow-archive-chart">';
-            html += '<div class="flow-archive-chart-title">Показания, ' + this._esc(unit) + '</div>';
+            html += '<div class="flow-archive-chart-title">' + chartTitle + ', ' + this._esc(unit) + '</div>';
             html += '<div class="flow-archive-chart-body">';
 
             // Область графика (без Y-оси, без сетки)
@@ -32904,19 +32917,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Бары вплотную, зебра через CSS :nth-child(even)
             for (var j = 0; j < chartRecords.length; j++) {
                 var r = chartRecords[j];
-                var curr = Math.abs(parseFloat(r.curr) || 0);
-                // Task 224: нормализация по диапазону (curr − min) / (max − min) × 100.
-                // Task 226: минимальная высота бара 5% (раньше 1%) — чтобы
-                // минимальное за период показание было отчётливо видно как
-                // «тонкая полоска», а не почти невидимая щепка.
+                var val = pickValue(r);
+                // Task 224: нормализация по диапазону (val − min) / (max − min) × 100.
+                // Task 226: минимальная высота бара 5%.
                 var barPct;
                 if (flat) {
-                    barPct = 60; // все показания одинаковы — плоская линия
+                    barPct = 60; // все значения одинаковы — плоская линия
                 } else {
-                    barPct = Math.max(5, ((curr - minReading) / range) * 100);
+                    barPct = Math.max(5, ((val - minVal) / range) * 100);
                 }
                 html += '<div class="flow-archive-vbar-col">';
-                html += '<div class="flow-archive-vbar-tip-zone"><span class="flow-archive-vbar-tip">' + this._fmtNum(curr) + '</span></div>';
+                html += '<div class="flow-archive-vbar-tip-zone"><span class="flow-archive-vbar-tip">' + this._fmtNum(val) + '</span></div>';
                 html += '<div class="flow-archive-vbar-bar-zone"><div class="flow-archive-vbar" style="height:' + barPct.toFixed(1) + '%"></div></div>';
                 html += '<div class="flow-archive-vbar-xlabel-zone"><span class="flow-archive-vbar-xlabel">' + this._fmtDateShort(r.dateCurr) + '</span></div>';
                 html += '</div>';
