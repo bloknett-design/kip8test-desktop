@@ -31308,6 +31308,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Ключи localStorage для кэша данных
         _cacheKey: 'kip8_flow_cache_v1',
 
+        // Task 235: ключ localStorage для кэша правил валидации.
+        // Сохраняем правила между сессиями, чтобы при открытии карточки
+        // расходомера не ходить на сервер за conditions каждый раз —
+        // модалка аномалий появляется моментально.
+        _rulesCacheKey: 'kip8_flow_rules_v1',
+        // TTL для кэша правил: 24 часа. Если кэш свежее — loadValidationRules
+        // НЕ делает серверный запрос, а раздаёт правила из localStorage.
+        // Если устарел — фоновым запросом обновляем (не блокируя UX).
+        _rulesCacheTtlMs: 24 * 60 * 60 * 1000,
+        // Timestamp последней успешной синхронизации правил с сервера.
+        _rulesCacheTs: 0,
+
         // Текущая вкладка: 'all' или 'fav'
         _activeTab: 'all',
 
@@ -31363,6 +31375,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             //    Если silent=true — populate без renderList().
             this._restoreCache(silent);
             this._loadFallback(silent);
+
+            // Task 235: подгрузить кэш правил валидации из localStorage
+            // (синхронно, до load()) — чтобы первое открытие карточки
+            // расходомера уже имело правила в памяти и модалка аномалий
+            // появлялась моментально, без серверного round-trip.
+            this._loadRulesCacheFromStorage();
 
             // 3. Загрузить свежие данные с сервера.
             //    load() всегда рендерит по завершении (успех или ошибка).
@@ -32569,25 +32587,98 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return null;
         },
 
-        // Task 199: асинхронно загрузить все правила с сервера и
-        // закэшировать в памяти. Вызывать при открытии карточки.
+        // Task 235: синхронно подгрузить кэш правил из localStorage в
+        // _rulesCache + _rulesCacheTs. Вызывается в init() (до load()),
+        // чтобы ПЕРВОЕ же открытие карточки расходомера уже имело правила
+        // в памяти — мгновенная модалка аномалий без серверного round-trip.
+        // Никогда не бросает исключение; при ошибке парсинга — тихий возврат.
+        _loadRulesCacheFromStorage: function() {
+            try {
+                var raw = localStorage.getItem(this._rulesCacheKey);
+                if (!raw) return;
+                var parsed = JSON.parse(raw);
+                if (!parsed || typeof parsed !== 'object') return;
+                var rules = (Array.isArray(parsed.rules)) ? parsed.rules : null;
+                var ts = parseInt(parsed.ts, 10) || 0;
+                if (rules && ts > 0) {
+                    // Заполняем _rulesCache (объект по meterId).
+                    for (var i = 0; i < rules.length; i++) {
+                        var r = rules[i];
+                        if (r && r.meterId) {
+                            this._rulesCache[r.meterId] = r;
+                        }
+                    }
+                    this._rulesCacheTs = ts;
+                }
+            } catch (e) { /* ignore parse errors / quota */ }
+        },
+
+        // Task 235: сохранить _rulesCache + текущий timestamp в localStorage.
+        // Вызывается после успешного fetch в loadValidationRules. Пишем в
+        // try/catch — quota/disabled localStorage не должны валить валидацию.
+        _persistRulesCache: function() {
+            try {
+                var rules = [];
+                for (var k in this._rulesCache) {
+                    if (Object.prototype.hasOwnProperty.call(this._rulesCache, k)) {
+                        rules.push(this._rulesCache[k]);
+                    }
+                }
+                var payload = { rules: rules, ts: Date.now() };
+                localStorage.setItem(this._rulesCacheKey, JSON.stringify(payload));
+                this._rulesCacheTs = payload.ts;
+            } catch (e) { /* quota or disabled */ }
+        },
+
+        // Task 199/235: асинхронно загрузить все правила с сервера и
+        // закэшировать в памяти + localStorage. Вызывать при открытии карточки.
+        //
+        // Оптимизация (Task 235): если кэш в localStorage свежий
+        // (< _rulesCacheTtlMs с момента последней синхронизации) — НЕ делаем
+        // серверный запрос, отдаём правила из памяти. Это убирает «каждый раз
+        // за условиями на сервер» при открытии карточки — модалка аномалий
+        // появляется моментально. Сервер всё равно валидирует независимо
+        // при фактическом сохранении (т.е. даже с устаревшим клиентским кэшем
+        // грубые ошибки будут пойманы на сервере).
+        //
+        // Если кэш устарел или отсутствует — фоновым запросом обновляем,
+        // при ошибке сети fallback на stale-кэш (лучше устаревшие правила,
+        // чем ничего).
         loadValidationRules: function() {
             var self = this;
+            // Task 235: если кэш свежий — отдаём сразу, без round-trip.
+            var now = Date.now();
+            if (this._rulesCacheTs > 0 &&
+                (now - this._rulesCacheTs) < this._rulesCacheTtlMs) {
+                return Promise.resolve(this._rulesCache);
+            }
             return this._api('flowmeter.getValidationRules', {}).then(function(data) {
                 if (data && Array.isArray(data.rules)) {
+                    // Сбросить старый кэш перед заполнением (если сервер
+                    // вернул урезанный список — не оставляем «зомби»-правил).
+                    self._rulesCache = {};
                     for (var i = 0; i < data.rules.length; i++) {
                         var r = data.rules[i];
                         if (r && r.meterId) {
                             self._rulesCache[r.meterId] = r;
                         }
                     }
+                    // Task 235: персист в localStorage для следующих сессий.
+                    self._persistRulesCache();
                 }
                 return self._rulesCache;
             }).catch(function(err) {
-                // Сервер не поддерживает getValidationRules — тихо пропускаем,
-                // валидация soft-confirm будет недоступна (только hard-block
-                // на клиенте и независимая серверная).
-                return null;
+                // Task 235: если fetch упал, а в localStorage есть stale-кэш —
+                // используем его (лучше устаревшие правила, чем отсутствие
+                // клиентской валидации). Сервер всё равно проверит авторитетно.
+                if (Object.keys(self._rulesCache).length === 0) {
+                    self._loadRulesCacheFromStorage();
+                }
+                // Если и localStorage пуст — тихо возвращаем null,
+                // soft-confirm валидация пропустится (только hard-block
+                // на клиенте + независимая серверная).
+                return (Object.keys(self._rulesCache).length > 0)
+                       ? self._rulesCache : null;
             });
         },
 
