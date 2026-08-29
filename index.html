@@ -32793,10 +32793,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         _api: function(action, payload) {
-            if (typeof KipAuth === 'undefined' || !KipAuth.api) {
-                return Promise.reject(new Error('KipAuth не загружен'));
+            // Task 203 fix: передаём session token в payload, иначе Apps Script
+            // возвращает 'no_session' для всех workSchedule.* запросов
+            // (WorkSchedule.gs._requireRead(payload.token) → no_session при undefined token).
+            // Аналогично CableJournal._api / Flowmeter._api.
+            const token = (typeof KipAuth !== 'undefined' && KipAuth.getToken)
+                ? KipAuth.getToken()
+                : null;
+            if (!token) {
+                return Promise.reject(new Error('Нет токена — войдите в аккаунт'));
             }
-            return KipAuth.api(action, payload || {});
+            return KipAuth.api(action, Object.assign({ token: token }, payload || {}));
         },
 
         _loadStatusCodes: function() {
