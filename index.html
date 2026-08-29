@@ -3329,7 +3329,7 @@
         color: #5b6a7d;
     }
     /* Task 197: ячейка комментария в архивной таблице */
-    /* Task 215→220: ширина столбца задаётся динамически через JS
+    /* Task 215→221: ширина столбца задаётся динамически через JS
        (_adjustArchiveColumnWidths) после рендера таблицы. CSS даёт
        только перенос слов + 4-строчную отсечку по высоте. */
     .flow-archive-table .flow-archive-comment {
@@ -3348,7 +3348,7 @@
         color: #5b6a7d;
     }
     /* Task 199: ячейка аномалий в архивной таблице — значки с кодами */
-    /* Task 215→220: ширина через JS (_adjustArchiveColumnWidths). */
+    /* Task 215→221: ширина через JS (_adjustArchiveColumnWidths). */
     .flow-archive-table .flow-archive-anomaly {
         white-space: normal; word-break: break-word;
         line-height: 1.3;
@@ -32637,10 +32637,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             // Task 197: колонка «Комментарий» — показываем всегда (Task 199.2)
             // (раньше скрывалась, если ни в одной записи нет комментария)
-            html += '<th>Комментарий</th>';
+            // Task 221: добавлен класс для измерения ширины заголовка в JS.
+            html += '<th class="flow-archive-comment-th">Комментарий</th>';
             // Task 199: колонка «Замечания» — показываем всегда (Task 199.2)
             // (раньше скрывалась, если ни в одной записи нет anomaly)
-            html += '<th>⚠ Замечания</th>';
+            // Task 221: добавлен класс для измерения ширины заголовка в JS.
+            html += '<th class="flow-archive-anomaly-th">⚠ Замечания</th>';
             html += '<th>Внёс</th>';
             html += '</tr></thead>';
             html += '<tbody>';
@@ -32704,50 +32706,92 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return html;
         },
 
-        // Task 220: динамическая ширина столбцов «Комментарий» и «⚠ Замечания».
-        // Алгоритм:
-        //   1) Для каждой inner-div в столбце — временно выставить white-space:nowrap,
-        //      убрать max-width/max-height/overflow → measure scrollWidth (= ширина
-        //      контента в одну строку). Восстановить исходные inline-стили.
-        //   2) target = clamp(200, 600, ceil(maxNatural / 2)).
-        //      Делитель 2: контент в 2 строки в самом длинном случае, запас есть
-        //      (4-строчная отсечка через CSS max-height:5.2em остаётся как safety).
-        //   3) Применить target как inline min-width + max-width на все inner-div'ы
-        //      этого столбца — td подстроится под ширину inner-div'а.
+        // Task 221: динамическая ширина столбцов «Комментарий» и «⚠ Замечания».
+        // Алгоритм (согласно ТЗ пользователя):
+        //   • минимальная ширина столбца = ширина, достаточная для полного
+        //     отображения текста заголовка (чтобы «Комментарий» / «⚠ Замечания»
+        //     не переносились);
+        //   • если контент ячеек помещается в 4 строки при этой ширине —
+        //     столбец не расширяем;
+        //   • если не помещается — расширяем ровно настолько, чтобы контент
+        //     укладывался в 4 строки (target = ceil(maxNatural / 4) + safety).
+        // Реализация:
+        //   1) Измерить scrollWidth у th-заголовка (временно white-space:nowrap) →
+        //      headerNatural — минимальная ширина столбца.
+        //   2) Для каждой inner-div — временно white-space:nowrap + no constraints,
+        //      measure scrollWidth → maxNatural — самая длинная ячейка в одну
+        //      строку. Восстановить исходные inline-стили.
+        //   3) target = max(headerNatural, ceil(maxNatural / 4) + 10).
+        //   4) Применить target как min-width + max-width на все inner-div'ы
+        //      столбца. td подстроится под ширину inner-div'а, th — следует за td.
         // Вызывается после container.innerHTML = _buildArchiveHtml(...) в двух
         // местах: renderDetail (мобильный) и renderDetailPanel (desktop panel).
         _adjustArchiveColumnWidths: function(container) {
             if (!container) return;
             try {
+                var commentTh = container.querySelector('.flow-archive-comment-th');
+                var anomalyTh = container.querySelector('.flow-archive-anomaly-th');
                 var commentCells = container.querySelectorAll('.flow-archive-comment-inner');
                 var anomalyCells = container.querySelectorAll('.flow-archive-anomaly-inner');
-                this._applyOptimalWidth(commentCells);
-                this._applyOptimalWidth(anomalyCells);
+                this._applyOptimalWidth(commentCells, commentTh);
+                this._applyOptimalWidth(anomalyCells, anomalyTh);
             } catch (e) {
-                // Тихо игнорируем — fallback: CSS max-width:400px (если задан)
-                // или table-layout:auto (без max-width).
+                // Тихо игнорируем — fallback: table-layout:auto + max-height:5.2em.
             }
         },
 
-        _applyOptimalWidth: function(cells) {
+        // Task 221: target = max(headerNatural, ceil(maxCellNatural / 4)).
+        // headerNatural — естественная ширина заголовка (чтобы слово
+        // «Комментарий» или «⚠ Замечания» полностью помещалось в одну строку).
+        // ceil(maxCellNatural / 4) — ширина, при которой самый длинный контент
+        // занимает ровно 4 строки (с word-break:break-word можно разрывать
+        // слова, так что деление на 4 точно).
+        // Если контент в 4 строки при ширине заголовка помещается (fourLineWidth
+        // <= headerNatural), target = headerNatural — столбец не расширяем.
+        // Если нет — target = fourLineWidth, столбец расширяется ровно под 4
+        // строки. max-height:5.2em + overflow:hidden в CSS остаётся как safety
+        // cap на случай edge-case'ов с длинными словами.
+        _applyOptimalWidth: function(cells, headerCell) {
             if (!cells || cells.length === 0) return;
+
+            // 1. Измерить естественную ширину заголовка (минимальная ширина
+            //    столбца, чтобы название полностью отображалось без переноса).
+            var headerNatural = 0;
+            if (headerCell) {
+                var origHeaderCss = headerCell.style.cssText;
+                headerCell.style.cssText = origHeaderCss +
+                    '; white-space:nowrap !important; max-width:none !important;' +
+                    ' width:auto !important;';
+                headerNatural = headerCell.scrollWidth;
+                headerCell.style.cssText = origHeaderCss;
+            }
+
+            // 2. Измерить максимальную естественную ширину контента ячеек
+            //    (в одну строку без переноса).
             var maxNatural = 0;
             for (var i = 0; i < cells.length; i++) {
                 var cell = cells[i];
-                // Сохранили исходный inline-стиль
                 var origCss = cell.style.cssText;
-                // Временно: nowrap + no constraints → мера естественной ширины
                 cell.style.cssText = origCss +
                     '; white-space:nowrap !important; max-width:none !important;' +
                     ' max-height:none !important; overflow:visible !important;' +
                     ' width:auto !important;';
                 var naturalWidth = cell.scrollWidth;
-                // Восстановили
                 cell.style.cssText = origCss;
                 if (naturalWidth > maxNatural) maxNatural = naturalWidth;
             }
-            // Делитель 2 → контент в 2 строки (с запасом до 4). Clamp [200, 600].
-            var target = Math.max(200, Math.min(600, Math.ceil(maxNatural / 2)));
+
+            // 3. Целевая ширина столбца:
+            //    • headerNatural — минимум, чтобы название столбца полностью
+            //      помещалось;
+            //    • ceil(maxNatural / 4) + 10px safety — чтобы контент помещался
+            //      ровно в 4 строки.
+            //    Берём максимум из двух.
+            var fourLineWidth = Math.ceil(maxNatural / 4) + 10;
+            var target = Math.max(headerNatural, fourLineWidth);
+
+            // 4. Применить target как min-width и max-width на inner-div'ы.
+            //    td подстроится под ширину inner-div'а.
             for (var j = 0; j < cells.length; j++) {
                 cells[j].style.minWidth = target + 'px';
                 cells[j].style.maxWidth = target + 'px';
