@@ -3329,11 +3329,9 @@
         color: #5b6a7d;
     }
     /* Task 197: ячейка комментария в архивной таблице */
-    /* Task 215→217→218→219: nowrap давал 1 длинную строку с обрезкой
-       справа. Возврат к white-space:normal + word-break:break-word
-       (перенос слов), НО max-width увеличен с 220px до 400px — столбец
-       реально шире, контент переносится до 4 строк. max-height:5.2em
-       + overflow:hidden — отсечка в 4 строки без «…». */
+    /* Task 215→220: ширина столбца задаётся динамически через JS
+       (_adjustArchiveColumnWidths) после рендера таблицы. CSS даёт
+       только перенос слов + 4-строчную отсечку по высоте. */
     .flow-archive-table .flow-archive-comment {
         font-size: 13px; color: var(--text-secondary);
         white-space: normal; word-break: break-word;
@@ -3341,8 +3339,7 @@
         vertical-align: top;
     }
     .flow-archive-table .flow-archive-comment-inner {
-        max-width: 400px;
-        max-height: 5.2em; /* 4 строки × 1.3 line-height */
+        max-height: 5.2em; /* 4 строки × 1.3 line-height — safety cap */
         overflow: hidden;
         line-height: 1.3;
         word-break: break-word;
@@ -3351,16 +3348,13 @@
         color: #5b6a7d;
     }
     /* Task 199: ячейка аномалий в архивной таблице — значки с кодами */
-    /* Task 215→217→218→219: возврат к white-space:normal, max-width:400px
-       (вместо 220), max-height:5.2em + overflow:hidden. Бейджи и
-       детали переносятся до 4 строк, столбец шире чем раньше. */
+    /* Task 215→220: ширина через JS (_adjustArchiveColumnWidths). */
     .flow-archive-table .flow-archive-anomaly {
         white-space: normal; word-break: break-word;
         line-height: 1.3;
         vertical-align: top;
     }
     .flow-archive-table .flow-archive-anomaly-inner {
-        max-width: 400px;
         max-height: 5.2em;
         overflow: hidden;
         line-height: 1.3;
@@ -31919,6 +31913,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (container) {
                     container.className = '';
                     container.innerHTML = FlowmeterData._buildArchiveHtml(records, m);
+                    // Task 220: динамическая ширина столбцов «Комментарий»/«Замечания» —
+                    // измеряем естественную ширину контента и выставляем ширину так,
+                    // чтобы контент влезал в ≤ 4 строк, при этом столбец растягивался.
+                    FlowmeterData._adjustArchiveColumnWidths(container);
                 }
             });
 
@@ -32704,6 +32702,56 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             html += '</div>'; // .flow-archive-section
 
             return html;
+        },
+
+        // Task 220: динамическая ширина столбцов «Комментарий» и «⚠ Замечания».
+        // Алгоритм:
+        //   1) Для каждой inner-div в столбце — временно выставить white-space:nowrap,
+        //      убрать max-width/max-height/overflow → measure scrollWidth (= ширина
+        //      контента в одну строку). Восстановить исходные inline-стили.
+        //   2) target = clamp(200, 600, ceil(maxNatural / 2)).
+        //      Делитель 2: контент в 2 строки в самом длинном случае, запас есть
+        //      (4-строчная отсечка через CSS max-height:5.2em остаётся как safety).
+        //   3) Применить target как inline min-width + max-width на все inner-div'ы
+        //      этого столбца — td подстроится под ширину inner-div'а.
+        // Вызывается после container.innerHTML = _buildArchiveHtml(...) в двух
+        // местах: renderDetail (мобильный) и renderDetailPanel (desktop panel).
+        _adjustArchiveColumnWidths: function(container) {
+            if (!container) return;
+            try {
+                var commentCells = container.querySelectorAll('.flow-archive-comment-inner');
+                var anomalyCells = container.querySelectorAll('.flow-archive-anomaly-inner');
+                this._applyOptimalWidth(commentCells);
+                this._applyOptimalWidth(anomalyCells);
+            } catch (e) {
+                // Тихо игнорируем — fallback: CSS max-width:400px (если задан)
+                // или table-layout:auto (без max-width).
+            }
+        },
+
+        _applyOptimalWidth: function(cells) {
+            if (!cells || cells.length === 0) return;
+            var maxNatural = 0;
+            for (var i = 0; i < cells.length; i++) {
+                var cell = cells[i];
+                // Сохранили исходный inline-стиль
+                var origCss = cell.style.cssText;
+                // Временно: nowrap + no constraints → мера естественной ширины
+                cell.style.cssText = origCss +
+                    '; white-space:nowrap !important; max-width:none !important;' +
+                    ' max-height:none !important; overflow:visible !important;' +
+                    ' width:auto !important;';
+                var naturalWidth = cell.scrollWidth;
+                // Восстановили
+                cell.style.cssText = origCss;
+                if (naturalWidth > maxNatural) maxNatural = naturalWidth;
+            }
+            // Делитель 2 → контент в 2 строки (с запасом до 4). Clamp [200, 600].
+            var target = Math.max(200, Math.min(600, Math.ceil(maxNatural / 2)));
+            for (var j = 0; j < cells.length; j++) {
+                cells[j].style.minWidth = target + 'px';
+                cells[j].style.maxWidth = target + 'px';
+            }
         },
 
         // График расхода — вертикальные бары (даты по X, расход по Y), зебра, без Y-оси
@@ -33557,6 +33605,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (container) {
                 container.className = '';
                 container.innerHTML = FlowmeterData._buildArchiveHtml(records, m);
+                // Task 220: динамическая ширина столбцов (см. выше)
+                FlowmeterData._adjustArchiveColumnWidths(container);
             }
         });
 
