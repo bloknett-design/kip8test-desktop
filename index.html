@@ -3329,27 +3329,30 @@
         color: #5b6a7d;
     }
     /* Task 197: ячейка комментария в архивной таблице */
-    /* Task 215→217: max-height не работает на <td> (display:table-cell).
-       Перенесено на inner-div. На td оставлены text-стили + valign top. */
+    /* Task 215→217→218: max-height на inner-div (не на td).
+       Task 218: white-space:nowrap — столбец растягивается по горизонтали
+       под содержимое, текст в одну строку, не переносится. max-height
+       оставлен как safety cap. */
     .flow-archive-table .flow-archive-comment {
         font-size: 13px; color: var(--text-secondary);
-        white-space: normal; word-break: break-word;
+        white-space: nowrap;
         line-height: 1.3;
         vertical-align: top;
     }
     .flow-archive-table .flow-archive-comment-inner {
-        max-height: 5.2em; /* 4 строки × 1.3 line-height */
+        max-height: 5.2em; /* safety cap: 4 строки × 1.3 line-height */
         overflow: hidden;
         line-height: 1.3;
-        word-break: break-word;
+        white-space: nowrap;
     }
     [data-theme="light"] .flow-archive-table .flow-archive-comment {
         color: #5b6a7d;
     }
     /* Task 199: ячейка аномалий в архивной таблице — значки с кодами */
-    /* Task 215→217: max-height/overflow:hidden на inner-div (не на td). */
+    /* Task 215→217→218: white-space:nowrap на inner-div — столбец
+       растягивается по горизонтали, бейджи и детали в одну строку. */
     .flow-archive-table .flow-archive-anomaly {
-        white-space: normal; word-break: break-word;
+        white-space: nowrap;
         line-height: 1.3;
         vertical-align: top;
     }
@@ -3357,7 +3360,7 @@
         max-height: 5.2em;
         overflow: hidden;
         line-height: 1.3;
-        word-break: break-word;
+        white-space: nowrap;
     }
     .flow-archive-table .flow-archive-anomaly .flow-anomaly-badge {
         display: inline-block; padding: 2px 6px; margin: 1px 2px 1px 0;
@@ -3367,8 +3370,8 @@
         line-height: 1.2;
     }
     .flow-archive-table .flow-archive-anomaly .flow-anomaly-badge-detail {
-        display: block; font-size: 11px; color: var(--text-tertiary);
-        margin: 1px 0 3px 0; font-style: italic;
+        display: inline-block; font-size: 11px; color: var(--text-tertiary);
+        margin: 1px 4px 1px 0; font-style: italic;
     }
     [data-theme="light"] .flow-archive-table .flow-archive-anomaly .flow-anomaly-badge {
         background: rgba(220, 80, 50, 0.10); color: #a05030;
@@ -13072,8 +13075,8 @@
 <div id="flowCommentSheet" class="flow-input-sheet">
     <div class="flow-input-sheet-handle"></div>
     <div class="flow-input-sheet-title" id="flowCommentTitle">Комментарий к показаниям</div>
-    <textarea id="flowCommentField" class="flow-comment-field" rows="4" maxlength="500" placeholder="Пояснение к последним показаниям (необязательно)" autocomplete="off" oninput="FlowmeterData._updateCommentCounter()"></textarea>
-    <div class="flow-comment-counter" id="flowCommentCounter">0 / 500</div>
+    <textarea id="flowCommentField" class="flow-comment-field" rows="4" maxlength="100" placeholder="Пояснение к последним показаниям (необязательно)" autocomplete="off" oninput="FlowmeterData._updateCommentCounter()"></textarea>
+    <div class="flow-comment-counter" id="flowCommentCounter">0 / 100</div>
     <button type="button" class="flow-input-submit" onclick="FlowmeterData.submitComment()">Сохранить</button>
     <button type="button" class="flow-comment-delete" id="flowCommentDelete" style="display:none;" onclick="FlowmeterData.deleteComment()">Удалить комментарий</button>
     <button type="button" class="flow-input-cancel" onclick="FlowmeterData.closeComment()">Отмена</button>
@@ -32045,12 +32048,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (sheet) sheet.classList.remove('active');
         },
 
-        // Счётчик символов (maxlength=500)
+        // Счётчик символов (maxlength=100, Task 218)
         _updateCommentCounter: function() {
             var field = document.getElementById('flowCommentField');
             var counter = document.getElementById('flowCommentCounter');
             if (field && counter) {
-                counter.textContent = field.value.length + ' / 500';
+                counter.textContent = field.value.length + ' / ' + field.maxLength;
             }
         },
 
