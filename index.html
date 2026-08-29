@@ -8729,13 +8729,16 @@
             z-index: 160;
         }
         #sidebar.desktop-open {
-            transform: translateX(-100%); /* .desktop-open не действует на мобильном */
+            transform: translateX(-100%) !important; /* .desktop-open не действует на мобильном */
         }
         #sidebar.active {
-            transform: translateX(0);
+            transform: translateX(0) !important; /* Task 243 (бекпорт из kip8): !important бьёт десктопное правило #sidebar{transform:translateX(-100%)!important} (specificity #sidebar.active (1,1,0) > #sidebar (1,0,0)). В kip8test wsTrSheet уже правильно закрыт, но !important оставлен для надёжности и паритета с kip8 — чтобы при следующем переносе kip8test → kip8 не потерять фикс. */
         }
         #sidebarOverlay.desktop-active {
             display: none !important; /* .desktop-active не действует на мобильном */
+        }
+        #sidebarOverlay.active {
+            display: block !important; /* Task 243 (бекпорт): то же самое для overlay */
         }
     }
 
@@ -34963,9 +34966,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 <script>
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js').then(function(reg) {
+        // updateViaCache: 'none' — браузер всегда ходит в сеть за sw.js,
+        // не использует HTTP-кэш. Это критично для быстрого деплоя новых
+        // версий (иначе пользователь может крутить старый SW сутками).
+        // Task 242 (бекпорт из kip8): усиление обновления SW — вместе с
+        // skipWaiting() в sw.js и reg.update() сразу при загрузке.
+        navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(function(reg) {
             // Проверять обновления SW каждые 30 минут
             setInterval(function() { reg.update(); }, 30 * 60 * 1000);
+
+            // Принудительно проверить обновление сразу при загрузке —
+            // если на сервере уже лежит новый SW, он начнёт установку.
+            reg.update().catch(function() {});
 
             // Регистрация фоновой синхронизации для обновления данных
             // (exam-tickets.json). Сработает при появлении сети, если
