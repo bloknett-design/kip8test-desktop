@@ -31782,9 +31782,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 '</div>';
             // Комментарий к показаниям — виден всем пользователям раздела
             html += flowBuildCommentRowHtml(commentText, isLocalComment);
-            // Task 197: последний архивный комментарий (meters.P) — preview.
-            // Виден всем. Если нет — строки нет (функция возвращает '').
-            html += flowBuildArchivedCommentRowHtml(m.archivedComment);
+            // Task 210: строка «Последний архивный комментарий» убрана из карточки —
+            // этот комментарий уже отображается в таблице хронологии показаний
+            // в столбце «Комментарий» (первая строка таблицы = последняя запись).
 
             // Температура среды (только если есть) — с датой, как в показаниях
             // Task 205: для dailyMode — Тэкон-19 не отдаёт температуру, не показываем
