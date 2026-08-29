@@ -32825,24 +32825,28 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
         },
 
-        // График расхода — вертикальные бары (даты по X, расход по Y), зебра, без Y-оси
+        // График показаний — вертикальные бары (даты по X, показание по Y), зебра, без Y-оси.
+        // Task 223: график теперь строится из фактических показаний (r.curr),
+        // а не из вычисленного расхода (r.consumption = curr - prev). Для
+        // накапливающих счётчиков (вода, пар, газ) это нагляднее — видно
+        // монотонный рост показаний по датам.
         _buildArchiveChart: function(records, meter) {
             if (records.length < 2) return '';
 
             var unit = meter ? meter.unit : (records[0].unit || '');
-            var maxCons = 0;
+            var maxReading = 0;
             for (var i = 0; i < records.length; i++) {
-                var c = Math.abs(records[i].consumption || 0);
-                if (c > maxCons) maxCons = c;
+                var v = Math.abs(parseFloat(records[i].curr) || 0);
+                if (v > maxReading) maxReading = v;
             }
-            if (maxCons === 0) return '';
+            if (maxReading === 0) return '';
 
             // Записи от старых к новым (по X слева направо)
             var chartRecords = records.slice(0, 31).reverse();
 
             var html = '';
             html += '<div class="flow-archive-chart">';
-            html += '<div class="flow-archive-chart-title">Расход, ' + this._esc(unit) + '</div>';
+            html += '<div class="flow-archive-chart-title">Показания, ' + this._esc(unit) + '</div>';
             html += '<div class="flow-archive-chart-body">';
 
             // Область графика (без Y-оси, без сетки)
@@ -32851,10 +32855,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Бары вплотную, зебра через CSS :nth-child(even)
             for (var j = 0; j < chartRecords.length; j++) {
                 var r = chartRecords[j];
-                var cons = Math.abs(r.consumption || 0);
-                var barPct = Math.max(1, (cons / maxCons) * 100);
+                var curr = Math.abs(parseFloat(r.curr) || 0);
+                var barPct = Math.max(1, (curr / maxReading) * 100);
                 html += '<div class="flow-archive-vbar-col">';
-                html += '<div class="flow-archive-vbar-tip-zone"><span class="flow-archive-vbar-tip">' + this._fmtNum(cons) + '</span></div>';
+                html += '<div class="flow-archive-vbar-tip-zone"><span class="flow-archive-vbar-tip">' + this._fmtNum(curr) + '</span></div>';
                 html += '<div class="flow-archive-vbar-bar-zone"><div class="flow-archive-vbar" style="height:' + barPct.toFixed(1) + '%"></div></div>';
                 html += '<div class="flow-archive-vbar-xlabel-zone"><span class="flow-archive-vbar-xlabel">' + this._fmtDateShort(r.dateCurr) + '</span></div>';
                 html += '</div>';
