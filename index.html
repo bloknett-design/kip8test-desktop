@@ -31176,17 +31176,24 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     }
 
     /** Task 199: построить HTML модалки подтверждения аномалий.
-     *  codes — массив строк вида 'CODE: detail'. meter — для шапки. */
+     *  codes — массив строк вида 'CODE: detail'. meter — для шапки.
+     *  Task 222: если в FlowmeterData._anomalyHelp[code] есть дружелюбное
+     *  описание — показываем его вместо технического detail. */
     function flowBuildAnomalyModalHtml(meter, codes) {
         var items = '';
+        // Task 222: подгружаем карту описаний, если FlowmeterData уже инициализирован
+        var helpMap = (typeof FlowmeterData !== 'undefined' && FlowmeterData._anomalyHelp)
+                      ? FlowmeterData._anomalyHelp : {};
         for (var i = 0; i < codes.length; i++) {
             var c = String(codes[i] || '');
             var colon = c.indexOf(':');
             var code = colon > 0 ? c.substring(0, colon) : c;
             var detail = colon > 0 ? c.substring(colon + 1).trim() : '';
+            // Task 222: предпочитаем дружелюбное описание, иначе — технический detail
+            var displayText = (helpMap[code]) || detail;
             items += '<li class="flow-anomaly-item">' +
                      '<span class="flow-anomaly-code">' + escHtml(code) + '</span>' +
-                     '<span class="flow-anomaly-detail">' + escHtml(detail) + '</span>' +
+                     '<span class="flow-anomaly-detail">' + escHtml(displayText) + '</span>' +
                      '</li>';
         }
         var meterTitle = meter ? (escHtml(meter.hoz || '') + ' — ' + escHtml(meter.param || '')) : '';
@@ -31242,6 +31249,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 195: ленивый кэш fallback-комментариев (localStorage),
         // используется пока серверный патч flowmeter.setComment не задеплоен
         _localComments: null,
+
+        // Task 222: карта кодов правил аномалий → текстовые описания
+        // в простой форме. Заполняется из response.flowmeter.archive
+        // (поле anomalyHelp) или из flowmeter.getValidationHelp.
+        // Используется в _buildArchiveHtml (столбец «⚠ Замечания»)
+        // и в flowBuildAnomalyModalHtml (модалка подтверждения).
+        _anomalyHelp: {},
 
         // 12 позиций хозрасчётных расходомеров
         // Заполняются из data/flowmeters.json (_loadFallback),
@@ -32579,6 +32593,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             this._api('flowmeter.archive', { id: meterId, limit: 200 }).then(function(data) {
                 if (data && Array.isArray(data.records)) {
+                    // Task 222: сохраняем карту описаний аномалий (если сервер прислал)
+                    if (data.anomalyHelp && typeof data.anomalyHelp === 'object') {
+                        self._anomalyHelp = data.anomalyHelp;
+                    }
                     self._persistArchive(meterId, data.records);
                     if (callback) callback(data.records);
                 } else {
@@ -32673,6 +32691,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     ? String(r.comment).trim() : '—';
                 html += '<td class="flow-archive-comment"><div class="flow-archive-comment-inner">' + this._esc(cmtStr) + '</div></td>';
                 // Task 199: флаги аномалий — значки с кодами (колонка видна всегда)
+                // Task 222: если в _anomalyHelp[code] есть дружелюбное описание —
+                // показываем его вместо технического detail (который генерируется
+                // сервером в ValidationRules.compute и содержит внутренние числа).
+                // Fallback: если карта пуста или код в ней не найден — показываем
+                // технический detail (старое поведение, для обратной совместимости).
                 var anStr = (r.anomaly && String(r.anomaly).trim() !== '')
                     ? String(r.anomaly).trim() : '';
                 if (anStr) {
@@ -32686,8 +32709,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         var code = colonIdx > 0 ? part.substring(0, colonIdx).trim() : part;
                         var detail = colonIdx > 0 ? part.substring(colonIdx + 1).trim() : '';
                         badges += '<span class="flow-anomaly-badge">' + this._esc(code) + '</span>';
-                        if (detail) {
-                            badges += '<span class="flow-anomaly-badge-detail">' + this._esc(detail) + '</span>';
+                        // Task 222: предпочитаем дружелюбное описание из _anomalyHelp,
+                        // иначе — технический detail из archive.Q.
+                        var friendly = (this._anomalyHelp && this._anomalyHelp[code]) || '';
+                        var displayText = friendly || detail;
+                        if (displayText) {
+                            badges += '<span class="flow-anomaly-badge-detail">' + this._esc(displayText) + '</span>';
                         }
                     }
                     html += '<td class="flow-archive-anomaly"><div class="flow-archive-anomaly-inner">' + badges + '</div></td>';
