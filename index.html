@@ -3262,10 +3262,15 @@
         font-weight: 400;
     }
     [data-theme="light"] .flow-detail-sub { color: rgba(20, 20, 19, 0.6); }
-    /* Task 225: дата под заголовком «Последние показания» — отдельной строкой */
-    .flow-detail-row-last > .flow-detail-date {
+    /* Task 227: дата в строке «Последние показания» — справа от названия,
+       в одной строке с ним и кнопкой комментария (раньше — отдельной строкой под). */
+    .flow-detail-row-head .flow-detail-date-inline {
         font-size: 12px;
-        margin-bottom: 4px;
+        font-weight: 400;
+        color: var(--text-secondary);
+        /* margin-right:auto толкает кнопку комментария к правому краю,
+           а дата идёт сразу за label (с отступом gap:8px из row-head). */
+        margin-right: auto;
     }
     /* Подсветка строки «Расход» — фон и лейбл как у обычной строки, зелёным только значение */
     .flow-detail-highlight .flow-detail-value { color: #5ab870; font-weight: 700; }
@@ -31821,19 +31826,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 !(m.comment !== undefined && m.comment !== null && String(m.comment).trim() !== '');
             var commentBtnHtml = flowBuildCommentBtnHtml(m, _email, commentText, _role);
             // Task 225: строка «Последние показания» объединяет в себе:
-            //   1) Заголовок «Последние показания» + кнопка комментария
-            //   2) Дату «за (дата) г.» — под названием, отдельной строкой
-            //   3) Значение последних показаний с единицей измерения
-            //   4) Температуру среды (если есть) — без отдельного заголовка
-            //   5) Гигакалории пара (если есть и это расходомер пара) — без заголовка
+            //   1) Заголовок «Последние показания» + дата справа + кнопка комментария
+            //   2) Значение последних показаний с единицей измерения
+            //   3) Температуру среды (если есть) — без отдельного заголовка
+            //   4) Гигакалории пара (если есть и это расходомер пара) — без заголовка
             // Строки «Температура среды» и «Гигакалории пара» как отдельные
             // строки убраны — их значения перенесены под основные показания.
+            // Task 227: дата «за (дата) г.» перенесена в правую часть row-head
+            // (между названием и кнопкой комментария) — раньше была отдельной
+            // строкой под названием.
             var lastReadingLabel = 'Последние показания';
             html += '<div class="flow-detail-row flow-detail-row-last">' +
-                '<div class="flow-detail-row-head"><span class="flow-detail-label">' + lastReadingLabel + '</span>' + commentBtnHtml + '</div>' +
-                // Дата — под названием «Последние показания»
-                '<div class="flow-detail-date">за ' + this._fmtDate(m.dateCurr) + ' г.</div>' +
-                // Значение последних показаний (без даты — она уже выше)
+                '<div class="flow-detail-row-head">' +
+                    '<span class="flow-detail-label">' + lastReadingLabel + '</span>' +
+                    '<span class="flow-detail-date flow-detail-date-inline">за ' + this._fmtDate(m.dateCurr) + ' г.</span>' +
+                    commentBtnHtml +
+                '</div>' +
+                // Значение последних показаний (без встроенной даты)
                 '<div class="flow-detail-value flow-detail-curr">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + '</div>' +
                 // Температура среды — под значением показаний (если есть)
                 (function(self, m, dailyMode) {
