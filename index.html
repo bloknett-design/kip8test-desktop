@@ -3254,6 +3254,19 @@
     [data-theme="light"] .flow-detail-value { color: #1a1a1a; }
     .flow-detail-curr { color: #6aa6e0; }
     [data-theme="light"] .flow-detail-curr { color: #1a5a8a; }
+    /* Task 225: подзначения (температура, гигакалории) под основными показаниями —
+       меньше и второстепенным цветом, чтобы визуально подчинялись осн. значению. */
+    .flow-detail-sub {
+        font-size: 14px;
+        color: rgba(220, 200, 190, 0.7);
+        font-weight: 400;
+    }
+    [data-theme="light"] .flow-detail-sub { color: rgba(20, 20, 19, 0.6); }
+    /* Task 225: дата под заголовком «Последние показания» — отдельной строкой */
+    .flow-detail-row-last > .flow-detail-date {
+        font-size: 12px;
+        margin-bottom: 4px;
+    }
     /* Подсветка строки «Расход» — фон и лейбл как у обычной строки, зелёным только значение */
     .flow-detail-highlight .flow-detail-value { color: #5ab870; font-weight: 700; }
     /* ========== Task 195: комментарий к последним показаниям ========== */
@@ -31807,30 +31820,42 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var isLocalComment = !!commentText &&
                 !(m.comment !== undefined && m.comment !== null && String(m.comment).trim() !== '');
             var commentBtnHtml = flowBuildCommentBtnHtml(m, _email, commentText, _role);
+            // Task 225: строка «Последние показания» объединяет в себе:
+            //   1) Заголовок «Последние показания» + кнопка комментария
+            //   2) Дату «за (дата) г.» — под названием, отдельной строкой
+            //   3) Значение последних показаний с единицей измерения
+            //   4) Температуру среды (если есть) — без отдельного заголовка
+            //   5) Гигакалории пара (если есть и это расходомер пара) — без заголовка
+            // Строки «Температура среды» и «Гигакалории пара» как отдельные
+            // строки убраны — их значения перенесены под основные показания.
             var lastReadingLabel = 'Последние показания';
-            html += '<div class="flow-detail-row">' +
+            html += '<div class="flow-detail-row flow-detail-row-last">' +
                 '<div class="flow-detail-row-head"><span class="flow-detail-label">' + lastReadingLabel + '</span>' + commentBtnHtml + '</div>' +
-                '<span class="flow-detail-value flow-detail-curr">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> за ' + this._fmtDate(m.dateCurr) + ' г.</span></span>' +
+                // Дата — под названием «Последние показания»
+                '<div class="flow-detail-date">за ' + this._fmtDate(m.dateCurr) + ' г.</div>' +
+                // Значение последних показаний (без даты — она уже выше)
+                '<div class="flow-detail-value flow-detail-curr">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + '</div>' +
+                // Температура среды — под значением показаний (если есть)
+                (function(self, m, dailyMode) {
+                    if (!dailyMode && m.temp !== null && m.temp !== undefined) {
+                        var tempStr = m.temp.toFixed(1).replace('.', ',') + ' °C';
+                        return '<div class="flow-detail-value flow-detail-sub">' + tempStr + '</div>';
+                    }
+                    return '';
+                })(this, m, dailyMode) +
+                // Гигакалории пара — под значением показаний (если есть и это пар)
+                (function(self, m, dailyMode) {
+                    if ((dailyMode || self._isSteamMeter(m)) && (m.gcal !== null && m.gcal !== undefined)) {
+                        return '<div class="flow-detail-value flow-detail-sub">' + gcalStr + '</div>';
+                    }
+                    return '';
+                })(this, m, dailyMode) +
                 '</div>';
             // Комментарий к показаниям — виден всем пользователям раздела
             html += flowBuildCommentRowHtml(commentText, isLocalComment);
             // Task 210: строка «Последний архивный комментарий» убрана из карточки —
             // этот комментарий уже отображается в таблице хронологии показаний
             // в столбце «Комментарий» (первая строка таблицы = последняя запись).
-
-            // Температура среды (только если есть) — с датой, как в показаниях
-            // Task 205: для dailyMode — Тэкон-19 не отдаёт температуру, не показываем
-            if (!dailyMode && m.temp !== null && m.temp !== undefined) {
-                var tempStr = (m.temp !== null && m.temp !== undefined) ? m.temp.toFixed(1).replace('.', ',') + ' °C' : '—';
-                html += '<div class="flow-detail-row"><span class="flow-detail-label">Температура среды</span><span class="flow-detail-value">' + tempStr + ',<span class="flow-detail-date"> за ' + this._fmtDate(m.dateCurr) + ' г.</span></span></div>';
-            }
-
-            // Гигакалории пара (только для расходомеров пара, Task 100) — с датой
-            // Показываем, только если это расходомер пара (param содержит «пара») и значение есть
-            // Task 205: для dailyMode — показываем всегда (если есть gcal)
-            if ((dailyMode || this._isSteamMeter(m)) && (m.gcal !== null && m.gcal !== undefined)) {
-                html += '<div class="flow-detail-row"><span class="flow-detail-label">Гигакалории пара</span><span class="flow-detail-value">' + gcalStr + ',<span class="flow-detail-date"> за ' + this._fmtDate(m.dateCurr) + ' г.</span></span></div>';
-            }
 
             // Внёс изменения
             // Task 109: показываем modDisplayName (имя из KIP8_Access), а не modName (email)
