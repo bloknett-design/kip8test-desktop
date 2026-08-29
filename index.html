@@ -31239,7 +31239,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     /** Task 199: построить HTML модалки подтверждения аномалий.
      *  codes — массив строк вида 'CODE: detail'. meter — для шапки.
      *  Task 222: если в FlowmeterData._anomalyHelp[code] есть дружелюбное
-     *  описание — показываем его вместо технического detail. */
+     *  описание — показываем его вместо технического detail.
+     *  Task 234: код правила (CODE) больше не показываем — только описание,
+     *  как в столбце «⚠ Замечания» хронологии показаний. */
     function flowBuildAnomalyModalHtml(meter, codes) {
         var items = '';
         // Task 222: подгружаем карту описаний, если FlowmeterData уже инициализирован
@@ -31252,10 +31254,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var detail = colon > 0 ? c.substring(colon + 1).trim() : '';
             // Task 222: предпочитаем дружелюбное описание, иначе — технический detail
             var displayText = (helpMap[code]) || detail;
+            // Task 234: код правила не показываем — только описание (как в столбце «⚠ Замечания»).
+            if (!displayText) continue;
             items += '<li class="flow-anomaly-item">' +
-                     '<span class="flow-anomaly-code">' + escHtml(code) + '</span>' +
                      '<span class="flow-anomaly-detail">' + escHtml(displayText) + '</span>' +
                      '</li>';
+        }
+        // Task 234: fallback, если после фильтра пусто (все displayText пусты) —
+        // чтобы модалка не оставалась без единого пункта.
+        if (!items) {
+            items = '<li class="flow-anomaly-item">' +
+                    '<span class="flow-anomaly-detail">Проверьте корректность введённых показаний</span>' +
+                    '</li>';
         }
         var meterTitle = meter ? (escHtml(meter.hoz || '') + ' — ' + escHtml(meter.param || '')) : '';
         return '<div id="flowAnomalyModal" class="flow-anomaly-modal-overlay">' +
