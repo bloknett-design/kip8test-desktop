@@ -1381,3 +1381,45 @@ Stage Summary:
 - Версия PWA в kip8test: kipia-test-v504. Версия десктопа: 2.1.7.
 - Пользователю: после пересборки Electron-приложения «График работы»
   будет в сворачиваемой группе «Документация ИОС» сайдбара.
+
+---
+Task ID: 241 финал (docs only — kip8test-desktop)
+Agent: main (Super Z)
+Task: Зафиксировать в worklog.md kip8test-desktop факт финального переноса
+      модуля WorkSchedule (Tasks 201-239) + Task 241 sidebar-move из kip8test
+      в боевой kip8 (commit 5edaeac). В kip8test-desktop: БЕЗ изменений кода —
+      index.html уже синхронизирован из kip8test@96039d0 (commit 6f29b23),
+      который является источником переноса.
+
+Work Log:
+- kip8test-desktop/index.html — БЕЗ изменений (код уже актуален с
+  kip8test@96039d0 через commit 6f29b23 auto: sync index.html from
+  kip8test@96039d0).
+- kip8test@555eb20 (Task 241 docs: фиксация финального переноса в kip8@5edaeac)
+  изменил только worklog.md и Системный_промт — index.html не тронут.
+  sync-to-desktop.yml в kip8test НЕ сработал на этот коммит (т.к. index.html
+  не изменился) — это ожидаемое поведение.
+- В kip8 (commit 5edaeac) выполнен финальный перенос:
+  - Фронтенд (index.html, +1238 строк): CSS .ws-* (279), 3 HTML-страницы,
+    3 bottom-sheet-а (145), кнопка меню workScheduleMenuBtn, JS-модуль
+    var WorkSchedule = {...} (770), 3 init-блока в navigateTo(),
+    _WORK_SCHEDULE_PAGES в role config, Task 241 sidebar-move (sidebarWorkScheduleBtn
+    внутри группы docs-ios сайдбара, счётчик «2»).
+  - Бэкенд: scripts/WorkSchedule.gs (854 строки) + 11 workSchedule.* роутов
+    в scripts/Code.gs.
+  - Тесты: tests/test-work-schedule.js (344 строки, +33 теста).
+  - SW: kipia-v394 → kipia-v395.
+  - Тесты kip8: 542 passed / 0 failed (было 509).
+- В kip8 обновлены документы (worklog.md + Системный_промт).
+- В kip8-desktop (commit e033e28) обновлены worklog + промт через
+  sync-to-desktop.yml + ручной commit; index.html автоматически синхронизирован
+  из kip8@5edaeac.
+
+Stage Summary:
+- kip8test-desktop полностью синхронен с kip8test@555eb20 (только что
+  запушен): index.html не требует обновления (источник — kip8test@96039d0,
+  уже синхронизирован). Worklog и Системный_промт — обновлены вручную.
+- Боевой десктоп kip8-desktop (commit e033e28) уже получил модуль WorkSchedule
+  из kip8@5edaeac через auto-sync. Тестовый десктоп kip8test-desktop уже
+  имел модуль WorkSchedule (из kip8test@96039d0) ранее.
+- Локальная дата: 2026-08-29 18:08:46 UTC+07:00 (Asia/Novosibirsk).
