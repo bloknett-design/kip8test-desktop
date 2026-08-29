@@ -31745,6 +31745,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Построить HTML детальной карточки
         _buildDetailHtml: function(m) {
+            // Task 205: Хозрасчёт №1 (id=1) — режим «расход за предыдущие сутки».
+            // Данные приходят из Тэкон-19 сразу как расход, без накопительных показаний.
+            // В этом режиме: нет «Предыдущих показаний», нет строки «Расход за N дн.»
+            // (потому что consumption = curr - 0 = curr — это и есть введённое значение),
+            // нет «Температуры». «Последние показания» переименованы в «Расход».
+            var dailyMode = this._isDailyMode(m);
             var consumption = m.curr - m.prev;
             var consStr = this._fmtNum(Math.abs(consumption));
             var tempStr = (m.temp !== null && m.temp !== undefined) ? m.temp.toFixed(1).replace('.', ',') + ' °C' : '—';
@@ -31755,11 +31761,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Заголовок карточки — param + period внутри одного div с зеброй
             html += '<div class="flow-detail-header"><div class="flow-detail-param">' + this._esc(m.param) + '</div><div class="flow-detail-period">' + this._esc(m.period) + '</div></div>';
 
-            // Предыдущие показания
-            html += '<div class="flow-detail-row"><span class="flow-detail-label">Предыдущие показания</span><span class="flow-detail-value">' + this._fmtNum(m.prev) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.datePrev) + ' г.</span></span></div>';
+            // Предыдущие показания (только НЕ для dailyMode)
+            if (!dailyMode) {
+                html += '<div class="flow-detail-row"><span class="flow-detail-label">Предыдущие показания</span><span class="flow-detail-value">' + this._fmtNum(m.prev) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.datePrev) + ' г.</span></span></div>';
+            }
 
             // Task 195: последние показания + кнопка комментария в правой части
             // строки (видна автору показаний ИЛИ админу) + подстрока комментария (всем).
+            // Task 205: для dailyMode — переименовываем label «Последние показания» → «Расход»
             var _email = (typeof KipAuth !== 'undefined' ? KipAuth._cachedEmail : null);
             var _role = (typeof KipAuth !== 'undefined' ? KipAuth._cachedRole : null);
             var canComment = flowCanComment(m, _email, _role);
@@ -31768,8 +31777,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var isLocalComment = !!commentText &&
                 !(m.comment !== undefined && m.comment !== null && String(m.comment).trim() !== '');
             var commentBtnHtml = flowBuildCommentBtnHtml(m, _email, commentText, _role);
+            var lastReadingLabel = dailyMode ? 'Расход' : 'Последние показания';
             html += '<div class="flow-detail-row">' +
-                '<div class="flow-detail-row-head"><span class="flow-detail-label">Последние показания</span>' + commentBtnHtml + '</div>' +
+                '<div class="flow-detail-row-head"><span class="flow-detail-label">' + lastReadingLabel + '</span>' + commentBtnHtml + '</div>' +
                 '<span class="flow-detail-value flow-detail-curr">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.dateCurr) + ' г.</span></span>' +
                 '</div>';
             // Комментарий к показаниям — виден всем пользователям раздела
@@ -31777,17 +31787,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Task 197: последний архивный комментарий (meters.P) — preview.
             // Виден всем. Если нет — строки нет (функция возвращает '').
             html += flowBuildArchivedCommentRowHtml(m.archivedComment);
-            // Расход
-            html += '<div class="flow-detail-row flow-detail-highlight"><span class="flow-detail-label">Расход</span><span class="flow-detail-value">' + consStr + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> за ' + this._daysBetween(m.datePrev, m.dateCurr) + ' дн.</span></span></div>';
+            // Расход (только НЕ для dailyMode — для dailyMode это значение уже
+            // показано выше в строке «Расход: [curr] [unit]», вычислять нечего)
+            if (!dailyMode) {
+                html += '<div class="flow-detail-row flow-detail-highlight"><span class="flow-detail-label">Расход</span><span class="flow-detail-value">' + consStr + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> за ' + this._daysBetween(m.datePrev, m.dateCurr) + ' дн.</span></span></div>';
+            }
 
             // Температура среды (только если есть) — с датой, как в показаниях
-            if (m.temp !== null && m.temp !== undefined) {
+            // Task 205: для dailyMode — Тэкон-19 не отдаёт температуру, не показываем
+            if (!dailyMode && m.temp !== null && m.temp !== undefined) {
                 html += '<div class="flow-detail-row"><span class="flow-detail-label">Температура среды</span><span class="flow-detail-value">' + tempStr + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.dateCurr) + ' г.</span></span></div>';
             }
 
             // Гигакалории пара (только для расходомеров пара, Task 100) — с датой
             // Показываем, только если это расходомер пара (param содержит «пара») и значение есть
-            if (this._isSteamMeter(m) && (m.gcal !== null && m.gcal !== undefined)) {
+            // Task 205: для dailyMode — показываем всегда (если есть gcal)
+            if ((dailyMode || this._isSteamMeter(m)) && (m.gcal !== null && m.gcal !== undefined)) {
                 html += '<div class="flow-detail-row"><span class="flow-detail-label">Гигакалории пара</span><span class="flow-detail-value">' + gcalStr + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.dateCurr) + ' г.</span></span></div>';
             }
 
@@ -31825,6 +31840,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _isSteamMeter: function(m) {
             if (!m || !m.param) return false;
             return String(m.param).toLowerCase().indexOf('пара') !== -1;
+        },
+
+        // Task 205: Хозрасчёт №1 (id=1) — особый режим «расход за предыдущие сутки».
+        // Данные приходят из Тэкон-19 уже сформированными (расход в т и Гкал).
+        // В этом режиме: нет полей prev/datePrev/temp; gcal обязательно; главное
+        // поле — «Расход, т»; строка «Расход за N дн.» в детальной карточке скрыта.
+        _isDailyMode: function(m) {
+            return !!(m && m.id === 1);
         },
 
         // Открыть детальную карточку
@@ -32100,8 +32123,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             if (!m) return;
 
+            // Task 205: Хозрасчёт №1 — особый режим «расход за предыдущие сутки»
+            var dailyMode = this._isDailyMode(m);
+
             var titleEl = document.getElementById('flowInputTitle');
-            if (titleEl) titleEl.textContent = m.hoz + (isEdit ? ' — изменить показания' : ' — ввести показания');
+            if (titleEl) {
+                if (dailyMode) {
+                    titleEl.textContent = m.hoz + (isEdit ? ' — изменить расход' : ' — внести расход за сутки');
+                } else {
+                    titleEl.textContent = m.hoz + (isEdit ? ' — изменить показания' : ' — ввести показания');
+                }
+            }
 
             var field = document.getElementById('flowInputField');
             if (field) {
@@ -32111,15 +32143,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 } else {
                     field.value = '';
                 }
-                field.placeholder = 'Текущие показания, ' + m.unit;
+                // Task 205: для dailyMode — другой placeholder (вводится расход, а не показания)
+                field.placeholder = dailyMode
+                    ? 'Расход за предыдущие сутки, ' + m.unit
+                    : 'Текущие показания, ' + m.unit;
             }
 
             // Температура — поле видно только для Хозрасчёта №6 (Task 103)
             // Task 104: при новом вводе — пустое; при редактировании (isEdit) — предзаполняем
+            // Task 205: для dailyMode (Хозрасчёт №1) — всегда скрыто (Тэкон-19 не отдаёт температуру)
             var tempField = document.getElementById('flowInputTemp');
             var tempGroup = tempField ? tempField.closest('.flow-input-group') : null;
             if (tempField && tempGroup) {
-                if (m.id === 6) {
+                if (!dailyMode && m.id === 6) {
                     tempGroup.style.display = '';
                     if (isEdit && m.temp !== null && m.temp !== undefined) {
                         tempField.value = m.temp.toFixed(1).replace('.', ',');
@@ -32135,17 +32171,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             // Гигакалории пара (Task 100) — поле видно только для расходомеров пара
             // Task 104: при новом вводе — пустое; при редактировании (isEdit) — предзаполняем
+            // Task 205: для dailyMode (Хозрасчёт №1) — Гкал обязательно (Тэкон-19 отдаёт расход в Гкал)
             var gcalGroup = document.getElementById('flowInputGcalGroup');
             var gcalField = document.getElementById('flowInputGcal');
             if (gcalGroup && gcalField) {
-                if (this._isSteamMeter(m)) {
+                if (dailyMode || this._isSteamMeter(m)) {
                     gcalGroup.style.display = '';
                     if (isEdit && m.gcal !== null && m.gcal !== undefined) {
                         gcalField.value = m.gcal.toFixed(3).replace('.', ',');
                     } else {
                         gcalField.value = '';
                     }
-                    gcalField.placeholder = '— (необязательно)';
+                    // Task 205: для dailyMode — Гкал обязательно
+                    gcalField.placeholder = dailyMode ? 'Гкал (обязательно)' : '— (необязательно)';
                 } else {
                     gcalGroup.style.display = 'none';
                     gcalField.value = '';
@@ -32248,18 +32286,27 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             for (var i = 0; i < this._METERS.length; i++) {
                 if (this._METERS[i].id === id) {
                     meter = this._METERS[i];
-                    // Task 108: при редактировании НЕ сдвигаем prev → curr (просто перезаписываем curr)
-                    if (!isEdit) {
+                    // Task 205: для dailyMode (Хозрасчёт №1) — не сдвигаем prev → curr
+                    // (prev всегда 0, т.к. данные сразу расход, а не накопительные показания).
+                    // Для остальных расходомеров — стандартная логика Task 108:
+                    // при новом вводе сдвигаем prev → curr; при isEdit — не сдвигаем.
+                    var dailyMode = this._isDailyMode(meter);
+                    if (!dailyMode && !isEdit) {
                         meter.prev = meter.curr;
                         meter.datePrev = meter.dateCurr;
                     }
+                    if (dailyMode) {
+                        meter.prev = 0;
+                        meter.datePrev = dateStr;  // datePrev = dateCurr (нет «предыдущей даты»)
+                        meter.temp = null;  // Тэкон-19 не отдаёт температуру
+                    }
                     meter.curr = num;
                     meter.dateCurr = dateStr;
-                    if (tempVal !== null) {
+                    if (!dailyMode && tempVal !== null) {
                         meter.temp = tempVal;
                     }
-                    // Гкал обновляем только для расходомеров пара (Task 100)
-                    if (this._isSteamMeter(meter) && gcalVal !== null) {
+                    // Гкал обновляем для расходомеров пара и для dailyMode (Task 100/205)
+                    if ((dailyMode || this._isSteamMeter(meter)) && gcalVal !== null) {
                         meter.gcal = gcalVal;
                     }
                     // Обновляем подпись — текущий пользователь + timestamp
@@ -32288,6 +32335,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // сразу отправляем. Сервер в любом случае валидирует
             // независимо и пишет аномалии в archive.Q.
             if (meter) {
+                var dailyMode = this._isDailyMode(meter);
+                // Task 205: для dailyMode (Хозрасчёт №1) — gcal обязателен.
+                // Проверяем до отправки на сервер — экономим один HTTP-запрос.
+                if (dailyMode && (gcalVal === null || isNaN(gcalVal))) {
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Введите расход в Гкал — поле обязательно для Хозрасчёта №1');
+                    }
+                    // Откат оптимистичного UI перезагрузкой
+                    this.load();
+                    return;
+                }
                 var apiPayload = {
                     id: id,
                     prev: meter.prev,
@@ -32297,7 +32355,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     temp: meter.temp,
                     isEdit: isEdit  // Task 108: сервер проверит «1 час + тот же пользователь»
                 };
-                if (this._isSteamMeter(meter)) {
+                if (dailyMode || this._isSteamMeter(meter)) {
                     apiPayload.gcal = (gcalVal !== null) ? gcalVal : (meter.gcal || '');
                 }
 
