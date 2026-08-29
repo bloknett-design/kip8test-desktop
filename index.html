@@ -3262,15 +3262,16 @@
         font-weight: 400;
     }
     [data-theme="light"] .flow-detail-sub { color: rgba(20, 20, 19, 0.6); }
-    /* Task 227: дата в строке «Последние показания» — справа от названия,
-       в одной строке с ним и кнопкой комментария (раньше — отдельной строкой под). */
-    .flow-detail-row-head .flow-detail-date-inline {
+    /* Task 227+229: дата в строке «Последние показания» — под-элемент label,
+       одна общая строка текста с названием (без разделения на 2 блока).
+       Стили даты мягко переопределяют label: меньший шрифт, normal регистр
+       (label uppercase, дата lowercase), нейтральный цвет. */
+    .flow-detail-label .flow-detail-date-inline {
         font-size: 12px;
         font-weight: 400;
+        text-transform: none;      /* отменить uppercase от .flow-detail-label */
+        letter-spacing: 0;         /* отменить от label */
         color: var(--text-secondary);
-        /* margin-right:auto толкает кнопку комментария к правому краю,
-           а дата идёт сразу за label (с отступом gap:8px из row-head). */
-        margin-right: auto;
     }
     /* Подсветка строки «Расход» — фон и лейбл как у обычной строки, зелёным только значение */
     .flow-detail-highlight .flow-detail-value { color: #5ab870; font-weight: 700; }
@@ -31832,14 +31833,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             //   4) Гигакалории пара (если есть и это расходомер пара) — без заголовка
             // Строки «Температура среды» и «Гигакалории пара» как отдельные
             // строки убраны — их значения перенесены под основные показания.
-            // Task 227: дата «за (дата) г.» перенесена в правую часть row-head
-            // (между названием и кнопкой комментария) — раньше была отдельной
-            // строкой под названием.
+            // Task 227: дата «за (дата) г.» перенесена в правую часть row-head.
+            // Task 229: дата — под-элемент label (одна общая строка текста,
+            // без визуального разделения на 2 блока). Пробел перед «за» даёт
+            // разделитель между названием и датой.
             var lastReadingLabel = 'Последние показания';
             html += '<div class="flow-detail-row flow-detail-row-last">' +
                 '<div class="flow-detail-row-head">' +
-                    '<span class="flow-detail-label">' + lastReadingLabel + '</span>' +
-                    '<span class="flow-detail-date flow-detail-date-inline">за ' + this._fmtDate(m.dateCurr) + ' г.</span>' +
+                    '<span class="flow-detail-label">' + lastReadingLabel +
+                        '<span class="flow-detail-date-inline"> за ' + this._fmtDate(m.dateCurr) + ' г.</span>' +
+                    '</span>' +
                     commentBtnHtml +
                 '</div>' +
                 // Значение последних показаний (без встроенной даты)
