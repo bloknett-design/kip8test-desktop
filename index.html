@@ -32826,20 +32826,35 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // График показаний — вертикальные бары (даты по X, показание по Y), зебра, без Y-оси.
-        // Task 223: график теперь строится из фактических показаний (r.curr),
+        // Task 223: график строится из фактических показаний (r.curr),
         // а не из вычисленного расхода (r.consumption = curr - prev). Для
         // накапливающих счётчиков (вода, пар, газ) это нагляднее — видно
         // монотонный рост показаний по датам.
+        // Task 224: нормализация по диапазону — bar = (curr − min) / (max − min) × 100.
+        // Все бары масштабируются так, чтобы минимальное показание → 0% (но не
+        // меньше 1% для видимости), максимальное → 100%. Это позволяет увидеть
+        // относительные изменения даже при больших абсолютных значениях счётчика
+        // (например, когда показания 100 000+ и разница в 50 единиц невооружённым
+        // глазом на «сырой» шкале 0..max не видна).
         _buildArchiveChart: function(records, meter) {
             if (records.length < 2) return '';
 
             var unit = meter ? meter.unit : (records[0].unit || '');
-            var maxReading = 0;
+            var minReading = Infinity;
+            var maxReading = -Infinity;
             for (var i = 0; i < records.length; i++) {
                 var v = Math.abs(parseFloat(records[i].curr) || 0);
+                if (v < minReading) minReading = v;
                 if (v > maxReading) maxReading = v;
             }
-            if (maxReading === 0) return '';
+            if (maxReading === 0 || !isFinite(maxReading)) return '';
+
+            // Размах: если все показания одинаковы (max === min), нормализация
+            // даст деление на ноль. В этом случае ставим всем барам одинаковую
+            // высоту (среднюю — 60%, чтобы было визуально заметно, но не 100%,
+            // т.к. это просто плоская линия без динамики).
+            var range = maxReading - minReading;
+            var flat = (range === 0);
 
             // Записи от старых к новым (по X слева направо)
             var chartRecords = records.slice(0, 31).reverse();
@@ -32856,7 +32871,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             for (var j = 0; j < chartRecords.length; j++) {
                 var r = chartRecords[j];
                 var curr = Math.abs(parseFloat(r.curr) || 0);
-                var barPct = Math.max(1, (curr / maxReading) * 100);
+                // Task 224: нормализация по диапазону (curr − min) / (max − min) × 100.
+                // Минимум 1% — чтобы бар был виден даже при curr === min.
+                var barPct;
+                if (flat) {
+                    barPct = 60; // все показания одинаковы — плоская линия
+                } else {
+                    barPct = Math.max(1, ((curr - minReading) / range) * 100);
+                }
                 html += '<div class="flow-archive-vbar-col">';
                 html += '<div class="flow-archive-vbar-tip-zone"><span class="flow-archive-vbar-tip">' + this._fmtNum(curr) + '</span></div>';
                 html += '<div class="flow-archive-vbar-bar-zone"><div class="flow-archive-vbar" style="height:' + barPct.toFixed(1) + '%"></div></div>';
