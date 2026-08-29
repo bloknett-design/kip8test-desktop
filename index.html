@@ -31844,7 +31844,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Task 205: Хозрасчёт №1 (id=1) — особый режим «расход за предыдущие сутки».
         // Данные приходят из Тэкон-19 уже сформированными (расход в т и Гкал).
-        // В этом режиме: нет полей prev/datePrev/temp; gcal обязательно; главное
+        // В этом режиме: нет полей prev/datePrev/temp; gcal необязательно; главное
         // поле — «Расход, т»; строка «Расход за N дн.» в детальной карточке скрыта.
         _isDailyMode: function(m) {
             return !!(m && m.id === 1);
@@ -32171,7 +32171,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             // Гигакалории пара (Task 100) — поле видно только для расходомеров пара
             // Task 104: при новом вводе — пустое; при редактировании (isEdit) — предзаполняем
-            // Task 205: для dailyMode (Хозрасчёт №1) — Гкал обязательно (Тэкон-19 отдаёт расход в Гкал)
+            // Task 205/206: для dailyMode (Хозрасчёт №1) — Гкал необязательно
+            // (Тэкон-19 отдаёт расход в Гкал, но поле остаётся на усмотрение оператора)
             var gcalGroup = document.getElementById('flowInputGcalGroup');
             var gcalField = document.getElementById('flowInputGcal');
             if (gcalGroup && gcalField) {
@@ -32182,8 +32183,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     } else {
                         gcalField.value = '';
                     }
-                    // Task 205: для dailyMode — Гкал обязательно
-                    gcalField.placeholder = dailyMode ? 'Гкал (обязательно)' : '— (необязательно)';
+                    gcalField.placeholder = '— (необязательно)';
                 } else {
                     gcalGroup.style.display = 'none';
                     gcalField.value = '';
@@ -32336,16 +32336,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // независимо и пишет аномалии в archive.Q.
             if (meter) {
                 var dailyMode = this._isDailyMode(meter);
-                // Task 205: для dailyMode (Хозрасчёт №1) — gcal обязателен.
-                // Проверяем до отправки на сервер — экономим один HTTP-запрос.
-                if (dailyMode && (gcalVal === null || isNaN(gcalVal))) {
-                    if (typeof KipToast !== 'undefined' && KipToast.show) {
-                        KipToast.show('Введите расход в Гкал — поле обязательно для Хозрасчёта №1');
-                    }
-                    // Откат оптимистичного UI перезагрузкой
-                    this.load();
-                    return;
-                }
                 var apiPayload = {
                     id: id,
                     prev: meter.prev,
