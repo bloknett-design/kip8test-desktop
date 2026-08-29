@@ -31745,15 +31745,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Построить HTML детальной карточки
         _buildDetailHtml: function(m) {
-            // Task 205: Хозрасчёт №1 (id=1) — режим «расход за предыдущие сутки».
+            // Task 205/207: Хозрасчёт №1 (id=1) — режим «расход за предыдущие сутки».
             // Данные приходят из Тэкон-19 сразу как расход, без накопительных показаний.
-            // В этом режиме: нет «Предыдущих показаний», нет строки «Расход за N дн.»
-            // (потому что consumption = curr - 0 = curr — это и есть введённое значение),
-            // нет «Температуры». «Последние показания» переименованы в «Расход».
+            // В этом режиме: нет «Температуры». Строка «Последние показания»
+            // показывает введённое значение расхода (как и для остальных расходомеров).
+            // Task 207: убраны строки «Предыдущие показания» и «Расход» из карточки —
+            // эти данные дублируются в таблице хронологии показаний ниже.
             var dailyMode = this._isDailyMode(m);
-            var consumption = m.curr - m.prev;
-            var consStr = this._fmtNum(Math.abs(consumption));
-            var tempStr = (m.temp !== null && m.temp !== undefined) ? m.temp.toFixed(1).replace('.', ',') + ' °C' : '—';
             // Гигакалории пара (Task 100) — отображаем с 3 знаками после запятой
             var gcalStr = (m.gcal !== null && m.gcal !== undefined) ? m.gcal.toFixed(3).replace('.', ',') + ' Гкал' : '—';
 
@@ -31761,14 +31759,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Заголовок карточки — param + period внутри одного div с зеброй
             html += '<div class="flow-detail-header"><div class="flow-detail-param">' + this._esc(m.param) + '</div><div class="flow-detail-period">' + this._esc(m.period) + '</div></div>';
 
-            // Предыдущие показания (только НЕ для dailyMode)
-            if (!dailyMode) {
-                html += '<div class="flow-detail-row"><span class="flow-detail-label">Предыдущие показания</span><span class="flow-detail-value">' + this._fmtNum(m.prev) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.datePrev) + ' г.</span></span></div>';
-            }
-
             // Task 195: последние показания + кнопка комментария в правой части
             // строки (видна автору показаний ИЛИ админу) + подстрока комментария (всем).
-            // Task 205: для dailyMode — переименовываем label «Последние показания» → «Расход»
+            // Task 207: формат даты «за (дата) г.», а не «от (дата) г.»
             var _email = (typeof KipAuth !== 'undefined' ? KipAuth._cachedEmail : null);
             var _role = (typeof KipAuth !== 'undefined' ? KipAuth._cachedRole : null);
             var canComment = flowCanComment(m, _email, _role);
@@ -31777,44 +31770,40 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var isLocalComment = !!commentText &&
                 !(m.comment !== undefined && m.comment !== null && String(m.comment).trim() !== '');
             var commentBtnHtml = flowBuildCommentBtnHtml(m, _email, commentText, _role);
-            var lastReadingLabel = dailyMode ? 'Расход' : 'Последние показания';
+            var lastReadingLabel = 'Последние показания';
             html += '<div class="flow-detail-row">' +
                 '<div class="flow-detail-row-head"><span class="flow-detail-label">' + lastReadingLabel + '</span>' + commentBtnHtml + '</div>' +
-                '<span class="flow-detail-value flow-detail-curr">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.dateCurr) + ' г.</span></span>' +
+                '<span class="flow-detail-value flow-detail-curr">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> за ' + this._fmtDate(m.dateCurr) + ' г.</span></span>' +
                 '</div>';
             // Комментарий к показаниям — виден всем пользователям раздела
             html += flowBuildCommentRowHtml(commentText, isLocalComment);
             // Task 197: последний архивный комментарий (meters.P) — preview.
             // Виден всем. Если нет — строки нет (функция возвращает '').
             html += flowBuildArchivedCommentRowHtml(m.archivedComment);
-            // Расход (только НЕ для dailyMode — для dailyMode это значение уже
-            // показано выше в строке «Расход: [curr] [unit]», вычислять нечего)
-            if (!dailyMode) {
-                html += '<div class="flow-detail-row flow-detail-highlight"><span class="flow-detail-label">Расход</span><span class="flow-detail-value">' + consStr + ' ' + this._esc(m.unit) + ',<span class="flow-detail-date"> за ' + this._daysBetween(m.datePrev, m.dateCurr) + ' дн.</span></span></div>';
-            }
 
             // Температура среды (только если есть) — с датой, как в показаниях
             // Task 205: для dailyMode — Тэкон-19 не отдаёт температуру, не показываем
             if (!dailyMode && m.temp !== null && m.temp !== undefined) {
-                html += '<div class="flow-detail-row"><span class="flow-detail-label">Температура среды</span><span class="flow-detail-value">' + tempStr + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.dateCurr) + ' г.</span></span></div>';
+                var tempStr = (m.temp !== null && m.temp !== undefined) ? m.temp.toFixed(1).replace('.', ',') + ' °C' : '—';
+                html += '<div class="flow-detail-row"><span class="flow-detail-label">Температура среды</span><span class="flow-detail-value">' + tempStr + ',<span class="flow-detail-date"> за ' + this._fmtDate(m.dateCurr) + ' г.</span></span></div>';
             }
 
             // Гигакалории пара (только для расходомеров пара, Task 100) — с датой
             // Показываем, только если это расходомер пара (param содержит «пара») и значение есть
             // Task 205: для dailyMode — показываем всегда (если есть gcal)
             if ((dailyMode || this._isSteamMeter(m)) && (m.gcal !== null && m.gcal !== undefined)) {
-                html += '<div class="flow-detail-row"><span class="flow-detail-label">Гигакалории пара</span><span class="flow-detail-value">' + gcalStr + ',<span class="flow-detail-date"> от ' + this._fmtDate(m.dateCurr) + ' г.</span></span></div>';
+                html += '<div class="flow-detail-row"><span class="flow-detail-label">Гигакалории пара</span><span class="flow-detail-value">' + gcalStr + ',<span class="flow-detail-date"> за ' + this._fmtDate(m.dateCurr) + ' г.</span></span></div>';
             }
 
             // Внёс изменения
             // Task 109: показываем modDisplayName (имя из KIP8_Access), а не modName (email)
             // Task 111: добавляем дату ввода (из modTimestamp) через запятую справа
+            // Task 207: убрано слово «от» — просто «ДД.ММ.ГГГГ ЧЧ:ММ»
             var modDisplay = m.modDisplayName || m.modName || '';
             if (modDisplay || m.modRole) {
                 var modParts = [];
                 if (m.modRole) modParts.push(this._esc(m.modRole));
                 if (modDisplay) modParts.push(this._esc(modDisplay));
-                // Task 111: дата из modTimestamp → формат ДД.ММ.ГГГГ, ЧЧ:ММ
                 var modDateStr = '';
                 if (m.modTimestamp) {
                     try {
@@ -31823,7 +31812,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         var mm = (md.getMonth() + 1 < 10 ? '0' : '') + (md.getMonth() + 1);
                         var hh = (md.getHours() < 10 ? '0' : '') + md.getHours();
                         var mi = (md.getMinutes() < 10 ? '0' : '') + md.getMinutes();
-                        modDateStr = ',<span class="flow-detail-date"> от ' + dd + '.' + mm + '.' + md.getFullYear() + ' ' + hh + ':' + mi + '</span>';
+                        modDateStr = ',<span class="flow-detail-date"> ' + dd + '.' + mm + '.' + md.getFullYear() + ' ' + hh + ':' + mi + '</span>';
                     } catch(e) { /* ignore */ }
                 }
                 html += '<div class="flow-detail-row"><span class="flow-detail-label" style="color:#7a8fa6;">Внёс изменения</span><span class="flow-detail-value" style="color:#5b7a96;">' + modParts.join(', ') + modDateStr + '</span></div>';
@@ -32602,7 +32591,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             html += '<thead><tr>';
             html += '<th>Дата</th>';
             html += '<th>Показания</th>';
-            html += '<th>Расход</th>';
+            // Task 207: для dailyMode (Хозрасчёт №1) — столбец «Расход» не нужен,
+            // т.к. Показания = Расход (consumption = curr - 0 = curr)
+            var showConsCol = !this._isDailyMode(meter);
+            if (showConsCol) {
+                html += '<th>Расход</th>';
+            }
             // Температура — показываем колонку только если хоть в одной записи есть
             if (displayRecords[0] && displayRecords[0].temp !== null && displayRecords[0].temp !== undefined) {
                 html += '<th>T</th>';
@@ -32630,7 +32624,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 html += '<tr>';
                 html += '<td class="flow-archive-date">' + this._fmtDate(r.dateCurr) + '</td>';
                 html += '<td class="flow-archive-val">' + this._fmtNum(r.curr) + '</td>';
-                html += '<td class="flow-archive-cons">' + this._fmtNum(consAbs) + '</td>';
+                if (showConsCol) {
+                    html += '<td class="flow-archive-cons">' + this._fmtNum(consAbs) + '</td>';
+                }
                 // Температура — показываем колонку только если хоть в одной записи есть
                 if (displayRecords[0] && displayRecords[0].temp !== null && displayRecords[0].temp !== undefined) {
                     var tStr = (r.temp !== null && r.temp !== undefined) ? r.temp.toFixed(1).replace('.', ',') : '—';
