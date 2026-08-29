@@ -32184,6 +32184,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self.closeComment();
                 self.renderList();
                 self.openDetail(id, false);  // перерендер карточки без pushState
+                // Task 232: сразу отрендерить архив из кэша с обновлённым m.comment,
+                // не дожидаясь network round-trip в loadArchive (контейнер
+                // #flowArchiveContainer уже создан в _buildDetailHtml). После
+                // завершения loadArchive контейнер будет перерисован актуальными
+                // данными сервера — но в первой (новейшей) записи комментарий
+                // останется, т.к. _buildArchiveHtml берёт m.comment для i===0.
+                try {
+                    var cachedRecords = self._restoreArchiveCache(id);
+                    var archiveContainer = document.getElementById('flowArchiveContainer');
+                    if (archiveContainer && cachedRecords && cachedRecords.length) {
+                        archiveContainer.className = '';
+                        archiveContainer.innerHTML = self._buildArchiveHtml(cachedRecords, m);
+                        try { self._adjustArchiveColumnWidths(archiveContainer); } catch (e2) { /* не критично */ }
+                    }
+                } catch (e) { /* кэш-рендер не критичен, сервер всё равно перерисует */ }
                 try { showToast(text ? 'Комментарий сохранён' : 'Комментарий удалён'); } catch (e) {}
             }).catch(function(err) {
                 var msg = (err && err.message) ? String(err.message) : '';
@@ -32199,6 +32214,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     self.closeComment();
                     self.renderList();
                     self.openDetail(id, false);
+                    // Task 232: кэш-рендер архива для локального fallback-комментария
+                    try {
+                        var cachedRecords = self._restoreArchiveCache(id);
+                        var archiveContainer = document.getElementById('flowArchiveContainer');
+                        if (archiveContainer && cachedRecords && cachedRecords.length) {
+                            archiveContainer.className = '';
+                            archiveContainer.innerHTML = self._buildArchiveHtml(cachedRecords, m);
+                            try { self._adjustArchiveColumnWidths(archiveContainer); } catch (e2) { /* ignore */ }
+                        }
+                    } catch (e) { /* ignore */ }
                     try { showToast(text
                         ? 'Сохранено только на этом устройстве (сервер без поддержки комментариев)'
                         : 'Комментарий удалён'); } catch (e) {}
@@ -32764,8 +32789,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // Task 197: комментарий к этой архивной записи (колонка видна всегда)
                 // Task 217: обёрнут в inner-div, т.к. max-height не работает
                 // напрямую на <td> (display: table-cell).
+                // Task 232: для НОВЕЙШЕЙ записи (i === 0) archive.P пуст (т.к. комментарий
+                // хранится в meters.O — активный, не «архивный»; попадает в archive.P
+                // только при смене автора показаний в updateReading). Поэтому для
+                // первой записи используем активный комментарий счётчика (meter.comment
+                // или локальный fallback), чтобы внесённый через setComment текст
+                // сразу отображался в хронологии — без ожидания новой архивной записи.
                 var cmtStr = (r.comment && String(r.comment).trim() !== '')
-                    ? String(r.comment).trim() : '—';
+                    ? String(r.comment).trim() : '';
+                if (!cmtStr && i === 0 && meter) {
+                    var liveCmt = flowCommentText(meter, this._getLocalComments());
+                    if (liveCmt) cmtStr = liveCmt;
+                }
+                if (!cmtStr) cmtStr = '—';
                 html += '<td class="flow-archive-comment"><div class="flow-archive-comment-inner">' + this._esc(cmtStr) + '</div></td>';
                 // Task 199: флаги аномалий — значки с кодами (колонка видна всегда)
                 // Task 222: если в _anomalyHelp[code] есть дружелюбное описание —
