@@ -26787,7 +26787,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
     const KipAuth = {
         // URL Apps Script Web App.
-        WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbztmOJb_QVnjRk1GnvKe4X1TWcDgPSFVvGJiumm3y5RaGwgEiJX15PBiJVUX9mKJiWHzA/exec',
+        WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzgPtyya6eMCql4pxZiOyYkfJaBsMRLvKK5bzrsbZpLa5zoNtxSoKeNYJauQVIOtlz2rg/exec',
 
         // Ключ localStorage для session token.
         TOKEN_KEY: 'kip8_session_token',
@@ -32879,7 +32879,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var idx = {};
             for (var i = 0; i < this._ENTRIES.length; i++) {
                 var e = this._ENTRIES[i];
-                idx[e['дата'] + '|' + e['таб_№']] = e;
+                idx[e['дата'] + '|' + e['таб_номер']] = e;
             }
             return idx;
         },
@@ -32910,11 +32910,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             for (var ei = 0; ei < this._EMPLOYEES.length; ei++) {
                 var emp = this._EMPLOYEES[ei];
                 html += '<tr>';
-                html += '<td class="ws-emp-col"><span class="ws-tab-no">' + this._esc(emp['таб_№']) + '</span>' + this._esc(emp['ФИО']) + '</td>';
+                html += '<td class="ws-emp-col"><span class="ws-tab-no">' + this._esc(emp['таб_номер']) + '</span>' + this._esc(emp['ФИО']) + '</td>';
                 for (var day = 1; day <= daysInMonth; day++) {
                     var ddt = new Date(this._year, this._month - 1, day);
                     var isoDate = this._isoDate(ddt);
-                    var key = isoDate + '|' + emp['таб_№'];
+                    var key = isoDate + '|' + emp['таб_номер'];
                     var entry = entryIdx[key];
                     html += this._renderCell(day, isoDate, emp, entry);
                 }
@@ -32962,7 +32962,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
 
             var editable = this._canEdit ? '1' : '0';
-            var safeTabNo = (emp['таб_№'] || '').replace(/'/g, '');
+            var safeTabNo = (emp['таб_номер'] || '').replace(/'/g, '');
             var clickHandler = 'WorkSchedule.openCellForm(\'' + isoDate + '\',\'' + safeTabNo + '\')';
             return '<td class="' + classes.join(' ') + '" ' +
                    'style="' + style + '" ' +
@@ -33036,19 +33036,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             var entry = null;
             for (var i = 0; i < this._ENTRIES.length; i++) {
-                if (this._ENTRIES[i]['дата'] === isoDate && this._ENTRIES[i]['таб_№'] === tabNo) {
+                if (this._ENTRIES[i]['дата'] === isoDate && this._ENTRIES[i]['таб_номер'] === tabNo) {
                     entry = this._ENTRIES[i];
                     break;
                 }
             }
             var emp = null;
             for (var j = 0; j < this._EMPLOYEES.length; j++) {
-                if (this._EMPLOYEES[j]['таб_№'] === tabNo) { emp = this._EMPLOYEES[j]; break; }
+                if (this._EMPLOYEES[j]['таб_номер'] === tabNo) { emp = this._EMPLOYEES[j]; break; }
             }
 
             this._editingCell = {
                 date: isoDate,
-                'таб_№': tabNo,
+                'таб_номер': tabNo,
                 ФИО: emp ? emp['ФИО'] : '',
                 entry: entry
             };
@@ -33089,7 +33089,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             if (!status) {
                 if (cell.entry && cell.entry.источник === 'руч') {
-                    this._api('workSchedule.deleteEntry', { date: cell.date, 'таб_№': cell['таб_№'] })
+                    this._api('workSchedule.deleteEntry', { date: cell.date, 'таб_номер': cell['таб_номер'] })
                         .then(function() { self._afterCellSubmit(); })
                         .catch(function(err) { self._onCellError(err); });
                 } else if (cell.entry && cell.entry.источник === 'авто') {
@@ -33104,7 +33104,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             var payload = {
                 date: cell.date,
-                'таб_№': cell['таб_№'],
+                'таб_номер': cell['таб_номер'],
                 статус: status,
                 переработка: overtime,
                 замещает: substitute || null,
@@ -33140,7 +33140,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var self = this;
             this._api('workSchedule.deleteEntry', {
                 date: this._editingCell.date,
-                'таб_№': this._editingCell['таб_№']
+                'таб_номер': this._editingCell['таб_номер']
             }).then(function() {
                 self.closeCellForm();
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
@@ -33185,7 +33185,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var shiftStr = e.тип === 'сменный' ? (e.смена ? '· смена ' + e.смена : '· смена не задана') : '';
                 html += '<div class="ws-emp-card">' +
                         '<div class="ws-emp-card-header">' +
-                            '<span class="ws-tab-no">' + this._esc(e['таб_№']) + '</span>' +
+                            '<span class="ws-tab-no">' + this._esc(e['таб_номер']) + '</span>' +
                             '<span class="ws-fio">' + this._esc(e['ФИО']) + '</span>' +
                         '</div>' +
                         '<div class="ws-meta">' +
@@ -33262,7 +33262,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!startCycle) { if (typeof KipToast !== 'undefined') KipToast.show('Укажите дату старта цикла'); return; }
 
             this._api('workSchedule.addEmployee', {
-                'таб_№': tabNo, 'ФИО': fio, тип: type,
+                'таб_номер': tabNo, 'ФИО': fio, тип: type,
                 смена: shift || null,
                 шаблон_ротации: patId ? parseInt(patId, 10) : null,
                 старт_цикла: startCycle,
@@ -33313,15 +33313,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var typeClass = 'ws-type-' + code;
                 var emp = null;
                 for (var j = 0; j < this._EMPLOYEES.length; j++) {
-                    if (this._EMPLOYEES[j]['таб_№'] === t['таб_№']) { emp = this._EMPLOYEES[j]; break; }
+                    if (this._EMPLOYEES[j]['таб_номер'] === t['таб_номер']) { emp = this._EMPLOYEES[j]; break; }
                 }
-                var empName = emp ? emp['ФИО'] : 'таб. №' + t['таб_№'];
+                var empName = emp ? emp['ФИО'] : 'таб. №' + t['таб_номер'];
                 var dateStr = t.дата_начала + (t.дата_окончания && t.дата_окончания !== t.дата_начала ? ' — ' + t.дата_окончания : '');
                 var delBtn = this._canEdit ? '<button type="button" class="ws-tr-delete-btn" onclick="WorkSchedule.deleteTraining(' + t.id + ')">Удалить</button>' : '';
                 html += '<div class="ws-tr-card">' + delBtn +
                         '<div><span class="ws-tr-type ' + typeClass + '">' + code + '</span>' +
                         '<span class="ws-tr-title">' + this._esc(t.тема) + '</span></div>' +
-                        '<div class="ws-tr-meta">таб. № ' + this._esc(t['таб_№']) + ' · ' + this._esc(empName) + '</div>' +
+                        '<div class="ws-tr-meta">таб. № ' + this._esc(t['таб_номер']) + ' · ' + this._esc(empName) + '</div>' +
                         '<div class="ws-tr-meta">' + dateStr + ' · ' + t.длительность_дней + ' дн.</div>' +
                         (t.комментарий ? '<div class="ws-tr-meta" style="margin-top:4px;">' + this._esc(t.комментарий) + '</div>' : '') +
                         '</div>';
@@ -33335,8 +33335,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (empSel) {
                 var html = '<option value="">— выберите —</option>';
                 for (var i = 0; i < this._EMPLOYEES.length; i++) {
-                    html += '<option value="' + this._esc(this._EMPLOYEES[i]['таб_№']) + '">' +
-                            this._esc(this._EMPLOYEES[i]['таб_№']) + ' — ' + this._esc(this._EMPLOYEES[i]['ФИО']) +
+                    html += '<option value="' + this._esc(this._EMPLOYEES[i]['таб_номер']) + '">' +
+                            this._esc(this._EMPLOYEES[i]['таб_номер']) + ' — ' + this._esc(this._EMPLOYEES[i]['ФИО']) +
                             '</option>';
                 }
                 empSel.innerHTML = html;
@@ -33377,7 +33377,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!startDate) { if (typeof KipToast !== 'undefined') KipToast.show('Укажите дату начала'); return; }
 
             this._api('workSchedule.addTraining', {
-                'таб_№': tabNo, тип: tip, тема: tema,
+                'таб_номер': tabNo, тип: tip, тема: tema,
                 дата_начала: startDate, дата_окончания: endDate,
                 длительность_дней: days, комментарий: comment
             }).then(function() {
