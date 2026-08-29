@@ -3010,6 +3010,54 @@
     .flow-empty-icon { font-size: 40px; margin-bottom: 10px; }
     .flow-empty-text { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
     .flow-empty-hint { font-size: 12px; }
+    /* Task 238: состояния «Загрузка данных…» (с анимированными точками)
+       и «Нет связи с сервером» (ошибка сети/сервера) для расходомеров. */
+    .flow-loading {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-secondary);
+    }
+    .flow-loading-text {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    .flow-loading-dots {
+        display: inline-block;
+        margin-left: 1px;
+    }
+    .flow-loading-dots span {
+        display: inline-block;
+        opacity: 0;
+        animation: flowLoadingDot 1.4s infinite;
+    }
+    .flow-loading-dots span:nth-child(1) { animation-delay: 0s; }
+    .flow-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .flow-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes flowLoadingDot {
+        0%, 60%, 100% { opacity: 0; }
+        30% { opacity: 1; }
+    }
+    .flow-error {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-secondary);
+    }
+    .flow-error-icon {
+        font-size: 32px;
+        margin-bottom: 10px;
+        opacity: 0.55;
+        line-height: 1;
+    }
+    .flow-error-text {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+    }
+    .flow-error-hint {
+        font-size: 12px;
+    }
     .flow-sheet-link {
         display: block; text-align: center; padding: 10px 16px;
         margin: 8px 14px 8px; border-radius: 8px;
@@ -31347,6 +31395,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Пустой массив до первой загрузки — рендер покажет заглушку.
         _METERS: [],
 
+        // Task 238: состояние загрузки списка расходомеров.
+        // 'idle'    — исходное / не авторизован (нет токена).
+        // 'loading' — fetch с сервера в полёте (init/load только что запущены).
+        // 'loaded'  — сервер ответил (массив может быть пустым — genuine empty).
+        // 'error'   — fetch упал (сеть/сессия/500). При наличии кэша данные
+        //             рендерятся из кэша, при отсутствии — показывается
+        //             «Нет связи с сервером, попробуйте зайти позже».
+        _loadState: 'idle',
+
         // ============================================================
         // API вызовы (по паттерну KipCableJournal)
         // ============================================================
@@ -31368,6 +31425,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var self = this;
             var token = KipAuth.getToken();
             var silent = !!token; // авторизован → не рендерить промежуточные данные
+
+            // Task 238: исходное состояние — «загрузка» (если есть токен).
+            // init() сразу рендерит список с пустым _METERS, поэтому
+            // пользователь видит «Загрузка данных…» до того, как load()
+            // вернёт данные. Если токена нет — состояние 'idle', renderList
+            // покажет fallback/кэш (если есть) или «Нет данных».
+            this._loadState = token ? 'loading' : 'idle';
 
             // 1. Показать «Загрузка…» (_METERS пустой)
             this.renderList();
@@ -31487,8 +31551,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // рендерим fallback/кэш (если они ещё не отрендерены)
             var token = KipAuth.getToken();
             if (!token) {
+                this._loadState = 'idle';  // Task 238: нет токена — нет «загрузки»
                 this.renderList();
                 return;
+            }
+
+            // Task 238: если данных ещё нет — помечаем состояние «загрузка»
+            // и сразу перерисовываем список (показывает «Загрузка данных…»).
+            // Если данные уже есть (кэш/fallback) — не трогаем состояние и
+            // UI; пользователь видит актуальный список, а фоновый refresh
+            // его обновит после завершения fetch.
+            if (this._METERS.length === 0) {
+                this._loadState = 'loading';
+                this.renderList();
             }
 
             this._api('flowmeter.list', {}).then(function(data) {
@@ -31497,6 +31572,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     self._loaded = true;
                     self._persistData(self._METERS);
                 }
+                self._loadState = 'loaded';  // Task 238
                 self.renderList();
                 // Если детальный вид сейчас видим — перерендерить его.
                 // Проверяем, что страница/панель реально открыты,
@@ -31514,6 +31590,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // При ошибке — рендерим fallback/кэш,
                 // чтобы не оставлять «Загрузка…» навсегда.
                 console.error('FlowmeterData.load:', err);
+                self._loadState = 'error';  // Task 238
                 self.renderList();
             });
         },
@@ -31539,7 +31616,27 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         '<div class="flow-empty-fav-text">Нет избранных расходомеров</div>' +
                         '<div class="flow-empty-fav-hint">Перейдите во вкладку «Все»<br>и нажмите <span class="star">☆</span> на карточке</div>' +
                         '</div>';
+                } else if (this._loadState === 'loading') {
+                    // Task 238: fetch с сервера в полёте. Анимированные три точки
+                    // дают пользователю визуальный отклик, что процесс идёт.
+                    container.innerHTML =
+                        '<div class="flow-loading">' +
+                        '<div class="flow-loading-text">Загрузка данных' +
+                        '<span class="flow-loading-dots"><span>.</span><span>.</span><span>.</span></span>' +
+                        '</div>' +
+                        '</div>';
+                } else if (this._loadState === 'error') {
+                    // Task 238: fetch упал (сеть/сессия/500) И нет кэша/fallback.
+                    // Если кэш есть — meters.length > 0 и эта ветка не сработает.
+                    container.innerHTML =
+                        '<div class="flow-error">' +
+                        '<div class="flow-error-icon">⚠</div>' +
+                        '<div class="flow-error-text">Нет связи с сервером</div>' +
+                        '<div class="flow-error-hint">Попробуйте зайти позже</div>' +
+                        '</div>';
                 } else {
+                    // _loadState === 'loaded' (сервер вернул пустой список) или
+                    // _loadState === 'idle' (не авторизован, нет fallback/кэша).
                     container.innerHTML = '<div class="admin-empty">Нет данных</div>';
                 }
                 return;
