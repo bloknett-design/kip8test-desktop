@@ -3900,7 +3900,9 @@
         background: var(--bg-tertiary, #0e1621);
         color: var(--text-primary, #e0e0e0);
         border: 1px solid var(--card-border, rgba(255,255,255,0.08));
-        border-radius: 6px;
+        /* Task 255: селекты месяца/года — прямые углы, как у кнопок
+           тулбара (Task 254 убрал скругления у кнопок) */
+        border-radius: 0;
         padding: 6px 10px;
         font-size: 14px;
         font-family: inherit;
@@ -4157,19 +4159,23 @@
     .ws-grid tbody td.ws-cell.ws-weekend.ws-status-empty {
         background: #6e4250;   /* тёмная тема: приглушённый пыльно-розовый */
     }
-    /* Task 254: красные линии-границы между колонками выходных и
-       рабочих дней (классы ставит JS: слева от субботы, справа от
-       воскресенья). 2px всегда перекрывает обычную 1px-границу
-       (border-collapse: побеждает более широкая) — линия гарантированно
-       красная и непрерывная: от шапки (thead) до последней строки.
-       Специфичность селекторов ЗАВЫШЕНА (.ws-cell / .ws-day-col):
-       иначе в светлой теме правило [data-theme="light"] .ws-grid
-       tbody td { border-color } (та же 0,2,2, но ниже по файлу)
-       перекрасит красную границу в серый. */
-    .ws-grid thead th.ws-day-col.ws-boundary-left,
-    .ws-grid tbody td.ws-cell.ws-boundary-left { border-left: 2px solid #e53935; }
-    .ws-grid thead th.ws-day-col.ws-boundary-right,
-    .ws-grid tbody td.ws-cell.ws-boundary-right { border-right: 2px solid #e53935; }
+    /* Task 255 (правка Task 254): красные линии-границы между колонками
+       выходных и рабочих дней — ТОНЬШЕ (1px вместо 2px), ПРИГЛУШЁННЕЕ
+       (#cc6e73 — пыльно-красный вместо яркого #e53935) и ТОЛЬКО в теле
+       таблицы (из шапки thead убраны). При 1px в border-collapse цвет
+       общей грани равных по толщине границ может выбрать соседняя
+       серая граница, поэтому красной делается ОБЕ стороны стыка
+       (классы ставит JS в _renderCell): у пятницы border-right
+       (ws-boundary-after) + у субботы border-left (ws-boundary-left),
+       у воскресенья border-right (ws-boundary-right) + у понедельника
+       border-left (ws-boundary-before). Специфичность селекторов
+       ЗАВЫШЕНА (.ws-cell): иначе в светлой теме правило
+       [data-theme="light"] .ws-grid tbody td { border-color } (0,2,2,
+       ниже по файлу) перекрасит красную границу в серый. */
+    .ws-grid tbody td.ws-cell.ws-boundary-left,
+    .ws-grid tbody td.ws-cell.ws-boundary-before { border-left: 1px solid #cc6e73; }
+    .ws-grid tbody td.ws-cell.ws-boundary-right,
+    .ws-grid tbody td.ws-cell.ws-boundary-after { border-right: 1px solid #cc6e73; }
 
     /* Task 252: легенда кодов под шахматкой УБРАНА — коды статусов снова
        выводятся в ячейках шахматки, расшифровка цветов не нужна.
@@ -33862,14 +33868,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var dt = new Date(this._year, this._month - 1, d);
                 var dow = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][dt.getDay()];
                 var isHoliday = (dt.getDay() === 0 || dt.getDay() === 6);
-                // Task 254: красные линии-границы выходных/рабочих дней —
-                // классы и на шапке, и на ячейках (см. _renderCell): линия
-                // непрерывна от шапки до последней строки. Границы НЕ
-                // ставятся на краях таблицы: суббота 1-го числа (слева
-                // колонка ФИО) и воскресенье последним днём месяца.
+                // Task 255 (правка Task 254): красные линии-границы
+                // выходных/рабочих дней из ШАПКИ убраны — линии проходят
+                // только по ячейкам тела таблицы (tbody, см. _renderCell).
+                // Шапке остаются только классы выходных (ws-holiday).
                 var thCls = 'ws-day-col' + (isHoliday ? ' ws-holiday' : '');
-                if (dt.getDay() === 6 && d > 1) thCls += ' ws-boundary-left';
-                if (dt.getDay() === 0 && d < daysInMonth) thCls += ' ws-boundary-right';
                 html += '<th class="' + thCls + '">' +
                         d + '<span class="ws-dow">' + dow + '</span></th>';
             }
@@ -33878,13 +33881,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             for (var ei = 0; ei < this._EMPLOYEES.length; ei++) {
                 var emp = this._EMPLOYEES[ei];
                 html += '<tr>';
-                // Task 254: под ФИО — строка с должностью («Слесарь КИПиА
-                // дневной» и т.п., поле «должность» справочника сотрудников).
-                // Пустая должность — строка не рендерится вовсе (без пустых
-                // строк в колонке). ФИО и должность — отдельные блоки с
+                // Task 254 + Task 255: под ФИО — строка с должностью и
+                // режимом занятости из справочника сотрудников (таблица
+                // «Сотрудники» файла табель_КИП_ИОС: столбец C — тип,
+                // столбец D — номер смены): «Слесарь КИПиА смена №1»,
+                // «Слесарь КИПиА дневной» (см. _posLabel). Пустая
+                // подпись — строка не рендерится вовсе (без пустых
+                // строк в колонке). ФИО и подпись — отдельные блоки с
                 // собственным эллипсисом (десктоп: колонка 200px).
-                var empPos = emp['должность']
-                    ? '<div class="ws-emp-pos">' + this._esc(emp['должность']) + '</div>'
+                var empPosLabel = this._posLabel(emp);
+                var empPos = empPosLabel
+                    ? '<div class="ws-emp-pos">' + this._esc(empPosLabel) + '</div>'
                     : '';
                 html += '<td class="ws-emp-col"><div class="ws-emp-name">' +
                         '<span class="ws-tab-no">' + this._esc(emp['таб_номер']) + '</span>' +
@@ -33944,18 +33951,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (isPending) classes.push('ws-pending');
             if (!status) classes.push('ws-status-empty');
 
-            // Task 254: разметка выходных дней (Сб/Вс) — розовый фон пустых
-            // ячеек (.ws-weekend + .ws-status-empty в CSS) и красные линии
-            // на стыках с рабочими днями (ws-boundary-left у субботы,
-            // ws-boundary-right у воскресенья). Граничные случаи: суббота
-            // 1-го числа (слева — колонка ФИО, линия не нужна) и
-            // воскресенье последним днём месяца (справа — край таблицы).
+            // Task 254 (разметка выходных) + Task 255 (правка линий):
+            // розовый фон пустых ячеек Сб/Вс (.ws-weekend +
+            // .ws-status-empty в CSS) и приглушённые красные 1px-линии
+            // на стыках выходных с рабочими днями. При 1px в
+            // border-collapse цвет общей грани равных границ браузер
+            // может взять у соседа, поэтому красной делается ОБЕ стороны
+            // стыка: пятница ws-boundary-after (border-right) + суббота
+            // ws-boundary-left (border-left); воскресенье
+            // ws-boundary-right (border-right) + понедельник
+            // ws-boundary-before (border-left). Граничные случаи: суббота
+            // 1-го числа (слева — колонка ФИО, пары нет) и воскресенье
+            // последним днём месяца (справа — край таблицы, пары нет).
             var cellDow = new Date(this._year, this._month - 1, day).getDay();
+            var lastDay = new Date(this._year, this._month, 0).getDate();
             if (cellDow === 0 || cellDow === 6) classes.push('ws-weekend');
             if (cellDow === 6 && day > 1) classes.push('ws-boundary-left');
-            if (cellDow === 0 && day < new Date(this._year, this._month, 0).getDate()) {
-                classes.push('ws-boundary-right');
-            }
+            if (cellDow === 5 && day < lastDay) classes.push('ws-boundary-after');
+            if (cellDow === 0 && day < lastDay) classes.push('ws-boundary-right');
+            if (cellDow === 1 && day > 1) classes.push('ws-boundary-before');
 
             // Task 252: коды статусов ВЕРНУТЫ в ячейки шахматки. Task 250
             // убирал их (статус определялся цветом, легенда расшифровывала),
@@ -34424,7 +34438,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             for (var i = 0; i < this._EMPLOYEES.length; i++) {
                 var e = this._EMPLOYEES[i];
                 var tagClass = e.тип === 'сменный' ? 'ws-tag' : 'ws-tag ws-tag-day';
-                var shiftStr = e.тип === 'сменный' ? (e.смена ? '· смена ' + e.смена : '· смена не задана') : '';
+                // Task 255: тип (столбец C) остаётся тегом-бейджем, а смена
+                // (столбец D) переносится в подпись должности справа от
+                // неё — единый формат «Слесарь КИПиА смена №1» /
+                // «Слесарь КИПиА дневной» (см. _posLabel), отдельный
+                // фрагмент «· смена N» убран как дублирующий.
+                var posLabel = this._posLabel(e);
                 html += '<div class="ws-emp-card">' +
                         '<div class="ws-emp-card-header">' +
                             '<span class="ws-tab-no">' + this._esc(e['таб_номер']) + '</span>' +
@@ -34432,8 +34451,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         '</div>' +
                         '<div class="ws-meta">' +
                             '<span class="' + tagClass + '">' + this._esc(e.тип) + '</span> ' +
-                            shiftStr +
-                            (e.должность ? ' · ' + this._esc(e.должность) : '') +
+                            (posLabel ? ' · ' + this._esc(posLabel) : '') +
                             (e.старт_цикла ? ' · старт: ' + this._esc(e.старт_цикла) : '') +
                         '</div>' +
                         (e.комментарий ? '<div class="ws-meta" style="margin-top:4px;">' + this._esc(e.комментарий) + '</div>' : '') +
@@ -34668,6 +34686,28 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var m = ('' + (dt.getMonth() + 1)).padStart(2, '0');
             var d = ('' + dt.getDate()).padStart(2, '0');
             return y + '-' + m + '-' + d;
+        },
+
+        // Task 255: подпись должности с режимом занятости — данные из
+        // таблицы «Сотрудники» файла табель_КИП_ИОС (тот же справочник
+        // в Google-таблице, метод listEmployees): столбец C — тип
+        // (сменный/дневной), столбец D — номер смены (1..5, только у
+        // сменного). Примеры формирования: «Слесарь КИПиА смена №1»
+        // (сменный, смена 1), «Слесарь КИПиА дневной» (дневной).
+        // Сменный без номера смены — «… сменный»; без типа — только
+        // должность; пусто и там и там — '' (строка не рендерится).
+        _posLabel: function(emp) {
+            var pos = String(emp['должность'] || '').trim();
+            var tip = String(emp['тип'] || '').trim();
+            var smena = parseInt(emp['смена'], 10);
+            var suffix = '';
+            if (tip === 'сменный') {
+                suffix = (smena >= 1 && smena <= 5) ? ' смена №' + smena : ' сменный';
+            } else if (tip === 'дневной') {
+                suffix = ' дневной';
+            }
+            if (!pos) return suffix.trim();
+            return pos + suffix;
         },
 
         _esc: function(s) {
