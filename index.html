@@ -3422,7 +3422,7 @@
         color: #5b6a7d;
     }
     /* Task 197: ячейка комментария в архивной таблице */
-    /* Task 215→221: ширина столбца задаётся динамически через JS
+    /* Task 215→248: ширина столбца задаётся динамически через JS
        (_adjustArchiveColumnWidths) после рендера таблицы. CSS даёт
        только перенос слов + 4-строчную отсечку по высоте. */
     .flow-archive-table .flow-archive-comment {
@@ -3441,7 +3441,7 @@
         color: #5b6a7d;
     }
     /* Task 199: ячейка аномалий в архивной таблице — значки с кодами */
-    /* Task 215→221: ширина через JS (_adjustArchiveColumnWidths). */
+    /* Task 215→248: ширина через JS (_adjustArchiveColumnWidths). */
     .flow-archive-table .flow-archive-anomaly {
         white-space: normal; word-break: break-word;
         line-height: 1.3;
@@ -33085,23 +33085,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return html;
         },
 
-        // Task 221: динамическая ширина столбцов «Комментарий» и «⚠ Замечания».
-        // Алгоритм (согласно ТЗ пользователя):
-        //   • минимальная ширина столбца = ширина, достаточная для полного
-        //     отображения текста заголовка (чтобы «Комментарий» / «⚠ Замечания»
-        //     не переносились);
-        //   • если контент ячеек помещается в 4 строки при этой ширине —
-        //     столбец не расширяем;
-        //   • если не помещается — расширяем ровно настолько, чтобы контент
-        //     укладывался в 4 строки (target = ceil(maxNatural / 4) + safety).
-        // Реализация:
-        //   1) Измерить scrollWidth у th-заголовка (временно white-space:nowrap) →
-        //      headerNatural — минимальная ширина столбца.
-        //   2) Для каждой inner-div — временно white-space:nowrap + no constraints,
-        //      measure scrollWidth → maxNatural — самая длинная ячейка в одну
-        //      строку. Восстановить исходные inline-стили.
-        //   3) target = max(headerNatural, ceil(maxNatural / 4) + 10).
-        //   4) Применить target как min-width + max-width на все inner-div'ы
+        // Task 221→248: динамическая ширина столбцов «Комментарий» и «⚠ Замечания».
+        // ТЗ (Task 248): текст — максимум 4 строки; если при такой ширине
+        // столбца весь текст не помещается, подогнать ширину столбца (не меняя
+        // 4 строк) так, чтобы помещался весь текст.
+        // Реализация (Task 248 — бинарный поиск по реальной высоте; см.
+        // комментарий над _applyOptimalWidth):
+        //   1) headerNatural (scrollWidth заголовка в nowrap) — минимум столбца;
+        //   2) naturalWidth каждой inner-div (в одну строку, nowrap);
+        //   3) бинарный поиск минимальной ширины, при которой высота ≤ 4 строк;
+        //   4) применить её как min-width + max-width на все inner-div'ы
         //      столбца. td подстроится под ширину inner-div'а, th — следует за td.
         // Вызывается после container.innerHTML = _buildArchiveHtml(...) в двух
         // местах: renderDetail (мобильный) и renderDetailPanel (desktop panel).
@@ -33119,22 +33112,37 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
         },
 
-        // Task 221: target = max(headerNatural, ceil(maxCellNatural / 4)).
-        // headerNatural — естественная ширина заголовка (чтобы слово
-        // «Комментарий» или «⚠ Замечания» полностью помещалось в одну строку).
-        // ceil(maxCellNatural / 4) — ширина, при которой самый длинный контент
-        // занимает ровно 4 строки (с word-break:break-word можно разрывать
-        // слова, так что деление на 4 точно).
-        // Если контент в 4 строки при ширине заголовка помещается (fourLineWidth
-        // <= headerNatural), target = headerNatural — столбец не расширяем.
-        // Если нет — target = fourLineWidth, столбец расширяется ровно под 4
-        // строки. max-height:5.2em + overflow:hidden в CSS остаётся как safety
-        // cap на случай edge-case'ов с длинными словами.
+        // Task 248: точный подбор ширины столбца — весь текст в 4 строки.
+        // ТЗ пользователя: текст размещается максимум в 4 строки; если при
+        // этой ширине столбца текст полностью не помещается — не меняя
+        // количества 4 строк, подогнать ширину столбца так, чтобы помещался
+        // весь текст.
+        // Эвристика Task 221 (ceil(natural / 4) + 10) дала сбой: она делит
+        // текст на 4 равные части, а реальный перенос — по границам слов.
+        // Баг-репорт 30.08.2026: комментарий «В показаниях значения за период
+        // двух суток 28-29.08.2026» (natural ≈ 340px) → эвристика дала ≈95px,
+        // но при 95px слова «суток» и «28-29.08.2026» не помещаются вместе
+        // в одну строку → реально 5 строк, 5-я срезалась max-height:5.2em
+        // (overflow:hidden) — пользователь видел обрыв на «…суток 28-».
+        // Новое: минимальная ширина, при которой РЕАЛЬНАЯ высота ячейки
+        // ≤ 4 строк, находится бинарным поиском (высота текста монотонна
+        // по ширине: шире → строк не больше). Порядок:
+        //   1) headerNatural — минимум (заголовок в одну строку);
+        //   2) naturalWidth каждой ячейки (nowrap), сортировка по убыванию;
+        //   3) ячейка, уже помещающаяся в 4 строки при текущей ширине
+        //      candidate, пропускается (шире — строк только меньше);
+        //   4) иначе бинарный поиск минимальной ширины в (candidate, natural);
+        //   5) candidate применяется как min-width + max-width на все
+        //      inner-div'ы столбца (механика применения Task 221 сохранена).
+        // Guard: измерения 0 (скрытый контейнер, display:none) — ширина
+        // не применяется вовсе, работает CSS-fallback (table-layout:auto
+        // + max-height:5.2em).
         _applyOptimalWidth: function(cells, headerCell) {
             if (!cells || cells.length === 0) return;
+            var MAX_LINES = 4;
 
-            // 1. Измерить естественную ширину заголовка (минимальная ширина
-            //    столбца, чтобы название полностью отображалось без переноса).
+            // 1. Естественная ширина заголовка (минимальная ширина столбца,
+            //    чтобы название полностью отображалось без переноса).
             var headerNatural = 0;
             if (headerCell) {
                 var origHeaderCss = headerCell.style.cssText;
@@ -33144,37 +33152,88 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 headerNatural = headerCell.scrollWidth;
                 headerCell.style.cssText = origHeaderCss;
             }
+            if (headerNatural <= 0) return; // скрытый контейнер — CSS-fallback
 
-            // 2. Измерить максимальную естественную ширину контента ячеек
-            //    (в одну строку без переноса).
-            var maxNatural = 0;
-            for (var i = 0; i < cells.length; i++) {
-                var cell = cells[i];
-                var origCss = cell.style.cssText;
-                cell.style.cssText = origCss +
+            // 2. naturalWidth каждой ячейки (в одну строку, nowrap).
+            //    Стили применяются ко всем ячейкам сразу, затем читаются —
+            //    один reflow на весь проход вместо по одному на ячейку.
+            var measured = [];
+            var origCssList = [];
+            var natList = [];
+            var i;
+            for (i = 0; i < cells.length; i++) {
+                origCssList.push(cells[i].style.cssText);
+                cells[i].style.cssText = origCssList[i] +
                     '; white-space:nowrap !important; max-width:none !important;' +
                     ' max-height:none !important; overflow:visible !important;' +
                     ' width:auto !important;';
-                var naturalWidth = cell.scrollWidth;
-                cell.style.cssText = origCss;
-                if (naturalWidth > maxNatural) maxNatural = naturalWidth;
+            }
+            for (i = 0; i < cells.length; i++) {
+                natList.push(cells[i].scrollWidth);
+            }
+            for (i = 0; i < cells.length; i++) {
+                cells[i].style.cssText = origCssList[i];
+                if (natList[i] > 0) {
+                    measured.push({ cell: cells[i], natural: natList[i] });
+                }
+            }
+            if (measured.length === 0) return; // скрытый контейнер — CSS-fallback
+
+            // 3. Порог высоты «4 строки»: line-height из computed style
+            //    (в CSS задан line-height: 1.3); +1px — допуск округления
+            //    scrollHeight до целого.
+            var lineHeightPx = 0;
+            try {
+                var cs = window.getComputedStyle(measured[0].cell, null);
+                lineHeightPx = parseFloat(cs.lineHeight);
+                if (!lineHeightPx || isNaN(lineHeightPx)) {
+                    lineHeightPx = (parseFloat(cs.fontSize) || 13) * 1.3;
+                }
+            } catch (e2) { lineHeightPx = 16.9; }
+            var maxAllowedHeight = MAX_LINES * lineHeightPx + 1;
+
+            // 4. Обход от самой широкой ячейки к узкой + бинарный поиск
+            //    минимальной ширины под «≤ 4 строки».
+            measured.sort(function(a, b) { return b.natural - a.natural; });
+            var candidate = headerNatural;
+            for (var k = 0; k < measured.length; k++) {
+                if (measured[k].natural <= candidate) continue; // 1 строка — ок
+                if (this._measureArchiveCellHeight(measured[k].cell, candidate) <= maxAllowedHeight) {
+                    continue; // уже ≤ 4 строк при текущей ширине
+                }
+                var lo = candidate;                 // узко — 5+ строк
+                var hi = measured[k].natural;       // 1 строка — точно ≤ 4 строк
+                while (hi - lo > 1) {
+                    var mid = Math.floor((lo + hi) / 2);
+                    if (this._measureArchiveCellHeight(measured[k].cell, mid) <= maxAllowedHeight) {
+                        hi = mid; // помещается — пробуем уже
+                    } else {
+                        lo = mid; // не помещается — нужно шире
+                    }
+                }
+                candidate = hi;
             }
 
-            // 3. Целевая ширина столбца:
-            //    • headerNatural — минимум, чтобы название столбца полностью
-            //      помещалось;
-            //    • ceil(maxNatural / 4) + 10px safety — чтобы контент помещался
-            //      ровно в 4 строки.
-            //    Берём максимум из двух.
-            var fourLineWidth = Math.ceil(maxNatural / 4) + 10;
-            var target = Math.max(headerNatural, fourLineWidth);
-
-            // 4. Применить target как min-width и max-width на inner-div'ы.
-            //    td подстроится под ширину inner-div'а.
+            // 5. Применить candidate как min-width и max-width на inner-div'ы.
+            //    td подстроится под ширину inner-div'а (механика Task 221).
             for (var j = 0; j < cells.length; j++) {
-                cells[j].style.minWidth = target + 'px';
-                cells[j].style.maxWidth = target + 'px';
+                cells[j].style.minWidth = candidate + 'px';
+                cells[j].style.maxWidth = candidate + 'px';
             }
+        },
+
+        // Task 248: РЕАЛЬНАЯ высота inner-div'а при фиксированной ширине
+        // widthPx (white-space: normal — перенос по словам, как в живой
+        // таблице). Исходные inline-стили сохраняются и восстанавливаются.
+        _measureArchiveCellHeight: function(cell, widthPx) {
+            var origCss = cell.style.cssText;
+            cell.style.cssText = origCss +
+                '; white-space:normal !important; max-width:none !important;' +
+                ' max-height:none !important; overflow:visible !important;' +
+                ' width:' + widthPx + 'px !important;';
+            var h = cell.scrollHeight;
+            cell.style.cssText = origCss;
+            return h;
         },
 
         // График архива — вертикальные бары (даты по X, значение по Y), зебра, без Y-оси.
