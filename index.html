@@ -3914,6 +3914,107 @@
         cursor: pointer;
     }
     .ws-generate-btn:active { opacity: 0.85; }
+    /* Task 251: кнопка пакетного сохранения накопленных правок шахматки.
+       Появляется (JS) только при наличии несохранённых изменений. */
+    .ws-save-btn {
+        background: var(--accent-green, #4ac771);
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 6px 14px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .ws-save-btn:active { opacity: 0.85; }
+    .ws-save-btn:disabled { opacity: 0.6; cursor: default; }
+
+    /* Task 251: попап выбора статуса рядом с ячейкой шахматки.
+       Табличка «код — название» столбиком; фиксированное позиционирование —
+       координаты задаёт JS относительно ячейки (getBoundingClientRect). */
+    .ws-popup-closer {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 9400;   /* выше sheet'ов (201) и сайдбара (1000-2000), ниже тостов (10000) */
+    }
+    .ws-popup-closer.active { display: block; }
+    .ws-cell-popup {
+        display: none;
+        position: fixed;
+        z-index: 9401;
+        min-width: 230px;
+        max-width: 320px;
+        max-height: 420px;
+        overflow-y: auto;
+        background: var(--bg-tertiary, #0e1621);
+        border: 1px solid var(--card-border, rgba(74, 143, 199, 0.25));
+        border-radius: 10px;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+        padding: 4px;
+        font-size: 13px;
+        color: var(--text-primary, #e0e0e0);
+    }
+    .ws-cell-popup.active { display: block; }
+    .ws-popup-title {
+        padding: 8px 10px 6px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+        border-bottom: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .ws-popup-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .ws-popup-row:hover { background: rgba(74, 143, 199, 0.15); }
+    .ws-popup-row.ws-popup-active { background: rgba(74, 143, 199, 0.25); }
+    .ws-popup-swatch {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        border: 1px solid rgba(255,255,255,0.2);
+        flex-shrink: 0;
+    }
+    .ws-popup-swatch-empty {
+        background: transparent;
+        border-style: dashed;
+    }
+    .ws-popup-code {
+        font-weight: 700;
+        min-width: 26px;
+        font-family: Consolas, monospace;
+        color: var(--text-primary, #e0e0e0);
+    }
+    .ws-popup-name {
+        color: var(--text-secondary, rgba(255,255,255,0.6));
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .ws-popup-more {
+        border-top: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        border-radius: 0;
+        margin-top: 2px;
+        color: var(--accent-blue, #4a8fc7);
+        font-weight: 600;
+    }
+
+    /* Task 251: маркер несохранённой ячейки — янтарная пунктирная рамка
+       (отличима от hover-подсветки — сплошной синий outline) */
+    .ws-grid tbody td.ws-cell.ws-pending {
+        outline: 2px dashed rgba(255, 193, 7, 0.9);
+        outline-offset: -2px;
+    }
 
     /* Контейнер шахматки — горизонтальный скролл */
     .ws-grid-wrap {
@@ -4177,6 +4278,21 @@
        (раньше transparent, просвечивал фон страницы) */
     [data-theme="light"] .ws-grid tbody td.ws-cell {
         background: #eef0f2;
+    }
+    /* Task 251: светлая тема — попап выбора статуса */
+    [data-theme="light"] .ws-cell-popup {
+        background: #f6f7f8;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+    }
+    [data-theme="light"] .ws-popup-row:hover { background: rgba(42, 93, 143, 0.12); }
+    [data-theme="light"] .ws-popup-row.ws-popup-active { background: rgba(42, 93, 143, 0.18); }
+    [data-theme="light"] .ws-popup-code { color: #222; }
+    [data-theme="light"] .ws-popup-name { color: #555; }
+    [data-theme="light"] .ws-popup-swatch { border-color: rgba(0, 0, 0, 0.15); }
+    [data-theme="light"] .ws-save-btn { background: #2e8b57; }
+    /* Task 251: светлая тема — маркер несохранённой ячейки потемнее */
+    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-pending {
+        outline-color: rgba(176, 122, 0, 0.95);
     }
     [data-theme="light"] .ws-emp-card .ws-meta,
     [data-theme="light"] .ws-tr-card .ws-tr-meta {
@@ -10531,6 +10647,9 @@
                 <select id="wsMonthSel" class="ws-month-sel" onchange="WorkSchedule.onMonthChange()"></select>
                 <select id="wsYearSel" class="ws-year-sel" onchange="WorkSchedule.onMonthChange()"></select>
                 <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateMonth()" hidden>Сформировать</button>
+                <!-- Task 251: кнопка пакетного сохранения накопленных локальных
+                     изменений шахматки (появляется при наличии несохранённых правок) -->
+                <button type="button" id="wsSaveBtn" class="ws-save-btn" onclick="WorkSchedule.saveAll()" hidden>Сохранить</button>
             </div>
             <div id="wsGridWrap" class="ws-grid-wrap">
                 <div class="admin-empty" id="wsEmpty">Загрузка…</div>
@@ -13305,6 +13424,14 @@
     <button type="button" class="flow-comment-delete" id="wsCellDelete" style="display:none;" onclick="WorkSchedule.deleteCell()">Удалить запись</button>
     <button type="button" class="flow-input-cancel" onclick="WorkSchedule.closeCellForm()">Отмена</button>
 </div>
+
+<!-- Task 251: попап выбора статуса рядом с ячейкой шахматки.
+     Открывается кликом по ячейке: табличка «код — название» столбиком.
+     Выбор применяется ЛОКАЛЬНО (накопление в _PENDING, без отправки на
+     сервер); отправка всех накопленных изменений — кнопка «Сохранить»
+     в тулбаре (WorkSchedule.saveAll). -->
+<div id="wsPopupCloser" class="ws-popup-closer" onclick="WorkSchedule.closeCellPopup()"></div>
+<div id="wsCellPopup" class="ws-cell-popup" role="menu"></div>
 
 <!-- ===== Bottom sheet: добавление сотрудника (workSchedule) ===== -->
 <div id="wsEmpOverlay" class="pin-sheet-overlay" onclick="WorkSchedule.closeEmployeeForm()"></div>
@@ -33444,12 +33571,36 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         _editingCell: null,
 
+        // Task 251: локальные несохранённые правки шахматки.
+        // Ключ: 'ISO-дата|таб_номер' → {статус, переработка, замещает,
+        // комментарий} либо {__delete: true} (запланировано удаление).
+        // Отправка на сервер — ТОЛЬКО пакетно, кнопкой saveAll().
+        _PENDING: {},
+        // Task 251: ячейка, у которой открыт попап выбора статуса
+        _popupCell: null,
+        // Task 251: флаг идущего пакетного сохранения (блокирует правки)
+        _saving: false,
+
         init: function() {
             if (this._initialized) {
                 this._refreshFromUrlState();
                 return;
             }
             this._initialized = true;
+
+            // Task 251: Esc закрывает попап выбора статуса; beforeunload
+            // предупреждает о несохранённых правках шахматки (обработчики
+            // вешаются один раз — init больше не пройдёт мимо этой точки)
+            var selfOnce = this;
+            document.addEventListener('keydown', function(ev) {
+                if (ev.key === 'Escape') selfOnce.closeCellPopup();
+            });
+            window.addEventListener('beforeunload', function(ev) {
+                if (Object.keys(selfOnce._PENDING).length > 0) {
+                    ev.preventDefault();
+                    ev.returnValue = '';
+                }
+            });
 
             var now = new Date();
             this._year  = now.getFullYear();
@@ -33644,15 +33795,31 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var isoDate = this._isoDate(ddt);
                     var key = isoDate + '|' + emp['таб_номер'];
                     var entry = entryIdx[key];
-                    html += this._renderCell(day, isoDate, emp, entry);
+                    // Task 251: локальная правка перекрывает серверные данные —
+                    // выбранная ячейка сразу показывает новый статус (без отправки
+                    // на сервер). __delete — запланированное удаление записи.
+                    var pending = this._PENDING[key] || null;
+                    var effEntry = entry;
+                    if (pending) {
+                        if (pending.__delete) {
+                            effEntry = null;
+                        } else {
+                            effEntry = Object.assign({}, entry || {}, pending, { 'источник': 'руч' });
+                        }
+                    }
+                    html += this._renderCell(day, isoDate, emp, effEntry, pending);
                 }
                 html += '</tr>';
             }
             html += '</tbody></table>';
             wrap.innerHTML = html;
+            // Task 251: актуализировать кнопку «Сохранить» (счётчик правок)
+            this._updateSaveBtn();
         },
 
-        _renderCell: function(day, isoDate, emp, entry) {
+        // Task 251: isPending — в ячейке есть несохранённая локальная правка
+        // (янтарная пунктирная рамка .ws-pending + пометка в tooltip).
+        _renderCell: function(day, isoDate, emp, entry, isPending) {
             var status = entry ? entry.статус : '';
             var source = entry ? entry.источник : '';
             var substitute = entry ? entry.замещает : null;
@@ -33675,6 +33842,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var classes = ['ws-cell'];
             if (isManual) classes.push('ws-source-manual');
             if (isOvertime) classes.push('ws-overtime');
+            if (isPending) classes.push('ws-pending');
             if (!status) classes.push('ws-status-empty');
 
             // Task 250: код статуса в ячейке больше не выводится — статус
@@ -33698,10 +33866,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (instructionId) titleParts.push('инструктаж id=' + instructionId);
                 if (entry.комментарий) titleParts.push('«' + entry.комментарий + '»');
             }
+            // Task 251: пометка о несохранённой локальной правке
+            if (isPending) titleParts.push('не сохранено');
 
             var editable = this._canEdit ? '1' : '0';
             var safeTabNo = (emp['таб_номер'] || '').replace(/'/g, '');
-            var clickHandler = 'WorkSchedule.openCellForm(\'' + isoDate + '\',\'' + safeTabNo + '\')';
+            // Task 251: клик по ячейке открывает попап выбора статуса рядом
+            // с ячейкой (вместо мгновенно сохраняющего bottom-sheet)
+            var clickHandler = 'WorkSchedule.onCellClick(event, \'' + isoDate + '\',\'' + safeTabNo + '\')';
             return '<td class="' + classes.join(' ') + '" ' +
                    (style ? 'style="' + style + '" ' : '') +
                    'data-editable="' + editable + '" ' +
@@ -33768,6 +33940,267 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 });
         },
 
+        // ============================================================
+        // Task 251: попап выбора статуса у ячейки + локальное накопление
+        // правок (_PENDING) + пакетное сохранение (saveAll).
+        // ============================================================
+
+        // Клик по ячейке: открыть попап со списком статусов рядом с ячейкой.
+        onCellClick: function(ev, isoDate, tabNo) {
+            if (!this._canEdit) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('У вас нет прав на правку графика');
+                }
+                return;
+            }
+            if (this._saving) return; // идёт пакетное сохранение — не мешаем
+            var td = null;
+            try {
+                if (ev && ev.target && ev.target.closest) {
+                    td = ev.target.closest('td.ws-cell');
+                }
+            } catch (e) {}
+            this._openCellPopup(td, isoDate, tabNo);
+        },
+
+        // Содержимое попапа: заголовок (дата · ФИО), строка «— выходной —»,
+        // строки статусов (свотч + код + название) столбиком, «Дополнительно…».
+        _renderCellPopup: function(isoDate, tabNo) {
+            var emp = null;
+            for (var j = 0; j < this._EMPLOYEES.length; j++) {
+                if (this._EMPLOYEES[j]['таб_номер'] === tabNo) { emp = this._EMPLOYEES[j]; break; }
+            }
+            var eff = this._effectiveEntry(isoDate, tabNo) || {};
+            var current = eff['статус'] || '';
+            var html = '<div class="ws-popup-title">' + this._esc(isoDate) + ' · ' +
+                       this._esc(emp ? emp['ФИО'] : 'таб. №' + tabNo) + '</div>';
+            // Очистка ячейки (выходной) — активна, когда ячейка пустая
+            html += '<div class="ws-popup-row' + (current ? '' : ' ws-popup-active') + '" onclick="WorkSchedule.onPopupStatus(\'\')">' +
+                    '<span class="ws-popup-swatch ws-popup-swatch-empty"></span>' +
+                    '<span class="ws-popup-code">—</span>' +
+                    '<span class="ws-popup-name">выходной</span></div>';
+            for (var i = 0; i < this._STATUS_CODES.length; i++) {
+                var c = this._STATUS_CODES[i];
+                html += '<div class="ws-popup-row' + (current === c.code ? ' ws-popup-active' : '') + '"' +
+                        ' onclick="WorkSchedule.onPopupStatus(\'' + this._esc(c.code) + '\')">' +
+                        '<span class="ws-popup-swatch" style="background:' + (c.color || '#3a3a3a') + ';"></span>' +
+                        '<span class="ws-popup-code">' + this._esc(c.code) + '</span>' +
+                        '<span class="ws-popup-name">' + this._esc(c.name) + '</span></div>';
+            }
+            // Расширенная правка (переработка, замещение, комментарий, удаление)
+            html += '<div class="ws-popup-row ws-popup-more" onclick="WorkSchedule.onPopupMore()">Дополнительно…</div>';
+            return html;
+        },
+
+        // Открыть попап рядом с ячейкой: правее ячейки, не влезает — левее,
+        // затем клампы по краям вьюпорта; по вертикали — от верха ячейки,
+        // не влезает вниз — прижать к низу вьюпорта.
+        _openCellPopup: function(cellEl, isoDate, tabNo) {
+            var popup = document.getElementById('wsCellPopup');
+            var closer = document.getElementById('wsPopupCloser');
+            if (!popup || !closer) return;
+            this._popupCell = { date: isoDate, 'таб_номер': tabNo };
+            popup.innerHTML = this._renderCellPopup(isoDate, tabNo);
+            closer.classList.add('active');
+            popup.classList.add('active');
+            // Сначала скрыто в левом верхнем углу — измерить габариты,
+            // затем позиционировать и показать
+            popup.style.left = '0px';
+            popup.style.top = '0px';
+            popup.style.visibility = 'hidden';
+            var pw = popup.offsetWidth;
+            var ph = popup.offsetHeight;
+            var vw = window.innerWidth;
+            var vh = window.innerHeight;
+            var left, top;
+            var rect = cellEl ? cellEl.getBoundingClientRect() : null;
+            if (rect) {
+                left = rect.right + 6;
+                if (left + pw > vw - 8) left = rect.left - pw - 6;
+                if (left < 8) left = Math.max(8, Math.min(rect.left, vw - pw - 8));
+                if (left + pw > vw - 8) left = Math.max(8, vw - pw - 8);
+                top = rect.top;
+                if (top + ph > vh - 8) top = Math.max(8, vh - ph - 8);
+            } else {
+                left = Math.max(8, (vw - pw) / 2);
+                top = Math.max(8, (vh - ph) / 2);
+            }
+            popup.style.left = Math.round(left) + 'px';
+            popup.style.top = Math.round(top) + 'px';
+            popup.style.visibility = '';
+        },
+
+        closeCellPopup: function() {
+            var popup = document.getElementById('wsCellPopup');
+            var closer = document.getElementById('wsPopupCloser');
+            if (popup) { popup.classList.remove('active'); popup.innerHTML = ''; }
+            if (closer) closer.classList.remove('active');
+            this._popupCell = null;
+        },
+
+        // Выбор статуса в попапе: применяется ЛОКАЛЬНО (в _PENDING),
+        // мгновенной отправки на сервер нет. Ячейка сразу перекрашивается.
+        onPopupStatus: function(code) {
+            if (!this._popupCell) return;
+            var date = this._popupCell.date;
+            var tabNo = this._popupCell['таб_номер'];
+            this._applyCellStatus(date, tabNo, code);
+            this.closeCellPopup();
+            this._renderGrid();
+            this._updateSaveBtn();
+        },
+
+        // «Дополнительно…» — открыть прежний bottom-sheet с расширенными
+        // полями (переработка, замещение, комментарий, удаление записи).
+        onPopupMore: function() {
+            if (!this._popupCell) return;
+            var date = this._popupCell.date;
+            var tabNo = this._popupCell['таб_номер'];
+            this.closeCellPopup();
+            this.openCellForm(date, tabNo);
+        },
+
+        // Серверная запись по ключу (без pending-наложения)
+        _serverEntry: function(isoDate, tabNo) {
+            for (var i = 0; i < this._ENTRIES.length; i++) {
+                if (this._ENTRIES[i]['дата'] === isoDate && this._ENTRIES[i]['таб_номер'] === tabNo) {
+                    return this._ENTRIES[i];
+                }
+            }
+            return null;
+        },
+
+        // Эффективное состояние ячейки: серверная запись, перекрытая
+        // локальной правкой (pending). __delete → ячейка пустая.
+        _effectiveEntry: function(isoDate, tabNo) {
+            var server = this._serverEntry(isoDate, tabNo);
+            var p = this._PENDING[isoDate + '|' + tabNo];
+            if (!p) return server;
+            if (p.__delete) return null;
+            return Object.assign({}, server || {}, p, { 'источник': 'руч' });
+        },
+
+        // Записать локальную правку ячейки (без отправки на сервер)
+        _setPendingCell: function(isoDate, tabNo, fields) {
+            this._PENDING[isoDate + '|' + tabNo] = fields;
+        },
+
+        // Применить статус к ячейке ЛОКАЛЬНО (накопление в _PENDING).
+        // code === '' — «выходной» (очистка ячейки):
+        //   • серверная ручная запись → планируем удаление (__delete);
+        //   • авто-запись → нельзя очистить (сервер запрещает deleteEntry
+        //     для авто) — тост, как в прежнем submitCellForm;
+        //   • была только локальная правка → правка снимается.
+        // code !== '' — новая локальная правка (доп. поля сохраняются из
+        // эффективного состояния ячейки).
+        _applyCellStatus: function(isoDate, tabNo, code) {
+            var key = isoDate + '|' + tabNo;
+            var server = this._serverEntry(isoDate, tabNo);
+            var pending = this._PENDING[key];
+            if (code) {
+                var base = pending || server || {};
+                this._PENDING[key] = {
+                    'статус': code,
+                    'переработка': (base.переработка === 1 || base.переработка === '1') ? 1 : 0,
+                    'замещает': base.замещает || null,
+                    'комментарий': base.комментарий || ''
+                };
+                return;
+            }
+            // Очистка («выходной»)
+            if (pending && !server) {
+                delete this._PENDING[key]; // локальная правка снимается — ячейка пустая
+            } else if (pending && server && server.источник === 'руч') {
+                this._PENDING[key] = { __delete: true }; // вернуть к удалению записи
+            } else if (pending && server && server.источник === 'авто') {
+                delete this._PENDING[key]; // откат локальной правки — снова авто-запись
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Нельзя очистить авто-запись. Установите статус вручную.');
+                }
+            } else if (server && server.источник === 'руч') {
+                this._PENDING[key] = { __delete: true };
+            } else if (server && server.источник === 'авто') {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Нельзя очистить авто-запись. Установите статус вручную.');
+                }
+            } else {
+                delete this._PENDING[key]; // ячейка и так пустая
+            }
+        },
+
+        // Кнопка «Сохранить» в тулбаре: видна только редакторам и только
+        // при наличии несохранённых правок; текст — со счётчиком.
+        _updateSaveBtn: function() {
+            var btn = document.getElementById('wsSaveBtn');
+            if (!btn) return;
+            var n = Object.keys(this._PENDING).length;
+            btn.hidden = !this._canEdit || n === 0;
+            btn.textContent = n > 0 ? 'Сохранить (' + n + ')' : 'Сохранить';
+        },
+
+        // Пакетное сохранение: все накопленные правки отправляются на сервер
+        // (последовательно setManualEntry / deleteEntry), успешные —
+        // удаляются из _PENDING; затем синхронизация — loadGrid() перечитывает
+        // данные с сервера, и приложение отображает актуальное состояние БД.
+        saveAll: function() {
+            if (this._saving) return;
+            var keys = Object.keys(this._PENDING);
+            if (!keys.length) return;
+            this._saving = true;
+            var self = this;
+            var btn = document.getElementById('wsSaveBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Сохранение…'; }
+            var okCount = 0;
+            var failCount = 0;
+            var firstErr = null;
+            var chain = Promise.resolve();
+            keys.forEach(function(key) {
+                chain = chain.then(function() {
+                    var p = self._PENDING[key];
+                    if (!p) return; // уже отправлена в этом проходе
+                    var parts = key.split('|');
+                    var payload = { date: parts[0], 'таб_номер': parts[1] };
+                    var call;
+                    if (p.__delete) {
+                        call = self._api('workSchedule.deleteEntry', payload);
+                    } else {
+                        payload['статус'] = p['статус'];
+                        payload['переработка'] = p['переработка'] || 0;
+                        payload['замещает'] = p['замещает'] || null;
+                        payload['комментарий'] = p['комментарий'] || '';
+                        call = self._api('workSchedule.setManualEntry', payload);
+                    }
+                    return call.then(function() {
+                        okCount++;
+                        delete self._PENDING[key];
+                    }).catch(function(err) {
+                        failCount++;
+                        if (!firstErr) firstErr = err;
+                    });
+                });
+            });
+            var finish = function() {
+                self._saving = false;
+                if (btn) btn.disabled = false;
+                self._updateSaveBtn();
+                // Синхронизация: перечитать данные с сервера (актуальное
+                // состояние БД) и перерисовать шахматку
+                self.loadGrid();
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    if (failCount === 0) {
+                        KipToast.show('Сохранено записей: ' + okCount);
+                    } else {
+                        KipToast.show('Сохранено ' + okCount + ' из ' + (okCount + failCount) +
+                                      '. Ошибка: ' + ((firstErr && (firstErr.message || firstErr)) || 'неизвестная'));
+                    }
+                }
+            };
+            chain.then(finish).catch(finish);
+        },
+
+        // Task 251: sheet расширенной правки открывается из попапа
+        // («Дополнительно…»). Показывает ЭФФЕКТИВНОЕ состояние ячейки
+        // (сервер + локальная правка); сохранение тоже идёт в _PENDING.
         openCellForm: function(isoDate, tabNo) {
             if (!this._canEdit) {
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
@@ -33775,13 +34208,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
                 return;
             }
-            var entry = null;
-            for (var i = 0; i < this._ENTRIES.length; i++) {
-                if (this._ENTRIES[i]['дата'] === isoDate && this._ENTRIES[i]['таб_номер'] === tabNo) {
-                    entry = this._ENTRIES[i];
-                    break;
-                }
-            }
+            var pending = this._PENDING[isoDate + '|' + tabNo] || null;
+            var entry = this._effectiveEntry(isoDate, tabNo);
             var emp = null;
             for (var j = 0; j < this._EMPLOYEES.length; j++) {
                 if (this._EMPLOYEES[j]['таб_номер'] === tabNo) { emp = this._EMPLOYEES[j]; break; }
@@ -33791,12 +34219,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 date: isoDate,
                 'таб_номер': tabNo,
                 ФИО: emp ? emp['ФИО'] : '',
-                entry: entry
+                entry: entry,
+                pending: pending
             };
 
             document.getElementById('wsCellInfo').textContent =
                 isoDate + ' · ' + (emp ? emp['ФИО'] : 'таб. №' + tabNo) +
-                (entry ? (entry.источник === 'руч' ? ' · ручная запись' : ' · авто-запись') : ' · нет записи');
+                (entry ? (entry.источник === 'руч' ? ' · ручная запись' : ' · авто-запись') : ' · нет записи') +
+                (pending ? ' · НЕ СОХРАНЕНО' : '');
             document.getElementById('wsCellStatus').value = entry ? entry.статус : '';
             document.getElementById('wsCellOvertime').value = entry && entry.переработка === 1 ? '1' : '0';
             document.getElementById('wsCellSubstitute').value = entry && entry.замещает ? entry.замещает : '';
@@ -33819,6 +34249,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._editingCell = null;
         },
 
+        // Task 251: sheet больше НЕ отправляет изменения на сервер — правка
+        // накапливается локально (в _PENDING), как и выбор в попапе.
+        // Отправка — только кнопкой «Сохранить» (saveAll).
         submitCellForm: function() {
             if (!this._editingCell) return;
             var status = document.getElementById('wsCellStatus').value;
@@ -33826,50 +34259,28 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var substitute = document.getElementById('wsCellSubstitute').value.trim();
             var comment = document.getElementById('wsCellComment').value.slice(0, 500);
             var cell = this._editingCell;
-            var self = this;
 
             if (!status) {
-                if (cell.entry && cell.entry.источник === 'руч') {
-                    this._api('workSchedule.deleteEntry', { date: cell.date, 'таб_номер': cell['таб_номер'] })
-                        .then(function() { self._afterCellSubmit(); })
-                        .catch(function(err) { self._onCellError(err); });
-                } else if (cell.entry && cell.entry.источник === 'авто') {
-                    if (typeof KipToast !== 'undefined' && KipToast.show) {
-                        KipToast.show('Нельзя очистить авто-запись. Установите статус вручную.');
-                    }
-                } else {
-                    this.closeCellForm();
-                }
-                return;
+                // «выходной» — очистка ячейки (та же семантика, что в попапе)
+                this._applyCellStatus(cell.date, cell['таб_номер'], '');
+            } else {
+                this._setPendingCell(cell.date, cell['таб_номер'], {
+                    'статус': status,
+                    'переработка': overtime,
+                    'замещает': substitute || null,
+                    'комментарий': comment
+                });
             }
-
-            var payload = {
-                date: cell.date,
-                'таб_номер': cell['таб_номер'],
-                статус: status,
-                переработка: overtime,
-                замещает: substitute || null,
-                комментарий: comment
-            };
-            this._api('workSchedule.setManualEntry', payload)
-                .then(function() { self._afterCellSubmit(); })
-                .catch(function(err) { self._onCellError(err); });
-        },
-
-        _afterCellSubmit: function() {
             this.closeCellForm();
+            this._renderGrid();
+            this._updateSaveBtn();
             if (typeof KipToast !== 'undefined' && KipToast.show) {
-                KipToast.show('Запись сохранена');
-            }
-            this.loadGrid();
-        },
-
-        _onCellError: function(err) {
-            if (typeof KipToast !== 'undefined' && KipToast.show) {
-                KipToast.show('Ошибка: ' + (err.message || err));
+                KipToast.show('Применено. Нажмите «Сохранить» для отправки на сервер');
             }
         },
 
+        // Task 251: удаление записи — тоже локально (в _PENDING),
+        // фактическое удаление на сервере — при saveAll.
         deleteCell: function() {
             if (!this._editingCell || !this._editingCell.entry) return;
             if (this._editingCell.entry.источник !== 'руч') {
@@ -33878,21 +34289,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
                 return;
             }
-            var self = this;
-            this._api('workSchedule.deleteEntry', {
-                date: this._editingCell.date,
-                'таб_номер': this._editingCell['таб_номер']
-            }).then(function() {
-                self.closeCellForm();
-                if (typeof KipToast !== 'undefined' && KipToast.show) {
-                    KipToast.show('Запись удалена');
-                }
-                self.loadGrid();
-            }).catch(function(err) {
-                if (typeof KipToast !== 'undefined' && KipToast.show) {
-                    KipToast.show('Ошибка: ' + (err.message || err));
-                }
-            });
+            this._applyCellStatus(this._editingCell.date, this._editingCell['таб_номер'], '');
+            this.closeCellForm();
+            this._renderGrid();
+            this._updateSaveBtn();
+            if (typeof KipToast !== 'undefined' && KipToast.show) {
+                KipToast.show('Удаление применено. Нажмите «Сохранить» для отправки на сервер');
+            }
         },
 
         initEmployeesPage: function() {
