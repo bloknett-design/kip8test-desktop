@@ -3887,10 +3887,11 @@
     /* Тулбар: месяц / год / кнопка «Сформировать».
        Task 264: тулбар стал КОЛОНКОЙ из двух ярусов — ряд кнопок
        (.ws-toolbar-main) и окошко производственного календаря
-       (#wsCalPanel): нормы времени и праздники выбранного месяца видны
-       постоянно, без открытия шторки. Бар вырос вниз — со стороны
-       таблицы, а шахматка сузилась по высоте (flex + ResizeObserver →
-       _fitGrid пересчитывает целочисленные высоты строк). */
+       (#wsCalPanel). Task 266: на десктопе (≥1024px) тулбар —
+       СТРОКА: окошко в ЛЕВОЙ части бара, все кнопки — в ПРАВОЙ
+       (правила — в блоке .ws-cal-panel ниже); высота бара
+       СТАТИЧЕСКАЯ — окошко фиксированной высоты со скроллом внутри.
+       Ниже 1024px — прежняя колонка: кнопки сверху, окошко под ними. */
     .ws-toolbar {
         display: flex;
         flex-direction: column;
@@ -4317,30 +4318,43 @@
         .ws-cal-chip span { display: none; }
     }
 
-    /* Task 264: окошко производственного календаря в баре кнопок графика
-       (#wsCalPanel в .ws-toolbar). Нормы времени и праздники/переносы
-       выбранного месяца — построчные строки с цветными чипами; данные
-       переехали сюда из шторки (шторка осталась настройками региона и
-       источника). Стиль — как у кнопок тулбара: прямые углы, фон
+    /* Task 266: окошко производственного календаря в баре кнопок
+       графика (#wsCalPanel в .ws-toolbar) — ДВА СТОЛБИКА: слева нормы
+       месяца, справа от него праздники и переносы. Источник данных и
+       время обновления из окошка УБРАНЫ (полная информация — в шторке
+       настроек: чип «Календарь»), бейдж «официальные нормы» убран —
+       официальность помечена тултипом столбика норм. Высота окошка
+       ФИКСИРОВАННАЯ — бар не «дышит» при смене месяца; если столбики
+       с текстом не входят — вертикальная полоса прокрутки внутри
+       окошка. Стиль — как у кнопок тулбара: прямые углы, фон
        вторичного уровня. */
     .ws-cal-panel {
         display: flex;
-        flex-direction: column;
-        gap: 5px;
+        /* столбик праздников при нехватке ширины переносится ПОД
+           столбик норм (мобильные экраны), а не сжимается */
+        flex-wrap: wrap;
+        align-content: flex-start;
+        column-gap: 20px;
+        row-gap: 8px;
+        /* Task 266: статическая высота бара — окошко не растёт
+           (мобильная база; десктоп — 160px в media-блоке ниже) */
+        height: 132px;
+        overflow-y: auto;                 /* скролл, если столбики не входят */
+        overscroll-behavior: contain;     /* скролл окошка не тянет страницу */
         background: var(--bg-tertiary, #0e1621);
         border: 1px solid var(--card-border, rgba(255,255,255,0.08));
         border-radius: 0;
-        padding: 7px 10px;
+        padding: 6px 10px;
     }
     .ws-cal-panel[hidden] { display: none; }
-    .ws-cp-norms,
-    .ws-cp-days,
-    .ws-cp-foot {
+    /* Task 266: столбики — вертикальные списки (нормы слева,
+       праздники справа); столбик не сжимается — при нехватке
+       ширины переносится на новую строку окошка */
+    .ws-cp-col {
         display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        column-gap: 12px;
-        row-gap: 4px;
+        flex-direction: column;
+        flex-shrink: 0;
+        gap: 2px;
         font-size: 12px;
         color: var(--text-secondary, rgba(255,255,255,0.65));
     }
@@ -4351,13 +4365,20 @@
         letter-spacing: 0.4px;
         color: var(--text-secondary, rgba(255,255,255,0.45));
         white-space: nowrap;
+        margin-bottom: 2px;
     }
     .ws-cp-item { white-space: nowrap; }
     .ws-cp-item b {
         color: var(--text-primary, #e0e0e0);
         font-weight: 700;
     }
-    /* Чипы особых дней: цвет — по виду (праздник/перенос/сокращённый) */
+    /* Чипы особых дней: цвет — по виду (праздник/перенос/сокращённый).
+       Task 266: столбик праздников — чипы прижаты влево (не растягиваются
+       на ширину столбика) и с небольшим межстрочным зазором */
+    .ws-cp-days {
+        align-items: flex-start;
+        gap: 3px;
+    }
     .ws-cp-day {
         display: inline-flex;
         align-items: center;
@@ -4376,9 +4397,39 @@
         font-size: 11px;
         color: var(--text-secondary, rgba(255,255,255,0.45));
     }
-    .ws-cp-foot {
+    /* Task 266: легенда звёздочки — в конце столбика праздников */
+    .ws-cp-legend {
         font-size: 10px;
-        color: var(--text-secondary, rgba(255,255,255,0.4));
+        line-height: 1.3;
+        color: var(--text-secondary, rgba(255,255,255,0.45));
+        white-space: normal;   /* в узком столбике переносится строками */
+        margin-top: 3px;
+    }
+    /* Task 266: ДЕСКТОП — окошко в ЛЕВОЙ части бара, все кнопки —
+       в ПРАВОЙ. Тулбар становится строкой: окошко занимает всё
+       свободное место слева (flex-grow), ряд кнопок прижат вправо
+       (margin-left: auto). Высота окошка — 160px: оба столбика
+       (нормы: заголовок + 7 строк) умещаются без скролла в обычные
+       месяцы; полоса прокрутки — только у длинных столбиков
+       (например, январские каникулы). */
+    @media (min-width: 1024px) {
+        .ws-toolbar {
+            flex-direction: row;
+            align-items: center;
+            gap: 12px;
+        }
+        .ws-cal-panel {
+            order: 0;              /* окошко — левая часть бара */
+            flex: 1 1 auto;       /* растягивается на свободную ширину */
+            min-width: 0;
+            height: 160px;        /* статическая высота бара на десктопе */
+        }
+        .ws-toolbar-main {
+            order: 1;             /* кнопки — правая часть бара */
+            margin-left: auto;
+            flex-shrink: 0;
+            flex-wrap: nowrap;
+        }
     }
 
     /* Шторка «Производственный календарь» — настройки: регион, источник
@@ -4423,10 +4474,10 @@
         margin-bottom: 8px;
     }
     /* Task 262: бейдж «предварительные данные» (2027 — проект Минтруда)
-       у заголовка месяца шторки; Task 264: бейдж «официальные нормы» —
-       в окошке тулбара */
-    .ws-cal-prelim,
-    .ws-cal-official {
+       у заголовка месяца шторки; Task 264: бейдж в окошке тулбара.
+       Task 266: бейдж «официальные нормы» УБРАН из окошка — официальность
+       помечена тултипом столбика норм, остался только preliminary */
+    .ws-cal-prelim {
         display: inline-block;
         margin-left: 8px;
         padding: 1px 8px;
@@ -4437,26 +4488,14 @@
         white-space: nowrap;
         text-transform: none;
         letter-spacing: 0;
-    }
-    .ws-cal-prelim {
         background: rgba(255,193,7,0.14);
         color: #ffc107;
         border: 1px solid rgba(255,193,7,0.35);
-    }
-    .ws-cal-official {
-        background: rgba(76,199,113,0.14);
-        color: #4ac771;
-        border: 1px solid rgba(76,199,113,0.35);
     }
     [data-theme="light"] .ws-cal-prelim {
         background: rgba(255,160,0,0.12);
         color: #a06b00;
         border-color: rgba(255,160,0,0.4);
-    }
-    [data-theme="light"] .ws-cal-official {
-        background: rgba(40,167,69,0.10);
-        color: #1d7a37;
-        border-color: rgba(40,167,69,0.35);
     }
     /* Task 264: подсказка в шторке — нормы и праздники месяца
        переехали в окошко тулбара графика */
@@ -4555,17 +4594,16 @@
         background: rgba(0, 0, 0, 0.03);
         border-color: rgba(0, 0, 0, 0.15);
     }
-    /* Task 264: светлая тема — окошко календаря в тулбаре */
+    /* Task 264/266: светлая тема — окошко календаря в тулбаре */
     [data-theme="light"] .ws-cal-panel {
         background: #fff;
         border-color: rgba(0, 0, 0, 0.12);
     }
-    [data-theme="light"] .ws-cp-norms,
-    [data-theme="light"] .ws-cp-days,
-    [data-theme="light"] .ws-cp-foot { color: #666; }
+    [data-theme="light"] .ws-cp-col { color: #666; }
     [data-theme="light"] .ws-cp-item b { color: #333; }
     [data-theme="light"] .ws-cp-cap,
-    [data-theme="light"] .ws-cp-empty { color: #999; }
+    [data-theme="light"] .ws-cp-empty,
+    [data-theme="light"] .ws-cp-legend { color: #999; }
     [data-theme="light"] .ws-grid thead th.ws-day-col .ws-short-star { color: #1d7a37; }
 
     /* Task 252: легенда кодов под шахматкой УБРАНА — коды статусов снова
@@ -11170,10 +11208,12 @@
                          изменений шахматки (появляется при наличии несохранённых правок) -->
                     <button type="button" id="wsSaveBtn" class="ws-save-btn" onclick="WorkSchedule.saveAll()" hidden>Сохранить</button>
                 </div>
-                <!-- Task 264: окошко производственного календаря в баре кнопок
-                     графика — нормы времени и праздники/переносы выбранного
-                     месяца видны постоянно (раньше — в шторке). Бар вырос вниз,
-                     со стороны таблицы; шахматка сузилась по высоте. Заполняет
+                <!-- Task 264/266: окошко производственного календаря в баре
+                     кнопок графика — нормы времени (столбик слева) и
+                     праздники/переносы (столбик справа) выбранного месяца
+                     видны постоянно. На десктопе окошко — в левой части
+                     бара (кнопки справа), высота статическая, при
+                     нехватке места — скролл внутри. Заполняет
                      ProdCalendar.renderPanel() -->
                 <div id="wsCalPanel" class="ws-cal-panel" hidden></div>
             </div>
@@ -36392,12 +36432,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             } catch (e) {}
         },
 
-        // Task 264: окошко производственного календаря в тулбаре
-        // (#wsCalPanel): нормы времени и праздники/переносы выбранного
-        // месяца — постоянно видны под кнопками графика, без открытия
-        // шторки. Месяц/год берутся из WorkSchedule (или текущие). Бар
-        // с кнопками вырос вниз, со стороны таблицы — шахматка сузилась
-        // по высоте (flex + ResizeObserver → _fitGrid).
+        // Task 264/266: окошко производственного календаря в тулбаре
+        // (#wsCalPanel): СТОЛБИКАМИ — слева нормы времени, справа от
+        // него праздники/переносы выбранного месяца. Источник данных и
+        // время обновления из окошка УБРАНЫ (Task 266) — полная
+        // информация осталась в шторке настроек (чип «Календарь»);
+        // бейдж «официальные нормы» убран, официальность — в тултипе
+        // столбика норм. На десктопе окошко прижато к ЛЕВОЙ части бара
+        // (кнопки — справа), высота бара СТАТИЧЕСКАЯ: окошко
+        // фиксированной высоты, при нехватке места столбики
+        // прокручиваются внутри него. Месяц/год берутся из
+        // WorkSchedule (или текущие).
         renderPanel: function() {
             var el = document.getElementById('wsCalPanel');
             if (!el) return;
@@ -36423,19 +36468,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                               'июл','авг','сен','окт','ноя','дек'];
             var html = '';
 
-            // Нормы времени месяца (legalic — официальные; иначе расчёт)
-            html += '<div class="ws-cp-norms" title="Норма времени по производственному календарю' +
+            // Столбик 1 (левый): нормы времени месяца столбиком.
+            // legalic — официальные (тултип), иначе — локальный расчёт
+            html += '<div class="ws-cp-col ws-cp-norms" title="Норма времени по производственному календарю' +
                     (st.normsOfficial ? ' — официальные данные' : '') +
                     (st.preliminary ? ' — предварительные данные (проект переноса)' : '') +
                     '">' +
                     '<span class="ws-cp-cap">Норма, ' +
-                        this._esc(monthsNom[mi].toLowerCase()) + ' ' + y + '</span>' +
-                    (st.normsOfficial
-                        ? '<span class="ws-cal-official" title="Нормы посчитаны из официальных минут производственного календаря">официальные нормы</span>'
-                        : '') +
-                    (st.preliminary
-                        ? '<span class="ws-cal-prelim" title="Год основан на проекте постановления Минтруда России — окончательные переносы ещё не утверждены">предварительно</span>'
-                        : '') +
+                        this._esc(monthsNom[mi].toLowerCase()) + ' ' + y +
+                        (st.preliminary
+                            ? ' <span class="ws-cal-prelim" title="Год основан на проекте постановления Минтруда России — окончательные переносы ещё не утверждены">предварительно</span>'
+                            : '') +
+                    '</span>' +
                     '<span class="ws-cp-item">Рабочих: <b>' + st.workDays + '</b></span>' +
                     '<span class="ws-cp-item">Выходных и празд.: <b>' + st.offDays + '</b></span>' +
                     '<span class="ws-cp-item">Сокращённых*: <b>' + st.shortened + '</b></span>' +
@@ -36449,8 +36493,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         : '') +
                     '</div>';
 
-            // Праздники и переносы месяца — цветные чипы с тултипами
-            // (Task 264: у сокращённых дней — звёздочка у даты)
+            // Столбик 2 (правый): праздники и переносы месяца — цветные
+            // чипы с тултипами (Task 264: у сокращённых дней —
+            // звёздочка у даты; Task 266: столбиком, внизу — легенда)
             var kindCls = {
                 'праздник': 'k-hol',
                 'региональный праздник': 'k-reg',
@@ -36458,7 +36503,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 'сокращённый': 'k-sh',
                 'рабочий перенос': 'k-wk'
             };
-            html += '<div class="ws-cp-days"><span class="ws-cp-cap">Праздники и переносы</span>';
+            html += '<div class="ws-cp-col ws-cp-days">' +
+                    '<span class="ws-cp-cap">Праздники и переносы</span>';
             if (st.specialDays.length) {
                 for (var k = 0; k < st.specialDays.length; k++) {
                     var sd = st.specialDays[k];
@@ -36477,18 +36523,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             } else {
                 html += '<span class="ws-cp-empty">нет праздников и переносов</span>';
             }
-            html += '</div>';
-
-            // Легенда звёздочки + источник и свежесть данных
-            html += '<div class="ws-cp-foot">' +
-                    '<span>* — сокращённый предпраздничный день (−1 час)</span>' +
-                    '<span class="ws-cp-src">источник: ' +
-                        this._esc(this._sourceShort(st.source)) +
-                        (st.fetchedAtMs
-                            ? ', обновлено ' + this._fmtDateTime(st.fetchedAtMs) +
-                              (Date.now() - st.fetchedAtMs > this._TTL_MS ? ' (офлайн-кэш)' : '')
-                            : '') +
-                    '</span></div>';
+            // Легенда звёздочки — в конце столбика праздников
+            html += '<span class="ws-cp-legend">* — сокращённый предпраздничный день (−1 час)</span>' +
+                    '</div>';
 
             el.innerHTML = html;
             el.hidden = false;
@@ -36656,14 +36693,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (source === 'prodcalendar') return 'production-calendar.ru';
             if (source === 'isdayoff') return 'isDayOff (GitHub-зеркало календаря РФ)';
             return 'нет данных (расчёт по Сб/Вс)';
-        },
-
-        // Task 264: короткая подпись источника для окошка тулбара
-        _sourceShort: function(source) {
-            if (source === 'legalic') return 'calendar.legalic.ru';
-            if (source === 'prodcalendar') return 'production-calendar.ru';
-            if (source === 'isdayoff') return 'isDayOff';
-            return 'нет данных — выходные по Сб/Вс и ст. 112';
         },
 
         // ===== Утилиты =====
