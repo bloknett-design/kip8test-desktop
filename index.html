@@ -21725,6 +21725,15 @@
                                             // (был 'calculators' — крошки показывали
                                             // «Главная / Инженерные калькуляторы / Сапёр»)
         'admin':            'dashboard',
+        // Task 249: График работы — корневой раздел (как Сапёр/Справочник).
+        // Без записи здесь buildBreadcrumbPath давал путь ['work-schedule'],
+        // а без записи в PAGE_LABELS крошки показывали raw id:
+        // «Главная / work-schedule» вместо «Главная / График работы».
+        // Подразделы (сотрудники/инструктажи) получают родителя для пути
+        // «Главная / График работы / <Подраздел>».
+        'work-schedule':            'dashboard',
+        'work-schedule-employees':  'work-schedule',
+        'work-schedule-trainings':  'work-schedule',
         // Инженерные калькуляторы
         'calc-kipa':        'calculators',
         'calc-electro':     'calculators',
@@ -21912,6 +21921,12 @@
         'temp-sensors':     'Датчики температуры',
         'minesweeper':      'Сапёр',
         'phonebook':        'Телефонный справочник',
+        // Task 249: читаемые метки для крошек страниц Графика работы
+        // (до фикса fallback на raw id: «Главная / work-schedule»).
+        // Метки совпадают с заголовками страниц (page-inline-header-title).
+        'work-schedule':            'График работы',
+        'work-schedule-employees':  'Сотрудники',
+        'work-schedule-trainings':  'Инструктажи и обучения',
         'admin':            'Админ-панель',
         'admin-users':      'Пользователи',
         'admin-sessions':   'Активные сессии',
