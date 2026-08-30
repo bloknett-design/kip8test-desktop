@@ -4028,6 +4028,35 @@
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         padding: 0 0 12px 0;
+        /* Task 257: полосы прокрутки шахматки СКРЫТЫ. Прокрутка
+           остаётся (колесо мыши / свайп), но визуальной полосы
+           справа от таблицы больше нет. Причина: при дробном
+           масштабе окна (Windows 125%/150%) высота области бывает
+           дробной, clientHeight округляется и таблица могла
+           переливаться на долю пикселя — справа вылезала тонкая
+           полоса прокрутки. */
+        scrollbar-width: none;      /* Firefox */
+        -ms-overflow-style: none;   /* старый Edge / IE */
+    }
+    /* Chrome / Edge / Safari (PWA) — «классический» скроллбар,
+       который занимал место справа от таблицы */
+    .ws-grid-wrap::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+        display: none;
+    }
+    /* Task 257: завершающая полоса внизу шахматки — небольшой
+       бордюрчик, зрительно закрывающий таблицу снизу (метка конца
+       таблицы). Рендерится в _renderGrid сразу после </table>,
+       высоту резервирует _fitGrid — полоса всегда прижата к нижнему
+       краю таблицы. Оттенок чуть сильнее --card-border, чтобы конец
+       читался отчётливо, но без резкости. */
+    .ws-grid-foot {
+        height: 3px;
+        background: rgba(74, 143, 199, 0.35);
+    }
+    [data-theme="light"] .ws-grid-foot {
+        background: rgba(20, 20, 19, 0.15);
     }
     .ws-grid {
         border-collapse: collapse;
@@ -33971,6 +34000,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 html += '</tr>';
             }
             html += '</tbody></table>';
+            // Task 257: завершающая полоса — небольшой бордюрчик под
+            // последней строкой, зрительно закрывает таблицу снизу
+            // (метка конца таблицы). Высоту резервирует _fitGrid —
+            // полоса всегда прижата к нижнему краю области.
+            html += '<div class="ws-grid-foot" aria-hidden="true"></div>';
             wrap.innerHTML = html;
             // Task 256: целочисленная подгонка высоты строк под размер
             // области — без полос прокрутки и с чёткими границами строк
@@ -34014,10 +34048,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 return;
             }
             var thead = table.querySelector('thead');
-            var avail = wrap.clientHeight;   // целое число (высота области)
+            // Task 257: высоту области берём ИЗ РЕАЛЬНОЙ геометрии,
+            // а не из clientHeight. При дробном масштабе окна
+            // (Windows 125%/150%) высота области дробная, clientHeight
+            // округляется ВВЕРХ — подгонка под него переливала таблицу
+            // на долю пикселя, и справа от таблицы вылезала полоса
+            // прокрутки. floor(факт + 0.25) не превышает реальную
+            // высоту (+0.25 гасит накопление ошибки float — 539.9999
+            // остаётся 540), переливание исключено. Взамен возможна
+            // щель до ~1px под завершающей полосой — глазу не видна.
+            var avail = Math.floor(wrap.getBoundingClientRect().height + 0.25);
             var headH = Math.round(thead.getBoundingClientRect().height);
+            // Task 257: завершающая полоса (3px) входит в бюджет —
+            // таблица + полоса всегда вписываются в область до низа
+            var foot = wrap.querySelector('.ws-grid-foot');
+            var footH = foot ? Math.round(foot.getBoundingClientRect().height) : 0;
             var n = rows.length;
-            var budget = avail - headH;
+            var budget = avail - headH - footH;
             var h = Math.floor(budget / n);
             if (budget <= 0 || h < 24) {
                 // страница скрыта / места совсем мало — природные высоты
