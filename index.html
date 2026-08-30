@@ -4046,13 +4046,13 @@
         display: none;
     }
     /* Task 257: завершающая полоса внизу шахматки — небольшой
-       бордюрчик, зрительно закрывающий таблицу снизу (метка конца
-       таблицы). Рендерится в _renderGrid сразу после </table>,
-       высоту резервирует _fitGrid — полоса всегда прижата к нижнему
-       краю таблицы. Оттенок чуть сильнее --card-border, чтобы конец
-       читался отчётливо, но без резкости. */
+       бордюрчик (Task 258: 5px), зрительно закрывающий таблицу снизу
+       (метка конца таблицы). Рендерится в _renderGrid сразу после
+       </table>, высоту резервирует _fitGrid — полоса всегда прижата
+       к нижнему краю таблицы. Оттенок чуть сильнее --card-border,
+       чтобы конец читался отчётливо, но без резкости. */
     .ws-grid-foot {
-        height: 3px;
+        height: 5px;
         background: rgba(74, 143, 199, 0.35);
     }
     [data-theme="light"] .ws-grid-foot {
@@ -34059,8 +34059,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // щель до ~1px под завершающей полосой — глазу не видна.
             var avail = Math.floor(wrap.getBoundingClientRect().height + 0.25);
             var headH = Math.round(thead.getBoundingClientRect().height);
-            // Task 257: завершающая полоса (3px) входит в бюджет —
-            // таблица + полоса всегда вписываются в область до низа
+            // Task 257: завершающая полоса (Task 258: 5px) входит в
+            // бюджет — таблица + полоса всегда вписываются в область
+            // до низа
             var foot = wrap.querySelector('.ws-grid-foot');
             var footH = foot ? Math.round(foot.getBoundingClientRect().height) : 0;
             var n = rows.length;
