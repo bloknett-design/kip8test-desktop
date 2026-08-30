@@ -4049,14 +4049,40 @@
        бордюрчик (Task 258: 5px), зрительно закрывающий таблицу снизу
        (метка конца таблицы). Рендерится в _renderGrid сразу после
        </table>, высоту резервирует _fitGrid — полоса всегда прижата
-       к нижнему краю таблицы. Оттенок чуть сильнее --card-border,
-       чтобы конец читался отчётливо, но без резкости. */
+       к нижнему краю таблицы.
+       Task 259: полоса НЕПРОЗРАЧНАЯ и с ЭФФЕКТОМ ВЫСТУПА — сплошной
+       стальной фон + светлая верхняя грань (блик, «свет сверху») и
+       тёмная нижняя (тень под выступом) — классический bevel-барьер.
+       box-sizing: border-box — общая высота остаётся 5px
+       (1px блик + 3px фон + 1px тень), _fitGrid читает реальную
+       геометрию, подгонка строк не меняется. */
     .ws-grid-foot {
         height: 5px;
-        background: rgba(74, 143, 199, 0.35);
+        box-sizing: border-box;
+        background: #35648f;
+        border-top: 1px solid #85b7dc;
+        border-bottom: 1px solid #0f1b26;
     }
     [data-theme="light"] .ws-grid-foot {
-        background: rgba(20, 20, 19, 0.15);
+        background: #b3c2ce;
+        border-top: 1px solid #ffffff;
+        border-bottom: 1px solid #84929e;
+    }
+    /* Task 259: разделитель групп персонала — первой строке группы
+       дневных работников (идёт сразу после сменных) задаётся
+       усиленная верхняя граница: группа сменного персонала
+       (смены №1..№5) зрительно отделена от группы дневных.
+       Специфичность .ws-grid tbody tr.ws-group-first td (0,2,3)
+       ВЫШЕ светлой темы [data-theme="light"] .ws-grid tbody td
+       (0,2,2) — разделитель не перекрашивается в серый (тот же
+       приём, что у красных границ Task 255). В border-collapse
+       стык 2px побеждает соседнюю 1px границу — линия непрерывна
+       по всей ширине строки. */
+    .ws-grid tbody tr.ws-group-first td {
+        border-top: 2px solid #4a8fc7;
+    }
+    [data-theme="light"] .ws-grid tbody tr.ws-group-first td {
+        border-top: 2px solid #6e8ba4;
     }
     .ws-grid {
         border-collapse: collapse;
@@ -33884,7 +33910,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var self = this;
             return this._api('workSchedule.listEmployees', { includeArchived: false })
                 .then(function(data) {
-                    self._EMPLOYEES = data.employees || [];
+                    // Task 259: единый порядок сотрудников для шахматки,
+                    // справочника «Сотрудники» и селектов форм — сначала
+                    // сменный персонал по порядку смен (№1..№5), затем
+                    // дневные по алфавиту фамилий (см. _sortEmployees).
+                    self._EMPLOYEES = self._sortEmployees(data.employees || []);
                 });
         },
 
@@ -33960,9 +33990,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             html += '</tr></thead><tbody>';
 
+            // Task 259: отслеживаем группу предыдущей строки — на стыке
+            // сменной и дневной групп первой строке дневных даётся класс
+            // ws-group-first (усиленная верхняя граница = зрительный
+            // разделитель групп). Список уже отсортирован _sortEmployees:
+            // сменные по сменам 1..5, затем дневные по алфавиту.
+            var prevTier = -1;
             for (var ei = 0; ei < this._EMPLOYEES.length; ei++) {
                 var emp = this._EMPLOYEES[ei];
-                html += '<tr>';
+                var empTip = String(emp['тип'] || '').trim();
+                var empTier = (empTip === 'сменный') ? 0
+                            : (empTip === 'дневной') ? 1 : 2;
+                var trCls = (empTier === 1 && prevTier === 0)
+                    ? ' class="ws-group-first"' : '';
+                prevTier = empTier;
+                html += '<tr' + trCls + '>';
                 // Task 254 + Task 255: под ФИО — строка с должностью и
                 // режимом занятости из справочника сотрудников (таблица
                 // «Сотрудники» файла табель_КИП_ИОС: столбец C — тип,
@@ -34926,6 +34968,41 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             if (!pos) return suffix.trim();
             return pos + suffix;
+        },
+
+        // Task 259: группировка и сортировка списка сотрудников —
+        // сначала СМЕННЫЙ персонал по порядку смен с первой по пятую
+        // (внутри одной смены — по алфавиту фамилий), затем ДНЕВНЫЕ
+        // работники по алфавиту начальной буквы фамилий. Сотрудники
+        // без типа — в конце списка (крайний случай). Порядок единый
+        // для всех потребителей _EMPLOYEES: шахматка, справочник
+        // «Сотрудники», селекты форм. Возвращает НОВЫЙ массив —
+        // исходный список сервера не мутируется.
+        _sortEmployees: function(list) {
+            var tier = function(emp) {
+                var tip = String(emp['тип'] || '').trim();
+                if (tip === 'сменный') return 0;
+                if (tip === 'дневной') return 1;
+                return 2;
+            };
+            var shiftNo = function(emp) {
+                var s = parseInt(emp['смена'], 10);
+                return (s >= 1 && s <= 5) ? s : 99;
+            };
+            return list.slice().sort(function(a, b) {
+                var ta = tier(a), tb = tier(b);
+                if (ta !== tb) return ta - tb;
+                if (ta === 0) {
+                    // сменные: сначала по номеру смены 1..5;
+                    // сменный без номера (99) — после номерных
+                    var sa = shiftNo(a), sb = shiftNo(b);
+                    if (sa !== sb) return sa - sb;
+                }
+                // внутри группы (и внутри одной смены) — алфавит
+                // фамилий (ФИО начинается с фамилии)
+                return String(a['ФИО'] || '').trim()
+                    .localeCompare(String(b['ФИО'] || '').trim(), 'ru');
+            });
         },
 
         _esc: function(s) {
