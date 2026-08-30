@@ -3890,7 +3890,10 @@
         gap: 8px;
         align-items: center;
         padding: 8px 12px;
-        background: var(--card-bg, rgba(30, 42, 56, 0.55));
+        /* Task 254: непрозрачный фон (было var(--card-bg) с альфой 0.55 —
+           сквозь тулбар просвечивала страница). Сплошной аналог --header-bg
+           тёмной темы (rgb 23,33,43) — тулбар визуально един с баром крошек. */
+        background: #17212b;
         border-bottom: 1px solid var(--card-border, rgba(255,255,255,0.06));
     }
     .ws-month-sel, .ws-year-sel {
@@ -3907,7 +3910,8 @@
         background: var(--accent-blue, #4a8fc7);
         color: #fff;
         border: none;
-        border-radius: 6px;
+        /* Task 254: кнопки без скруглений углов (было 6px) */
+        border-radius: 0;
         padding: 6px 14px;
         font-size: 14px;
         font-weight: 600;
@@ -3920,7 +3924,8 @@
         background: var(--accent-green, #4ac771);
         color: #fff;
         border: none;
-        border-radius: 6px;
+        /* Task 254: кнопки без скруглений углов (было 6px) */
+        border-radius: 0;
         padding: 6px 14px;
         font-size: 14px;
         font-weight: 600;
@@ -4091,6 +4096,25 @@
         color: var(--accent-blue, #4a8fc7);
         margin-right: 6px;
     }
+    /* Task 254: ФИО — в собственном блоке (эллипсис при переполнении),
+       под ним — строка с должностью */
+    .ws-grid tbody td.ws-emp-col .ws-emp-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    /* Task 254: должность сотрудника — второй строкой под ФИО
+       (например, «Слесарь КИПиА дневной» / «Слесарь КИПиА смена №1»).
+       Пустая должность — строка не рендерится (JS). */
+    .ws-grid tbody td.ws-emp-col .ws-emp-pos {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 10px;
+        font-weight: 400;
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+        margin-top: 1px;
+    }
     .ws-grid tbody td.ws-cell {
         cursor: pointer;
         /* Task 250: сплошной (непрозрачный) фон пустых ячеек — раньше фон
@@ -4126,6 +4150,26 @@
     .ws-grid tbody td.ws-cell.ws-status-empty {
         color: var(--text-secondary, rgba(255,255,255,0.25));
     }
+    /* Task 254: пустые ячейки выходных дней (Сб/Вс) — слабый
+       пастельно-розовый фон. Только ПУСТЫЕ ячейки: статусные (Д/Н/Б…)
+       сохраняют цвет справочника кодов. Фон сплошной (инвариант
+       Task 250 — страница не просвечивает). */
+    .ws-grid tbody td.ws-cell.ws-weekend.ws-status-empty {
+        background: #6e4250;   /* тёмная тема: приглушённый пыльно-розовый */
+    }
+    /* Task 254: красные линии-границы между колонками выходных и
+       рабочих дней (классы ставит JS: слева от субботы, справа от
+       воскресенья). 2px всегда перекрывает обычную 1px-границу
+       (border-collapse: побеждает более широкая) — линия гарантированно
+       красная и непрерывная: от шапки (thead) до последней строки.
+       Специфичность селекторов ЗАВЫШЕНА (.ws-cell / .ws-day-col):
+       иначе в светлой теме правило [data-theme="light"] .ws-grid
+       tbody td { border-color } (та же 0,2,2, но ниже по файлу)
+       перекрасит красную границу в серый. */
+    .ws-grid thead th.ws-day-col.ws-boundary-left,
+    .ws-grid tbody td.ws-cell.ws-boundary-left { border-left: 2px solid #e53935; }
+    .ws-grid thead th.ws-day-col.ws-boundary-right,
+    .ws-grid tbody td.ws-cell.ws-boundary-right { border-right: 2px solid #e53935; }
 
     /* Task 252: легенда кодов под шахматкой УБРАНА — коды статусов снова
        выводятся в ячейках шахматки, расшифровка цветов не нужна.
@@ -4273,6 +4317,18 @@
     [data-theme="light"] .ws-popup-name { color: #555; }
     [data-theme="light"] .ws-popup-swatch { border-color: rgba(0, 0, 0, 0.15); }
     [data-theme="light"] .ws-save-btn { background: #2e8b57; }
+    /* Task 254: светлая тема — тулбар непрозрачный (сплошной аналог
+       --header-bg светлой темы rgb 240,238,230) */
+    [data-theme="light"] .ws-toolbar { background: #f0eee6; }
+    /* Task 254: светлая тема — слабый пастельно-розовый фон пустых
+       ячеек выходных (заметно мягче «Больничного» #F8BBD0) */
+    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-weekend.ws-status-empty {
+        background: #f7d9e3;
+    }
+    /* Task 254: светлая тема — должность под ФИО потемнее */
+    [data-theme="light"] .ws-grid tbody td.ws-emp-col .ws-emp-pos {
+        color: #666;
+    }
     /* Task 251: светлая тема — маркер несохранённой ячейки потемнее */
     [data-theme="light"] .ws-grid tbody td.ws-cell.ws-pending {
         outline-color: rgba(176, 122, 0, 0.95);
@@ -4311,7 +4367,8 @@
             max-width: none;
         }
         /* ФИО в фиксированной по ширине колонке — эллипсис вместо
-           растяжения таблицы */
+           растяжения таблицы (Task 254: блоки .ws-emp-name/.ws-emp-pos
+           обрезаются каждый своей строкой — смотрите выше) */
         #page-work-schedule .ws-grid tbody td.ws-emp-col {
             width: 200px;
             max-width: none;
@@ -33805,7 +33862,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var dt = new Date(this._year, this._month - 1, d);
                 var dow = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][dt.getDay()];
                 var isHoliday = (dt.getDay() === 0 || dt.getDay() === 6);
-                html += '<th class="ws-day-col' + (isHoliday ? ' ws-holiday' : '') + '">' +
+                // Task 254: красные линии-границы выходных/рабочих дней —
+                // классы и на шапке, и на ячейках (см. _renderCell): линия
+                // непрерывна от шапки до последней строки. Границы НЕ
+                // ставятся на краях таблицы: суббота 1-го числа (слева
+                // колонка ФИО) и воскресенье последним днём месяца.
+                var thCls = 'ws-day-col' + (isHoliday ? ' ws-holiday' : '');
+                if (dt.getDay() === 6 && d > 1) thCls += ' ws-boundary-left';
+                if (dt.getDay() === 0 && d < daysInMonth) thCls += ' ws-boundary-right';
+                html += '<th class="' + thCls + '">' +
                         d + '<span class="ws-dow">' + dow + '</span></th>';
             }
             html += '</tr></thead><tbody>';
@@ -33813,7 +33878,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             for (var ei = 0; ei < this._EMPLOYEES.length; ei++) {
                 var emp = this._EMPLOYEES[ei];
                 html += '<tr>';
-                html += '<td class="ws-emp-col"><span class="ws-tab-no">' + this._esc(emp['таб_номер']) + '</span>' + this._esc(emp['ФИО']) + '</td>';
+                // Task 254: под ФИО — строка с должностью («Слесарь КИПиА
+                // дневной» и т.п., поле «должность» справочника сотрудников).
+                // Пустая должность — строка не рендерится вовсе (без пустых
+                // строк в колонке). ФИО и должность — отдельные блоки с
+                // собственным эллипсисом (десктоп: колонка 200px).
+                var empPos = emp['должность']
+                    ? '<div class="ws-emp-pos">' + this._esc(emp['должность']) + '</div>'
+                    : '';
+                html += '<td class="ws-emp-col"><div class="ws-emp-name">' +
+                        '<span class="ws-tab-no">' + this._esc(emp['таб_номер']) + '</span>' +
+                        this._esc(emp['ФИО']) + '</div>' + empPos + '</td>';
                 for (var day = 1; day <= daysInMonth; day++) {
                     var ddt = new Date(this._year, this._month - 1, day);
                     var isoDate = this._isoDate(ddt);
@@ -33868,6 +33943,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (isOvertime) classes.push('ws-overtime');
             if (isPending) classes.push('ws-pending');
             if (!status) classes.push('ws-status-empty');
+
+            // Task 254: разметка выходных дней (Сб/Вс) — розовый фон пустых
+            // ячеек (.ws-weekend + .ws-status-empty в CSS) и красные линии
+            // на стыках с рабочими днями (ws-boundary-left у субботы,
+            // ws-boundary-right у воскресенья). Граничные случаи: суббота
+            // 1-го числа (слева — колонка ФИО, линия не нужна) и
+            // воскресенье последним днём месяца (справа — край таблицы).
+            var cellDow = new Date(this._year, this._month - 1, day).getDay();
+            if (cellDow === 0 || cellDow === 6) classes.push('ws-weekend');
+            if (cellDow === 6 && day > 1) classes.push('ws-boundary-left');
+            if (cellDow === 0 && day < new Date(this._year, this._month, 0).getDate()) {
+                classes.push('ws-boundary-right');
+            }
 
             // Task 252: коды статусов ВЕРНУТЫ в ячейки шахматки. Task 250
             // убирал их (статус определялся цветом, легенда расшифровывала),
