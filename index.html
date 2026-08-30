@@ -3992,6 +3992,27 @@
     }
     .ws-grid tbody td.ws-cell {
         cursor: pointer;
+        /* Task 250: сплошной (непрозрачный) фон пустых ячеек — раньше фон
+           задавался inline как transparent и сквозь него просвечивал фон
+           страницы. Статусные ячейки перекрывают этот фон inline-цветом
+           из справочника кодов. position: relative — для маркера
+           переработки (::after). */
+        background: var(--bg-primary, #1a2233);
+        position: relative;
+    }
+    /* Task 250: маркер переработки — красная точка в правом верхнем углу
+       ячейки (текста-кода в ячейке больше нет, прежний underline исчез
+       вместе с текстом) */
+    .ws-grid tbody td.ws-cell.ws-overtime::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #ff5252;
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
     }
     .ws-grid tbody td.ws-cell[data-editable="1"]:hover {
         outline: 2px solid var(--accent-blue, #4a8fc7);
@@ -4152,6 +4173,11 @@
     [data-theme="light"] .ws-grid tbody td {
         border-color: rgba(0, 0, 0, 0.08);
     }
+    /* Task 250: светлая тема — сплошной фон пустых ячеек шахматки
+       (раньше transparent, просвечивал фон страницы) */
+    [data-theme="light"] .ws-grid tbody td.ws-cell {
+        background: #eef0f2;
+    }
     [data-theme="light"] .ws-emp-card .ws-meta,
     [data-theme="light"] .ws-tr-card .ws-tr-meta {
         color: #666;
@@ -4159,6 +4185,40 @@
     [data-theme="light"] .ws-cell-info {
         background: rgba(0, 0, 0, 0.04);
         color: #555;
+    }
+
+    /* === Task 250: десктоп (≥1024px) — дашборд «График работы» занимает
+       всю ширину экрана приложения, без горизонтальной прокрутки. Раньше
+       таблица была width: max-content (31 колонка дней + ФИО) и
+       горизонтально скроллилась в .ws-grid-wrap. Теперь table-layout:
+       fixed — колонка сотрудников фиксирована, колонки дней делят
+       остаток ширины поровну и сжимаются/растягиваются под окно. === */
+    @media (min-width: 1024px) {
+        #page-work-schedule .ws-grid-wrap {
+            overflow-x: hidden;  /* прокрутка не нужна — таблица по ширине */
+        }
+        #page-work-schedule .ws-grid {
+            width: 100%;          /* ровно по ширине контейнера */
+            table-layout: fixed;  /* колонки дней делят ширину поровну */
+        }
+        #page-work-schedule .ws-grid thead th.ws-emp-col {
+            width: 200px;
+            min-width: 0;
+            max-width: none;
+        }
+        #page-work-schedule .ws-grid thead th.ws-day-col {
+            width: auto;
+            min-width: 0;   /* базовые 30px мешают сжатию в fixed-layout */
+            max-width: none;
+        }
+        /* ФИО в фиксированной по ширине колонке — эллипсис вместо
+           растяжения таблицы */
+        #page-work-schedule .ws-grid tbody td.ws-emp-col {
+            width: 200px;
+            max-width: none;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     }
 
     /* === Конец CSS графика работы (Task 201) === */
@@ -33601,11 +33661,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var isOvertime = entry && entry.переработка === 1;
 
             var color = '#3a3a3a';
-            var textColor = '#fff';
+            var statusName = status;
             if (status) {
                 for (var i = 0; i < this._STATUS_CODES.length; i++) {
                     if (this._STATUS_CODES[i].code === status) {
                         color = this._STATUS_CODES[i].color || color;
+                        statusName = this._STATUS_CODES[i].name || status;
                         break;
                     }
                 }
@@ -33613,15 +33674,24 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             var classes = ['ws-cell'];
             if (isManual) classes.push('ws-source-manual');
+            if (isOvertime) classes.push('ws-overtime');
             if (!status) classes.push('ws-status-empty');
 
-            var style = 'background:' + (status ? color : 'transparent') + ';';
-            if (status) style += 'color:' + textColor + ';';
-            if (isOvertime) style += 'text-decoration:underline;';
+            // Task 250: код статуса в ячейке больше не выводится — статус
+            // определяется цветом (легенда под шахматкой расшифровывает цвета,
+            // tooltip показывает название). Пустые ячейки получают сплошной
+            // фон из CSS (.ws-grid tbody td.ws-cell) вместо transparent —
+            // раньше сквозь них просвечивал фон страницы. Статусные ячейки
+            // перекрывают CSS-фон inline-цветом из справочника кодов.
+            var style = '';
+            if (status) style += 'background:' + color + ';';
 
+            // Task 250: переработка — красная точка в углу ячейки
+            // (класс ws-overtime + ::after в CSS; раньше был underline
+            // текста кода, но текста в ячейке больше нет).
             var titleParts = [isoDate, emp['ФИО']];
             if (entry) {
-                titleParts.push('статус: ' + (status || '—'));
+                titleParts.push('статус: ' + (statusName || '—'));
                 if (isOvertime) titleParts.push('переработка');
                 if (source) titleParts.push('источник: ' + source);
                 if (substitute) titleParts.push('замещает таб. №' + substitute);
@@ -33633,11 +33703,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var safeTabNo = (emp['таб_номер'] || '').replace(/'/g, '');
             var clickHandler = 'WorkSchedule.openCellForm(\'' + isoDate + '\',\'' + safeTabNo + '\')';
             return '<td class="' + classes.join(' ') + '" ' +
-                   'style="' + style + '" ' +
+                   (style ? 'style="' + style + '" ' : '') +
                    'data-editable="' + editable + '" ' +
                    'onclick="' + clickHandler + '" ' +
                    'title="' + this._escAttr(titleParts.join(' / ')) + '">' +
-                   (status || '·') +
+                   (status ? '' : '·') +
                    '</td>';
         },
 
@@ -33645,12 +33715,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var el = document.getElementById('wsLegend');
             if (!el) return;
             if (!this._STATUS_CODES.length) { el.innerHTML = ''; return; }
+            // Task 250: коды статусов убраны из легенды — только цветовой
+            // образец и название статуса (коды больше не выводятся ни в
+            // ячейках шахматки, ни в легенде; цвет ↔ название достаточно).
             var html = '';
             for (var i = 0; i < this._STATUS_CODES.length; i++) {
                 var c = this._STATUS_CODES[i];
                 html += '<span class="ws-legend-item">' +
                         '<span class="ws-legend-swatch" style="background:' + (c.color || '#3a3a3a') + ';"></span>' +
-                        '<b>' + this._esc(c.code) + '</b> — ' + this._esc(c.name) +
+                        this._esc(c.name) +
                         '</span>';
             }
             el.innerHTML = html;
