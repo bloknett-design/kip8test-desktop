@@ -4127,27 +4127,10 @@
         color: var(--text-secondary, rgba(255,255,255,0.25));
     }
 
-    /* Легенда кодов под шахматкой */
-    .ws-legend {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px 8px;
-        padding: 8px 12px 16px;
-        font-size: 11px;
-        color: var(--text-secondary, rgba(255,255,255,0.6));
-    }
-    .ws-legend-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-    }
-    .ws-legend-swatch {
-        display: inline-block;
-        width: 14px;
-        height: 14px;
-        border-radius: 3px;
-        border: 1px solid rgba(255,255,255,0.2);
-    }
+    /* Task 252: легенда кодов под шахматкой УБРАНА — коды статусов снова
+       выводятся в ячейках шахматки, расшифровка цветов не нужна.
+       (Прежние CSS-правила легенды удалены вместе с её HTML-контейнером
+       и JS-методом рендера.) */
 
     /* Информационный блок в sheet правки ячейки */
     .ws-cell-info {
@@ -4334,6 +4317,46 @@
             max-width: none;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+    }
+
+    /* === Task 252: десктоп — дашборд «График работы» на всю высоту окна. ===
+       Легенда под шахматкой убрана, шахматка растянута до самого низа
+       экрана (таблица height:100% — строки делят свободную высоту, последняя
+       строка у нижнего края окна). Тулбар с кнопками — на всю ширину,
+       ровно между баром хлебных крошек (page-inline-header) сверху и
+       графиком снизу. Вертикальный скролл — только внутри шахматки. === */
+    @media (min-width: 1024px) {
+        /* Страница — flex-колонка на всю высоту области контента:
+           крошки → тулбар → шахматка (всё остальное, до низа окна) */
+        #contentArea > #page-work-schedule.active {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;      /* сама страница не скроллится */
+            padding-bottom: 0;     /* убрать мобильный отступ ~70px снизу */
+        }
+        /* Оба бара не сжимаются: крошки сверху, тулбар под ними —
+           во всю ширину, от крошек до графика */
+        #page-work-schedule .page-inline-header,
+        #page-work-schedule .ws-toolbar {
+            flex-shrink: 0;
+        }
+        /* Шахматка занимает всё оставшееся место — вниз до края окна */
+        #page-work-schedule .ws-grid-wrap {
+            flex: 1;
+            min-height: 0;         /* разрешить сжатие внутри flex-колонки */
+            overflow-y: auto;      /* длинная шахматка скроллится здесь */
+            padding-bottom: 0;     /* последняя строка — у самого низа */
+        }
+        /* Таблица растягивается по высоте контейнера: строки делят
+           свободную высоту — график доходит до самого низа экрана */
+        #page-work-schedule .ws-grid {
+            height: 100%;
+        }
+        /* Шапка таблицы (дни месяца) не растягивается пропорционально
+           строкам — держит компактную высоту, прилипает к верху скролла */
+        #page-work-schedule .ws-grid thead th {
+            height: 32px;
         }
     }
 
@@ -10654,7 +10677,6 @@
             <div id="wsGridWrap" class="ws-grid-wrap">
                 <div class="admin-empty" id="wsEmpty">Загрузка…</div>
             </div>
-            <div class="ws-legend" id="wsLegend"></div>
         </div>
 
         <!-- ======================== ГРАФИК РАБОТЫ — справочник сотрудников ======================== -->
@@ -33638,7 +33660,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var self = this;
             this._loadStatusCodes().then(function() {
                 self._loadPatterns().then(function() {
-                    self._renderLegend();
+                    // Task 252: легенда под шахматкой убрана — коды статусов
+                    // снова выводятся в ячейках (_renderCell), расшифровка
+                    // цветов не нужна (попап Task 251 показывает код+название).
                     self._refreshFromUrlState();
                 });
             });
@@ -33845,18 +33869,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (isPending) classes.push('ws-pending');
             if (!status) classes.push('ws-status-empty');
 
-            // Task 250: код статуса в ячейке больше не выводится — статус
-            // определяется цветом (легенда под шахматкой расшифровывает цвета,
-            // tooltip показывает название). Пустые ячейки получают сплошной
-            // фон из CSS (.ws-grid tbody td.ws-cell) вместо transparent —
-            // раньше сквозь них просвечивал фон страницы. Статусные ячейки
-            // перекрывают CSS-фон inline-цветом из справочника кодов.
+            // Task 252: коды статусов ВЕРНУТЫ в ячейки шахматки. Task 250
+            // убирал их (статус определялся цветом, легенда расшифровывала),
+            // но Task 252 убирает легенду — цвет без расшифровки нечитаем,
+            // поэтому в ячейке снова выводится код статуса. Сплошной
+            // (непрозрачный) фон Task 250 сохранён: пустые ячейки берут фон
+            // из CSS (.ws-grid tbody td.ws-cell), статусные перекрывают его
+            // inline-цветом из справочника кодов. Tooltip по-прежнему
+            // показывает название статуса, маркер переработки — красная
+            // точка в углу (ws-overtime::after).
             var style = '';
             if (status) style += 'background:' + color + ';';
 
-            // Task 250: переработка — красная точка в углу ячейки
-            // (класс ws-overtime + ::after в CSS; раньше был underline
-            // текста кода, но текста в ячейке больше нет).
+            // Task 252: переработка — красная точка в углу ячейки
+            // (класс ws-overtime + ::after в CSS). Код статуса снова в
+            // ячейке, но маркер остаётся точкой (заметнее прежнего
+            // underline и не путается с текстом кода).
             var titleParts = [isoDate, emp['ФИО']];
             if (entry) {
                 titleParts.push('статус: ' + (statusName || '—'));
@@ -33879,26 +33907,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                    'data-editable="' + editable + '" ' +
                    'onclick="' + clickHandler + '" ' +
                    'title="' + this._escAttr(titleParts.join(' / ')) + '">' +
-                   (status ? '' : '·') +
+                   (status || '·') +
                    '</td>';
-        },
-
-        _renderLegend: function() {
-            var el = document.getElementById('wsLegend');
-            if (!el) return;
-            if (!this._STATUS_CODES.length) { el.innerHTML = ''; return; }
-            // Task 250: коды статусов убраны из легенды — только цветовой
-            // образец и название статуса (коды больше не выводятся ни в
-            // ячейках шахматки, ни в легенде; цвет ↔ название достаточно).
-            var html = '';
-            for (var i = 0; i < this._STATUS_CODES.length; i++) {
-                var c = this._STATUS_CODES[i];
-                html += '<span class="ws-legend-item">' +
-                        '<span class="ws-legend-swatch" style="background:' + (c.color || '#3a3a3a') + ';"></span>' +
-                        this._esc(c.name) +
-                        '</span>';
-            }
-            el.innerHTML = html;
         },
 
         generateMonth: function() {
