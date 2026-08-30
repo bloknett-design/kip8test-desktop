@@ -4046,6 +4046,14 @@
         position: sticky;
         top: 0;
         z-index: 2;
+        /* Task 256: явные целочисленные межстрочные интервалы — природная
+           высота шапки была ДРОБНОЙ (36.5px: line-height "normal" даёт
+           14.4px у чисел и 10.8px у дней недели). Из-за этого первая
+           строка начиналась на y=197.5 и ВСЕ границы строк попадали на
+           дробные координаты — 1px линии «растворялись» антиалиасингом
+           (пропадали разделители между сотрудниками). 14px + 11px +
+           паддинги 12px = ровно 37px. */
+        line-height: 14px;
     }
     .ws-grid thead th.ws-emp-col {
         position: sticky;
@@ -4069,6 +4077,9 @@
         font-size: 9px;
         color: var(--text-secondary, rgba(255,255,255,0.4));
         font-weight: 400;
+        /* Task 256: целый межстрочный интервал (см. комментарий у
+           .ws-grid thead th) — шапка высотой ровно 37px */
+        line-height: 11px;
     }
     .ws-grid tbody td {
         border: 1px solid var(--card-border, rgba(255,255,255,0.06));
@@ -4104,6 +4115,10 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        /* Task 256: явный целый интервал — природная высота ячейки ФИО
+           с должностью ровно 39px (6+14+1+12+6), иначе «normal» даёт
+           дробные 39.4px и границы строк уезжают на дробные координаты */
+        line-height: 14px;
     }
     /* Task 254: должность сотрудника — второй строкой под ФИО
        (например, «Слесарь КИПиА дневной» / «Слесарь КИПиА смена №1»).
@@ -4116,6 +4131,8 @@
         font-weight: 400;
         color: var(--text-secondary, rgba(255,255,255,0.55));
         margin-top: 1px;
+        /* Task 256: целый интервал — в сумме с ФИО ровно 39px (см. выше) */
+        line-height: 12px;
     }
     .ws-grid tbody td.ws-cell {
         cursor: pointer;
@@ -4411,10 +4428,42 @@
             overflow-y: auto;      /* длинная шахматка скроллится здесь */
             padding-bottom: 0;     /* последняя строка — у самого низа */
         }
-        /* Таблица растягивается по высоте контейнера: строки делят
-           свободную высоту — график доходит до самого низа экрана */
+        /* Таблица заполняет область шахматки до низа окна ЦЕЛОЧИСЛЕННЫМИ
+           высотами строк. Task 256: прежде здесь было height: 100% —
+           браузер распределял высоту по строкам ДРОБНО (например, по
+           60.2px), границы строк попадали на дробные Y-координаты и
+           антиалиасинг почти стирал 1px линии — пропадали разделители
+           между сотрудниками. Теперь высоты строк задаёт JS (_fitGrid):
+           целые пиксели + остаток по +1px первым строкам, сумма строк
+           ровно равна высоте области — и до низа окна, и без полос
+           прокрутки. */
         #page-work-schedule .ws-grid {
-            height: 100%;
+            height: auto;
+        }
+        /* Task 256: высота ячеек тела — через переменную (её задаёт
+           _fitGrid). Без JS — прежние 32px (природная высота). */
+        #page-work-schedule .ws-grid tbody td {
+            height: var(--ws-row-h, 32px);
+        }
+        /* Task 256: компактный режим (строкам не хватает природных
+           39px): колонка ФИО ужимается — 3+14+12+3 = 32px */
+        .ws-grid-wrap.ws-compact .ws-grid tbody td.ws-emp-col {
+            padding: 3px 10px;
+        }
+        .ws-grid-wrap.ws-compact .ws-grid tbody td.ws-emp-col .ws-emp-pos {
+            margin-top: 0;
+        }
+        /* Task 256: предельно сжатый режим: 1+13+10+1 = 25px */
+        .ws-grid-wrap.ws-tight .ws-grid tbody td.ws-emp-col {
+            padding: 1px 8px;
+        }
+        .ws-grid-wrap.ws-tight .ws-grid tbody td.ws-emp-col .ws-emp-name {
+            line-height: 13px;
+        }
+        .ws-grid-wrap.ws-tight .ws-grid tbody td.ws-emp-col .ws-emp-pos {
+            font-size: 9px;
+            line-height: 10px;
+            margin-top: 0;
         }
         /* Шапка таблицы (дни месяца) не растягивается пропорционально
            строкам — держит компактную высоту, прилипает к верху скролла */
@@ -33720,6 +33769,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var genBtn = document.getElementById('wsGenerateBtn');
             if (genBtn) genBtn.hidden = !this._canEdit;
 
+            // Task 256: следим за размером области шахматки — пересчёт
+            // целочисленных высот строк при изменении окна/показе страницы
+            this._attachFitResize();
+
             var self = this;
             this._loadStatusCodes().then(function() {
                 self._loadPatterns().then(function() {
@@ -33919,8 +33972,125 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             html += '</tbody></table>';
             wrap.innerHTML = html;
+            // Task 256: целочисленная подгонка высоты строк под размер
+            // области — без полос прокрутки и с чёткими границами строк
+            this._fitGrid();
             // Task 251: актуализировать кнопку «Сохранить» (счётчик правок)
             this._updateSaveBtn();
+        },
+
+        // Task 256: авто-подгонка шахматки под размер окна приложения.
+        // Задаёт ЦЕЛОЧИСЛЕННЫЕ высоты строк: (высота области - шапка) /
+        // число сотрудников, остаток пикселей — первым строкам по +1px.
+        // Целые высоты дают два эффекта:
+        //   1) таблица всегда вписывается в окно — нет полос прокрутки
+        //      по краям (пока строкам хватает минимальной высоты);
+        //   2) границы строк попадают на целые пиксели — 1px линии не
+        //      «растворяются» антиалиасингом (при height:100% браузер
+        //      давал строкам дробные высоты вроде 60.2px, и разделители
+        //      между сотрудниками пропадали — например, между 3-м и 4-м).
+        // Минимальную высоту строки НЕ считаем по формуле, а ИЗМЕРЯЕМ
+        // (box-sizing: border-box + collapsed-границы добавляют к сумме
+        // «контент+паддинги» ещё ~1px): сначала природная высота колонки
+        // ФИО, при нехватке места — компактный класс ws-compact (колонка
+        // ФИО ужимается), затем ws-tight (предельно сжатый вид). Если и
+        // этого мало — природные высоты и прокрутка внутри .ws-grid-wrap.
+        // Мобильная вёрстка (<1024px) не подгоняется — там шахматка
+        // природной высоты, страница скроллится целиком.
+        _fitGrid: function() {
+            var wrap = document.getElementById('wsGridWrap');
+            if (!wrap) return;
+            var table = wrap.querySelector('.ws-grid');
+            var rows = table ? table.querySelectorAll('tbody tr') : [];
+            var isDesktop = window.matchMedia
+                && window.matchMedia('(min-width: 1024px)').matches;
+            var clearFit = function() {
+                wrap.classList.remove('ws-compact', 'ws-tight');
+                wrap.style.removeProperty('--ws-row-h');
+                for (var c = 0; c < rows.length; c++) rows[c].style.height = '';
+            };
+            if (!table || !rows.length || !isDesktop) {
+                clearFit();   // мобильная вёрстка / нет данных: природные высоты
+                return;
+            }
+            var thead = table.querySelector('thead');
+            var avail = wrap.clientHeight;   // целое число (высота области)
+            var headH = Math.round(thead.getBoundingClientRect().height);
+            var n = rows.length;
+            var budget = avail - headH;
+            var h = Math.floor(budget / n);
+            if (budget <= 0 || h < 24) {
+                // страница скрыта / места совсем мало — природные высоты
+                clearFit();
+                return;
+            }
+            // Замер природной высоты строк: дневным ячейкам ставим 1px,
+            // чтобы виден был только реальный минимум колонки ФИО
+            // (max по строкам — должности есть не у всех сотрудников)
+            var measureNatural = function() {
+                var maxH = 0;
+                for (var m = 0; m < n; m++) {
+                    var rh = rows[m].getBoundingClientRect().height;
+                    if (rh > maxH) maxH = rh;
+                }
+                return Math.ceil(maxH);
+            };
+            wrap.classList.remove('ws-compact', 'ws-tight');
+            wrap.style.setProperty('--ws-row-h', '1px');
+            for (var k = 0; k < n; k++) rows[k].style.height = '';
+            var natural = measureNatural();
+            if (h < natural) {
+                // компактный ярус: колонка ФИО без нижнего паддинга роскоши
+                wrap.classList.add('ws-compact');
+                natural = measureNatural();
+                if (h < natural) {
+                    // предельно сжатый ярус
+                    wrap.classList.add('ws-tight');
+                    natural = measureNatural();
+                    if (h < natural) {
+                        // не влезает даже сжато — природный вид + прокрутка
+                        clearFit();
+                        return;
+                    }
+                }
+            }
+            // Применяем целые высоты: остаток (budget - h*n < n пикселей)
+            // первым строкам по +1px — таблица заполняет область ровно до
+            // низа окна, без щели снизу
+            wrap.style.setProperty('--ws-row-h', h + 'px');
+            var rem = budget - h * n;
+            for (var i = 0; i < n; i++) {
+                rows[i].style.height = (h + (i < rem ? 1 : 0)) + 'px';
+            }
+        },
+
+        // Task 256: пересчёт при изменении размера области шахматки —
+        // окно растянули/сжали, страницу показали/скрыли, перешли
+        // мобильную/десктопную вёрстку. Навешивается один раз (init).
+        _attachFitResize: function() {
+            if (this._fitAttached) return;
+            this._fitAttached = true;
+            var self = this;
+            var wrap = document.getElementById('wsGridWrap');
+            if (wrap && typeof ResizeObserver !== 'undefined') {
+                this._fitObserver = new ResizeObserver(function() {
+                    self._fitGrid();
+                });
+                this._fitObserver.observe(wrap);
+            } else if (wrap) {
+                // запасной вариант для старых браузеров без ResizeObserver
+                window.addEventListener('resize', function() {
+                    self._fitGrid();
+                });
+            }
+            // Переход через десктопный брейкпоинт: включить/выключить
+            // подгонку, даже если размер области не изменился
+            if (window.matchMedia) {
+                var mq = window.matchMedia('(min-width: 1024px)');
+                var onMq = function() { self._fitGrid(); };
+                if (mq.addEventListener) mq.addEventListener('change', onMq);
+                else if (mq.addListener) mq.addListener(onMq);
+            }
         },
 
         // Task 251: isPending — в ячейке есть несохранённая локальная правка
