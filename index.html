@@ -4385,6 +4385,47 @@
     .ws-cal-day-kind.k-tr  { background: rgba(74,143,199,0.18); color: #6aa6e0; }
     .ws-cal-day-kind.k-sh  { background: rgba(76,199,113,0.16); color: #4ac771; }
     .ws-cal-day-kind.k-wk  { background: rgba(176,190,197,0.16); color: #b0bec5; }
+    /* Task 262: бейдж «предварительные данные» (2027 — проект Минтруда)
+       у заголовка месяца шторки и бейдж «официальные нормы» в блоке норм */
+    .ws-cal-prelim,
+    .ws-cal-official {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 1px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 600;
+        vertical-align: middle;
+        white-space: nowrap;
+        text-transform: none;
+        letter-spacing: 0;
+    }
+    .ws-cal-prelim {
+        background: rgba(255,193,7,0.14);
+        color: #ffc107;
+        border: 1px solid rgba(255,193,7,0.35);
+    }
+    .ws-cal-official {
+        background: rgba(76,199,113,0.14);
+        color: #4ac771;
+        border: 1px solid rgba(76,199,113,0.35);
+    }
+    [data-theme="light"] .ws-cal-prelim {
+        background: rgba(255,160,0,0.12);
+        color: #a06b00;
+        border-color: rgba(255,160,0,0.4);
+    }
+    [data-theme="light"] .ws-cal-official {
+        background: rgba(40,167,69,0.10);
+        color: #1d7a37;
+        border-color: rgba(40,167,69,0.35);
+    }
+    /* Task 262: строка годовой нормы — на всю ширину сетки норм */
+    .ws-cal-norms-grid .ws-cal-year-norm {
+        grid-column: 1 / -1;
+        padding-top: 2px;
+        border-top: 1px dashed var(--card-border, rgba(255,255,255,0.08));
+    }
     .ws-cal-day-title {
         color: var(--text-secondary, rgba(255,255,255,0.6));
         min-width: 0;
@@ -34260,10 +34301,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 chip.title = 'Производственный календарь недоступен — выходные по Сб/Вс. Нажмите для деталей.';
             } else {
                 textEl.textContent = st.workDays + ' раб. дн. · ' +
-                                     ProdCalendar._fmtHours(st.hours40) + ' ч';
+                                     ProdCalendar._fmtHours(st.hours40) + ' ч' +
+                                     (st.preliminary ? ' *' : '');
                 chip.title = 'Рабочих дней: ' + st.workDays +
                              ', норма времени (40-час. неделя): ' +
-                             ProdCalendar._fmtHours(st.hours40) + ' ч. Нажмите для деталей.';
+                             ProdCalendar._fmtHours(st.hours40) + ' ч' +
+                             (st.normsOfficial ? ' — официальные данные' : '') +
+                             (st.preliminary
+                                 ? '. Данные за ' + this._year +
+                                   ' год — предварительные (проект переноса)'
+                                 : '') +
+                             '. Нажмите для деталей.';
             }
         },
 
@@ -35385,42 +35433,62 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     // времени. Используется шапкой и ячейками шахматки (_renderGrid /
     // _renderCell), чипом норм в тулбаре и шторкой календаря.
     //
-    // ИСТОЧНИКИ (выбраны по итогам исследования с живыми проверками):
-    //   1) isDayOff — GitHub-зеркало производственного календаря РФ
-    //      (raw.githubusercontent.com/isdayoff/calendars, CORS открыт,
-    //      без регистрации): dayoff[] — нерабочие сверх Сб/Вс,
-    //      predayoff[] — сокращённые, workday[] — рабочие сб/вс,
-    //      holiday[] — праздничные даты. Названия праздников берутся
-    //      из фиксированной карты ТК РФ ст. 112. Источник по умолчанию.
-    //   2) production-calendar.ru/v2 — при наличии ЛИЧНОГО токена
-    //      (бесплатная регистрация, поле в шторке календаря): 89
-    //      регионов РФ (по умолчанию 42 — Кемеровская область —
-    //      Кузбасс), официальные названия праздников и переносов.
-    //      CORS и preflight открыты; гостевой доступ к days ограничен
-    //      четырьмя месяцами в году — потому источник используется
-    //      только с токеном.
-    //   3) Фолбэк без сети/данных: Сб/Вс + фиксированные праздники
-    //      ТК РФ ст. 112 (без переносов) — прежнее поведение.
+    // ИСТОЧНИКИ (Task 262: legalic — основной; выбран по итогам
+    // исследования с живыми запросами и кросс-сверкой с официальными
+    // нормами 2024-2026):
+    //   1) calendar.legalic.ru — REST без ключей и лимитов, CORS *:
+    //      /api/v1/calendars/RU-FEDERAL/export?year=YYYY&format=json —
+    //      все дни года с типами (праздник / перенесённый выходной /
+    //      сокращённый / рабочая суббота-перенос), ЦЕПОЧКАМИ переносов
+    //      (transferredFrom/transferredTo), названиями праздников,
+    //      минутами 40/36/24-час. недель по каждому дню (официальные
+    //      нормы суммируются из минут), версиями календаря (2022-2026
+    //      OFFICIAL, 2027 PRELIMINARY — проект Минтруда, помечается в
+    //      интерфейсе). Только федеральный календарь.
+    //   2) isDayOff — GitHub-зеркало (raw.githubusercontent.com/
+    //      isdayoff/calendars, без регистрации): dayoff/predayoff/
+    //      workday/holiday; названия — из карты ТК РФ ст. 112. Резерв.
+    //   3) production-calendar.ru/v2 — с ЛИЧНЫМ токеном (поле в шторке):
+    //      89 регионов РФ; идёт ПЕРВЫМ при токене И регионе с
+    //      региональными праздниками (calendar_type 2), иначе —
+    //      последний в цепочке резерв.
+    //   4) День шахтёра (Кузбасс, регион 42): последнее воскресенье
+    //      августа — праздничный нерабочий день по Закону Кемеровской
+    //      области от 27.12.2007 № 186-ОЗ «О праздничных днях и
+    //      памятных датах Кемеровской области». Дата «плавающая» —
+    //      вычисляется локально и накладывается на данные любого
+    //      источника (и на офлайн-фолбэк) только для региона 42.
+    //   5) Фолбэк без сети/данных: Сб/Вс + фиксированные праздники
+    //      ТК РФ ст. 112 (без переносов) + День шахтёра для 42.
     //
-    // Нормы времени считаются ЛОКАЛЬНО по типам дней (проверено на
-    // 2026 годе — совпадает с официальными календарями):
-    //   40-час: рабочие дни × 8 − сокращённые × 1   (2026: 247×8−4=1972)
-    //   36-час: рабочие дни × 7,2 − сокращённые     (2026: 1774,4)
-    //   24-час: рабочие дни × 4,8 − сокращённые     (2026: 1181,6)
+    // Нормы времени: при источнике legalic — ОФИЦИАЛЬНЫЕ (сумма минут
+    // по дням месяца; 2026: 247 дн. → 1972 / 1774,4 / 1181,6 ч), иначе
+    // локальный расчёт по типам дней (проверен на 2026 — совпадает):
+    //   40-час: раб.дн.×8 − сокращ.×1;  36-час: ×7,2 − сокращ.;
+    //   24-час: ×4,8 − сокращ.
     //
-    // Кэш: localStorage (ключ включает год и регион), TTL автообновления
-    // 7 суток; кнопка «Обновить сейчас» игнорирует TTL. При сбое сети
-    // устаревший кэш продолжает работать (офлайн), при полном отсутствии
-    // данных — фолбэк по Сб/Вс + ст. 112.
+    // Кэш: localStorage v2 (ключ включает год и регион), TTL
+    // автообновления 7 суток; кнопка «Обновить сейчас» игнорирует TTL.
+    // При сбое сети устаревший кэш продолжает работать (офлайн), при
+    // полном отсутствии данных — фолбэк по Сб/Вс + ст. 112.
     // ============================================================
     var ProdCalendar = {
 
         _SETTINGS_KEY: 'ws_pcal_settings_v1',
-        _CACHE_PREFIX: 'ws_pcal_year_',
+        // Task 262: префикс v2 — формат кэша расширен (version, norms,
+        // переносы tFrom/tTo); старые ключи ws_pcal_year_* вычищаются
+        // при сохранении новых данных.
+        _CACHE_PREFIX: 'ws_pcal_year2_',
         _TTL_MS: 7 * 24 * 60 * 60 * 1000,
         _DEFAULT_REGION: 42,
         _ISDAYOFF_URL: 'https://raw.githubusercontent.com/isdayoff/calendars/main/db/',
         _PRODCAL_URL: 'https://production-calendar.ru/v2/ru/',
+        // Task 262: основной источник — legalic (федеральный календарь,
+        // официальные нормы из минут, цепочки переносов, 2022-2027).
+        _LEGALIC_URL: 'https://calendar.legalic.ru/api/v1/calendars/RU-FEDERAL/export',
+        // День шахтёра — праздничный день Кузбасса (регион 42):
+        // Закон Кемеровской области от 27.12.2007 № 186-ОЗ.
+        _MINERS_DAY_TITLE: 'День шахтёра',
 
         // Полный список регионов РФ (id:название:тип; тип 2 = есть
         // региональные праздники, 0 = федеральный календарь).
@@ -35538,7 +35606,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var j = JSON.parse(raw);
                 if (!j || !j.days || typeof j.days !== 'object') return null;
                 if (typeof j.fetchedAtMs !== 'number') return null;
-                if (j.source !== 'isdayoff' && j.source !== 'prodcalendar') return null;
+                if (j.source !== 'legalic' && j.source !== 'isdayoff' &&
+                    j.source !== 'prodcalendar') return null;
                 return j;
             } catch (e) {
                 return null;
@@ -35554,8 +35623,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     fetchedAt: new Date(data.fetchedAtMs).toISOString(),
                     region: data.region,
                     regionName: data.regionName,
+                    version: data.version || null,
+                    norms: data.norms || null,
                     days: data.days
                 }));
+                // Task 262: вычищаем кэш прежнего формата (Task 260)
+                try {
+                    localStorage.removeItem('ws_pcal_year_' + year + '_' +
+                                            (data.region || this._DEFAULT_REGION));
+                } catch (e2) {}
             } catch (e) { /* переполнение хранилища — живём памятью */ }
         },
 
@@ -35572,7 +35648,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // ===== Загрузка года (сеть) =====
 
         // Гарантирует данные года: свежая память → свежий кэш → сеть
-        // (токен production-calendar.ru → isDayOff GitHub). Возвращает
+        // (legalic → isDayOff GitHub → production-calendar.ru с токеном).
+        // Возвращает
         // Promise<boolean>: true — пришли НОВЫЕ данные (вызов должен
         // перерисовать шахматку/чип). При сбое сети молча оставляет
         // устаревший кэш (офлайн) или фолбэк Сб/Вс.
@@ -35621,17 +35698,46 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
         },
 
+        // Task 262: приоритет источников. Для региона с региональными
+        // праздниками при наличии токена первым идёт production-calendar.ru
+        // (только он знает региональные календари); во всех остальных
+        // случаях первым — legalic (богатый федеральный API без ключей:
+        // официальные нормы, цепочки переносов, 2027-й с пометкой
+        // «предварительный»), затем isDayOff, при токене — prodcal
+        // последним резервом. Отказ источника молча переводит на следующий.
         _fetchYear: function(year) {
             var self = this;
             var settings = this.getSettings();
-            var prodP = settings.token
-                ? this._fetchProdCal(year, settings.region, settings.token)
-                : Promise.resolve(null);
-            return prodP
+            var chain = [];
+            if (settings.token && this.regionHasRegional(settings.region)) {
+                chain.push(function() {
+                    return self._fetchProdCal(year, settings.region, settings.token);
+                });
+            }
+            chain.push(function() { return self._fetchLegalic(year); });
+            chain.push(function() { return self._fetchIsDayOff(year); });
+            if (settings.token) {
+                chain.push(function() {
+                    return self._fetchProdCal(year, settings.region, settings.token);
+                });
+            }
+            return this._trySources(chain, 0).then(function(data) {
+                if (data && data.days) {
+                    self._applyRegionalOverlay(year, data);
+                }
+                return data;
+            });
+        },
+
+        // Последовательный перебор источников: побеждает первый удачный.
+        _trySources: function(chain, i) {
+            var self = this;
+            if (!chain || i >= chain.length) return Promise.resolve(null);
+            return chain[i]()
                 .catch(function() { return null; })
-                .then(function(pcData) {
-                    if (pcData) return pcData;
-                    return self._fetchIsDayOff(year).catch(function() { return null; });
+                .then(function(data) {
+                    if (data && data.days) return data;
+                    return self._trySources(chain, i + 1);
                 });
         },
 
@@ -35660,6 +35766,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return this._fetchJson(url, null).then(function(json) {
                 var parsed = self._parseIsDayOff(json);
                 if (!parsed) throw new Error('isdayoff: неожиданный формат');
+                parsed.fetchedAtMs = Date.now();
+                var s = self.getSettings();
+                parsed.region = s.region;
+                parsed.regionName = self.regionName(s.region);
+                return parsed;
+            });
+        },
+
+        // Task 262: legalic — основной источник. Федеральный
+        // производственный календарь РФ: официальный статус дней с
+        // цепочками переносов, минуты 40/36/24-час. недель по каждому
+        // дню, версии календаря (2027 — PRELIMINARY, проект Минтруда).
+        // Без ключей и лимитов, CORS *, ETag + cache-control.
+        _fetchLegalic: function(year) {
+            var self = this;
+            var url = this._LEGALIC_URL + '?year=' + year + '&format=json';
+            return this._fetchJson(url, null).then(function(json) {
+                var parsed = self._parseLegalic(json);
+                if (!parsed) throw new Error('legalic: неожиданный формат');
                 parsed.fetchedAtMs = Date.now();
                 var s = self.getSettings();
                 parsed.region = s.region;
@@ -35788,6 +35913,122 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return { days: days, source: 'prodcalendar' };
         },
 
+        // Task 262: legalic export года:
+        // { version: {versionId, year, status}, contentHash,
+        //   days: [{ date: 'YYYY-MM-DD', weekday, type, isWorking,
+        //            shortened, minutes: {'40h','36h','24h'}, hours,
+        //            holidayName, transferredFrom, transferredTo }] }
+        // Типы: WORKING, WEEKEND, PUBLIC_HOLIDAY (праздник),
+        // SHORTENED_WORKING (сокращённый), TRANSFERRED_WORKING (рабочая
+        // суббота/воскресенье — выходной перенесён на другой день),
+        // TRANSFERRED_DAY_OFF (будний нерабочий — выходной перенесён
+        // С праздника/субботы). Нормы считаются из СУММ минут (целые) —
+        // это официальные числа источника (2026: 1972/1774,4/1181,6 ч).
+        _parseLegalic: function(json) {
+            if (!json || typeof json !== 'object' || !Array.isArray(json.days)) {
+                return null;
+            }
+            var ver = json.version || {};
+            var verId = String(ver.versionId || '');
+            if (!verId) return null;
+            var r2 = function(v) { return Math.round(v * 100) / 100; };
+            var days = {};
+            var mSum = {};
+            var ySum = { m40: 0, m36: 0, m24: 0 };
+            for (var i = 0; i < json.days.length; i++) {
+                var d = json.days[i];
+                if (!d || !d.date) continue;
+                var m = String(d.date).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (!m) continue;
+                var mmdd = m[2] + m[3];
+                var type = String(d.type || '');
+                var rec = {};
+                if (type === 'PUBLIC_HOLIDAY') {
+                    rec.off = 1; rec.holiday = 1;
+                } else if (type === 'TRANSFERRED_DAY_OFF') {
+                    rec.off = 1;
+                } else if (type === 'SHORTENED_WORKING') {
+                    rec.short = 1;
+                } else if (type === 'TRANSFERRED_WORKING') {
+                    rec.work = 1;
+                    // рабочая суббота может быть и сокращённой
+                    // (01.11.2025: 7 ч — предпраздничная)
+                    if (d.shortened) rec.short = 1;
+                } else if (type !== 'WORKING' && type !== 'WEEKEND') {
+                    // неизвестный тип будущих версий: страхуемся флагом
+                    if (d.isWorking === false) rec.off = 1;
+                    else if (d.shortened) rec.short = 1;
+                }
+                if (d.holidayName) rec.title = String(d.holidayName);
+                if (d.transferredFrom) {
+                    rec.tFrom = String(d.transferredFrom).slice(5).replace('-', '');
+                }
+                if (d.transferredTo) {
+                    rec.tTo = String(d.transferredTo).slice(5).replace('-', '');
+                }
+                var hasKeys = false;
+                for (var rk in rec) { if (rec.hasOwnProperty(rk)) { hasKeys = true; break; } }
+                if (hasKeys) days[mmdd] = rec;
+                // минуты → суммы официальных норм по месяцам и году
+                var min = (d.minutes && typeof d.minutes === 'object') ? d.minutes : {};
+                var a40 = parseInt(min['40h'], 10) || 0;
+                var a36 = parseInt(min['36h'], 10) || 0;
+                var a24 = parseInt(min['24h'], 10) || 0;
+                if (!mSum[m[2]]) mSum[m[2]] = { m40: 0, m36: 0, m24: 0 };
+                mSum[m[2]].m40 += a40; mSum[m[2]].m36 += a36; mSum[m[2]].m24 += a24;
+                ySum.m40 += a40; ySum.m36 += a36; ySum.m24 += a24;
+            }
+            var norms = { official: true, months: {},
+                          year: { h40: r2(ySum.m40 / 60),
+                                  h36: r2(ySum.m36 / 60),
+                                  h24: r2(ySum.m24 / 60) } };
+            for (var mk in mSum) {
+                if (mSum.hasOwnProperty(mk)) {
+                    norms.months[mk] = {
+                        h40: r2(mSum[mk].m40 / 60),
+                        h36: r2(mSum[mk].m36 / 60),
+                        h24: r2(mSum[mk].m24 / 60)
+                    };
+                }
+            }
+            var version = { id: verId, status: String(ver.status || 'OFFICIAL') };
+            return {
+                days: days, source: 'legalic',
+                version: version, norms: norms,
+                preliminary: version.status === 'PRELIMINARY'
+            };
+        },
+
+        // Task 262: День шахтёра — последнее воскресенье августа
+        // (Закон Кемеровской области от 27.12.2007 № 186-ОЗ). Дата
+        // «плавающая», вычисляется для любого года: берём 31 августа
+        // и откатываемся назад до воскресенья.
+        _minersDayMmdd: function(year) {
+            var d = new Date(year, 7, 31);
+            d.setDate(d.getDate() - d.getDay());
+            return this._mmdd(8, d.getDate());
+        },
+
+        // Наложение вычисляемого регионального праздника (День шахтёра)
+        // на данные любого источника. Только для региона 42; не трогает
+        // уже размеченные дни (источник с региональными данными) и не
+        // отменяет рабочий перенос (рабочую субботу), если такой вдруг
+        // выпадет на эту дату.
+        _applyRegionalOverlay: function(year, data) {
+            if (!data || !data.days) return;
+            if ((data.region || 0) !== 42) return;
+            var md = this._minersDayMmdd(year);
+            var rec = data.days[md];
+            if (rec && (rec.regional || rec.work)) return;
+            if (!rec) rec = {};
+            rec.off = 1;
+            rec.holiday = 1;
+            rec.regional = 1;
+            if (!rec.title) rec.title = this._MINERS_DAY_TITLE;
+            data.days[md] = rec;
+            data.minersDay = true;
+        },
+
         // ===== Универсальный доступ к дню =====
 
         _mmdd: function(month, day) {
@@ -35800,8 +36041,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         //   holiday — гос./региональный праздник (для «*» и подсветки)
         //   short — сокращённый рабочий день (−1 час)
         //   work — рабочий день, перенесённый на выходной
-        //   title — название («День Победы», «Выходной (перенесённый)»…)
-        // Без данных (фолбэк): Сб/Вс + фиксированные праздники ст. 112.
+        //   title — название («День Победы», «Выходной, перенесённый с
+        //         03.01.2026» — Task 262: цепочки переносов legalic)
+        //   transferFrom/transferTo — даты переноса (DD.MM.YYYY)
+        // Без данных (фолбэк): Сб/Вс + фиксированные праздники ст. 112
+        // + День шахтёра для региона 42 (вычисляется локально).
         dayInfo: function(year, month, day) {
             var mmdd = this._mmdd(month, day);
             var dw = new Date(year, month - 1, day).getDay();
@@ -35809,14 +36053,27 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var data = this._getYearData(year);
             var rec = (data && data.days && data.days[mmdd]) ? data.days[mmdd] : null;
             var source = data ? data.source : 'fallback';
+            var tFrom = (rec && rec.tFrom) ? this._fmtRuDate(rec.tFrom, year) : null;
+            var tTo = (rec && rec.tTo) ? this._fmtRuDate(rec.tTo, year) : null;
 
-            // Рабочая суббота/воскресенье: календарь явно отменяет выходной
+            // Рабочая суббота/воскресенье: календарь явно отменяет
+            // выходной (Task 262: legalic помечает такой день днём,
+            // НА который перенесён выходной — «рабочая суббота:
+            // выходной перенесён на 03.11.2025»)
             if (rec && rec.work) {
                 var wTitle = rec.title || null;
                 if (!wTitle && isWeekend) wTitle = 'Рабочий день (перенос)';
+                if (tTo) {
+                    wTitle = (wTitle || 'Рабочий день') +
+                             ': выходной перенесён на ' + tTo;
+                } else if (tFrom) {
+                    wTitle = (wTitle || 'Рабочий день') +
+                             ', перенесённый с ' + tFrom;
+                }
                 return {
                     off: false, holiday: false, short: !!rec.short, work: true,
                     title: wTitle, regional: !!rec.regional, project: !!rec.project,
+                    transferFrom: tFrom, transferTo: tTo,
                     source: source, hasData: !!data
                 };
             }
@@ -35836,9 +36093,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         title = 'Сокращённый рабочий день';
                     }
                 }
+                // Task 262: цепочки переносов legalic в названии дня
+                if (tFrom && off && !holiday) {
+                    title = 'Выходной, перенесённый с ' + tFrom;
+                } else if (holiday && tTo) {
+                    title = (title || 'Праздничный день') +
+                            ' (выходной перенесён на ' + tTo + ')';
+                }
                 return {
                     off: off, holiday: holiday, short: short, work: false,
                     title: title, regional: !!rec.regional, project: !!rec.project,
+                    transferFrom: tFrom, transferTo: tTo,
                     source: source, hasData: true
                 };
             }
@@ -35848,35 +36113,64 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 return {
                     off: isWeekend, holiday: false, short: false, work: false,
                     title: null, regional: false, project: false,
+                    transferFrom: null, transferTo: null,
                     source: source, hasData: true
                 };
             }
 
-            // ФОЛБЭК: данных нет — Сб/Вс + праздники ст. 112 (без переносов)
+            // ФОЛБЭК: данных нет — Сб/Вс + праздники ст. 112 (без
+            // переносов); День шахтёра (регион 42) вычисляется и тут.
             var fx = this._FIXED_TITLES[mmdd] || null;
+            var fReg = false;
+            try {
+                if (this.getSettings().region === 42 &&
+                    mmdd === this._minersDayMmdd(year)) {
+                    fx = this._MINERS_DAY_TITLE;
+                    fReg = true;
+                }
+            } catch (e) {}
             return {
                 off: isWeekend || !!fx, holiday: !!fx, short: false, work: false,
-                title: fx, regional: false, project: false,
+                title: fx, regional: fReg, project: false,
+                transferFrom: null, transferTo: null,
                 source: 'fallback', hasData: false
             };
         },
 
+        // 'MMDD' + год → 'DD.MM.YYYY' (для цепочек переносов)
+        _fmtRuDate: function(mmdd, year) {
+            var s = String(mmdd);
+            return s.slice(2) + '.' + s.slice(0, 2) + '.' + year;
+        },
+
         // Статистика месяца по производственному календарю: рабочие/
-        // нерабочие дни, особые дни с названиями, нормы времени
-        // (40/36/24-часовые недели — локальный расчёт по типам дней).
+        // нерабочие дни, особые дни с названиями, нормы времени.
+        // Task 262: при источнике legalic нормы 40/36/24 — ОФИЦИАЛЬНЫЕ
+        // (сумма минут по дням месяца), иначе — локальный расчёт по
+        // типам дней. version/preliminary — статус календаря года
+        // (2027 у legalic — PRELIMINARY, проект Минтруда).
         monthStats: function(year, month) {
             var dim = new Date(year, month, 0).getDate();
             var stats = {
                 year: year, month: month,
                 calendarDays: dim, workDays: 0, offDays: 0, shortened: 0,
                 specialDays: [], hours40: 0, hours36: 0, hours24: 0,
-                hasData: false, source: 'fallback', fetchedAtMs: null
+                hasData: false, source: 'fallback', fetchedAtMs: null,
+                normsOfficial: false, version: null, preliminary: false,
+                yearHours40: null
             };
             var data = this._getYearData(year);
             if (data) {
                 stats.hasData = true;
                 stats.source = data.source;
                 stats.fetchedAtMs = data.fetchedAtMs || null;
+                if (data.version) stats.version = data.version;
+                if (data.version && data.version.status === 'PRELIMINARY') {
+                    stats.preliminary = true;
+                }
+                if (data.norms && data.norms.year) {
+                    stats.yearHours40 = data.norms.year.h40;
+                }
             }
             for (var d = 1; d <= dim; d++) {
                 var info = this.dayInfo(year, month, d);
@@ -35898,11 +36192,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     });
                 }
             }
-            // Нормы времени: ТК РФ, сокращённые дни −1 час (проверено
-            // на 2026: 247 дн. → 1972 / 1774,4 / 1181,6 ч)
-            stats.hours40 = stats.workDays * 8 - stats.shortened;
-            stats.hours36 = Math.round((stats.workDays * 7.2 - stats.shortened) * 10) / 10;
-            stats.hours24 = Math.round((stats.workDays * 4.8 - stats.shortened) * 10) / 10;
+            // Нормы времени. Приоритет — официальные данные источника
+            // (legalic: минуты по дням суммированы при парсинге;
+            // проверено на 2026: 247 дн. → 1972 / 1774,4 / 1181,6 ч).
+            var mn = (data && data.norms && data.norms.official)
+                ? data.norms.months[(month < 10 ? '0' : '') + month] : null;
+            if (mn) {
+                stats.hours40 = mn.h40;
+                stats.hours36 = mn.h36;
+                stats.hours24 = mn.h24;
+                stats.normsOfficial = true;
+            } else {
+                // Локальный расчёт: ТК РФ, сокращённые дни −1 час
+                stats.hours40 = stats.workDays * 8 - stats.shortened;
+                stats.hours36 = Math.round((stats.workDays * 7.2 - stats.shortened) * 10) / 10;
+                stats.hours24 = Math.round((stats.workDays * 4.8 - stats.shortened) * 10) / 10;
+            }
             return stats;
         },
 
@@ -36010,7 +36315,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
                     KipToast.show(s.token
                         ? 'Токен сохранён: источник production-calendar.ru'
-                        : 'Токен удалён: источник isDayOff');
+                        : 'Токен удалён: источник calendar.legalic.ru');
                 }
             }).catch(function() {
                 self._renderSheet();
@@ -36040,17 +36345,30 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             html += '<div class="ws-cal-row">' +
                     '<div class="ws-cal-month">' +
-                        this._esc(monthsNom[(m - 1 + 12) % 12] + ' ' + y) + '</div>' +
+                        this._esc(monthsNom[(m - 1 + 12) % 12] + ' ' + y) +
+                        (st.preliminary
+                            ? '<span class="ws-cal-prelim" title="Год основан на проекте постановления Минтруда России — окончательные переносы ещё не утверждены">предварительные данные</span>'
+                            : '') +
+                    '</div>' +
                     '<select id="wsCalRegionSel" class="ws-cal-region-sel" ' +
                         'onchange="ProdCalendar.onRegionChange()" ' +
                         'title="Регион производственного календаря (региональные праздники)">' +
                         regOpts + '</select>' +
                     '</div>';
 
-            // Нормы времени месяца
+            // Нормы времени месяца (Task 262: при источнике legalic —
+            // официальные данные; иначе — локальный расчёт) + годовая
+            // норма из того же источника
             html += '<div class="ws-cal-norms">' +
                     '<div class="ws-cal-caption">Норма времени, ' +
-                        this._esc(monthsGen[(m - 1 + 12) % 12]).toLowerCase() + '</div>' +
+                        this._esc(monthsGen[(m - 1 + 12) % 12]).toLowerCase() +
+                        (st.normsOfficial
+                            ? ' <span class="ws-cal-official">официальные нормы</span>'
+                            : '') +
+                        (st.preliminary
+                            ? ' <span class="ws-cal-official">предварительно</span>'
+                            : '') +
+                    '</div>' +
                     '<div class="ws-cal-norms-grid">' +
                     '<div>Рабочих дней: <b>' + st.workDays + '</b></div>' +
                     '<div>Выходных и праздничных: <b>' + st.offDays + '</b></div>' +
@@ -36059,6 +36377,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     '<div>40-час. неделя: <b>' + this._fmtHours(st.hours40) + ' ч</b></div>' +
                     '<div>36-час. неделя: <b>' + this._fmtHours(st.hours36) + ' ч</b></div>' +
                     '<div>24-час. неделя: <b>' + this._fmtHours(st.hours24) + ' ч</b></div>' +
+                    (st.yearHours40 !== null && st.yearHours40 !== undefined
+                        ? '<div class="ws-cal-year-norm">Норма на ' + y +
+                           ' год (40-час.): <b>' + this._fmtHours(st.yearHours40) + ' ч</b>' +
+                           (st.preliminary ? ' — предварительно' : '') + '</div>'
+                        : '') +
                     '</div></div>';
 
             // Праздники и переносы месяца
@@ -36078,7 +36401,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             '<span class="ws-cal-day-date">' + sd.d + ' ' +
                                 this._esc(monthsGen[(m - 1 + 12) % 12]) + '</span>' +
                             '<span class="ws-cal-day-kind ' + (kindCls[sd.kind] || 'k-tr') + '">' +
-                                this._esc(sd.kind) + (sd.project ? ' (прогноз)' : '') + '</span>' +
+                                this._esc(sd.kind) +
+                                (sd.project ? ' (прогноз)'
+                                    : (st.preliminary ? ' (предварительно)' : '')) +
+                            '</span>' +
                             '<span class="ws-cal-day-title">' + this._esc(sd.title || '') + '</span>' +
                             '</div>';
                 }
@@ -36096,17 +36422,35 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     freshText += ' (офлайн-кэш, старше 7 суток)';
                 }
             }
-            var regNote = this.regionHasRegional(s.region)
-                ? 'У этого региона есть региональные праздники — для их учёта нужен токен production-calendar.ru.'
-                : 'У региона ' + s.region + ' региональных праздников нет — календарь совпадает с федеральным.';
+            var regNote;
+            if (s.region === 42) {
+                regNote = 'День шахтёра (последнее воскресенье августа) ' +
+                          'учитывается автоматически — Закон Кемеровской области ' +
+                          'от 27.12.2007 № 186-ОЗ.';
+            } else if (this.regionHasRegional(s.region)) {
+                regNote = 'У этого региона есть региональные праздники — для их учёта нужен токен production-calendar.ru.';
+            } else {
+                regNote = 'У региона ' + s.region + ' региональных праздников нет — календарь совпадает с федеральным.';
+            }
+            // Task 262: версия календаря года (legalic) — доверием к данным
+            var verLine = '';
+            if (st.version && st.version.id) {
+                verLine = '<div>Версия календаря: <b>' + this._esc(st.version.id) + '</b>' +
+                          (st.preliminary
+                              ? ' — год основан на проекте постановления Минтруда (финал — осенью)'
+                              : ' — официальные данные') + '</div>';
+            }
             html += '<div class="ws-cal-src">' +
                     '<div class="ws-cal-src-row"><b>Источник:</b> ' + this._esc(srcLabel) +
                     ' <button type="button" id="wsCalRefreshBtn" class="ws-cal-refresh-btn" ' +
                         'onclick="ProdCalendar.refreshNow()">Обновить сейчас</button></div>' +
                     '<div>' + this._esc(freshText) + '. ' + this._esc(regNote) + '</div>' +
+                    verLine +
                     (st.source === 'fallback'
                         ? '<div>Данных нет (нет сети или год ещё не опубликован) — ' +
-                          'выходные считаются по Сб/Вс и праздникам ТК РФ без переносов.</div>'
+                          'выходные считаются по Сб/Вс и праздникам ТК РФ без переносов' +
+                          (s.region === 42 ? '; День шахтёра — по последнему воскресенью августа' : '') +
+                          '.</div>'
                         : '') +
                     '</div>';
 
@@ -36118,8 +36462,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         'placeholder="API-токен production-calendar.ru" autocomplete="off">' +
                     '<button type="button" onclick="ProdCalendar.saveToken()">Сохранить</button>' +
                     '</div>' +
-                    '<div class="ws-cal-hint">Бесплатный токен (регистрация на production-calendar.ru) ' +
-                        'включает региональные календари и официальные названия праздников и переносов. ' +
+                    '<div class="ws-cal-hint">Основной источник — calendar.legalic.ru (федеральный календарь, ' +
+                        'официальные нормы и цепочки переносов, без ключей). ' +
+                        'Бесплатный токен production-calendar.ru (регистрация на сайте) ' +
+                        'добавляет региональные календари для регионов с собственными ' +
+                        'праздниками (для Кузбасса не требуется). ' +
                         'Токен хранится только на этом устройстве.</div>' +
                     '</div>';
 
@@ -36127,6 +36474,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         _sourceLabel: function(source) {
+            if (source === 'legalic') return 'calendar.legalic.ru (федеральный, официальные нормы)';
             if (source === 'prodcalendar') return 'production-calendar.ru';
             if (source === 'isdayoff') return 'isDayOff (GitHub-зеркало календаря РФ)';
             return 'нет данных (расчёт по Сб/Вс)';
