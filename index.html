@@ -3100,11 +3100,15 @@
     .flow-summary-days { font-size: 12px; font-weight: 400; color: var(--text-secondary); margin-left: 8px; }
     /* Task 231: дата — под-элемент label «Последние показания» в карточке (одна строка,
        как в детальной карточке Task 229). Меньший шрифт, нейтральный цвет. */
+    /* Task 247: дата «за ДД.ММ.ГГГГ г.» — единый неразрывный блок (как в детальной
+       карточке): при нехватке ширины переносится на новую строку целиком.
+       Пробел-разделитель — за пределами span (см. renderList). */
     .flow-summary-label .flow-summary-date-inline {
         font-size: 11px;
         font-weight: 400;
         color: var(--text-secondary);
         margin-left: 4px;
+        white-space: nowrap;       /* Task 247: блок даты не рвётся по словам */
     }
     /* Task 231: sub-значения temp/gcal под основным значением, без названий.
        Значения включают собственные единицы (°C, Гкал), поэтому лейблы не нужны. */
@@ -3330,12 +3334,18 @@
        одна общая строка текста с названием (без разделения на 2 блока).
        Стили даты мягко переопределяют label: меньший шрифт, normal регистр
        (label uppercase, дата lowercase), нейтральный цвет. */
+    /* Task 247: дата «за ДД.ММ.ГГГГ г.» — ЕДИНЫЙ неразрывный блок: при
+       нехватке ширины (мобильные экраны) весь текст «за 29.08.2026 г.»
+       переносится на новую строку ЦЕЛИКОМ, а не по отдельным словам.
+       Пробел-разделитель вынесен ЗА пределы этого span (см. _buildDetailHtml),
+       поэтому единственная точка переноса — между названием и датой. */
     .flow-detail-label .flow-detail-date-inline {
         font-size: 12px;
         font-weight: 400;
         text-transform: none;      /* отменить uppercase от .flow-detail-label */
         letter-spacing: 0;         /* отменить от label */
         color: var(--text-secondary);
+        white-space: nowrap;       /* Task 247: блок даты не рвётся по словам */
     }
     /* Подсветка строки «Расход» — фон и лейбл как у обычной строки, зелёным только значение */
     .flow-detail-highlight .flow-detail-value { color: #5ab870; font-weight: 700; }
@@ -31673,7 +31683,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // лейблы «Гкал» и «T среды» убраны — значения temp/gcal (с собственными единицами °C и Гкал)
                 // показаны под основным значением как sub-текст без названий.
                 html += '<span class="flow-summary-item flow-summary-item-last">';
-                html += '<span class="flow-summary-label">Последние показания<span class="flow-summary-date-inline"> за ' + this._fmtDate(m.dateCurr) + ' г.</span></span>';
+                // Task 247: пробел вынесен ЗА пределы span даты — блок «за ДД.ММ.ГГГГ г.»
+                // неразрывен (white-space: nowrap), переносится на новую строку целиком.
+                html += '<span class="flow-summary-label">Последние показания <span class="flow-summary-date-inline">за ' + this._fmtDate(m.dateCurr) + ' г.</span></span>';
                 html += '<span class="flow-summary-val">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + '</span>';
                 var subParts = [];
                 if (m.temp !== null && m.temp !== undefined) { subParts.push(tempStr); }
@@ -32016,11 +32028,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Task 229: дата — под-элемент label (одна общая строка текста,
             // без визуального разделения на 2 блока). Пробел перед «за» даёт
             // разделитель между названием и датой.
+            // Task 247: пробел вынесен ЗА пределы span даты — сам блок даты
+            // «за ДД.ММ.ГГГГ г.» неразрывен (white-space: nowrap в CSS), поэтому
+            // при нехватке ширины он переносится на новую строку ЦЕЛИКОМ.
             var lastReadingLabel = 'Последние показания';
             html += '<div class="flow-detail-row flow-detail-row-last">' +
                 '<div class="flow-detail-row-head">' +
                     '<span class="flow-detail-label">' + lastReadingLabel +
-                        '<span class="flow-detail-date-inline"> за ' + this._fmtDate(m.dateCurr) + ' г.</span>' +
+                        ' <span class="flow-detail-date-inline">за ' + this._fmtDate(m.dateCurr) + ' г.</span>' +
                     '</span>' +
                     commentBtnHtml +
                 '</div>' +
