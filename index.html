@@ -4249,6 +4249,239 @@
     .ws-grid tbody td.ws-cell.ws-boundary-right,
     .ws-grid tbody td.ws-cell.ws-boundary-after { border-right: 1px solid #cc6e73; }
 
+    /* === Task 260: производственный календарь === */
+
+    /* Праздник в шапке (гос./региональный праздник по производственному
+       календарю) — ярче и жирнее обычного выходного (ws-holiday #ff8a8a):
+       день сразу читается как «красный день», у выходных/переносов цвет
+       спокойнее. Название праздника — в тултипе th (title, ставит JS). */
+    .ws-grid thead th.ws-day-col.ws-feast {
+        color: #ff6b6b;
+        font-weight: 700;
+    }
+
+    /* Чип в тулбаре: «19 раб. дн. · 151 ч» — рабочие дни и норма времени
+       выбранного месяца по производственному календарю. Клик — шторка
+       с праздниками, переносами и нормами (ProdCalendar.openSheet). */
+    .ws-cal-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--bg-tertiary, #0e1621);
+        color: var(--text-secondary, rgba(255,255,255,0.7));
+        border: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        /* Task 254: кнопки тулбара без скруглений — чип в том же стиле */
+        border-radius: 0;
+        padding: 5px 10px;
+        font-size: 12px;
+        font-family: inherit;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .ws-cal-chip:active { opacity: 0.85; }
+    .ws-cal-chip svg {
+        width: 14px;
+        height: 14px;
+        stroke: var(--accent-blue, #4a8fc7);
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        flex-shrink: 0;
+    }
+    /* Очень узкие экраны: у чипа остаётся только иконка (текст не влезает
+       в тулбар рядом с селектами месяца/года) */
+    @media (max-width: 400px) {
+        .ws-cal-chip span { display: none; }
+    }
+
+    /* Шторка «Производственный календарь»: нормы времени, праздники,
+       источник данных, регион. База — .flow-input-sheet (bottom sheet),
+       здесь только внутренняя вёрстка. */
+    .ws-cal-sheet { max-height: 84vh; overflow-y: auto; }
+    .ws-cal-body {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding-bottom: 4px;
+    }
+    .ws-cal-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+    .ws-cal-month {
+        font-weight: 700;
+        font-size: 15px;
+        color: var(--text-primary, #e0e0e0);
+    }
+    .ws-cal-region-sel {
+        background: var(--bg-tertiary, #0e1621);
+        color: var(--text-primary, #e0e0e0);
+        border: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        border-radius: 0;
+        padding: 5px 8px;
+        font-size: 13px;
+        font-family: inherit;
+        max-width: 100%;
+    }
+    .ws-cal-norms {
+        border: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        border-radius: 8px;
+        padding: 10px 12px;
+    }
+    .ws-cal-caption {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        color: var(--text-secondary, rgba(255,255,255,0.5));
+        margin-bottom: 8px;
+    }
+    .ws-cal-norms-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 14px;
+        font-size: 13px;
+        color: var(--text-secondary, rgba(255,255,255,0.65));
+    }
+    .ws-cal-norms-grid b {
+        color: var(--text-primary, #e0e0e0);
+        font-weight: 700;
+    }
+    .ws-cal-days {
+        border: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        border-radius: 8px;
+        padding: 4px 12px 6px;
+    }
+    .ws-cal-day {
+        display: flex;
+        gap: 8px;
+        align-items: baseline;
+        padding: 6px 0;
+        border-bottom: 1px dashed var(--card-border, rgba(255,255,255,0.08));
+        font-size: 13px;
+    }
+    .ws-cal-day:last-child { border-bottom: none; }
+    .ws-cal-day-date {
+        min-width: 92px;
+        color: var(--text-primary, #e0e0e0);
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .ws-cal-day-kind {
+        font-size: 10px;
+        font-weight: 700;
+        padding: 1px 6px;
+        border-radius: 3px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .ws-cal-day-kind.k-hol { background: rgba(255,107,107,0.16); color: #ff6b6b; }
+    .ws-cal-day-kind.k-reg { background: rgba(255,193,7,0.16); color: #ffc107; }
+    .ws-cal-day-kind.k-tr  { background: rgba(74,143,199,0.18); color: #6aa6e0; }
+    .ws-cal-day-kind.k-sh  { background: rgba(76,199,113,0.16); color: #4ac771; }
+    .ws-cal-day-kind.k-wk  { background: rgba(176,190,197,0.16); color: #b0bec5; }
+    .ws-cal-day-title {
+        color: var(--text-secondary, rgba(255,255,255,0.6));
+        min-width: 0;
+    }
+    .ws-cal-src {
+        border-top: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        padding-top: 10px;
+        font-size: 12px;
+        color: var(--text-secondary, rgba(255,255,255,0.6));
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .ws-cal-src-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .ws-cal-src b { color: var(--text-primary, #e0e0e0); }
+    .ws-cal-refresh-btn {
+        background: var(--accent-blue, #4a8fc7);
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 5px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+    }
+    .ws-cal-refresh-btn:disabled { opacity: 0.6; cursor: default; }
+    .ws-cal-token {
+        border-top: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        padding-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 12px;
+    }
+    .ws-cal-token-row { display: flex; gap: 8px; }
+    .ws-cal-token input {
+        flex: 1;
+        min-width: 0;
+        background: var(--bg-tertiary, #0e1621);
+        color: var(--text-primary, #e0e0e0);
+        border: 1px solid var(--card-border, rgba(255,255,255,0.1));
+        border-radius: 4px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-family: Consolas, monospace;
+    }
+    .ws-cal-token button {
+        background: var(--accent-green, #4ac771);
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        white-space: nowrap;
+    }
+    .ws-cal-hint {
+        font-size: 11px;
+        line-height: 1.5;
+        color: var(--text-secondary, rgba(255,255,255,0.45));
+    }
+    .ws-cal-empty {
+        font-size: 13px;
+        color: var(--text-secondary, rgba(255,255,255,0.6));
+        padding: 4px 0;
+    }
+
+    /* Task 260: светлая тема — шторка календаря и чип */
+    [data-theme="light"] .ws-cal-chip {
+        background: #fff;
+        color: #555;
+        border-color: rgba(0, 0, 0, 0.12);
+    }
+    [data-theme="light"] .ws-cal-region-sel,
+    [data-theme="light"] .ws-cal-token input {
+        background: #fff;
+        color: #333;
+        border-color: rgba(0, 0, 0, 0.15);
+    }
+    [data-theme="light"] .ws-cal-norms-grid,
+    [data-theme="light"] .ws-cal-day-title,
+    [data-theme="light"] .ws-cal-src { color: #666; }
+    [data-theme="light"] .ws-cal-norms-grid b,
+    [data-theme="light"] .ws-cal-day-date,
+    [data-theme="light"] .ws-cal-src b,
+    [data-theme="light"] .ws-cal-month { color: #333; }
+    [data-theme="light"] .ws-cal-caption { color: #888; }
+    [data-theme="light"] .ws-cal-hint { color: #999; }
+
     /* Task 252: легенда кодов под шахматкой УБРАНА — коды статусов снова
        выводятся в ячейках шахматки, расшифровка цветов не нужна.
        (Прежние CSS-правила легенды удалены вместе с её HTML-контейнером
@@ -10836,6 +11069,13 @@
             <div class="ws-toolbar">
                 <select id="wsMonthSel" class="ws-month-sel" onchange="WorkSchedule.onMonthChange()"></select>
                 <select id="wsYearSel" class="ws-year-sel" onchange="WorkSchedule.onMonthChange()"></select>
+                <!-- Task 260: чип производственного календаря — рабочие дни и
+                     норма времени выбранного месяца; клик открывает шторку с
+                     праздниками, переносами, нормами и настройками источника -->
+                <button type="button" id="wsCalChip" class="ws-cal-chip" onclick="ProdCalendar.openSheet()" title="Производственный календарь: праздники, выходные, нормы времени">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <span id="wsCalChipText">…</span>
+                </button>
                 <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateMonth()" hidden>Сформировать</button>
                 <!-- Task 251: кнопка пакетного сохранения накопленных локальных
                      изменений шахматки (появляется при наличии несохранённых правок) -->
@@ -13621,6 +13861,17 @@
      в тулбаре (WorkSchedule.saveAll). -->
 <div id="wsPopupCloser" class="ws-popup-closer" onclick="WorkSchedule.closeCellPopup()"></div>
 <div id="wsCellPopup" class="ws-cell-popup" role="menu"></div>
+
+<!-- ===== Task 260: Bottom sheet производственного календаря (workSchedule) =====
+     Открывается чипом в тулбаре: нормы времени месяца, праздники и переносы,
+     регион (по умолчанию 42 — Кемеровская область — Кузбасс), источник
+     данных и его обновление, API-токен production-calendar.ru. -->
+<div id="wsCalOverlay" class="pin-sheet-overlay" onclick="ProdCalendar.closeSheet()"></div>
+<div id="wsCalSheet" class="flow-input-sheet ws-cal-sheet">
+    <div class="flow-input-sheet-handle"></div>
+    <div class="flow-input-sheet-title">Производственный календарь</div>
+    <div id="wsCalSheetBody" class="ws-cal-body"></div>
+</div>
 
 <!-- ===== Bottom sheet: добавление сотрудника (workSchedule) ===== -->
 <div id="wsEmpOverlay" class="pin-sheet-overlay" onclick="WorkSchedule.closeEmployeeForm()"></div>
@@ -33837,6 +34088,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     self._refreshFromUrlState();
                 });
             });
+
+            // Task 260: производственный календарь — фоновая загрузка года
+            // (isDayOff GitHub / production-calendar.ru). Пока данных нет,
+            // шахматка рендерится по Сб/Вс; после загрузки — перерисовка.
+            this._ensureCal();
         },
 
         _refreshFromUrlState: function() {
@@ -33856,6 +34112,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 this._month = parseInt(monthSel.value, 10);
                 this._year  = parseInt(yearSel.value, 10);
             }
+            // Task 260: мог смениться год — гарантируем данные календаря
+            this._ensureCal();
             this.loadGrid();
         },
 
@@ -33945,12 +34203,68 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 this._loadTrainings()
             ]).then(function() {
                 self._renderGrid();
+                // Task 260: чип норм месяца в тулбаре
+                self._updateCalChip();
             }).catch(function(err) {
                 if (wrapEl) wrapEl.innerHTML = '<div class="admin-empty">Ошибка загрузки: ' + (err.message || err) + '</div>';
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
                     KipToast.show('Ошибка загрузки графика: ' + (err.message || err));
                 }
             });
+        },
+
+        // ============================================================
+        // Task 260: производственный календарь шахматки
+        // (модуль ProdCalendar: гос. праздники, перенесённые выходные,
+        //  сокращённые и рабочие субботы производственного календаря РФ)
+        // ============================================================
+
+        // Фоновая загрузка данных календаря выбранного года. Пока данных
+        // нет, шахматка рендерится по Сб/Вс (фолбэк); после прихода
+        // данных — перерисовка сетки и чипа норм. Возвращает промис
+        // (удобно для ожидания в тестах/харнессах).
+        _ensureCal: function() {
+            var self = this;
+            if (typeof ProdCalendar === 'undefined' || !ProdCalendar.ensureYear) {
+                return Promise.resolve(false);
+            }
+            return ProdCalendar.ensureYear(this._year).then(function(changed) {
+                if (changed && self._EMPLOYEES.length) {
+                    self._renderGrid();
+                }
+                self._updateCalChip();
+                return changed;
+            }).catch(function() { return false; });
+        },
+
+        // День нерабочий по производственному календарю (Сб/Вс +
+        // праздники + перенесённые выходные, без рабочих суббот).
+        _calDayOff: function(day) {
+            if (typeof ProdCalendar !== 'undefined' && ProdCalendar.dayInfo) {
+                return !!ProdCalendar.dayInfo(this._year, this._month, day).off;
+            }
+            var dw = new Date(this._year, this._month - 1, day).getDay();
+            return dw === 0 || dw === 6;
+        },
+
+        // Чип норм в тулбаре: «19 раб. дн. · 151 ч» (или «Сб/Вс», если
+        // данных календаря нет). Клик по чипу открывает шторку календаря.
+        _updateCalChip: function() {
+            var textEl = document.getElementById('wsCalChipText');
+            var chip = document.getElementById('wsCalChip');
+            if (!textEl || !chip) return;
+            if (typeof ProdCalendar === 'undefined' || !ProdCalendar.monthStats) return;
+            var st = ProdCalendar.monthStats(this._year, this._month);
+            if (!st.hasData) {
+                textEl.textContent = 'Сб/Вс';
+                chip.title = 'Производственный календарь недоступен — выходные по Сб/Вс. Нажмите для деталей.';
+            } else {
+                textEl.textContent = st.workDays + ' раб. дн. · ' +
+                                     ProdCalendar._fmtHours(st.hours40) + ' ч';
+                chip.title = 'Рабочих дней: ' + st.workDays +
+                             ', норма времени (40-час. неделя): ' +
+                             ProdCalendar._fmtHours(st.hours40) + ' ч. Нажмите для деталей.';
+            }
         },
 
         _buildEntryIndex: function() {
@@ -33979,13 +34293,30 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             for (var d = 1; d <= daysInMonth; d++) {
                 var dt = new Date(this._year, this._month - 1, d);
                 var dow = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][dt.getDay()];
-                var isHoliday = (dt.getDay() === 0 || dt.getDay() === 6);
+                // Task 260: праздник/выходной — по производственному
+                // календарю (ProdCalendar): Сб/Вс + гос. праздники +
+                // перенесённые выходные − рабочие субботы. Праздники
+                // (ws-feast) ярче обычных выходных, название — в тултипе
+                // заголовка («9 Вс — День Победы»).
+                var dInfo = (typeof ProdCalendar !== 'undefined' && ProdCalendar.dayInfo)
+                    ? ProdCalendar.dayInfo(this._year, this._month, d) : null;
+                var isOff = dInfo ? dInfo.off
+                          : (dt.getDay() === 0 || dt.getDay() === 6);
+                var isFeast = dInfo ? !!dInfo.holiday : false;
                 // Task 255 (правка Task 254): красные линии-границы
                 // выходных/рабочих дней из ШАПКИ убраны — линии проходят
                 // только по ячейкам тела таблицы (tbody, см. _renderCell).
-                // Шапке остаются только классы выходных (ws-holiday).
-                var thCls = 'ws-day-col' + (isHoliday ? ' ws-holiday' : '');
-                html += '<th class="' + thCls + '">' +
+                // Шапке остаются классы выходных (ws-holiday) и
+                // праздников (ws-feast).
+                var thCls = 'ws-day-col' + (isOff ? ' ws-holiday' : '') +
+                            (isFeast ? ' ws-feast' : '');
+                var thTitle = '';
+                if (dInfo && dInfo.title) {
+                    thTitle = d + ' ' + dow + ' — ' + dInfo.title +
+                              (dInfo.short ? ' (сокращённый день)' : '');
+                }
+                html += '<th class="' + thCls + '"' +
+                        (thTitle ? ' title="' + this._escAttr(thTitle) + '"' : '') + '>' +
                         d + '<span class="ws-dow">' + dow + '</span></th>';
             }
             html += '</tr></thead><tbody>';
@@ -34211,25 +34542,28 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (isPending) classes.push('ws-pending');
             if (!status) classes.push('ws-status-empty');
 
-            // Task 254 (разметка выходных) + Task 255 (правка линий):
-            // розовый фон пустых ячеек Сб/Вс (.ws-weekend +
-            // .ws-status-empty в CSS) и приглушённые красные 1px-линии
-            // на стыках выходных с рабочими днями. При 1px в
-            // border-collapse цвет общей грани равных границ браузер
-            // может взять у соседа, поэтому красной делается ОБЕ стороны
-            // стыка: пятница ws-boundary-after (border-right) + суббота
-            // ws-boundary-left (border-left); воскресенье
-            // ws-boundary-right (border-right) + понедельник
-            // ws-boundary-before (border-left). Граничные случаи: суббота
-            // 1-го числа (слева — колонка ФИО, пары нет) и воскресенье
-            // последним днём месяца (справа — край таблицы, пары нет).
-            var cellDow = new Date(this._year, this._month - 1, day).getDay();
+            // Task 260 (развитие Tasks 254/255): выходные и праздники — по
+            // производственному календарю (ProdCalendar): Сб/Вс, гос.
+            // праздники, перенесённые выходные; РАБОЧИЕ субботы выходными
+            // не считаются. Розовый фон пустых ячеек (.ws-weekend +
+            // .ws-status-empty) и приглушённые красные 1px-линии на стыках
+            // нерабочих дней с рабочими — теперь по календарю, а не только
+            // по Сб/Вс. При 1px в border-collapse цвет общей грани равных
+            // границ браузер может взять у соседа, поэтому красной делается
+            // ОБЕ стороны стыка: последний рабочий день ws-boundary-after
+            // (border-right) + первый нерабочий ws-boundary-left
+            // (border-left); последний нерабочий ws-boundary-right
+            // (border-right) + первый рабочий ws-boundary-before
+            // (border-left). Граничные случаи: нерабочий 1-го числа (слева
+            // — колонка ФИО, пары нет) и нерабочий последним днём месяца
+            // (справа — край таблицы, пары нет).
             var lastDay = new Date(this._year, this._month, 0).getDate();
-            if (cellDow === 0 || cellDow === 6) classes.push('ws-weekend');
-            if (cellDow === 6 && day > 1) classes.push('ws-boundary-left');
-            if (cellDow === 5 && day < lastDay) classes.push('ws-boundary-after');
-            if (cellDow === 0 && day < lastDay) classes.push('ws-boundary-right');
-            if (cellDow === 1 && day > 1) classes.push('ws-boundary-before');
+            var dayOff = this._calDayOff(day);
+            if (dayOff) classes.push('ws-weekend');
+            if (dayOff && day > 1 && !this._calDayOff(day - 1)) classes.push('ws-boundary-left');
+            if (dayOff && day < lastDay && !this._calDayOff(day + 1)) classes.push('ws-boundary-right');
+            if (!dayOff && day < lastDay && this._calDayOff(day + 1)) classes.push('ws-boundary-after');
+            if (!dayOff && day > 1 && this._calDayOff(day - 1)) classes.push('ws-boundary-before');
 
             // Task 252: коды статусов ВЕРНУТЫ в ячейки шахматки. Task 250
             // убирал их (статус определялся цветом, легенда расшифровывала),
@@ -34248,6 +34582,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // ячейке, но маркер остаётся точкой (заметнее прежнего
             // underline и не путается с текстом кода).
             var titleParts = [isoDate, emp['ФИО']];
+            // Task 260: название праздника/переноса/сокращённого дня —
+            // сразу после даты в тултипе ячейки
+            var cellInfo = (typeof ProdCalendar !== 'undefined' && ProdCalendar.dayInfo)
+                ? ProdCalendar.dayInfo(this._year, this._month, day) : null;
+            if (cellInfo && cellInfo.title &&
+                (cellInfo.off || cellInfo.work || cellInfo.short)) {
+                titleParts.splice(1, 0, cellInfo.title);
+            }
             if (entry) {
                 titleParts.push('статус: ' + (statusName || '—'));
                 if (isOvertime) titleParts.push('переработка');
@@ -34344,7 +34686,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             var eff = this._effectiveEntry(isoDate, tabNo) || {};
             var current = eff['статус'] || '';
-            var html = '<div class="ws-popup-title">' + this._esc(isoDate) + ' · ' +
+            // Task 260: название праздника/переноса — в заголовке попапа
+            // («2026-05-09 · День Победы · Иванов И. И.»)
+            var popupDate = isoDate;
+            if (typeof ProdCalendar !== 'undefined' && ProdCalendar.dayInfo) {
+                var pp = String(isoDate).split('-');
+                if (pp.length === 3) {
+                    var pdInfo = ProdCalendar.dayInfo(
+                        parseInt(pp[0], 10), parseInt(pp[1], 10), parseInt(pp[2], 10));
+                    if (pdInfo && pdInfo.title &&
+                        (pdInfo.off || pdInfo.work || pdInfo.short)) {
+                        popupDate += ' · ' + pdInfo.title;
+                    }
+                }
+            }
+            var html = '<div class="ws-popup-title">' + this._esc(popupDate) + ' · ' +
                        this._esc(emp ? emp['ФИО'] : 'таб. №' + tabNo) + '</div>';
             // Очистка ячейки (выходной) — активна, когда ячейка пустая
             html += '<div class="ws-popup-row' + (current ? '' : ' ws-popup-active') + '" onclick="WorkSchedule.onPopupStatus(\'\')">' +
@@ -35003,6 +35359,791 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 return String(a['ФИО'] || '').trim()
                     .localeCompare(String(b['ФИО'] || '').trim(), 'ru');
             });
+        },
+
+        _esc: function(s) {
+            if (s === null || s === undefined) return '';
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        },
+
+        _escAttr: function(s) {
+            return this._esc(s).replace(/"/g, '&quot;');
+        }
+    };
+
+    // ============================================================
+    // Task 260: производственный календарь РФ (модуль ProdCalendar)
+    // ============================================================
+    // Автоматическая загрузка производственного рабочего календаря
+    // России для шахматки «График работы»: гос. праздники, перенесённые
+    // выходные, сокращённые предпраздничные и рабочие субботы, нормы
+    // времени. Используется шапкой и ячейками шахматки (_renderGrid /
+    // _renderCell), чипом норм в тулбаре и шторкой календаря.
+    //
+    // ИСТОЧНИКИ (выбраны по итогам исследования с живыми проверками):
+    //   1) isDayOff — GitHub-зеркало производственного календаря РФ
+    //      (raw.githubusercontent.com/isdayoff/calendars, CORS открыт,
+    //      без регистрации): dayoff[] — нерабочие сверх Сб/Вс,
+    //      predayoff[] — сокращённые, workday[] — рабочие сб/вс,
+    //      holiday[] — праздничные даты. Названия праздников берутся
+    //      из фиксированной карты ТК РФ ст. 112. Источник по умолчанию.
+    //   2) production-calendar.ru/v2 — при наличии ЛИЧНОГО токена
+    //      (бесплатная регистрация, поле в шторке календаря): 89
+    //      регионов РФ (по умолчанию 42 — Кемеровская область —
+    //      Кузбасс), официальные названия праздников и переносов.
+    //      CORS и preflight открыты; гостевой доступ к days ограничен
+    //      четырьмя месяцами в году — потому источник используется
+    //      только с токеном.
+    //   3) Фолбэк без сети/данных: Сб/Вс + фиксированные праздники
+    //      ТК РФ ст. 112 (без переносов) — прежнее поведение.
+    //
+    // Нормы времени считаются ЛОКАЛЬНО по типам дней (проверено на
+    // 2026 годе — совпадает с официальными календарями):
+    //   40-час: рабочие дни × 8 − сокращённые × 1   (2026: 247×8−4=1972)
+    //   36-час: рабочие дни × 7,2 − сокращённые     (2026: 1774,4)
+    //   24-час: рабочие дни × 4,8 − сокращённые     (2026: 1181,6)
+    //
+    // Кэш: localStorage (ключ включает год и регион), TTL автообновления
+    // 7 суток; кнопка «Обновить сейчас» игнорирует TTL. При сбое сети
+    // устаревший кэш продолжает работать (офлайн), при полном отсутствии
+    // данных — фолбэк по Сб/Вс + ст. 112.
+    // ============================================================
+    var ProdCalendar = {
+
+        _SETTINGS_KEY: 'ws_pcal_settings_v1',
+        _CACHE_PREFIX: 'ws_pcal_year_',
+        _TTL_MS: 7 * 24 * 60 * 60 * 1000,
+        _DEFAULT_REGION: 42,
+        _ISDAYOFF_URL: 'https://raw.githubusercontent.com/isdayoff/calendars/main/db/',
+        _PRODCAL_URL: 'https://production-calendar.ru/v2/ru/',
+
+        // Полный список регионов РФ (id:название:тип; тип 2 = есть
+        // региональные праздники, 0 = федеральный календарь).
+        // Источник: production-calendar.ru/v2/ru/regions (без токена).
+        _REGIONS_RAW: '1:Республика Адыгея:2|2:Республика Башкортостан:2|3:Республика Бурятия:2|4:Республика Алтай:2|5:Республика Дагестан:2|6:Республика Ингушетия:2|7:Кабардино-Балкарская Республика:2|8:Республика Калмыкия:2|9:Карачаево-Черкесская Республика:2|10:Республика Карелия:0|11:Республика Коми:2|12:Республика Марий Эл:0|13:Республика Мордовия:0|14:Республика Саха (Якутия):2|15:Республика Северная Осетия — Алания:2|16:Республика Татарстан:2|17:Республика Тыва:2|18:Удмуртская Республика:0|19:Республика Хакасия:0|21:Чувашская Республика:2|22:Алтайский край:0|23:Краснодарский край:2|24:Красноярский край:0|25:Приморский край:0|26:Ставропольский край:2|27:Хабаровский край:0|28:Амурская область:0|29:Архангельская область:0|30:Астраханская область:0|31:Белгородская область:2|32:Брянская область:2|33:Владимирская область:0|34:Волгоградская область:0|35:Вологодская область:0|36:Воронежская область:0|37:Ивановская область:0|38:Иркутская область:2|39:Калининградская область:0|40:Калужская область:0|41:Камчатский край:0|42:Кемеровская область - Кузбасс:0|43:Кировская область:0|44:Костромская область:0|45:Курганская область:0|46:Курская область:0|47:Ленинградская область:0|48:Липецкая область:0|49:Магаданская область:0|50:Московская область:0|51:Мурманская область:0|52:Нижегородская область:0|53:Новгородская область:0|54:Новосибирская область:0|55:Омская область:2|56:Оренбургская область:0|57:Орловская область:0|58:Пензенская область:2|59:Пермский край:0|60:Псковская область:0|61:Ростовская область:0|62:Рязанская область:0|63:Самарская область:0|64:Саратовская область:2|65:Сахалинская область:0|66:Свердловская область:0|67:Смоленская область:0|68:Тамбовская область:2|69:Тверская область:0|70:Томская область:0|71:Тульская область:0|72:Тюменская область:0|73:Ульяновская область:0|74:Челябинская область:0|75:Забайкальский край:2|76:Ярославская область:0|77:Москва:0|78:Санкт-Петербург:0|79:Еврейская АО:0|80:Донецкая Народная Республика:2|81:Луганская Народная Республика:2|82:Республика Крым:2|83:Ненецкий АО:0|84:Херсонская область:2|85:Запорожская область:2|86:Ханты-Мансийский АО — Югра:0|87:Чукотский АО:0|89:Ямало-Ненецкий АО:0|92:Севастополь:2|95:Чеченская Республика:2',
+
+        _REGIONS: null,
+
+        // Нерабочие праздничные дни по ТК РФ ст. 112 (даты фиксированы,
+        // переносы приходят из источников): карта MMDD → название.
+        // Используется и для названий праздников источника isDayOff
+        // (он отдаёт только даты), и как фолбэк без данных.
+        _FIXED_TITLES: {
+            '0101': 'Новогодние каникулы', '0102': 'Новогодние каникулы',
+            '0103': 'Новогодние каникулы', '0104': 'Новогодние каникулы',
+            '0105': 'Новогодние каникулы', '0106': 'Новогодние каникулы',
+            '0107': 'Рождество Христово',  '0108': 'Новогодние каникулы',
+            '0223': 'День защитника Отечества',
+            '0308': 'Международный женский день',
+            '0501': 'Праздник Весны и Труда',
+            '0509': 'День Победы',
+            '0612': 'День России',
+            '1104': 'День народного единства'
+        },
+
+        // Память года: year → нормализованные данные {source,
+        // fetchedAtMs, region, regionName, days:{MMDD:{off,holiday,
+        // short,work,regional,project,title}}}
+        _MEM: {},
+        // Выполняющиеся запросы года (дедупликация параллельных вызовов)
+        _PENDING: {},
+        // Месяц/год, для которых открыта шторка
+        _sy: null,
+        _sm: null,
+
+        // ===== Справочник регионов =====
+
+        regions: function() {
+            if (this._REGIONS) return this._REGIONS;
+            var out = [];
+            try {
+                var parts = String(this._REGIONS_RAW).split('|');
+                for (var i = 0; i < parts.length; i++) {
+                    var seg = parts[i].split(':');
+                    if (seg.length < 2) continue;
+                    var id = parseInt(seg[0], 10);
+                    if (isNaN(id)) continue;
+                    out.push({
+                        id: id,
+                        name: seg[1],
+                        type: parseInt(seg[2] || '0', 10) || 0
+                    });
+                }
+            } catch (e) {}
+            this._REGIONS = out;
+            return out;
+        },
+
+        regionName: function(id) {
+            var list = this.regions();
+            for (var i = 0; i < list.length; i++) {
+                if (list[i].id === id) return list[i].name;
+            }
+            return 'регион ' + id;
+        },
+
+        regionHasRegional: function(id) {
+            var list = this.regions();
+            for (var i = 0; i < list.length; i++) {
+                if (list[i].id === id) return list[i].type === 2;
+            }
+            return false;
+        },
+
+        // ===== Настройки (регион + токен), localStorage =====
+
+        getSettings: function() {
+            var s = { region: this._DEFAULT_REGION, token: '' };
+            try {
+                var raw = (typeof localStorage !== 'undefined' && localStorage.getItem)
+                    ? localStorage.getItem(this._SETTINGS_KEY) : null;
+                if (raw) {
+                    var j = JSON.parse(raw);
+                    if (j && typeof j === 'object') {
+                        var r = parseInt(j.region, 10);
+                        if (!isNaN(r) && r >= 1 && r <= 99) s.region = r;
+                        if (typeof j.token === 'string') s.token = j.token;
+                    }
+                }
+            } catch (e) {}
+            return s;
+        },
+
+        setSettings: function(s) {
+            try {
+                if (typeof localStorage !== 'undefined' && localStorage.setItem) {
+                    localStorage.setItem(this._SETTINGS_KEY, JSON.stringify({
+                        region: s.region, token: s.token || ''
+                    }));
+                }
+            } catch (e) {}
+        },
+
+        // ===== Кэш (localStorage, ключ включает год и регион) =====
+
+        _cacheKey: function(year) {
+            return this._CACHE_PREFIX + year + '_' + this.getSettings().region;
+        },
+
+        _loadCache: function(year) {
+            try {
+                if (typeof localStorage === 'undefined' || !localStorage.getItem) return null;
+                var raw = localStorage.getItem(this._cacheKey(year));
+                if (!raw) return null;
+                var j = JSON.parse(raw);
+                if (!j || !j.days || typeof j.days !== 'object') return null;
+                if (typeof j.fetchedAtMs !== 'number') return null;
+                if (j.source !== 'isdayoff' && j.source !== 'prodcalendar') return null;
+                return j;
+            } catch (e) {
+                return null;
+            }
+        },
+
+        _saveCache: function(year, data) {
+            try {
+                if (typeof localStorage === 'undefined' || !localStorage.setItem) return;
+                localStorage.setItem(this._cacheKey(year), JSON.stringify({
+                    source: data.source,
+                    fetchedAtMs: data.fetchedAtMs,
+                    fetchedAt: new Date(data.fetchedAtMs).toISOString(),
+                    region: data.region,
+                    regionName: data.regionName,
+                    days: data.days
+                }));
+            } catch (e) { /* переполнение хранилища — живём памятью */ }
+        },
+
+        _getYearData: function(year) {
+            if (this._MEM[year]) return this._MEM[year];
+            var cached = this._loadCache(year);
+            if (cached) {
+                this._MEM[year] = cached;
+                return cached;
+            }
+            return null;
+        },
+
+        // ===== Загрузка года (сеть) =====
+
+        // Гарантирует данные года: свежая память → свежий кэш → сеть
+        // (токен production-calendar.ru → isDayOff GitHub). Возвращает
+        // Promise<boolean>: true — пришли НОВЫЕ данные (вызов должен
+        // перерисовать шахматку/чип). При сбое сети молча оставляет
+        // устаревший кэш (офлайн) или фолбэк Сб/Вс.
+        ensureYear: function(year, force) {
+            var self = this;
+            year = parseInt(year, 10);
+            if (isNaN(year) || year < 1990 || year > 2100) {
+                return Promise.resolve(false);
+            }
+            var mem = this._MEM[year];
+            if (!force && mem && (Date.now() - mem.fetchedAtMs) < this._TTL_MS) {
+                return Promise.resolve(false);
+            }
+            if (!force && this._PENDING[year]) {
+                return this._PENDING[year];
+            }
+            if (!force) {
+                var cached = this._loadCache(year);
+                if (cached && (Date.now() - cached.fetchedAtMs) < this._TTL_MS) {
+                    this._MEM[year] = cached;
+                    return Promise.resolve(false);
+                }
+            }
+            var p = this._fetchYear(year).then(function(data) {
+                delete self._PENDING[year];
+                if (data && data.days) {
+                    self._MEM[year] = data;
+                    self._saveCache(year, data);
+                    return true;
+                }
+                self._keepStale(year);
+                return false;
+            }).catch(function() {
+                delete self._PENDING[year];
+                self._keepStale(year);
+                return false;
+            });
+            this._PENDING[year] = p;
+            return p;
+        },
+
+        _keepStale: function(year) {
+            if (!this._MEM[year]) {
+                var stale = this._loadCache(year);
+                if (stale) this._MEM[year] = stale;
+            }
+        },
+
+        _fetchYear: function(year) {
+            var self = this;
+            var settings = this.getSettings();
+            var prodP = settings.token
+                ? this._fetchProdCal(year, settings.region, settings.token)
+                : Promise.resolve(null);
+            return prodP
+                .catch(function() { return null; })
+                .then(function(pcData) {
+                    if (pcData) return pcData;
+                    return self._fetchIsDayOff(year).catch(function() { return null; });
+                });
+        },
+
+        // production-calendar.ru (только с токеном): compact=1 — только
+        // особые дни (~13 КБ/мес с юр. документами, год ~60 КБ),
+        // region=NN — региональный календарь.
+        _fetchProdCal: function(year, region, token) {
+            var self = this;
+            var url = this._PRODCAL_URL + year + '/days?region=' +
+                      encodeURIComponent(region) + '&compact=1';
+            return this._fetchJson(url, { 'Authorization': 'Bearer ' + token })
+                .then(function(json) {
+                    var parsed = self._parseProdCal(json);
+                    if (!parsed) throw new Error('prodcal: ответ ограничен или пуст');
+                    parsed.fetchedAtMs = Date.now();
+                    parsed.region = region;
+                    parsed.regionName = self.regionName(region);
+                    return parsed;
+                });
+        },
+
+        // isDayOff GitHub-зеркало: без регистрации, CORS открыт.
+        _fetchIsDayOff: function(year) {
+            var self = this;
+            var url = this._ISDAYOFF_URL + year + '/ru' + year + '.json';
+            return this._fetchJson(url, null).then(function(json) {
+                var parsed = self._parseIsDayOff(json);
+                if (!parsed) throw new Error('isdayoff: неожиданный формат');
+                parsed.fetchedAtMs = Date.now();
+                var s = self.getSettings();
+                parsed.region = s.region;
+                parsed.regionName = self.regionName(s.region);
+                return parsed;
+            });
+        },
+
+        _fetchJson: function(url, headers) {
+            return new Promise(function(resolve, reject) {
+                if (typeof fetch !== 'function') {
+                    reject(new Error('fetch недоступен'));
+                    return;
+                }
+                var settled = false;
+                var timer = setTimeout(function() {
+                    if (!settled) {
+                        settled = true;
+                        reject(new Error('таймаут запроса'));
+                    }
+                }, 12000);
+                var opts = { cache: 'no-store' };
+                if (headers) opts.headers = headers;
+                fetch(url, opts)
+                    .then(function(r) {
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        return r.json();
+                    })
+                    .then(function(j) {
+                        if (!settled) {
+                            settled = true;
+                            clearTimeout(timer);
+                            resolve(j);
+                        }
+                    })
+                    .catch(function(e) {
+                        if (!settled) {
+                            settled = true;
+                            clearTimeout(timer);
+                            reject(e);
+                        }
+                    });
+            });
+        },
+
+        // ===== Парсеры источников → единый формат days =====
+
+        // isDayOff: {dayoff:[MMDD], predayoff:[MMDD], workday:[MMDD],
+        // holiday:[MMDD], covidday:[MMDD]} (5-дневная неделя).
+        _parseIsDayOff: function(json) {
+            if (!json || typeof json !== 'object' || !Array.isArray(json.dayoff)) {
+                return null;
+            }
+            var days = {};
+            var ensure = function(mmdd) {
+                if (!days[mmdd]) days[mmdd] = {};
+                return days[mmdd];
+            };
+            var lists = [
+                // нерабочие сверх обычных Сб/Вс (праздники + переносы)
+                ['dayoff',    function(rec) { rec.off = 1; }],
+                // праздничные даты (могут совпадать с Сб/Вс — ст. 112)
+                ['holiday',   function(rec) { rec.holiday = 1; }],
+                // сокращённые РАБОЧИЕ дни (предпраздничные)
+                ['predayoff', function(rec) { rec.short = 1; }],
+                // рабочие субботы/воскресенья (перенос рабочего дня)
+                ['workday',   function(rec) { rec.work = 1; delete rec.off; }],
+                // исторические ковидные нерабочие дни
+                ['covidday',  function(rec) { rec.off = 1; }]
+            ];
+            for (var li = 0; li < lists.length; li++) {
+                var key = lists[li][0];
+                var fn = lists[li][1];
+                var arr = json[key];
+                if (!Array.isArray(arr)) continue;
+                for (var i = 0; i < arr.length; i++) {
+                    var mmdd = String(arr[i]);
+                    if (!/^\d{4}$/.test(mmdd)) continue;
+                    fn(ensure(mmdd));
+                }
+            }
+            return { days: days, source: 'isdayoff' };
+        },
+
+        // production-calendar.ru/v2: {status, days:[{date, type:{id},
+        // title, is_project, is_wsch}]} — compact-режим отдаёт только
+        // особые дни. type: 1 раб, 2 выходной, 3 гос. праздник,
+        // 4 региональный праздник, 5 сокращённый, 6 перенесённый
+        // выходной. Гостевое ограничение отдаёт days СТРОКОЙ — это
+        // не массив/объект → парсер вернёт null (источник пропускается).
+        _parseProdCal: function(json) {
+            if (!json || typeof json !== 'object' || json.status !== 'ok') {
+                return null;
+            }
+            var raw = json.days;
+            if (!raw || typeof raw === 'string') return null;
+            var list = [];
+            if (Array.isArray(raw)) {
+                list = raw;
+            } else if (typeof raw === 'object') {
+                for (var k in raw) {
+                    if (raw.hasOwnProperty(k) && raw[k] && typeof raw[k] === 'object') {
+                        list.push(raw[k]);
+                    }
+                }
+            } else {
+                return null;
+            }
+            var days = {};
+            for (var i = 0; i < list.length; i++) {
+                var d = list[i];
+                if (!d || !d.date || !d.type) continue;
+                var m = String(d.date).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (!m) continue;
+                var t = d.type.id;
+                var rec = {};
+                if (t === 2 || t === 3 || t === 4 || t === 6) rec.off = 1;
+                if (t === 3 || t === 4) rec.holiday = 1;
+                if (t === 4) rec.regional = 1;
+                if (t === 5) rec.short = 1;
+                if (t === 1) rec.work = 1;
+                if (d.title) rec.title = String(d.title);
+                if (d.is_project) rec.project = 1;
+                days[m[2] + m[3]] = rec;
+            }
+            return { days: days, source: 'prodcalendar' };
+        },
+
+        // ===== Универсальный доступ к дню =====
+
+        _mmdd: function(month, day) {
+            return (month < 10 ? '0' : '') + month + (day < 10 ? '0' : '') + day;
+        },
+
+        // Сведения о дне по производственному календарю:
+        //   off — день нерабочий (Сб/Вс, праздник, перенесённый выходной;
+        //         рабочие субботы отменяют выходной)
+        //   holiday — гос./региональный праздник (для «*» и подсветки)
+        //   short — сокращённый рабочий день (−1 час)
+        //   work — рабочий день, перенесённый на выходной
+        //   title — название («День Победы», «Выходной (перенесённый)»…)
+        // Без данных (фолбэк): Сб/Вс + фиксированные праздники ст. 112.
+        dayInfo: function(year, month, day) {
+            var mmdd = this._mmdd(month, day);
+            var dw = new Date(year, month - 1, day).getDay();
+            var isWeekend = (dw === 0 || dw === 6);
+            var data = this._getYearData(year);
+            var rec = (data && data.days && data.days[mmdd]) ? data.days[mmdd] : null;
+            var source = data ? data.source : 'fallback';
+
+            // Рабочая суббота/воскресенье: календарь явно отменяет выходной
+            if (rec && rec.work) {
+                var wTitle = rec.title || null;
+                if (!wTitle && isWeekend) wTitle = 'Рабочий день (перенос)';
+                return {
+                    off: false, holiday: false, short: !!rec.short, work: true,
+                    title: wTitle, regional: !!rec.regional, project: !!rec.project,
+                    source: source, hasData: !!data
+                };
+            }
+
+            if (rec) {
+                var off = isWeekend || !!rec.off;
+                var holiday = !!rec.holiday;
+                var short = !!rec.short;
+                var title = rec.title || null;
+                if (!title) {
+                    if (holiday) {
+                        title = this._FIXED_TITLES[mmdd] || 'Праздничный день';
+                    } else if (off && !isWeekend) {
+                        // будний нерабочий день без названия — перенос
+                        title = 'Выходной (перенесённый)';
+                    } else if (short) {
+                        title = 'Сокращённый рабочий день';
+                    }
+                }
+                return {
+                    off: off, holiday: holiday, short: short, work: false,
+                    title: title, regional: !!rec.regional, project: !!rec.project,
+                    source: source, hasData: true
+                };
+            }
+
+            if (data) {
+                // данные есть, день обычный — выходной только если Сб/Вс
+                return {
+                    off: isWeekend, holiday: false, short: false, work: false,
+                    title: null, regional: false, project: false,
+                    source: source, hasData: true
+                };
+            }
+
+            // ФОЛБЭК: данных нет — Сб/Вс + праздники ст. 112 (без переносов)
+            var fx = this._FIXED_TITLES[mmdd] || null;
+            return {
+                off: isWeekend || !!fx, holiday: !!fx, short: false, work: false,
+                title: fx, regional: false, project: false,
+                source: 'fallback', hasData: false
+            };
+        },
+
+        // Статистика месяца по производственному календарю: рабочие/
+        // нерабочие дни, особые дни с названиями, нормы времени
+        // (40/36/24-часовые недели — локальный расчёт по типам дней).
+        monthStats: function(year, month) {
+            var dim = new Date(year, month, 0).getDate();
+            var stats = {
+                year: year, month: month,
+                calendarDays: dim, workDays: 0, offDays: 0, shortened: 0,
+                specialDays: [], hours40: 0, hours36: 0, hours24: 0,
+                hasData: false, source: 'fallback', fetchedAtMs: null
+            };
+            var data = this._getYearData(year);
+            if (data) {
+                stats.hasData = true;
+                stats.source = data.source;
+                stats.fetchedAtMs = data.fetchedAtMs || null;
+            }
+            for (var d = 1; d <= dim; d++) {
+                var info = this.dayInfo(year, month, d);
+                var dw = new Date(year, month - 1, d).getDay();
+                var isWeekend = (dw === 0 || dw === 6);
+                if (info.off) stats.offDays++; else stats.workDays++;
+                if (info.short) stats.shortened++;
+                var kind = null;
+                if (info.holiday && info.regional) kind = 'региональный праздник';
+                else if (info.holiday) kind = 'праздник';
+                else if (info.work) kind = 'рабочий перенос';
+                else if (info.off && !isWeekend) kind = 'перенос';
+                else if (info.short) kind = 'сокращённый';
+                if (kind) {
+                    stats.specialDays.push({
+                        d: d, kind: kind,
+                        title: info.title || '',
+                        project: !!info.project
+                    });
+                }
+            }
+            // Нормы времени: ТК РФ, сокращённые дни −1 час (проверено
+            // на 2026: 247 дн. → 1972 / 1774,4 / 1181,6 ч)
+            stats.hours40 = stats.workDays * 8 - stats.shortened;
+            stats.hours36 = Math.round((stats.workDays * 7.2 - stats.shortened) * 10) / 10;
+            stats.hours24 = Math.round((stats.workDays * 4.8 - stats.shortened) * 10) / 10;
+            return stats;
+        },
+
+        // ===== UI: шторка «Производственный календарь» =====
+
+        openSheet: function() {
+            var y = null, m = null;
+            try {
+                if (typeof WorkSchedule !== 'undefined' && WorkSchedule._year) {
+                    y = WorkSchedule._year;
+                    m = WorkSchedule._month;
+                }
+            } catch (e) {}
+            if (!y) {
+                var now = new Date();
+                y = now.getFullYear();
+                m = now.getMonth() + 1;
+            }
+            this._sy = y;
+            this._sm = m;
+            var overlay = document.getElementById('wsCalOverlay');
+            var sheet = document.getElementById('wsCalSheet');
+            if (overlay) overlay.classList.add('active');
+            if (sheet) sheet.classList.add('active');
+            this._renderSheet();
+            // фоновая проверка свежести (старше TTL — обновим молча)
+            var self = this;
+            this.ensureYear(y, false).then(function(changed) {
+                if (changed) {
+                    self._renderSheet();
+                    self._syncWorkSchedule();
+                }
+            }).catch(function() {});
+        },
+
+        closeSheet: function() {
+            var overlay = document.getElementById('wsCalOverlay');
+            var sheet = document.getElementById('wsCalSheet');
+            if (overlay) overlay.classList.remove('active');
+            if (sheet) sheet.classList.remove('active');
+        },
+
+        // Перерисовать шахматку и чип норм после прихода новых данных
+        _syncWorkSchedule: function() {
+            try {
+                if (typeof WorkSchedule !== 'undefined' && WorkSchedule) {
+                    if (typeof WorkSchedule._updateCalChip === 'function') {
+                        WorkSchedule._updateCalChip();
+                    }
+                    if (WorkSchedule._EMPLOYEES && WorkSchedule._EMPLOYEES.length &&
+                        typeof WorkSchedule._renderGrid === 'function') {
+                        WorkSchedule._renderGrid();
+                    }
+                }
+            } catch (e) {}
+        },
+
+        refreshNow: function() {
+            var self = this;
+            var btn = document.getElementById('wsCalRefreshBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Обновление…'; }
+            this.ensureYear(this._sy, true).then(function() {
+                self._renderSheet();
+                self._syncWorkSchedule();
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    var st = self.monthStats(self._sy, self._sm);
+                    KipToast.show(st.hasData
+                        ? 'Календарь обновлён'
+                        : 'Не удалось обновить: источник недоступен');
+                }
+            }).catch(function() {
+                self._renderSheet();
+            });
+        },
+
+        onRegionChange: function() {
+            var sel = document.getElementById('wsCalRegionSel');
+            if (!sel) return;
+            var val = parseInt(sel.value, 10);
+            var s = this.getSettings();
+            if (!isNaN(val) && val >= 1 && val <= 99) s.region = val;
+            this.setSettings(s);
+            // регион входит в ключ кэша — память под новый регион пуста
+            this._MEM = {};
+            var self = this;
+            this.ensureYear(this._sy, true).then(function() {
+                self._renderSheet();
+                self._syncWorkSchedule();
+            }).catch(function() {
+                self._renderSheet();
+            });
+        },
+
+        saveToken: function() {
+            var input = document.getElementById('wsCalToken');
+            var s = this.getSettings();
+            s.token = input ? String(input.value || '').trim() : '';
+            this.setSettings(s);
+            // токен меняет источник — сбрасываем память и перечитываем
+            this._MEM = {};
+            var self = this;
+            this.ensureYear(this._sy, true).then(function() {
+                self._renderSheet();
+                self._syncWorkSchedule();
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show(s.token
+                        ? 'Токен сохранён: источник production-calendar.ru'
+                        : 'Токен удалён: источник isDayOff');
+                }
+            }).catch(function() {
+                self._renderSheet();
+            });
+        },
+
+        _renderSheet: function() {
+            var bodyEl = document.getElementById('wsCalSheetBody');
+            if (!bodyEl) return;
+            var y = this._sy || new Date().getFullYear();
+            var m = this._sm || (new Date().getMonth() + 1);
+            var st = this.monthStats(y, m);
+            var s = this.getSettings();
+            var monthsNom = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                             'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            var monthsGen = ['января','февраля','марта','апреля','мая','июня',
+                             'июля','августа','сентября','октября','ноября','декабря'];
+            var html = '';
+
+            // Месяц + селект региона (89 регионов, 42 — Кузбасс по умолчанию)
+            var regs = this.regions();
+            var regOpts = '';
+            for (var i = 0; i < regs.length; i++) {
+                regOpts += '<option value="' + regs[i].id + '"' +
+                           (regs[i].id === s.region ? ' selected' : '') + '>' +
+                           this._esc(regs[i].id + ' — ' + regs[i].name) + '</option>';
+            }
+            html += '<div class="ws-cal-row">' +
+                    '<div class="ws-cal-month">' +
+                        this._esc(monthsNom[(m - 1 + 12) % 12] + ' ' + y) + '</div>' +
+                    '<select id="wsCalRegionSel" class="ws-cal-region-sel" ' +
+                        'onchange="ProdCalendar.onRegionChange()" ' +
+                        'title="Регион производственного календаря (региональные праздники)">' +
+                        regOpts + '</select>' +
+                    '</div>';
+
+            // Нормы времени месяца
+            html += '<div class="ws-cal-norms">' +
+                    '<div class="ws-cal-caption">Норма времени, ' +
+                        this._esc(monthsGen[(m - 1 + 12) % 12]).toLowerCase() + '</div>' +
+                    '<div class="ws-cal-norms-grid">' +
+                    '<div>Рабочих дней: <b>' + st.workDays + '</b></div>' +
+                    '<div>Выходных и праздничных: <b>' + st.offDays + '</b></div>' +
+                    '<div>Сокращённых: <b>' + st.shortened + '</b></div>' +
+                    '<div>Календарных: <b>' + st.calendarDays + '</b></div>' +
+                    '<div>40-час. неделя: <b>' + this._fmtHours(st.hours40) + ' ч</b></div>' +
+                    '<div>36-час. неделя: <b>' + this._fmtHours(st.hours36) + ' ч</b></div>' +
+                    '<div>24-час. неделя: <b>' + this._fmtHours(st.hours24) + ' ч</b></div>' +
+                    '</div></div>';
+
+            // Праздники и переносы месяца
+            html += '<div class="ws-cal-days">' +
+                    '<div class="ws-cal-caption">Праздники и переносы</div>';
+            if (st.specialDays.length) {
+                var kindCls = {
+                    'праздник': 'k-hol',
+                    'региональный праздник': 'k-reg',
+                    'перенос': 'k-tr',
+                    'сокращённый': 'k-sh',
+                    'рабочий перенос': 'k-wk'
+                };
+                for (var k = 0; k < st.specialDays.length; k++) {
+                    var sd = st.specialDays[k];
+                    html += '<div class="ws-cal-day">' +
+                            '<span class="ws-cal-day-date">' + sd.d + ' ' +
+                                this._esc(monthsGen[(m - 1 + 12) % 12]) + '</span>' +
+                            '<span class="ws-cal-day-kind ' + (kindCls[sd.kind] || 'k-tr') + '">' +
+                                this._esc(sd.kind) + (sd.project ? ' (прогноз)' : '') + '</span>' +
+                            '<span class="ws-cal-day-title">' + this._esc(sd.title || '') + '</span>' +
+                            '</div>';
+                }
+            } else {
+                html += '<div class="ws-cal-empty">В этом месяце нет праздников и переносов.</div>';
+            }
+            html += '</div>';
+
+            // Источник данных + обновление
+            var srcLabel = this._sourceLabel(st.source);
+            var freshText = 'данных ещё нет';
+            if (st.fetchedAtMs) {
+                freshText = 'обновлено ' + this._fmtDateTime(st.fetchedAtMs);
+                if (Date.now() - st.fetchedAtMs > this._TTL_MS) {
+                    freshText += ' (офлайн-кэш, старше 7 суток)';
+                }
+            }
+            var regNote = this.regionHasRegional(s.region)
+                ? 'У этого региона есть региональные праздники — для их учёта нужен токен production-calendar.ru.'
+                : 'У региона ' + s.region + ' региональных праздников нет — календарь совпадает с федеральным.';
+            html += '<div class="ws-cal-src">' +
+                    '<div class="ws-cal-src-row"><b>Источник:</b> ' + this._esc(srcLabel) +
+                    ' <button type="button" id="wsCalRefreshBtn" class="ws-cal-refresh-btn" ' +
+                        'onclick="ProdCalendar.refreshNow()">Обновить сейчас</button></div>' +
+                    '<div>' + this._esc(freshText) + '. ' + this._esc(regNote) + '</div>' +
+                    (st.source === 'fallback'
+                        ? '<div>Данных нет (нет сети или год ещё не опубликован) — ' +
+                          'выходные считаются по Сб/Вс и праздникам ТК РФ без переносов.</div>'
+                        : '') +
+                    '</div>';
+
+            // Токен расширенного источника
+            html += '<div class="ws-cal-token">' +
+                    '<div class="ws-cal-caption" style="margin-bottom:0;">Расширенный источник (необязательно)</div>' +
+                    '<div class="ws-cal-token-row">' +
+                    '<input type="text" id="wsCalToken" value="' + this._escAttr(s.token) + '" ' +
+                        'placeholder="API-токен production-calendar.ru" autocomplete="off">' +
+                    '<button type="button" onclick="ProdCalendar.saveToken()">Сохранить</button>' +
+                    '</div>' +
+                    '<div class="ws-cal-hint">Бесплатный токен (регистрация на production-calendar.ru) ' +
+                        'включает региональные календари и официальные названия праздников и переносов. ' +
+                        'Токен хранится только на этом устройстве.</div>' +
+                    '</div>';
+
+            bodyEl.innerHTML = html;
+        },
+
+        _sourceLabel: function(source) {
+            if (source === 'prodcalendar') return 'production-calendar.ru';
+            if (source === 'isdayoff') return 'isDayOff (GitHub-зеркало календаря РФ)';
+            return 'нет данных (расчёт по Сб/Вс)';
+        },
+
+        // ===== Утилиты =====
+
+        _fmtHours: function(h) {
+            var r = Math.round(h * 10) / 10;
+            return (r % 1 === 0) ? String(r) : String(r).replace('.', ',');
+        },
+
+        _fmtDateTime: function(ms) {
+            var d = new Date(ms);
+            var p2 = function(v) { return (v < 10 ? '0' : '') + v; };
+            return p2(d.getDate()) + '.' + p2(d.getMonth() + 1) + '.' + d.getFullYear() +
+                   ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes());
         },
 
         _esc: function(s) {
