@@ -330,9 +330,13 @@
        все кнопки в колонке должны быть одинаковой высоты независимо от длины текста.
        grid-auto-rows: 1fr в Grid без фиксированной высоты делает все неявные строки
        равными по высоте самой высокой строке. min-height дополнительно страхует
-       от слишком узких кнопок на коротких подписях. */
+       от слишком узких кнопок на коротких подписях.
+       Task 267: то же самое — на странице Документация ИОС (page-docs-ios),
+       где обе кнопки («Расходомеры хозрасчётные» и «График работы») теперь
+       в ОДНОМ .menu-btn-row и размещаются сеткой автоматически, как в Библиотеке. */
     #page-library-internal .menu-btn-row,
-    #page-library-electro .menu-btn-row { grid-auto-rows: 1fr; }
+    #page-library-electro .menu-btn-row,
+    #page-docs-ios .kip-ios-block .menu-btn-row { grid-auto-rows: 1fr; }
     #page-library-internal .menu-btn,
     #page-library-electro .menu-btn { min-height: 80px; align-items: center; }
     #page-docs-ios .menu-btn { min-height: 80px; align-items: center; }
@@ -3011,7 +3015,10 @@
     .flow-empty-text { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
     .flow-empty-hint { font-size: 12px; }
     /* Task 238: состояния «Загрузка данных…» (с анимированными точками)
-       и «Нет связи с сервером» (ошибка сети/сервера) для расходомеров. */
+       и «Нет связи с сервером» (ошибка сети/сервера) для расходомеров.
+       Task 267: классы .flow-loading-dots / @keyframes flowLoadingDot
+       переиспользуются в «Графике работы» — «Загрузка…» шахматки с
+       бегущими точками (статический HTML #wsEmpty + loadGrid()). */
     .flow-loading {
         text-align: center;
         padding: 40px 20px;
@@ -11146,10 +11153,13 @@
             <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Документация ИОС</div></div>
 
             <div class="kip-ios-block">
+                <!-- Task 267: обе кнопки в ОДНОМ .menu-btn-row — автоматическое
+                     размещение по сетке, как на странице «Библиотека КИП и А»
+                     (десктоп ≥1024px — 3 колонки слева направо, мобильный —
+                     колонка). Раньше каждая кнопка жила в своём .menu-btn-row
+                     и на десктопе занимала отдельную строку. -->
                 <div class="menu-btn-row">
                     <div id="flowmeterMenuBtn" class="menu-btn" onclick="navigateTo('flowmeter-data')" style="cursor: pointer;"><div class="menu-btn-text"><div class="menu-btn-label">Расходомеры хозрасчётные</div><div class="menu-btn-sublabel">Накопительные расходы и показания</div></div><svg class="menu-btn-arrow" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: rgba(255,255,255,0.12); fill: none; stroke-width: 2; stroke-linecap: round;"><polyline points="9 18 15 12 9 6"/></svg></div>
-                </div>
-                <div class="menu-btn-row">
                     <div id="workScheduleMenuBtn" class="menu-btn" onclick="navigateTo('work-schedule')" style="cursor: pointer;"><div class="menu-btn-text"><div class="menu-btn-label">График работы</div><div class="menu-btn-sublabel">Шахматка сменного и дневного персонала</div></div><svg class="menu-btn-arrow" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: rgba(255,255,255,0.12); fill: none; stroke-width: 2; stroke-linecap: round;"><polyline points="9 18 15 12 9 6"/></svg></div>
                 </div>
             </div>
@@ -11218,7 +11228,10 @@
                 <div id="wsCalPanel" class="ws-cal-panel" hidden></div>
             </div>
             <div id="wsGridWrap" class="ws-grid-wrap">
-                <div class="admin-empty" id="wsEmpty">Загрузка…</div>
+                <!-- Task 267: «Загрузка…» с анимированными точками (те же
+                     .flow-loading-dots, что у расходомеров); loadGrid()
+                     ставит идентичную разметку при каждой загрузке месяца -->
+                <div class="admin-empty" id="wsEmpty">Загрузка<span class="flow-loading-dots"><span>.</span><span>.</span><span>.</span></span></div>
             </div>
         </div>
 
@@ -22489,13 +22502,16 @@
                                             // (был 'calculators' — крошки показывали
                                             // «Главная / Инженерные калькуляторы / Сапёр»)
         'admin':            'dashboard',
-        // Task 249: График работы — корневой раздел (как Сапёр/Справочник).
-        // Без записи здесь buildBreadcrumbPath давал путь ['work-schedule'],
-        // а без записи в PAGE_LABELS крошки показывали raw id:
-        // «Главная / work-schedule» вместо «Главная / График работы».
-        // Подразделы (сотрудники/инструктажи) получают родителя для пути
-        // «Главная / График работы / <Подраздел>».
-        'work-schedule':            'dashboard',
+        // Task 249: хлебные крошки страниц Графика работы получили записи
+        // в PAGE_PARENTS/PAGE_LABELS (до фикса показывали raw id «Главная /
+        // work-schedule»). Task 267: «График работы» — ПОДРАЗДЕЛ «Документации
+        // ИОС» (его кнопка живёт на page-docs-ios, рядом с «Расходомерами
+        // хозрасчётные»), поэтому крошки показывают ПОЛНУЮ цепочку
+        // «Главная / Документация / Документация ИОС / График работы»
+        // (в Task 249 раздел был корневым — цепочка была укороченной
+        // «Главная / График работы»). Подразделы (сотрудники/инструктажи)
+        // получают родителя work-schedule: «… / График работы / <Подраздел>».
+        'work-schedule':            'docs-ios',
         'work-schedule-employees':  'work-schedule',
         'work-schedule-trainings':  'work-schedule',
         // Инженерные калькуляторы
@@ -22814,6 +22830,11 @@
         'docs-ios':      { label: 'Документация ИОС',         sublabel: 'Документация и оперативные данные',              target: 'docs-ios',      category: 'docs' },
         // ===== Документация ИОС — подразделы (страница page-docs-ios) =====
         'flowmeter-data': { label: 'Расходомеры хозрасчётные', sublabel: 'Накопительные расходы и показания',             target: 'flowmeter-data',category: 'docs' },
+        // Task 267: «График работы» можно закрепить на главной — свайп
+        // кнопки на странице «Документация ИОС» (по примеру «Расходомеров
+        // хозрасчётные»): wrapSubsectionItems оборачивает кнопку в
+        // .subsection-cell, т.к. ключ появился в этом реестре
+        'work-schedule':  { label: 'График работы',              sublabel: 'Шахматка сменного и дневного персонала',          target: 'work-schedule',  category: 'docs' },
         // ===== КИП ИОС — подразделы (страница page-kip-ios) =====
         'devices':       { label: 'Приборы',                  sublabel: 'Перечень КИП ИОС — 1312 приборов',              target: 'devices',       category: 'docs' },
         'lockouts':      { label: 'Блокировки',               sublabel: 'По производствам',                               target: 'lockouts-prod', category: 'docs' },
@@ -34367,7 +34388,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         loadGrid: function() {
             var self = this;
             var wrapEl = document.getElementById('wsGridWrap');
-            if (wrapEl) wrapEl.innerHTML = '<div class="admin-empty" id="wsEmpty">Загрузка…</div>';
+            // Task 267: анимированные точки «Загрузка…» (по примеру
+            // расходомеров — те же классы .flow-loading-dots)
+            if (wrapEl) wrapEl.innerHTML = '<div class="admin-empty" id="wsEmpty">Загрузка<span class="flow-loading-dots"><span>.</span><span>.</span><span>.</span></span></div>';
 
             Promise.all([
                 this._loadEmployees(),
