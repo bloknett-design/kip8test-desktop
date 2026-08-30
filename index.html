@@ -11165,7 +11165,7 @@
                         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                         <span id="wsCalChipText">Календарь</span>
                     </button>
-                    <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateMonth()" hidden>Сформировать</button>
+                    <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateMonth()" title="Сформировать шахматку на выбранный месяц — откроется диалог подтверждения" hidden>Сформировать</button>
                     <!-- Task 251: кнопка пакетного сохранения накопленных локальных
                          изменений шахматки (появляется при наличии несохранённых правок) -->
                     <button type="button" id="wsSaveBtn" class="ws-save-btn" onclick="WorkSchedule.saveAll()" hidden>Сохранить</button>
@@ -24932,27 +24932,62 @@ function _kipDialogClose(ov, resolve, value) {
 /**
  * Кастомный confirm-диалог.
  * @param {string} msg — текст вопроса
- * @param {object} [opts] — { danger: true } — красная кнопка OK
+ * @param {object} [opts] — { danger: true } — красная кнопка OK;
+ *   { title } — заголовок (по умолчанию «Подтвердите действие»);
+ *   { okText } — надпись кнопки подтверждения (по умолчанию «OK»);
+ *   { cancelText } — надпись кнопки отмены (по умолчанию «Отмена»)
  * @returns {Promise<boolean>}
  */
+// Task 265: настройки заголовка/кнопок + клавиатура (Escape — отмена,
+// Enter — подтверждение; если фокус на кнопке диалога — Enter жмёт её,
+// а не глобальный обработчик). Повторное срабатывание защищено.
 function kipConfirm(msg, opts) {
     opts = opts || {};
     return new Promise(function(resolve) {
         var ov = _kipDialogOverlay();
         var dangerCls = opts.danger ? ' danger' : '';
+        var title = (opts.title != null && String(opts.title)) || 'Подтвердите действие';
+        var okText = (opts.okText != null && String(opts.okText)) || 'OK';
+        var cancelText = (opts.cancelText != null && String(opts.cancelText)) || 'Отмена';
         ov.innerHTML =
             '<div class="kip-dialog">' +
-                '<div class="kip-dialog-title">Подтвердите действие</div>' +
+                '<div class="kip-dialog-title">' + _kipDialogEsc(title) + '</div>' +
                 '<div class="kip-dialog-msg">' + (msg || '').replace(/</g,'&lt;') + '</div>' +
                 '<div class="kip-dialog-btns">' +
-                    '<button type="button" class="kip-dialog-btn kip-dialog-cancel">Отмена</button>' +
-                    '<button type="button" class="kip-dialog-btn kip-dialog-ok' + dangerCls + '">OK</button>' +
+                    '<button type="button" class="kip-dialog-btn kip-dialog-cancel">' + _kipDialogEsc(cancelText) + '</button>' +
+                    '<button type="button" class="kip-dialog-btn kip-dialog-ok' + dangerCls + '">' + _kipDialogEsc(okText) + '</button>' +
                 '</div>' +
             '</div>';
-        ov.querySelector('.kip-dialog-cancel').onclick = function() { _kipDialogClose(ov, resolve, false); };
-        ov.querySelector('.kip-dialog-ok').onclick = function() { _kipDialogClose(ov, resolve, true); };
+        var settled = false;
+        var onKey = function(e) {
+            var t = e && e.target;
+            var fromBtn = t && t.closest ? t.closest('.kip-dialog-btn') : null;
+            if (e.key === 'Escape') done(false);
+            else if (e.key === 'Enter' && !fromBtn) done(true);
+        };
+        var cleanup = function() {
+            document.removeEventListener('keydown', onKey);
+        };
+        var done = function(value) {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            _kipDialogClose(ov, resolve, value);
+        };
+        ov.querySelector('.kip-dialog-cancel').onclick = function() { done(false); };
+        ov.querySelector('.kip-dialog-ok').onclick = function() { done(true); };
+        document.addEventListener('keydown', onKey);
         requestAnimationFrame(function() { ov.classList.add('active'); });
     });
+}
+
+/** Экранирование заголовка/надписей кнопок диалога (Task 265). */
+function _kipDialogEsc(s) {
+    return String(s === null || s === undefined ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
 }
 
 /**
@@ -34722,9 +34757,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var self = this;
             var monthName = ['','Январь','Февраль','Март','Апрель','Май','Июнь',
                               'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            // Task 265: формирование запускается ТОЛЬКО через диалог
+            // подтверждения: заголовок «Формирование шахматки», кнопка
+            // действия «Сформировать» (Escape — отмена, Enter — OK).
+            // Кнопка «Сформировать» в тулбаре ничего не делает без
+            // явного подтверждения.
             if (typeof kipConfirm === 'function') {
                 kipConfirm('Сформировать шахматку на ' + monthName[this._month] + ' ' + this._year + '?\n' +
-                           'Существующие ручные правки будут сохранены. Плановые смены и инструктажи заполнятся автоматически.')
+                           'Существующие ручные правки будут сохранены. Плановые смены и инструктажи заполнятся автоматически.',
+                           { title: 'Формирование шахматки', okText: 'Сформировать' })
                     .then(function(ok) {
                         if (!ok) return;
                         self._doGenerate();
