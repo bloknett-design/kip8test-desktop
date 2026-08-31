@@ -4692,6 +4692,118 @@
         cursor: pointer;
     }
 
+    /* === Task 274: отпуска — страница, субнавигация, план в ячейках === */
+
+    /* Субнавигация модуля «График работы»: полоса под тулбаром
+       (шахматка) или под заголовком страницы — переходы между
+       шахматкой и справочными страницами (Сотрудники /
+       Инструктажи / Отпуска). Активный пункт подсвечен,
+       переносятся на новый ряд при нехватке места (мобильный). */
+    .ws-subnav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 7px 12px;
+        border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.08));
+    }
+    .ws-subnav-btn {
+        background: transparent;
+        border: 1px solid var(--border-subtle, rgba(255,255,255,0.14));
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .ws-subnav-btn:hover {
+        color: var(--text-primary, #e0e0e0);
+        border-color: rgba(255,255,255,0.3);
+    }
+    .ws-subnav-btn.active {
+        background: rgba(74, 143, 199, 0.18);
+        border-color: rgba(74, 143, 199, 0.45);
+        color: var(--accent-blue, #4a8fc7);
+    }
+
+    /* Строка «год + сводка» на странице «Отпуска» */
+    .ws-vac-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px 2px;
+    }
+    .ws-vac-summary {
+        font-size: 12px;
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+    }
+
+    /* Карточка сотрудника на странице «Отпуска» (база — .ws-tr-card):
+       заголовок с таб.№/ФИО/итогом дней + строки частей периода */
+    .ws-vac-card .ws-vac-card-header {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+    .ws-vac-card .ws-vac-card-header .ws-fio {
+        color: var(--text-primary, #e0e0e0);
+        font-weight: 600;
+        font-size: 14px;
+    }
+    .ws-vac-card .ws-vac-total {
+        margin-left: auto;
+        font-size: 11px;
+        color: var(--text-secondary, rgba(255,255,255,0.6));
+    }
+    .ws-vac-card .ws-vac-part {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 5px 0 1px;
+        border-top: 1px dashed var(--border-subtle, rgba(255,255,255,0.08));
+    }
+    .ws-vac-card .ws-vac-part:first-of-type { border-top: none; }
+    .ws-vac-badge {
+        display: inline-block;
+        padding: 1px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+    .ws-vac-badge.p1 { background: rgba(74, 143, 199, 0.18);  color: #6fa8d6; }
+    .ws-vac-badge.p2 { background: rgba(255, 193, 7, 0.16);   color: #ffd54f; }
+    .ws-vac-badge.p3 { background: rgba(126, 90, 184, 0.2);   color: #b39ddb; }
+    .ws-vac-card .ws-vac-dates {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-primary, #e0e0e0);
+    }
+    .ws-vac-card .ws-vac-days,
+    .ws-vac-card .ws-vac-comment {
+        font-size: 11px;
+        color: var(--text-secondary, rgba(255,255,255,0.6));
+    }
+
+    /* Форма «Новый отпуск»: строка дней периода и подсказка */
+    .ws-vac-form-info {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary, #e0e0e0);
+        padding: 2px 2px 8px;
+    }
+    .ws-vac-form-hint {
+        font-size: 11px;
+        line-height: 1.45;
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+        background: var(--info-box-bg, rgba(13, 17, 23, 0.5));
+        border-radius: 6px;
+        padding: 8px 10px;
+        margin-bottom: 10px;
+    }
+
     /* Светлая тема: график */
     [data-theme="light"] .ws-month-sel,
     [data-theme="light"] .ws-year-sel,
@@ -4742,9 +4854,63 @@
     [data-theme="light"] .ws-tr-card .ws-tr-meta {
         color: #666;
     }
+    /* Task 274: светлая тема — субнавигация и отпуска */
+    [data-theme="light"] .ws-subnav {
+        border-bottom-color: rgba(20, 20, 19, 0.1);
+    }
+    [data-theme="light"] .ws-subnav-btn {
+        border-color: rgba(20, 20, 19, 0.16);
+        color: var(--text-secondary, rgba(20, 20, 19, 0.65));
+    }
+    [data-theme="light"] .ws-subnav-btn:hover {
+        color: var(--text-primary, #141413);
+        border-color: rgba(20, 20, 19, 0.35);
+    }
+    [data-theme="light"] .ws-subnav-btn.active {
+        background: rgba(198, 97, 63, 0.12);
+        border-color: rgba(198, 97, 63, 0.4);
+        color: #C6613F;
+    }
+    [data-theme="light"] .ws-vac-summary,
+    [data-theme="light"] .ws-vac-card .ws-vac-days,
+    [data-theme="light"] .ws-vac-card .ws-vac-comment,
+    [data-theme="light"] .ws-vac-card .ws-vac-total {
+        color: #666;
+    }
+    [data-theme="light"] .ws-vac-card .ws-vac-dates,
+    [data-theme="light"] .ws-vac-form-info {
+        color: #333;
+    }
+    [data-theme="light"] .ws-vac-badge.p1 { background: rgba(74, 143, 199, 0.14); color: #2a5d8f; }
+    [data-theme="light"] .ws-vac-badge.p2 { background: rgba(255, 193, 7, 0.18);  color: #9c6f00; }
+    [data-theme="light"] .ws-vac-badge.p3 { background: rgba(126, 90, 184, 0.14); color: #6a4aa0; }
+    [data-theme="light"] .ws-vac-form-hint {
+        background: rgba(20, 20, 19, 0.04);
+        color: rgba(20, 20, 19, 0.6);
+    }
     [data-theme="light"] .ws-cell-info {
         background: rgba(0, 0, 0, 0.04);
         color: #555;
+    }
+
+    /* План отпуска в ПУСТОЙ ячейке шахматки (Task 274): период
+       задан в листе «Отпуска», записи ещё нет (до «Сформировать»).
+       Код «О» на светлом фоне отпуска + ПУНКТИРНАЯ рамка (outline —
+       как у несохранённых правок) — отличима и от пустой ячейки, и
+       от сохранённой записи «О». Правило расположено ПОСЛЕ светлой
+       темы: правило-«конкурент» [data-theme=light] .ws-cell той же
+       специфичности, а класс ws-status-empty плану не ставится —
+       правило выходных дней не срабатывает. */
+    .ws-grid tbody td.ws-cell.ws-vac-plan {
+        background: #ECEFF1;
+        color: #546e7a;
+        font-weight: 700;
+        outline: 2px dashed rgba(74, 143, 199, 0.7);
+        outline-offset: -2px;
+    }
+    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-vac-plan {
+        color: #37474f;
+        outline-color: rgba(198, 97, 63, 0.7);
     }
 
     /* === Task 250: десктоп (≥1024px) — дашборд «График работы» занимает
@@ -11192,6 +11358,16 @@
                      скролл внутри. Заполняет ProdCalendar.renderPanel() -->
                 <div id="wsCalPanel" class="ws-cal-panel" hidden></div>
             </div>
+            <!-- Task 274: субнавигация модуля «График работы» — переходы
+                 между шахматкой и справочными страницами (раньше
+                 «Сотрудники» и «Инструктажи» были достижимы только по
+                 прямой ссылке). Активный пункт подсвечен. -->
+            <div class="ws-subnav">
+                <button type="button" class="ws-subnav-btn active" onclick="navigateTo('work-schedule')">Шахматка</button>
+                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-employees')">Сотрудники</button>
+                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-trainings')">Инструктажи</button>
+                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-vacations')">Отпуска</button>
+            </div>
             <div id="wsGridWrap" class="ws-grid-wrap">
                 <!-- Task 267/269: «Загрузка…» с анимированными точками и
                      ШРИФТОМ КАК У РАСХОДОМЕРОВ — та же связка классов
@@ -11209,6 +11385,12 @@
                 <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
                 <div class="page-inline-header-title">Сотрудники</div>
             </div>
+            <div class="ws-subnav">
+                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule')">Шахматка</button>
+                <button type="button" class="ws-subnav-btn active" onclick="navigateTo('work-schedule-employees')">Сотрудники</button>
+                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-trainings')">Инструктажи</button>
+                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-vacations')">Отпуска</button>
+            </div>
             <div id="wsEmployeesList" class="ws-employees-list">
                 <div class="admin-empty" id="wsEmployeesEmpty">Загрузка…</div>
             </div>
@@ -11223,11 +11405,44 @@
                 <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
                 <div class="page-inline-header-title">Инструктажи и обучения</div>
             </div>
+            <div class="ws-subnav">
+                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule')">Шахматка</button>
+                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-employees')">Сотрудники</button>
+                <button type="button" class="ws-subnav-btn active" onclick="navigateTo('work-schedule-trainings')">Инструктажи</button>
+                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-vacations')">Отпуска</button>
+            </div>
             <div id="wsTrainingsList" class="ws-trainings-list">
                 <div class="admin-empty" id="wsTrainingsEmpty">Загрузка…</div>
             </div>
             <div class="ws-add-bar" id="wsAddTrainingBar" hidden>
                 <button type="button" class="ws-add-btn" onclick="WorkSchedule.openTrainingForm()">+ Добавить мероприятие</button>
+            </div>
+        </div>
+
+        <!-- ======================== ГРАФИК РАБОТЫ — отпуска (план периодов, Task 274) ======================== -->
+        <!-- Лист «Отпуска» таблицы табель_КИП_ИОС: периоды 2–3 частей
+             на год. Управление — здесь; расстановка в шахматке —
+             кнопкой «Сформировать» (авто-«О» в Записи_графика). -->
+        <div id="page-work-schedule-vacations" class="page-content">
+            <div class="page-inline-header">
+                <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
+                <div class="page-inline-header-title">Отпуска</div>
+            </div>
+            <div class="ws-subnav">
+                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule')">Шахматка</button>
+                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-employees')">Сотрудники</button>
+                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-trainings')">Инструктажи</button>
+                <button type="button" class="ws-subnav-btn active" onclick="navigateTo('work-schedule-vacations')">Отпуска</button>
+            </div>
+            <div class="ws-vac-toolbar">
+                <select id="wsVacYearSel" class="ws-month-sel" onchange="WorkSchedule.onVacYearChange()" title="Год плана отпусков"></select>
+                <span id="wsVacSummary" class="ws-vac-summary">—</span>
+            </div>
+            <div id="wsVacationsList" class="ws-trainings-list">
+                <div class="admin-empty" id="wsVacationsEmpty">Загрузка…</div>
+            </div>
+            <div class="ws-add-bar" id="wsAddVacationBar" hidden>
+                <button type="button" class="ws-add-btn" onclick="WorkSchedule.openVacationForm()">+ Добавить отпуск</button>
             </div>
         </div>
 
@@ -14088,6 +14303,46 @@
     <textarea id="wsTrComment" class="flow-comment-field" rows="2" maxlength="500" placeholder="Комментарий (необязательно)" autocomplete="off"></textarea>
     <button type="button" class="flow-input-submit" onclick="WorkSchedule.submitTrainingForm()">Добавить</button>
     <button type="button" class="flow-input-cancel" onclick="WorkSchedule.closeTrainingForm()">Отмена</button>
+</div>
+
+<!-- ===== Task 274: Bottom sheet — добавление периода отпуска (workSchedule) ===== -->
+<!-- Часть 1..3 (отпуска делятся на 2–3 части в год), даты периода.
+     «Часть» автоматически подставляется первым свободным номером
+     выбранного сотрудника (onVacEmployeeChange). Дней считается от
+     дат. Расстановка «О» в шахматке — кнопкой «Сформировать». -->
+<div id="wsVacOverlay" class="pin-sheet-overlay" onclick="WorkSchedule.closeVacationForm()"></div>
+<div id="wsVacSheet" class="flow-input-sheet" style="max-height: 90vh; overflow-y: auto;">
+    <div class="flow-input-sheet-handle"></div>
+    <div class="flow-input-sheet-title">Новый отпуск</div>
+    <div class="flow-input-row">
+        <div class="flow-input-group" style="flex:0 0 35%;">
+            <label class="flow-input-label" for="wsVacTabNo">Таб. №</label>
+            <select id="wsVacTabNo" class="flow-input-field-small" onchange="WorkSchedule.onVacEmployeeChange()"></select>
+        </div>
+        <div class="flow-input-group" style="flex:1 1 65%;">
+            <label class="flow-input-label" for="wsVacPart">Часть отпуска</label>
+            <select id="wsVacPart" class="flow-input-field-small">
+                <option value="1">1 — первая часть</option>
+                <option value="2">2 — вторая часть</option>
+                <option value="3">3 — третья часть</option>
+            </select>
+        </div>
+    </div>
+    <div class="flow-input-row">
+        <div class="flow-input-group">
+            <label class="flow-input-label" for="wsVacStart">Дата начала</label>
+            <input type="date" id="wsVacStart" class="flow-input-field-small" onchange="WorkSchedule.onVacDatesChange()">
+        </div>
+        <div class="flow-input-group">
+            <label class="flow-input-label" for="wsVacEnd">Дата окончания</label>
+            <input type="date" id="wsVacEnd" class="flow-input-field-small" onchange="WorkSchedule.onVacDatesChange()">
+        </div>
+    </div>
+    <div class="ws-vac-form-info" id="wsVacDaysInfo">Период: —</div>
+    <div class="ws-vac-form-hint">Отпуск делится на 2–3 части в год, одна из частей — не менее 14 календарных дней (ст. 125 ТК РФ). Дни периода отметятся в шахматке кодом «О» после нажатия «Сформировать».</div>
+    <textarea id="wsVacComment" class="flow-comment-field" rows="2" maxlength="500" placeholder="Комментарий (необязательно)" autocomplete="off"></textarea>
+    <button type="button" class="flow-input-submit" onclick="WorkSchedule.submitVacationForm()">Добавить</button>
+    <button type="button" class="flow-input-cancel" onclick="WorkSchedule.closeVacationForm()">Отмена</button>
 </div>
 
 <script>
@@ -22161,6 +22416,10 @@
         if (page === 'work-schedule-trainings') {
             setTimeout(() => { if (typeof WorkSchedule !== 'undefined') WorkSchedule.initTrainingsPage(); }, 30);
         }
+        // Task 274: страница «Отпуска» — план периодов отпусков
+        if (page === 'work-schedule-vacations') {
+            setTimeout(() => { if (typeof WorkSchedule !== 'undefined') WorkSchedule.initVacationsPage(); }, 30);
+        }
         if (page === 'plan-114') { setTimeout(() => { if (typeof plan114RenderList === 'function') plan114RenderList(); }, 30); }
         if (page === 'charts') { setTimeout(() => { if (typeof KipCharts !== 'undefined') KipCharts.onPageOpen(); }, 30); }
         if (TICKET_IDS.includes(page)) { setTimeout(() => initTicketsPage(page), 30); }
@@ -22477,6 +22736,7 @@
         'work-schedule':            'docs-ios',
         'work-schedule-employees':  'work-schedule',
         'work-schedule-trainings':  'work-schedule',
+        'work-schedule-vacations':  'work-schedule',
         // Инженерные калькуляторы
         'calc-kipa':        'calculators',
         'calc-electro':     'calculators',
@@ -22670,6 +22930,7 @@
         'work-schedule':            'График работы',
         'work-schedule-employees':  'Сотрудники',
         'work-schedule-trainings':  'Инструктажи и обучения',
+        'work-schedule-vacations':  'Отпуска',
         'admin':            'Админ-панель',
         'admin-users':      'Пользователи',
         'admin-sessions':   'Активные сессии',
@@ -27828,7 +28089,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 201: График работы — 3 страницы (шахматка + сотрудники + инструктажи)
         // Task 204: доступен ТОЛЬКО Админу (как и _CHARTS_PAGES).
         // READ_ROLES/WRITE_ROLES в WorkSchedule.gs также ограничены до ['Админ'].
-        _WORK_SCHEDULE_PAGES: ['work-schedule', 'work-schedule-employees', 'work-schedule-trainings'],
+        _WORK_SCHEDULE_PAGES: ['work-schedule', 'work-schedule-employees',
+                               'work-schedule-trainings', 'work-schedule-vacations'],
         // Графики КИП ИОС — отдельная группа доступа (только Админ)
         _CHARTS_PAGES: ['charts'],
         _SECRET_PAGES: ['minesweeper', 'phonebook'],
@@ -34143,11 +34405,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     //   workSchedule.addEmployee         — добавить сотрудника
     //   workSchedule.addTraining         — добавить мероприятие
     //   workSchedule.deleteTraining      — удалить мероприятие
+    //   workSchedule.listVacations       — план отпусков года (Task 274,
+    //                                      лист «Отпуска» табель_КИП_ИОС)
+    //   workSchedule.addVacation         — добавить период (часть 1..3)
+    //   workSchedule.deleteVacation      — удалить период
     //
     // Страницы:
     //   #page-work-schedule              — шахматка на месяц
     //   #page-work-schedule-employees    — справочник сотрудников
     //   #page-work-schedule-trainings     — инструктажи/обучения/проверки
+    //   #page-work-schedule-vacations     — отпуска (план периодов, Task 274)
     // ============================================================
 
     var WorkSchedule = {
@@ -34161,6 +34428,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _TRAININGS: [],
         _PATTERNS: [],
         _STATUS_CODES: [],
+        // Task 274: план отпусков (лист «Отпуска» табель_КИП_ИОС).
+        // _VACATIONS — периоды года ШАХМАТКИ (план «О» в пустых
+        // ячейках, грузится в loadGrid вместе с записями);
+        // _VAC_PAGE — периоды года страницы «Отпуска» (свой селект года)
+        _VACATIONS: [],
+        _VAC_PAGE: [],
+        _vacYear: null,
 
         _year: null,
         _month: null,
@@ -34350,6 +34624,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 });
         },
 
+        // Task 274: план отпусков года шахматки (лист «Отпуска»).
+        // Ошибка (листа/эндпоинта ещё нет — до деплоя серверной части)
+        // НЕ ломает шахматку: промис резолвится пустым списком.
+        _loadVacations: function() {
+            var self = this;
+            return this._api('workSchedule.listVacations', { year: this._year })
+                .then(function(data) {
+                    self._VACATIONS = data.vacations || [];
+                })
+                .catch(function() {
+                    self._VACATIONS = [];
+                });
+        },
+
         loadGrid: function() {
             var self = this;
             var wrapEl = document.getElementById('wsGridWrap');
@@ -34360,7 +34648,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             Promise.all([
                 this._loadEmployees(),
                 this._loadEntries(),
-                this._loadTrainings()
+                this._loadTrainings(),
+                // Task 274: план отпусков — с собственным catch, сбой
+                // не блокирует рендер сетки
+                this._loadVacations()
             ]).then(function() {
                 self._renderGrid();
                 // Task 260: чип норм месяца в тулбаре
@@ -34438,6 +34729,71 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 idx[e['дата'] + '|' + e['таб_номер']] = e;
             }
             return idx;
+        },
+
+        // ============================================================
+        // Task 274: хелперы плана отпуска
+        // ============================================================
+
+        // Период отпуска, покрывающий дату (ISO-строки сравниваются
+        // лексикографически = хронологически). null — даты нет в плане.
+        _vacationAt: function(isoDate, tabNo) {
+            for (var i = 0; i < this._VACATIONS.length; i++) {
+                var v = this._VACATIONS[i];
+                if (v['таб_номер'] !== tabNo) continue;
+                if (isoDate >= v.дата_начала && isoDate <= v.дата_окончания) return v;
+            }
+            return null;
+        },
+
+        // Длительность периода в календарных днях (включительно)
+        _vacDays: function(v) {
+            var s = this._parseIsoLocal(v.дата_начала);
+            var e = this._parseIsoLocal(v.дата_окончания) || s;
+            if (!s || !e) return 0;
+            return Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
+        },
+
+        // Дни периода, попадающие в указанный год (для периодов,
+        // пересекающих границу года: 29.12–11.01 → 3 дн. в старом,
+        // 11 дн. в новом). Итоги года считаются по этим дням.
+        _vacDaysInYear: function(v, year) {
+            var s = this._parseIsoLocal(v.дата_начала);
+            var e = this._parseIsoLocal(v.дата_окончания) || s;
+            if (!s || !e) return 0;
+            var yStart = new Date(year, 0, 1);
+            var yEnd = new Date(year + 1, 0, 1);
+            var from = Math.max(s.getTime(), yStart.getTime());
+            var to = Math.min(e.getTime(), yEnd.getTime() - 1);
+            if (to < from) return 0;
+            return Math.floor(to / 86400000) - Math.floor(from / 86400000) + 1;
+        },
+
+        // ISO YYYY-MM-DD → Date (локальная полночь, без сдвига TZ)
+        _parseIsoLocal: function(iso) {
+            if (!iso) return null;
+            var p = String(iso).split('-');
+            if (p.length !== 3) return null;
+            var y = parseInt(p[0], 10), m = parseInt(p[1], 10), d = parseInt(p[2], 10);
+            if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
+            return new Date(y, m - 1, d);
+        },
+
+        // ISO → «01.06.2026» (дата в карточках отпусков)
+        _fmtDateRu: function(iso) {
+            if (!iso) return '—';
+            var p = String(iso).split('-');
+            return p.length === 3 ? (p[2] + '.' + p[1] + '.' + p[0]) : String(iso);
+        },
+
+        // Русская форма множественного: 1 часть / 2 части / 5 частей
+        _plural: function(n, forms) {
+            var a = Math.abs(n) % 100;
+            var b = a % 10;
+            if (a > 10 && a < 20) return forms[2];
+            if (b > 1 && b < 5) return forms[1];
+            if (b === 1) return forms[0];
+            return forms[2];
         },
 
         _renderGrid: function() {
@@ -34708,7 +35064,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (isManual) classes.push('ws-source-manual');
             if (isOvertime) classes.push('ws-overtime');
             if (isPending) classes.push('ws-pending');
-            if (!status) classes.push('ws-status-empty');
+
+            // Task 274: ПУСТАЯ ячейка внутри периода отпуска — план «О»
+            // (пунктирная рамка, цвет отпуска): период задан в листе
+            // «Отпуска», записи ещё нет. Появится при «Сформировать».
+            // Существующие записи и локальные правки (_PENDING)
+            // план не перекрывают — источник правды в сетке — записи.
+            // Класс ws-status-empty плану НЕ ставится: фон и цвет
+            // текста задаёт правило ws-vac-plan (не «пустая ячейка»)
+            var vacPlan = null;
+            if (!status && !isPending) {
+                vacPlan = this._vacationAt(isoDate, emp['таб_номер']);
+                if (vacPlan) classes.push('ws-vac-plan');
+            }
+            if (!status && !vacPlan) classes.push('ws-status-empty');
 
             // Task 260 (развитие Tasks 254/255): выходные и праздники — по
             // производственному календарю (ProdCalendar): Сб/Вс, гос.
@@ -34766,6 +35135,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (instructionId) titleParts.push('инструктаж id=' + instructionId);
                 if (entry.комментарий) titleParts.push('«' + entry.комментарий + '»');
             }
+            // Task 274: тултип плана отпуска в пустой ячейке
+            if (vacPlan) {
+                var pNo = parseInt(vacPlan.часть, 10);
+                titleParts.push('ОТПУСК (план' + (pNo ? ', часть ' + pNo : '') + '): ' +
+                                this._fmtDateRu(vacPlan.дата_начала) + ' — ' +
+                                this._fmtDateRu(vacPlan.дата_окончания) +
+                                ' · ' + this._vacDays(vacPlan) + ' дн.');
+                titleParts.push('заполнится кодом «О» при «Сформировать»');
+            }
             // Task 251: пометка о несохранённой локальной правке
             if (isPending) titleParts.push('не сохранено');
 
@@ -34779,7 +35157,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                    'data-editable="' + editable + '" ' +
                    'onclick="' + clickHandler + '" ' +
                    'title="' + this._escAttr(titleParts.join(' / ')) + '">' +
-                   (status || '·') +
+                   // Task 274: пустая ячейка в периоде отпуска — код «О»
+                   // плана (фоновый цвет и рамка — классом ws-vac-plan)
+                   (status || (vacPlan ? 'О' : '·')) +
                    '</td>';
         },
 
@@ -34795,7 +35175,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var self = this;
             if (typeof kipConfirm === 'function') {
                 kipConfirm('Сформировать шахматку на ' + this._year + ' год (все 12 месяцев)?\n' +
-                           'Существующие ручные правки будут сохранены. Плановые смены и инструктажи заполнятся автоматически.',
+                           'Существующие ручные правки будут сохранены. Плановые смены, инструктажи и отпуска заполнятся автоматически.',
                            { title: 'Формирование шахматки', okText: 'Сформировать' })
                     .then(function(ok) {
                         if (!ok) return;
@@ -34810,11 +35190,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 272: последовательная генерация 12 месяцев года.
         // Прогресс — на кнопке («Формируется… 3/12»), суммы в тосте.
         // Ручные правки не трогаются (приоритет manual на сервере).
+        // Task 274: в суммы вошло и заполнение отпусков («О»),
+        // удалённые устаревшие авто-«О» (период изменился) — отдельной
+        // строкой тоста.
         _doGenerateYear: function() {
             var self = this;
             var genBtn = document.getElementById('wsGenerateBtn');
             var totalGenerated = 0;
             var totalUpdated = 0;
+            var totalRemoved = 0;
             var monthsDone = 0;
 
             var nextMonth = function(month) {
@@ -34824,7 +35208,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
                         KipToast.show('Год ' + self._year + ': сформировано ' +
                                       totalGenerated + ' зап., обновлено ' +
-                                      totalUpdated);
+                                      totalUpdated +
+                                      (totalRemoved ? ', удалено ' + totalRemoved +
+                                       ' устаревших отпусков' : ''));
                     }
                     self.loadGrid();
                     return;
@@ -34835,6 +35221,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         monthsDone++;
                         totalGenerated += (data && data.generated) || 0;
                         totalUpdated += (data && data.updated) || 0;
+                        // Task 274: устаревшие авто-«О» (счётчик removed)
+                        totalRemoved += (data && data.removed) || 0;
                         nextMonth(month + 1);
                     })
                     .catch(function(err) {
@@ -35486,6 +35874,340 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         KipToast.show('Мероприятие удалено');
                     }
                     self.loadTrainings();
+                })
+                .catch(function(err) {
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Ошибка: ' + (err.message || err));
+                    }
+                });
+        },
+
+        // ============================================================
+        // Task 274: страница «Отпуска» (план периодов, лист «Отпуска»)
+        // ============================================================
+
+        initVacationsPage: function() {
+            var addBar = document.getElementById('wsAddVacationBar');
+            if (addBar) addBar.hidden = !this._canEdit;
+            // Селект года: по умолчанию — год шахматки (или текущий),
+            // диапазон как у селекта года шахматки (−1 … +2)
+            var yearSel = document.getElementById('wsVacYearSel');
+            if (yearSel && !yearSel.options.length) {
+                var cur = this._year || (new Date()).getFullYear();
+                var html = '';
+                for (var y = cur - 1; y <= cur + 2; y++) {
+                    html += '<option value="' + y + '"' +
+                            (y === cur ? ' selected' : '') + '>' + y + '</option>';
+                }
+                yearSel.innerHTML = html;
+            }
+            this._vacYear = (yearSel && parseInt(yearSel.value, 10)) ||
+                            (new Date()).getFullYear();
+            this.loadVacations();
+        },
+
+        onVacYearChange: function() {
+            var yearSel = document.getElementById('wsVacYearSel');
+            if (yearSel) this._vacYear = parseInt(yearSel.value, 10);
+            this.loadVacations();
+        },
+
+        loadVacations: function() {
+            var self = this;
+            var listEl = document.getElementById('wsVacationsList');
+            if (listEl) listEl.innerHTML = '<div class="admin-empty">Загрузка…</div>';
+            // селекту формы нужен справочник сотрудников — грузим и его
+            var emps = this._EMPLOYEES.length
+                ? Promise.resolve()
+                : this._loadEmployees().catch(function() {});
+            emps.then(function() {
+                return self._api('workSchedule.listVacations', { year: self._vacYear });
+            }).then(function(data) {
+                self._VAC_PAGE = data.vacations || [];
+                self._renderVacations();
+            }).catch(function(err) {
+                if (listEl) listEl.innerHTML =
+                    '<div class="admin-empty">Ошибка: ' + (err.message || err) +
+                    '<br><span style="font-size:11px;">Лист «Отпуска» и серверная часть ' +
+                    'подключаются деплоем Task 274 (см. scripts/DEPLOY-Task274-vacations.md).</span></div>';
+                var sumEl = document.getElementById('wsVacSummary');
+                if (sumEl) sumEl.textContent = '—';
+            });
+        },
+
+        // Группировка по сотрудникам (порядок _sortEmployees), у каждого —
+        // строки частей периода с итогом дней за год; кто без плана —
+        // пометка «отпусков нет» (видно, кому ещё не запланировали)
+        _renderVacations: function() {
+            var listEl = document.getElementById('wsVacationsList');
+            if (!listEl) return;
+            var vacs = this._VAC_PAGE || [];
+            var year = this._vacYear;
+            var byEmp = {};
+            for (var i = 0; i < vacs.length; i++) {
+                var v = vacs[i];
+                if (!byEmp[v['таб_номер']]) byEmp[v['таб_номер']] = [];
+                byEmp[v['таб_номер']].push(v);
+            }
+            // части внутри сотрудника — по дате начала
+            for (var k in byEmp) {
+                if (Object.prototype.hasOwnProperty.call(byEmp, k)) {
+                    byEmp[k].sort(function(a, b) {
+                        return String(a.дата_начала).localeCompare(String(b.дата_начала));
+                    });
+                }
+            }
+
+            var html = '';
+            var empsWith = 0, partsTotal = 0, daysTotal = 0;
+            for (var e = 0; e < this._EMPLOYEES.length; e++) {
+                var emp = this._EMPLOYEES[e];
+                var tab = emp['таб_номер'];
+                var rows = byEmp[tab] || [];
+                var empDays = 0;
+                var partsHtml = '';
+                for (var r = 0; r < rows.length; r++) {
+                    var vv = rows[r];
+                    var dInYear = this._vacDaysInYear(vv, year);
+                    empDays += dInYear;
+                    var pNo = parseInt(vv.часть, 10);
+                    var pCls = (pNo >= 1 && pNo <= 3) ? ' p' + pNo : '';
+                    var badge = '<span class="ws-vac-badge' + pCls + '">' +
+                                (pNo ? 'часть ' + pNo : 'часть —') + '</span>';
+                    // дни в году отличаются от полной длительности,
+                    // только если период пересекает границу года
+                    var daysNote = (dInYear !== this._vacDays(vv))
+                        ? dInYear + ' дн. в ' + year : this._vacDays(vv) + ' дн.';
+                    var delBtn = this._canEdit
+                        ? '<button type="button" class="ws-tr-delete-btn" ' +
+                          'title="Удалить период отпуска" ' +
+                          'onclick="WorkSchedule.deleteVacation(' + vv.id + ')">Удалить</button>'
+                        : '';
+                    partsHtml += '<div class="ws-vac-part">' + badge +
+                            '<span class="ws-vac-dates">' +
+                            this._esc(this._fmtDateRu(vv.дата_начала)) + ' — ' +
+                            this._esc(this._fmtDateRu(vv.дата_окончания)) + '</span>' +
+                            '<span class="ws-vac-days">' + daysNote + '</span>' +
+                            (vv.комментарий
+                                ? '<span class="ws-vac-comment">' + this._esc(vv.комментарий) + '</span>'
+                                : '') +
+                            delBtn + '</div>';
+                }
+                if (rows.length) {
+                    empsWith++;
+                    partsTotal += rows.length;
+                    daysTotal += empDays;
+                }
+                var total = rows.length
+                    ? empDays + ' дн. · ' + rows.length + ' ' +
+                      this._plural(rows.length, ['часть', 'части', 'частей'])
+                    : 'отпусков нет';
+                html += '<div class="ws-tr-card ws-vac-card">' +
+                        '<div class="ws-vac-card-header">' +
+                        '<span class="ws-tab-no">' + this._esc(tab) + '</span>' +
+                        '<span class="ws-fio">' + this._esc(emp['ФИО']) + '</span>' +
+                        '<span class="ws-vac-total">' + this._esc(total) + '</span>' +
+                        '</div>' + partsHtml + '</div>';
+            }
+
+            // периоды сотрудников, которых нет в справочнике (архив) —
+            // в конце списка отдельной карточкой
+            var known = {};
+            for (var k2 = 0; k2 < this._EMPLOYEES.length; k2++) {
+                known[this._EMPLOYEES[k2]['таб_номер']] = true;
+            }
+            var extraHtml = '';
+            for (var t in byEmp) {
+                if (Object.prototype.hasOwnProperty.call(byEmp, t) && !known[t]) {
+                    var rows2 = byEmp[t];
+                    var parts2 = '';
+                    for (var r2 = 0; r2 < rows2.length; r2++) {
+                        var u = rows2[r2];
+                        var upNo = parseInt(u.часть, 10);
+                        var upCls = (upNo >= 1 && upNo <= 3) ? ' p' + upNo : '';
+                        parts2 += '<div class="ws-vac-part">' +
+                                '<span class="ws-vac-badge' + upCls + '">' +
+                                (upNo ? 'часть ' + upNo : 'часть —') + '</span>' +
+                                '<span class="ws-vac-dates">' +
+                                this._esc(this._fmtDateRu(u.дата_начала)) + ' — ' +
+                                this._esc(this._fmtDateRu(u.дата_окончания)) + '</span>' +
+                                '<span class="ws-vac-days">' + this._vacDaysInYear(u, year) + ' дн.</span>' +
+                                (this._canEdit
+                                    ? '<button type="button" class="ws-tr-delete-btn" ' +
+                                      'onclick="WorkSchedule.deleteVacation(' + u.id + ')">Удалить</button>'
+                                    : '') +
+                                '</div>';
+                    }
+                    extraHtml += '<div class="ws-tr-card ws-vac-card">' +
+                            '<div class="ws-vac-card-header">' +
+                            '<span class="ws-tab-no">' + this._esc(t) + '</span>' +
+                            '<span class="ws-fio">нет в справочнике</span>' +
+                            '</div>' + parts2 + '</div>';
+                    partsTotal += rows2.length;
+                }
+            }
+            html += extraHtml;
+
+            if (!html) {
+                listEl.innerHTML = '<div class="admin-empty">Нет данных: справочник ' +
+                        'сотрудников пуст, периоды не заданы.</div>';
+            } else {
+                listEl.innerHTML = html;
+            }
+
+            // сводка года в тулбаре страницы
+            var sumEl = document.getElementById('wsVacSummary');
+            if (sumEl) {
+                sumEl.textContent = vacs.length
+                    ? empsWith + ' из ' + this._EMPLOYEES.length + ' сотрудников · ' +
+                      partsTotal + ' ' + this._plural(partsTotal, ['часть', 'части', 'частей']) +
+                      ' · ' + daysTotal + ' дн.'
+                    : 'периоды не заданы';
+            }
+        },
+
+        openVacationForm: function() {
+            if (!this._canEdit) return;
+            var empSel = document.getElementById('wsVacTabNo');
+            if (empSel) {
+                var html = '<option value="">— выберите —</option>';
+                for (var i = 0; i < this._EMPLOYEES.length; i++) {
+                    html += '<option value="' + this._esc(this._EMPLOYEES[i]['таб_номер']) + '">' +
+                            this._esc(this._EMPLOYEES[i]['таб_номер']) + ' — ' +
+                            this._esc(this._EMPLOYEES[i]['ФИО']) + '</option>';
+                }
+                empSel.innerHTML = html;
+            }
+            // даты по умолчанию: сегодня + 14 дней (минимальная «большая»
+            // часть по ст. 125 ТК РФ), число дней пересчитается
+            var today = this._isoDate(new Date());
+            var startInput = document.getElementById('wsVacStart');
+            var endInput = document.getElementById('wsVacEnd');
+            if (startInput) startInput.value = today;
+            if (endInput) {
+                var dft = new Date();
+                dft.setDate(dft.getDate() + 13);
+                endInput.value = this._isoDate(dft);
+            }
+            document.getElementById('wsVacPart').value = '1';
+            document.getElementById('wsVacComment').value = '';
+            this.onVacEmployeeChange();
+            this.onVacDatesChange();
+
+            document.getElementById('wsVacOverlay').classList.add('active');
+            document.getElementById('wsVacSheet').classList.add('active');
+            setTimeout(function() {
+                var f = document.getElementById('wsVacTabNo');
+                if (f) f.focus();
+            }, 350);
+        },
+
+        closeVacationForm: function() {
+            document.getElementById('wsVacOverlay').classList.remove('active');
+            document.getElementById('wsVacSheet').classList.remove('active');
+        },
+
+        // Выбор сотрудника → «часть» подставляется первым свободным
+        // номером (1..3) этого сотрудника в выбранном году
+        onVacEmployeeChange: function() {
+            var empSel = document.getElementById('wsVacTabNo');
+            var partSel = document.getElementById('wsVacPart');
+            if (!empSel || !partSel) return;
+            var tabNo = empSel.value;
+            var used = {};
+            for (var i = 0; i < (this._VAC_PAGE || []).length; i++) {
+                var v = this._VAC_PAGE[i];
+                if (v['таб_номер'] === tabNo &&
+                    String(v.дата_начала).slice(0, 4) === String(this._vacYear)) {
+                    used[parseInt(v.часть, 10)] = true;
+                }
+            }
+            var free = 1;
+            while (free <= 3 && used[free]) free++;
+            if (free <= 3) partSel.value = String(free);
+            // все 3 части заняты — оставляем выбор пользователю,
+            // сервер отклонит дубль (duplicate_часть) с пояснением
+        },
+
+        // Смена дат → строка «Период: N кал. дн.» (+подсказка про 14 дн.)
+        onVacDatesChange: function() {
+            var info = document.getElementById('wsVacDaysInfo');
+            if (!info) return;
+            var s = document.getElementById('wsVacStart').value;
+            var e = document.getElementById('wsVacEnd').value;
+            if (!s || !e) { info.textContent = 'Период: —'; return; }
+            if (e < s) { info.textContent = 'Дата окончания раньше начала'; return; }
+            var sd = this._parseIsoLocal(s), ed = this._parseIsoLocal(e);
+            var days = Math.round((ed.getTime() - sd.getTime()) / 86400000) + 1;
+            info.textContent = 'Период: ' + days + ' кал. дн.' +
+                    (days < 14 ? ' (часть менее 14 дней — допустима, если ' +
+                                'другая часть ≥ 14)' : '');
+        },
+
+        submitVacationForm: function() {
+            var tabNo = document.getElementById('wsVacTabNo').value.trim();
+            var part = parseInt(document.getElementById('wsVacPart').value, 10);
+            var startDate = document.getElementById('wsVacStart').value;
+            var endDate = document.getElementById('wsVacEnd').value || startDate;
+            var comment = document.getElementById('wsVacComment').value.slice(0, 500);
+            var self = this;
+
+            if (!tabNo) { if (typeof KipToast !== 'undefined') KipToast.show('Выберите сотрудника'); return; }
+            if (!startDate) { if (typeof KipToast !== 'undefined') KipToast.show('Укажите дату начала'); return; }
+            if (endDate < startDate) {
+                if (typeof KipToast !== 'undefined') KipToast.show('Дата окончания раньше даты начала');
+                return;
+            }
+            // пересечение с уже заданными периодами сотрудника (та же
+            // проверка на сервере — здесь для мгновенной обратной связи)
+            for (var i = 0; i < (this._VAC_PAGE || []).length; i++) {
+                var v = this._VAC_PAGE[i];
+                if (v['таб_номер'] !== tabNo) continue;
+                if (startDate <= v.дата_окончания && endDate >= v.дата_начала) {
+                    if (typeof KipToast !== 'undefined') KipToast.show(
+                        'Период пересекается с отпуском ' +
+                        this._fmtDateRu(v.дата_начала) + ' — ' +
+                        this._fmtDateRu(v.дата_окончания));
+                    return;
+                }
+            }
+
+            this._api('workSchedule.addVacation', {
+                'таб_номер': tabNo, часть: part,
+                дата_начала: startDate, дата_окончания: endDate,
+                комментарий: comment
+            }).then(function() {
+                self.closeVacationForm();
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Отпуск добавлен. Нажмите «Сформировать» в шахматке — дни отметятся кодом «О»');
+                }
+                self.loadVacations();
+            }).catch(function(err) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Ошибка: ' + (err.message || err));
+                }
+            });
+        },
+
+        deleteVacation: function(id) {
+            if (!this._canEdit) return;
+            var self = this;
+            if (typeof kipConfirm === 'function') {
+                kipConfirm('Удалить период отпуска id=' + id + '?', { danger: true })
+                    .then(function(ok) { if (ok) self._doDeleteVacation(id); });
+            } else {
+                if (confirm('Удалить период отпуска id=' + id + '?')) self._doDeleteVacation(id);
+            }
+        },
+
+        _doDeleteVacation: function(id) {
+            var self = this;
+            this._api('workSchedule.deleteVacation', { id: id })
+                .then(function() {
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Период отпуска удалён. Пересформируйте шахматку, чтобы снять «О»');
+                    }
+                    self.loadVacations();
                 })
                 .catch(function(err) {
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
