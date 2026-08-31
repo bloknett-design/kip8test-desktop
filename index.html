@@ -4304,9 +4304,11 @@
         font-weight: 700;
     }
 
-    /* Чип в тулбаре: «19 раб. дн. · 151 ч» — рабочие дни и норма времени
-       выбранного месяца по производственному календарю. Клик — шторка
-       с праздниками, переносами и нормами (ProdCalendar.openSheet). */
+    /* Task 272: кнопка «Обновить» в тулбаре (была «Календарь"). Клик —
+       диалог с источником данных (calendar.legalic.ru, федеральный,
+       официальные нормы) и подтверждением обновления
+       (ProdCalendar.confirmRefresh). На время запроса выключена и
+       показывает «Обновление…». */
     .ws-cal-chip {
         display: inline-flex;
         align-items: center;
@@ -4325,6 +4327,8 @@
         -webkit-tap-highlight-color: transparent;
     }
     .ws-cal-chip:active { opacity: 0.85; }
+    /* Task 272: идёт обновление календаря — кнопка выключена */
+    .ws-cal-chip:disabled { opacity: 0.6; cursor: default; }
     .ws-cal-chip svg {
         width: 14px;
         height: 14px;
@@ -4344,8 +4348,9 @@
        графика (#wsCalPanel в .ws-toolbar) — столбики: группа норм
        (Task 269: ДВА столбика — дни слева, часы справа) и столбик
        праздников/переносов. Источник данных и время обновления из
-       окошка убраны (полная информация — в шторке настроек: чип
-       «Календарь»). Task 269: ширина окна — ПО ТЕКСТУ (fit-content,
+       окошка убраны (Task 272: источник — в диалоге кнопки
+       «Обновить», шторка настроек удалена). Task 269: ширина окна —
+       ПО ТЕКСТУ (fit-content,
        не растягивается на свободную часть бара). Task 270: высота —
        95px = ПОД ПЯТЬ СТРОК (плашка-заголовок + 4 строки столбика
        часов: 40/36/24-час + «На год»); бар не «дышит» при смене
@@ -4476,12 +4481,13 @@
         white-space: normal;   /* в узком столбике переносится строками */
         margin-top: 3px;
     }
-    /* Task 269: ДЕСКТОП — все кнопки (селекты + чип «Календарь» +
-       «Сформировать» + «Сохранить») в ЛЕВОЙ НИЖНЕЙ части бара
-       (ряд прижат к нижней кромке, align-self: flex-end), окошко
-       с данными — в ПРАВОЙ части бара. Ширина окошка — по тексту
-       (наследуется из базового правила width: fit-content), оно
-       не растягивается на свободное место. Task 270: высота
+    /* Task 269 → Task 272: ДЕСКТОП — все кнопки (селекты + кнопка
+       «Обновить» + «Сформировать» + «Сохранить») в ЛЕВОМ ВЕРХНЕМ
+       углу бара (ряд прижат к верхней кромке, align-self:
+       flex-start — Task 272 перенесла кнопки из левой нижней части),
+       окошко с данными — в ПРАВОЙ части бара. Ширина окошка — по
+       тексту (наследуется из базового правила width: fit-content),
+       оно не растягивается на свободное место. Task 270: высота
        окошка — 95px (под 5 строк), внутренние отступы бара и
        зазор между рядами — 5px: бар узкий, по высоте окошка. */
     @media (min-width: 1024px) {
@@ -4491,9 +4497,9 @@
             gap: 5px;
         }
         .ws-toolbar-main {
-            order: 0;              /* кнопки — левая часть бара */
-            align-self: flex-end;  /* прижаты к нижней кромке бара */
-            margin-right: auto;    /* окошко уходит в правую часть */
+            order: 0;                /* кнопки — левая часть бара */
+            align-self: flex-start;  /* Task 272: прижаты к ВЕРХНЕЙ кромке бара */
+            margin-right: auto;      /* окошко уходит в правую часть */
             flex-shrink: 0;
             flex-wrap: nowrap;
         }
@@ -4504,51 +4510,20 @@
         }
     }
 
-    /* Шторка «Производственный календарь» — настройки: регион, источник
-       данных и обновление, токен. Нормы времени и праздники месяца —
-       в окошке тулбара (Task 264). База — .flow-input-sheet (bottom
-       sheet), здесь только внутренняя вёрстка. */
-    .ws-cal-sheet { max-height: 84vh; overflow-y: auto; }
-    .ws-cal-body {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        padding-bottom: 4px;
-    }
-    .ws-cal-row {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-    }
-    .ws-cal-month {
-        font-weight: 700;
-        font-size: 15px;
-        color: var(--text-primary, #e0e0e0);
-    }
-    .ws-cal-region-sel {
-        background: var(--bg-tertiary, #0e1621);
-        color: var(--text-primary, #e0e0e0);
-        border: 1px solid var(--card-border, rgba(255,255,255,0.08));
-        border-radius: 0;
-        padding: 5px 8px;
-        font-size: 13px;
-        font-family: inherit;
-        max-width: 100%;
-    }
-    .ws-cal-caption {
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.4px;
-        color: var(--text-secondary, rgba(255,255,255,0.5));
-        margin-bottom: 8px;
-    }
+    /* Task 272: стили шторки производственного календаря
+       (.ws-cal-sheet, .ws-cal-body, .ws-cal-row, .ws-cal-month,
+       .ws-cal-region-sel, .ws-cal-caption, .ws-cal-moved,
+       .ws-cal-src, .ws-cal-refresh-btn, .ws-cal-token,
+       .ws-cal-hint и их светлые варианты) УДАЛЕНЫ вместе с
+       интерфейсом выбора региона и поля токена
+       production-calendar.ru. Осталось окошко тулбара (.ws-cp-*),
+       бейдж «предварительно» (.ws-cal-prelim) и кнопка
+       «Обновить» (.ws-cal-chip). */
+
     /* Task 262: бейдж «предварительные данные» (2027 — проект Минтруда)
-       у заголовка месяца шторки; Task 264: бейдж в окошке тулбара.
-       Task 266: бейдж «официальные нормы» УБРАН из окошка — официальность
-       помечена тултипом столбика норм, остался только preliminary */
+       в окошке тулбара (Task 264). Task 266: бейдж «официальные нормы»
+       УБРАН из окошка — официальность помечена тултипом столбика норм,
+       остался только preliminary. */
     .ws-cal-prelim {
         display: inline-block;
         margin-left: 8px;
@@ -4569,102 +4544,11 @@
         color: #a06b00;
         border-color: rgba(255,160,0,0.4);
     }
-    /* Task 264: подсказка в шторке — нормы и праздники месяца
-       переехали в окошко тулбара графика */
-    .ws-cal-moved {
-        font-size: 12px;
-        line-height: 1.5;
-        color: var(--text-secondary, rgba(255,255,255,0.55));
-        background: var(--bg-tertiary, #0e1621);
-        border: 1px dashed var(--card-border, rgba(255,255,255,0.14));
-        padding: 7px 10px;
-    }
-    .ws-cal-src {
-        border-top: 1px solid var(--card-border, rgba(255,255,255,0.08));
-        padding-top: 10px;
-        font-size: 12px;
-        color: var(--text-secondary, rgba(255,255,255,0.6));
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-    .ws-cal-src-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-    }
-    .ws-cal-src b { color: var(--text-primary, #e0e0e0); }
-    .ws-cal-refresh-btn {
-        background: var(--accent-blue, #4a8fc7);
-        color: #fff;
-        border: none;
-        border-radius: 4px;
-        padding: 5px 12px;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        font-family: inherit;
-    }
-    .ws-cal-refresh-btn:disabled { opacity: 0.6; cursor: default; }
-    .ws-cal-token {
-        border-top: 1px solid var(--card-border, rgba(255,255,255,0.08));
-        padding-top: 10px;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        font-size: 12px;
-    }
-    .ws-cal-token-row { display: flex; gap: 8px; }
-    .ws-cal-token input {
-        flex: 1;
-        min-width: 0;
-        background: var(--bg-tertiary, #0e1621);
-        color: var(--text-primary, #e0e0e0);
-        border: 1px solid var(--card-border, rgba(255,255,255,0.1));
-        border-radius: 4px;
-        padding: 6px 10px;
-        font-size: 12px;
-        font-family: Consolas, monospace;
-    }
-    .ws-cal-token button {
-        background: var(--accent-green, #4ac771);
-        color: #fff;
-        border: none;
-        border-radius: 4px;
-        padding: 6px 12px;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        font-family: inherit;
-        white-space: nowrap;
-    }
-    .ws-cal-hint {
-        font-size: 11px;
-        line-height: 1.5;
-        color: var(--text-secondary, rgba(255,255,255,0.45));
-    }
-    /* Task 260: светлая тема — шторка календаря, чип и окошко тулбара */
+    /* Task 260: светлая тема — кнопка «Обновить» и окошко тулбара */
     [data-theme="light"] .ws-cal-chip {
         background: #fff;
         color: #555;
         border-color: rgba(0, 0, 0, 0.12);
-    }
-    [data-theme="light"] .ws-cal-region-sel,
-    [data-theme="light"] .ws-cal-token input {
-        background: #fff;
-        color: #333;
-        border-color: rgba(0, 0, 0, 0.15);
-    }
-    [data-theme="light"] .ws-cal-src { color: #666; }
-    [data-theme="light"] .ws-cal-src b,
-    [data-theme="light"] .ws-cal-month { color: #333; }
-    [data-theme="light"] .ws-cal-caption { color: #888; }
-    [data-theme="light"] .ws-cal-hint { color: #999; }
-    [data-theme="light"] .ws-cal-moved {
-        color: #777;
-        background: rgba(0, 0, 0, 0.03);
-        border-color: rgba(0, 0, 0, 0.15);
     }
     /* Task 264/266: светлая тема — окошко календаря в тулбаре.
        Task 270: фон окна НЕМНОГО ТЕМНЕЕ белого (#e9e7de — на тон
@@ -11283,26 +11167,27 @@
                 <div class="ws-toolbar-main">
                     <select id="wsMonthSel" class="ws-month-sel" onchange="WorkSchedule.onMonthChange()"></select>
                     <select id="wsYearSel" class="ws-year-sel" onchange="WorkSchedule.onMonthChange()"></select>
-                    <!-- Task 260/264: чип производственного календаря — кнопка
-                         настроек: регион, источник данных, обновление, токен.
-                         Нормы времени и праздники выбранного месяца переехали
-                         в окошко ниже (wsCalPanel); клик открывает шторку
-                         настроек -->
-                    <button type="button" id="wsCalChip" class="ws-cal-chip" onclick="ProdCalendar.openSheet()" title="Производственный календарь: регион, источник данных и обновление">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                        <span id="wsCalChipText">Календарь</span>
+                    <!-- Task 272: кнопка «Обновить» (была «Календарь"): клик —
+                         диалог с источником данных (calendar.legalic.ru,
+                         федеральный, официальные нормы) и подтверждением
+                         обновления. Шторка настроек с выбором региона и
+                         токеном production-calendar.ru УБРАНА — регион
+                         один (42 — Кемеровская область - Кузбасс) -->
+                    <button type="button" id="wsCalChip" class="ws-cal-chip" onclick="ProdCalendar.confirmRefresh()" title="Обновить производственный календарь (источник — calendar.legalic.ru, федеральный, официальные нормы)">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><polyline points="21 3 21 9 15 9"></polyline></svg>
+                        <span id="wsCalChipText">Обновить</span>
                     </button>
-                    <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateMonth()" title="Сформировать шахматку на выбранный месяц — откроется диалог подтверждения" hidden>Сформировать</button>
+                    <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateYear()" title="Сформировать шахматку на весь выбранный год (12 месяцев) — откроется диалог подтверждения" hidden>Сформировать</button>
                     <!-- Task 251: кнопка пакетного сохранения накопленных локальных
                          изменений шахматки (появляется при наличии несохранённых правок) -->
                     <button type="button" id="wsSaveBtn" class="ws-save-btn" onclick="WorkSchedule.saveAll()" hidden>Сохранить</button>
                 </div>
-                <!-- Task 264/266/269: окошко производственного календаря
+                <!-- Task 264/266/269/272: окошко производственного календаря
                      в баре кнопок графика — группа норм (заголовок +
                      ДВА столбика: счётчики дней слева, часы справа) и
                      столбик праздников/переносов выбранного месяца
-                     видны постоянно. На десктопе кнопки — в ЛЕВОЙ
-                     НИЖНЕЙ части бара, окошко — в ПРАВОЙ; ширина окна —
+                     видны постоянно. На десктопе кнопки — в ЛЕВОМ
+                     ВЕРХНЕМ углу бара, окошко — в ПРАВОЙ; ширина окна —
                      по тексту, высота статическая, при нехватке места —
                      скролл внутри. Заполняет ProdCalendar.renderPanel() -->
                 <div id="wsCalPanel" class="ws-cal-panel" hidden></div>
@@ -14094,17 +13979,12 @@
 <div id="wsPopupCloser" class="ws-popup-closer" onclick="WorkSchedule.closeCellPopup()"></div>
 <div id="wsCellPopup" class="ws-cell-popup" role="menu"></div>
 
-<!-- ===== Task 260/264: Bottom sheet производственного календаря (workSchedule) =====
-     Открывается чипом в тулбаре: регион (по умолчанию 42 — Кемеровская
-     область — Кузбасс), источник данных и его обновление, API-токен
-     production-calendar.ru. Нормы времени и праздники/переносы месяца —
-     с Task 264 в окошке тулбара (wsCalPanel), не в шторке. -->
-<div id="wsCalOverlay" class="pin-sheet-overlay" onclick="ProdCalendar.closeSheet()"></div>
-<div id="wsCalSheet" class="flow-input-sheet ws-cal-sheet">
-    <div class="flow-input-sheet-handle"></div>
-    <div class="flow-input-sheet-title">Производственный календарь</div>
-    <div id="wsCalSheetBody" class="ws-cal-body"></div>
-</div>
+<!-- Task 272: bottom sheet производственного календаря УДАЛЁН —
+     шторка с выбором региона, источником и API-токеном
+     production-calendar.ru больше не нужна: регион один (42 —
+     Кемеровская область - Кузбасс), источник — calendar.legalic.ru,
+     обновление — кнопка «Обновить» в тулбаре (диалог подтверждения).
+     Нормы и праздники месяца — в окошке тулбара (wsCalPanel). -->
 
 <!-- ===== Bottom sheet: добавление сотрудника (workSchedule) ===== -->
 <div id="wsEmpOverlay" class="pin-sheet-overlay" onclick="WorkSchedule.closeEmployeeForm()"></div>
@@ -34256,6 +34136,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     //   workSchedule.getStatusCodes     — легенда
     //   workSchedule.getPatterns        — шаблоны ротации
     //   workSchedule.generateMonth      — СФОРМИРОВАТЬ шахматку
+    //                                     (Task 272: клиент вызывает
+    //                                     эндпоинт 12 раз — весь год)
     //   workSchedule.setManualEntry      — upsert ручной правки
     //   workSchedule.deleteEntry         — удалить ручную запись
     //   workSchedule.addEmployee         — добавить сотрудника
@@ -34528,18 +34410,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return dw === 0 || dw === 6;
         },
 
-        // Чип календаря в тулбаре — кнопка настроек (регион, источник,
-        // токен). Task 264: нормы времени и праздники месяца переехали из
-        // чипа и шторки в окошко тулбара (wsCalPanel — рисует
+        // Кнопка «Обновить» в тулбаре (Task 272: была «Календарь») —
+        // клик открывает диалог с источником данных и подтверждением
+        // обновления (ProdCalendar.confirmRefresh). Нормы времени и
+        // праздники месяца — в окошке тулбара (wsCalPanel — рисует
         // ProdCalendar.renderPanel, вызывается отсюда при каждом
         // обновлении сетки/данных календаря).
         _updateCalChip: function() {
             var textEl = document.getElementById('wsCalChipText');
             var chip = document.getElementById('wsCalChip');
-            if (textEl) textEl.textContent = 'Календарь';
+            if (textEl) textEl.textContent = 'Обновить';
             if (chip) {
-                chip.title = 'Производственный календарь: регион, источник данных и обновление. ' +
-                             'Нормы времени и праздники месяца — в окошке ниже.';
+                chip.title = 'Обновить производственный календарь ' +
+                             '(источник — calendar.legalic.ru, федеральный, ' +
+                             'официальные нормы). Нормы времени и праздники ' +
+                             'месяца — в окошке ниже.';
             }
             if (typeof ProdCalendar !== 'undefined' && ProdCalendar.renderPanel) {
                 ProdCalendar.renderPanel();
@@ -34898,49 +34783,73 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                    '</td>';
         },
 
-        generateMonth: function() {
+        // Task 272: «Сформировать» строит шахматку на ВЕСЬ ГОД —
+        // серверный эндпоинт workSchedule.generateMonth вызывается
+        // последовательно для всех 12 месяцев выбранного года
+        // (generateMonth на клиенте переименован в generateYear).
+        // Подтверждение — как в Task 265: диалог с заголовком
+        // «Формирование шахматки» и кнопкой «Сформировать»
+        // (Escape — отмена, Enter — OK).
+        generateYear: function() {
             if (!this._canEdit) return;
             var self = this;
-            var monthName = ['','Январь','Февраль','Март','Апрель','Май','Июнь',
-                              'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-            // Task 265: формирование запускается ТОЛЬКО через диалог
-            // подтверждения: заголовок «Формирование шахматки», кнопка
-            // действия «Сформировать» (Escape — отмена, Enter — OK).
-            // Кнопка «Сформировать» в тулбаре ничего не делает без
-            // явного подтверждения.
             if (typeof kipConfirm === 'function') {
-                kipConfirm('Сформировать шахматку на ' + monthName[this._month] + ' ' + this._year + '?\n' +
+                kipConfirm('Сформировать шахматку на ' + this._year + ' год (все 12 месяцев)?\n' +
                            'Существующие ручные правки будут сохранены. Плановые смены и инструктажи заполнятся автоматически.',
                            { title: 'Формирование шахматки', okText: 'Сформировать' })
                     .then(function(ok) {
                         if (!ok) return;
-                        self._doGenerate();
+                        self._doGenerateYear();
                     });
             } else {
-                if (!confirm('Сформировать шахматку на ' + monthName[this._month] + ' ' + this._year + '?')) return;
-                self._doGenerate();
+                if (!confirm('Сформировать шахматку на ' + this._year + ' год (все 12 месяцев)?')) return;
+                self._doGenerateYear();
             }
         },
 
-        _doGenerate: function() {
+        // Task 272: последовательная генерация 12 месяцев года.
+        // Прогресс — на кнопке («Формируется… 3/12»), суммы в тосте.
+        // Ручные правки не трогаются (приоритет manual на сервере).
+        _doGenerateYear: function() {
             var self = this;
             var genBtn = document.getElementById('wsGenerateBtn');
-            if (genBtn) { genBtn.disabled = true; genBtn.textContent = 'Формируется…'; }
+            var totalGenerated = 0;
+            var totalUpdated = 0;
+            var monthsDone = 0;
 
-            this._api('workSchedule.generateMonth', { year: this._year, month: this._month })
-                .then(function(data) {
+            var nextMonth = function(month) {
+                if (month > 12) {
+                    // год сформирован — итоговый тост и перезагрузка сетки
                     if (genBtn) { genBtn.disabled = false; genBtn.textContent = 'Сформировать'; }
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
-                        KipToast.show('Сформировано: ' + data.generated + ' зап., обновлено: ' + data.updated);
+                        KipToast.show('Год ' + self._year + ': сформировано ' +
+                                      totalGenerated + ' зап., обновлено ' +
+                                      totalUpdated);
                     }
                     self.loadGrid();
-                })
-                .catch(function(err) {
-                    if (genBtn) { genBtn.disabled = false; genBtn.textContent = 'Сформировать'; }
-                    if (typeof KipToast !== 'undefined' && KipToast.show) {
-                        KipToast.show('Ошибка: ' + (err.message || err));
-                    }
-                });
+                    return;
+                }
+                if (genBtn) { genBtn.textContent = 'Формируется… ' + month + '/12'; }
+                self._api('workSchedule.generateMonth', { year: self._year, month: month })
+                    .then(function(data) {
+                        monthsDone++;
+                        totalGenerated += (data && data.generated) || 0;
+                        totalUpdated += (data && data.updated) || 0;
+                        nextMonth(month + 1);
+                    })
+                    .catch(function(err) {
+                        // сбой месяца — останавливаемся, накопленное не теряем:
+                        // уже сформированные месяцы остаются на сервере
+                        if (genBtn) { genBtn.disabled = false; genBtn.textContent = 'Сформировать'; }
+                        if (typeof KipToast !== 'undefined' && KipToast.show) {
+                            KipToast.show('Ошибка (месяц ' + month + ', готово ' +
+                                          monthsDone + '/12): ' + (err.message || err));
+                        }
+                        if (monthsDone > 0) self.loadGrid();
+                    });
+            };
+            if (genBtn) { genBtn.disabled = true; genBtn.textContent = 'Формируется… 1/12'; }
+            nextMonth(1);
         },
 
         // ============================================================
@@ -35672,8 +35581,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     // России для шахматки «График работы»: гос. праздники, перенесённые
     // выходные, сокращённые предпраздничные и рабочие субботы, нормы
     // времени. Используется шапкой и ячейками шахматки (_renderGrid /
-    // _renderCell), чипом и окошком календаря в тулбаре (Task 264:
-    // wsCalPanel — нормы и праздники месяца) и шторкой настроек.
+    // _renderCell), кнопкой «Обновить» и окошком календаря в тулбаре
+    // (Task 264: wsCalPanel — нормы и праздники месяца). Task 272:
+    // шторка настроек УДАЛЕНА — регион один (42 — Кемеровская
+    // область - Кузбасс), выбор региона, поле токена и обновление
+    // «сейчас» из шторки убраны; обновление — кнопкой «Обновить»
+    // в тулбаре через диалог подтверждения.
     //
     // ИСТОЧНИКИ (Task 262: legalic — основной; выбран по итогам
     // исследования с живыми запросами и кросс-сверкой с официальными
@@ -35690,11 +35603,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     //   2) isDayOff — GitHub-зеркало (raw.githubusercontent.com/
     //      isdayoff/calendars, без регистрации): dayoff/predayoff/
     //      workday/holiday; названия — из карты ТК РФ ст. 112. Резерв.
-    //   3) production-calendar.ru/v2 — с ЛИЧНЫМ токеном (поле в шторке):
-    //      89 регионов РФ; идёт ПЕРВЫМ при токене И регионе с
-    //      региональными праздниками (calendar_type 2), иначе —
-    //      последний в цепочке резерв.
-    //   4) День шахтёра (Кузбасс, регион 42): последнее воскресенье
+    //      (Task 272: источник 3 — production-calendar.ru/v2 с личным
+    //      токеном — УДАЛЁН вместе с полем ввода токена и выбором
+    //      региона: у предприятия один регион 42, для которого
+    //      токен не требовался.)
+    //   3) День шахтёра (Кузбасс, регион 42): последнее воскресенье
     //      августа — праздничный нерабочий день по Закону Кемеровской
     //      области от 27.12.2007 № 186-ОЗ «О праздничных днях и
     //      памятных датах Кемеровской области». Дата «плавающая» —
@@ -35703,7 +35616,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     //      Task 264: вместе с ним — День города Кемерово (12 июня,
     //      вместе с Днём России): добавляется в название праздника
     //      при чтении дня (dayInfo) — работает и на старом кэше.
-    //   5) Фолбэк без сети/данных: Сб/Вс + фиксированные праздники
+    //   4) Фолбэк без сети/данных: Сб/Вс + фиксированные праздники
     //      ТК РФ ст. 112 (без переносов) + День шахтёра для 42.
     //
     // Нормы времени: при источнике legalic — ОФИЦИАЛЬНЫЕ (сумма минут
@@ -35713,21 +35626,28 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     //   24-час: ×4,8 − сокращ.
     //
     // Кэш: localStorage v2 (ключ включает год и регион), TTL
-    // автообновления 7 суток; кнопка «Обновить сейчас» игнорирует TTL.
+    // автообновления 7 суток; кнопка «Обновить» (Task 272 — была
+    // «Календарь») игнорирует TTL после подтверждения в диалоге.
     // При сбое сети устаревший кэш продолжает работать (офлайн), при
     // полном отсутствии данных — фолбэк по Сб/Вс + ст. 112.
     // ============================================================
     var ProdCalendar = {
 
+        // Task 272: настройки (регион/токен) больше не хранятся —
+        // ключ оставлен, чтобы вычистить старую запись настроек
         _SETTINGS_KEY: 'ws_pcal_settings_v1',
         // Task 262: префикс v2 — формат кэша расширен (version, norms,
         // переносы tFrom/tTo); старые ключи ws_pcal_year_* вычищаются
         // при сохранении новых данных.
         _CACHE_PREFIX: 'ws_pcal_year2_',
         _TTL_MS: 7 * 24 * 60 * 60 * 1000,
+        // Task 272: регион один и постоянный — 42 (Кемеровская
+        // область - Кузбасс); выбор региона из приложения убран
         _DEFAULT_REGION: 42,
+        _REGION_NAME: 'Кемеровская область - Кузбасс',
         _ISDAYOFF_URL: 'https://raw.githubusercontent.com/isdayoff/calendars/main/db/',
-        _PRODCAL_URL: 'https://production-calendar.ru/v2/ru/',
+        // Task 272: источник production-calendar.ru (требовал личный
+        // токен) УДАЛЁН из цепочки вместе с полем ввода токена.
         // Task 262: основной источник — legalic (федеральный календарь,
         // официальные нормы из минут, цепочки переносов, 2022-2027).
         _LEGALIC_URL: 'https://calendar.legalic.ru/api/v1/calendars/RU-FEDERAL/export',
@@ -35740,12 +35660,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _CITY_DAY_TITLE: 'День города Кемерово',
         _CITY_DAY_MMDD: '0612',
 
-        // Полный список регионов РФ (id:название:тип; тип 2 = есть
-        // региональные праздники, 0 = федеральный календарь).
-        // Источник: production-calendar.ru/v2/ru/regions (без токена).
-        _REGIONS_RAW: '1:Республика Адыгея:2|2:Республика Башкортостан:2|3:Республика Бурятия:2|4:Республика Алтай:2|5:Республика Дагестан:2|6:Республика Ингушетия:2|7:Кабардино-Балкарская Республика:2|8:Республика Калмыкия:2|9:Карачаево-Черкесская Республика:2|10:Республика Карелия:0|11:Республика Коми:2|12:Республика Марий Эл:0|13:Республика Мордовия:0|14:Республика Саха (Якутия):2|15:Республика Северная Осетия — Алания:2|16:Республика Татарстан:2|17:Республика Тыва:2|18:Удмуртская Республика:0|19:Республика Хакасия:0|21:Чувашская Республика:2|22:Алтайский край:0|23:Краснодарский край:2|24:Красноярский край:0|25:Приморский край:0|26:Ставропольский край:2|27:Хабаровский край:0|28:Амурская область:0|29:Архангельская область:0|30:Астраханская область:0|31:Белгородская область:2|32:Брянская область:2|33:Владимирская область:0|34:Волгоградская область:0|35:Вологодская область:0|36:Воронежская область:0|37:Ивановская область:0|38:Иркутская область:2|39:Калининградская область:0|40:Калужская область:0|41:Камчатский край:0|42:Кемеровская область - Кузбасс:0|43:Кировская область:0|44:Костромская область:0|45:Курганская область:0|46:Курская область:0|47:Ленинградская область:0|48:Липецкая область:0|49:Магаданская область:0|50:Московская область:0|51:Мурманская область:0|52:Нижегородская область:0|53:Новгородская область:0|54:Новосибирская область:0|55:Омская область:2|56:Оренбургская область:0|57:Орловская область:0|58:Пензенская область:2|59:Пермский край:0|60:Псковская область:0|61:Ростовская область:0|62:Рязанская область:0|63:Самарская область:0|64:Саратовская область:2|65:Сахалинская область:0|66:Свердловская область:0|67:Смоленская область:0|68:Тамбовская область:2|69:Тверская область:0|70:Томская область:0|71:Тульская область:0|72:Тюменская область:0|73:Ульяновская область:0|74:Челябинская область:0|75:Забайкальский край:2|76:Ярославская область:0|77:Москва:0|78:Санкт-Петербург:0|79:Еврейская АО:0|80:Донецкая Народная Республика:2|81:Луганская Народная Республика:2|82:Республика Крым:2|83:Ненецкий АО:0|84:Херсонская область:2|85:Запорожская область:2|86:Ханты-Мансийский АО — Югра:0|87:Чукотский АО:0|89:Ямало-Ненецкий АО:0|92:Севастополь:2|95:Чеченская Республика:2',
-
-        _REGIONS: null,
+        // Task 272: справочник 89 регионов РФ удалён — регион
+        // фиксирован (42), выбор региона в интерфейсе убран.
 
         // Нерабочие праздничные дни по ТК РФ ст. 112 (даты фиксированы,
         // переносы приходят из источников): карта MMDD → название.
@@ -35770,76 +35686,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _MEM: {},
         // Выполняющиеся запросы года (дедупликация параллельных вызовов)
         _PENDING: {},
-        // Месяц/год, для которых открыта шторка
-        _sy: null,
-        _sm: null,
 
-        // ===== Справочник регионов =====
-
-        regions: function() {
-            if (this._REGIONS) return this._REGIONS;
-            var out = [];
-            try {
-                var parts = String(this._REGIONS_RAW).split('|');
-                for (var i = 0; i < parts.length; i++) {
-                    var seg = parts[i].split(':');
-                    if (seg.length < 2) continue;
-                    var id = parseInt(seg[0], 10);
-                    if (isNaN(id)) continue;
-                    out.push({
-                        id: id,
-                        name: seg[1],
-                        type: parseInt(seg[2] || '0', 10) || 0
-                    });
-                }
-            } catch (e) {}
-            this._REGIONS = out;
-            return out;
-        },
-
-        regionName: function(id) {
-            var list = this.regions();
-            for (var i = 0; i < list.length; i++) {
-                if (list[i].id === id) return list[i].name;
-            }
-            return 'регион ' + id;
-        },
-
-        regionHasRegional: function(id) {
-            var list = this.regions();
-            for (var i = 0; i < list.length; i++) {
-                if (list[i].id === id) return list[i].type === 2;
-            }
-            return false;
-        },
-
-        // ===== Настройки (регион + токен), localStorage =====
+        // ===== Настройки =====
+        // Task 272: хранившиеся настройки (регион/токен) упразднены —
+        // регион один (42 — Кемеровская область - Кузбасс), токен
+        // production-calendar.ru удалён из приложения. Метод оставлен
+        // (им пользуются _cacheKey и тесты) и ВСЕГДА возвращает 42;
+        // старая запись настроек в localStorage вычищается при первом
+        // обращении.
 
         getSettings: function() {
-            var s = { region: this._DEFAULT_REGION, token: '' };
             try {
-                var raw = (typeof localStorage !== 'undefined' && localStorage.getItem)
-                    ? localStorage.getItem(this._SETTINGS_KEY) : null;
-                if (raw) {
-                    var j = JSON.parse(raw);
-                    if (j && typeof j === 'object') {
-                        var r = parseInt(j.region, 10);
-                        if (!isNaN(r) && r >= 1 && r <= 99) s.region = r;
-                        if (typeof j.token === 'string') s.token = j.token;
-                    }
+                if (typeof localStorage !== 'undefined' && localStorage.removeItem) {
+                    localStorage.removeItem(this._SETTINGS_KEY);
                 }
             } catch (e) {}
-            return s;
-        },
-
-        setSettings: function(s) {
-            try {
-                if (typeof localStorage !== 'undefined' && localStorage.setItem) {
-                    localStorage.setItem(this._SETTINGS_KEY, JSON.stringify({
-                        region: s.region, token: s.token || ''
-                    }));
-                }
-            } catch (e) {}
+            return { region: this._DEFAULT_REGION };
         },
 
         // ===== Кэш (localStorage, ключ включает год и регион) =====
@@ -35856,6 +35718,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var j = JSON.parse(raw);
                 if (!j || !j.days || typeof j.days !== 'object') return null;
                 if (typeof j.fetchedAtMs !== 'number') return null;
+                // Task 272: prodcalendar удалён из цепочки, но старый
+                // кэш с этой подписью остаётся читаемым (офлайн-данные
+                // не теряются), новые записи будут только legalic/isdayoff
                 if (j.source !== 'legalic' && j.source !== 'isdayoff' &&
                     j.source !== 'prodcalendar') return null;
                 return j;
@@ -35948,29 +35813,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
         },
 
-        // Task 262: приоритет источников. Для региона с региональными
-        // праздниками при наличии токена первым идёт production-calendar.ru
-        // (только он знает региональные календари); во всех остальных
-        // случаях первым — legalic (богатый федеральный API без ключей:
-        // официальные нормы, цепочки переносов, 2027-й с пометкой
-        // «предварительный»), затем isDayOff, при токене — prodcal
-        // последним резервом. Отказ источника молча переводит на следующий.
+        // Task 262/272: приоритет источников — legalic первым (богатый
+        // федеральный API без ключей: официальные нормы, цепочки
+        // переносов, 2027-й с пометкой «предварительный»), затем
+        // isDayOff как резерв. Источник production-calendar.ru
+        // (личный токен) УДАЛЁН в Task 272 вместе с полем ввода
+        // токена: у предприятия один регион 42, региональные
+        // праздники Кузбасса накладываются оверлеем локально.
+        // Отказ источника молча переводит на следующий.
         _fetchYear: function(year) {
             var self = this;
-            var settings = this.getSettings();
-            var chain = [];
-            if (settings.token && this.regionHasRegional(settings.region)) {
-                chain.push(function() {
-                    return self._fetchProdCal(year, settings.region, settings.token);
-                });
-            }
-            chain.push(function() { return self._fetchLegalic(year); });
-            chain.push(function() { return self._fetchIsDayOff(year); });
-            if (settings.token) {
-                chain.push(function() {
-                    return self._fetchProdCal(year, settings.region, settings.token);
-                });
-            }
+            var chain = [
+                function() { return self._fetchLegalic(year); },
+                function() { return self._fetchIsDayOff(year); }
+            ];
             return this._trySources(chain, 0).then(function(data) {
                 if (data && data.days) {
                     self._applyRegionalOverlay(year, data);
@@ -35991,23 +35847,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 });
         },
 
-        // production-calendar.ru (только с токеном): compact=1 — только
-        // особые дни (~13 КБ/мес с юр. документами, год ~60 КБ),
-        // region=NN — региональный календарь.
-        _fetchProdCal: function(year, region, token) {
-            var self = this;
-            var url = this._PRODCAL_URL + year + '/days?region=' +
-                      encodeURIComponent(region) + '&compact=1';
-            return this._fetchJson(url, { 'Authorization': 'Bearer ' + token })
-                .then(function(json) {
-                    var parsed = self._parseProdCal(json);
-                    if (!parsed) throw new Error('prodcal: ответ ограничен или пуст');
-                    parsed.fetchedAtMs = Date.now();
-                    parsed.region = region;
-                    parsed.regionName = self.regionName(region);
-                    return parsed;
-                });
-        },
+        // Task 272: _fetchProdCal / _parseProdCal (production-calendar.ru,
+        // требовал личный токен) УДАЛЁНЫ — поле ввода токена и ветки
+        // цепочки с ним убраны из приложения.
 
         // isDayOff GitHub-зеркало: без регистрации, CORS открыт.
         _fetchIsDayOff: function(year) {
@@ -36017,9 +35859,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var parsed = self._parseIsDayOff(json);
                 if (!parsed) throw new Error('isdayoff: неожиданный формат');
                 parsed.fetchedAtMs = Date.now();
-                var s = self.getSettings();
-                parsed.region = s.region;
-                parsed.regionName = self.regionName(s.region);
+                parsed.region = self._DEFAULT_REGION;
+                parsed.regionName = self._REGION_NAME;
                 return parsed;
             });
         },
@@ -36036,9 +35877,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var parsed = self._parseLegalic(json);
                 if (!parsed) throw new Error('legalic: неожиданный формат');
                 parsed.fetchedAtMs = Date.now();
-                var s = self.getSettings();
-                parsed.region = s.region;
-                parsed.regionName = self.regionName(s.region);
+                parsed.region = self._DEFAULT_REGION;
+                parsed.regionName = self._REGION_NAME;
                 return parsed;
             });
         },
@@ -36119,49 +35959,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return { days: days, source: 'isdayoff' };
         },
 
-        // production-calendar.ru/v2: {status, days:[{date, type:{id},
-        // title, is_project, is_wsch}]} — compact-режим отдаёт только
-        // особые дни. type: 1 раб, 2 выходной, 3 гос. праздник,
-        // 4 региональный праздник, 5 сокращённый, 6 перенесённый
-        // выходной. Гостевое ограничение отдаёт days СТРОКОЙ — это
-        // не массив/объект → парсер вернёт null (источник пропускается).
-        _parseProdCal: function(json) {
-            if (!json || typeof json !== 'object' || json.status !== 'ok') {
-                return null;
-            }
-            var raw = json.days;
-            if (!raw || typeof raw === 'string') return null;
-            var list = [];
-            if (Array.isArray(raw)) {
-                list = raw;
-            } else if (typeof raw === 'object') {
-                for (var k in raw) {
-                    if (raw.hasOwnProperty(k) && raw[k] && typeof raw[k] === 'object') {
-                        list.push(raw[k]);
-                    }
-                }
-            } else {
-                return null;
-            }
-            var days = {};
-            for (var i = 0; i < list.length; i++) {
-                var d = list[i];
-                if (!d || !d.date || !d.type) continue;
-                var m = String(d.date).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-                if (!m) continue;
-                var t = d.type.id;
-                var rec = {};
-                if (t === 2 || t === 3 || t === 4 || t === 6) rec.off = 1;
-                if (t === 3 || t === 4) rec.holiday = 1;
-                if (t === 4) rec.regional = 1;
-                if (t === 5) rec.short = 1;
-                if (t === 1) rec.work = 1;
-                if (d.title) rec.title = String(d.title);
-                if (d.is_project) rec.project = 1;
-                days[m[2] + m[3]] = rec;
-            }
-            return { days: days, source: 'prodcalendar' };
-        },
+        // Task 272: парсер production-calendar.ru/v2 (_parseProdCal)
+        // УДАЛЁН — источник с личным токеном больше не используется.
 
         // Task 262: legalic export года:
         // { version: {versionId, year, status}, contentHash,
@@ -36484,9 +36283,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return stats;
         },
 
-        // ===== UI: шторка «Производственный календарь» =====
+        // ===== UI: кнопка «Обновить» (Task 272) =====
+        // Была кнопка «Календарь» со шторкой настроек (регион,
+        // источник, токен). Теперь клик открывает ДИАЛОГ с
+        // информацией по источнику и подтверждением обновления;
+        // регион фиксирован (42), поле токена убрано из приложения.
 
-        openSheet: function() {
+        // Год/месяц, на которые смотрит кнопка «Обновить» (из
+        // WorkSchedule или текущие — как renderPanel)
+        _currentYM: function() {
             var y = null, m = null;
             try {
                 if (typeof WorkSchedule !== 'undefined' && WorkSchedule._year) {
@@ -36499,31 +36304,40 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 y = now.getFullYear();
                 m = now.getMonth() + 1;
             }
-            this._sy = y;
-            this._sm = m;
-            var overlay = document.getElementById('wsCalOverlay');
-            var sheet = document.getElementById('wsCalSheet');
-            if (overlay) overlay.classList.add('active');
-            if (sheet) sheet.classList.add('active');
-            this._renderSheet();
-            // фоновая проверка свежести (старше TTL — обновим молча)
+            return { y: y, m: m };
+        },
+
+        // Клик по кнопке «Обновить»: диалог с источником данных
+        // и кнопкой подтверждения обновления (kipConfirm).
+        confirmRefresh: function() {
             var self = this;
-            this.ensureYear(y, false).then(function(changed) {
-                if (changed) {
-                    self._renderSheet();
-                    self._syncWorkSchedule();
+            var ym = this._currentYM();
+            var st = this.monthStats(ym.y, ym.m);
+            // Подпись фактического источника данных; основной —
+            // calendar.legalic.ru (федеральный, официальные нормы)
+            var srcLabel = this._sourceLabel(st.source);
+            var freshText = '';
+            if (st.fetchedAtMs) {
+                freshText = 'Обновлено: ' + this._fmtDateTime(st.fetchedAtMs) + '.';
+                if (Date.now() - st.fetchedAtMs > this._TTL_MS) {
+                    freshText += ' (офлайн-кэш, старше 7 суток)';
                 }
-            }).catch(function() {});
+            }
+            var msg = 'Источник: ' + srcLabel + '.' +
+                      (freshText ? '\n' + freshText : '') +
+                      '\nОбновить производственный календарь на ' + ym.y + ' год?';
+            if (typeof kipConfirm === 'function') {
+                kipConfirm(msg, { title: 'Обновление календаря', okText: 'Обновить' })
+                    .then(function(ok) {
+                        if (!ok) return;
+                        self.refreshNow();
+                    });
+            } else {
+                if (confirm(msg)) self.refreshNow();
+            }
         },
 
-        closeSheet: function() {
-            var overlay = document.getElementById('wsCalOverlay');
-            var sheet = document.getElementById('wsCalSheet');
-            if (overlay) overlay.classList.remove('active');
-            if (sheet) sheet.classList.remove('active');
-        },
-
-        // Перерисовать шахматку и чип норм после прихода новых данных
+        // Перерисовать шахматку и кнопку после прихода новых данных
         _syncWorkSchedule: function() {
             try {
                 if (typeof WorkSchedule !== 'undefined' && WorkSchedule) {
@@ -36538,18 +36352,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             } catch (e) {}
         },
 
-        // Task 264/266/269: окошко производственного календаря в тулбаре
-        // (#wsCalPanel): группа норм (Task 269: ДВА СТОЛБИКА — счётчики
-        // дней слева, нормы часов справа от них) и столбик праздников /
-        // переносов выбранного месяца. Источник данных и время обновления
-        // из окошка УБРАНЫ (Task 266) — полная информация осталась в
-        // шторке настроек (чип «Календарь»); бейдж «официальные нормы»
-        // убран, официальность — в тултипе группы норм. На десктопе
-        // (Task 269) кнопки прижаты к ЛЕВОЙ НИЖНЕЙ части бара, окошко —
-        // в ПРАВОЙ, ширина окошка — по тексту; высота бара СТАТИЧЕСКАЯ:
-        // окошко фиксированной высоты, при нехватке места столбики
-        // прокручиваются внутри него. Месяц/год берутся из
-        // WorkSchedule (или текущие).
+        // Task 264/266/269/272: окошко производственного календаря в
+        // тулбаре (#wsCalPanel): группа норм (Task 269: ДВА СТОЛБИКА —
+        // счётчики дней слева, нормы часов справа от них) и столбик
+        // праздников / переносов выбранного месяца. Источник данных и
+        // время обновления из окошка УБРАНЫ (Task 266), шторка настроек
+        // удалена (Task 272) — источник показывается в диалоге кнопки
+        // «Обновить»; бейдж «официальные нормы» убран, официальность —
+        // в тултипе группы норм. На десктопе (Task 272) кнопки — в
+        // ЛЕВОМ ВЕРХНЕМ углу бара, окошко — в ПРАВОЙ, ширина окошка —
+        // по тексту; высота бара СТАТИЧЕСКАЯ: окошко фиксированной
+        // высоты, при нехватке места столбики прокручиваются внутри
+        // него. Месяц/год берутся из WorkSchedule (или текущие).
         renderPanel: function() {
             var el = document.getElementById('wsCalPanel');
             if (!el) return;
@@ -36646,162 +36460,38 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             el.hidden = false;
         },
 
+        // Task 272: обновление по подтверждению диалога — принудительный
+        // запрос года (force=true, TTL игнорируется). Пока идёт запрос,
+        // кнопка «Обновить» в тулбаре выключена и показывает
+        // «Обновление…»; после — перерисовка шахматки/окошка и тост.
         refreshNow: function() {
             var self = this;
-            var btn = document.getElementById('wsCalRefreshBtn');
-            if (btn) { btn.disabled = true; btn.textContent = 'Обновление…'; }
-            this.ensureYear(this._sy, true).then(function() {
-                self._renderSheet();
+            var chip = document.getElementById('wsCalChip');
+            var chipText = document.getElementById('wsCalChipText');
+            if (chip) chip.disabled = true;
+            if (chipText) chipText.textContent = 'Обновление…';
+            var ym = this._currentYM();
+            this.ensureYear(ym.y, true).then(function() {
+                if (chip) chip.disabled = false;
+                if (chipText) chipText.textContent = 'Обновить';
                 self._syncWorkSchedule();
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
-                    var st = self.monthStats(self._sy, self._sm);
+                    var st = self.monthStats(ym.y, ym.m);
                     KipToast.show(st.hasData
                         ? 'Календарь обновлён'
                         : 'Не удалось обновить: источник недоступен');
                 }
             }).catch(function() {
-                self._renderSheet();
-            });
-        },
-
-        onRegionChange: function() {
-            var sel = document.getElementById('wsCalRegionSel');
-            if (!sel) return;
-            var val = parseInt(sel.value, 10);
-            var s = this.getSettings();
-            if (!isNaN(val) && val >= 1 && val <= 99) s.region = val;
-            this.setSettings(s);
-            // регион входит в ключ кэша — память под новый регион пуста
-            this._MEM = {};
-            var self = this;
-            this.ensureYear(this._sy, true).then(function() {
-                self._renderSheet();
+                if (chip) chip.disabled = false;
+                if (chipText) chipText.textContent = 'Обновить';
                 self._syncWorkSchedule();
-            }).catch(function() {
-                self._renderSheet();
             });
         },
 
-        saveToken: function() {
-            var input = document.getElementById('wsCalToken');
-            var s = this.getSettings();
-            s.token = input ? String(input.value || '').trim() : '';
-            this.setSettings(s);
-            // токен меняет источник — сбрасываем память и перечитываем
-            this._MEM = {};
-            var self = this;
-            this.ensureYear(this._sy, true).then(function() {
-                self._renderSheet();
-                self._syncWorkSchedule();
-                if (typeof KipToast !== 'undefined' && KipToast.show) {
-                    KipToast.show(s.token
-                        ? 'Токен сохранён: источник production-calendar.ru'
-                        : 'Токен удалён: источник calendar.legalic.ru');
-                }
-            }).catch(function() {
-                self._renderSheet();
-            });
-        },
-
-        _renderSheet: function() {
-            var bodyEl = document.getElementById('wsCalSheetBody');
-            if (!bodyEl) return;
-            var y = this._sy || new Date().getFullYear();
-            var m = this._sm || (new Date().getMonth() + 1);
-            var st = this.monthStats(y, m);
-            var s = this.getSettings();
-            var monthsNom = ['Январь','Февраль','Март','Апрель','Май','Июнь',
-                             'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-            var html = '';
-
-            // Месяц + селект региона (89 регионов, 42 — Кузбасс по умолчанию)
-            var regs = this.regions();
-            var regOpts = '';
-            for (var i = 0; i < regs.length; i++) {
-                regOpts += '<option value="' + regs[i].id + '"' +
-                           (regs[i].id === s.region ? ' selected' : '') + '>' +
-                           this._esc(regs[i].id + ' — ' + regs[i].name) + '</option>';
-            }
-            html += '<div class="ws-cal-row">' +
-                    '<div class="ws-cal-month">' +
-                        this._esc(monthsNom[(m - 1 + 12) % 12] + ' ' + y) +
-                        (st.preliminary
-                            ? '<span class="ws-cal-prelim" title="Год основан на проекте постановления Минтруда России — окончательные переносы ещё не утверждены">предварительные данные</span>'
-                            : '') +
-                    '</div>' +
-                    '<select id="wsCalRegionSel" class="ws-cal-region-sel" ' +
-                        'onchange="ProdCalendar.onRegionChange()" ' +
-                        'title="Регион производственного календаря (региональные праздники)">' +
-                        regOpts + '</select>' +
-                    '</div>';
-
-            // Task 264: нормы времени и праздники/переносы месяца
-            // переехали из шторки в окошко тулбара графика (wsCalPanel)
-            html += '<div class="ws-cal-moved">Нормы времени и праздники месяца — ' +
-                    'в окошке тулбара графика (под кнопками). ' +
-                    'Здесь — регион, источник и обновление.</div>';
-
-            // Источник данных + обновление
-            var srcLabel = this._sourceLabel(st.source);
-            var freshText = 'данных ещё нет';
-            if (st.fetchedAtMs) {
-                freshText = 'обновлено ' + this._fmtDateTime(st.fetchedAtMs);
-                if (Date.now() - st.fetchedAtMs > this._TTL_MS) {
-                    freshText += ' (офлайн-кэш, старше 7 суток)';
-                }
-            }
-            var regNote;
-            if (s.region === 42) {
-                regNote = 'День шахтёра (последнее воскресенье августа, Закон ' +
-                          'Кемеровской области от 27.12.2007 № 186-ОЗ) и День города ' +
-                          'Кемерово (12 июня, отмечается вместе с Днём России) ' +
-                          'учитываются автоматически.';
-            } else if (this.regionHasRegional(s.region)) {
-                regNote = 'У этого региона есть региональные праздники — для их учёта нужен токен production-calendar.ru.';
-            } else {
-                regNote = 'У региона ' + s.region + ' региональных праздников нет — календарь совпадает с федеральным.';
-            }
-            // Task 262: версия календаря года (legalic) — доверием к данным
-            var verLine = '';
-            if (st.version && st.version.id) {
-                verLine = '<div>Версия календаря: <b>' + this._esc(st.version.id) + '</b>' +
-                          (st.preliminary
-                              ? ' — год основан на проекте постановления Минтруда (финал — осенью)'
-                              : ' — официальные данные') + '</div>';
-            }
-            html += '<div class="ws-cal-src">' +
-                    '<div class="ws-cal-src-row"><b>Источник:</b> ' + this._esc(srcLabel) +
-                    ' <button type="button" id="wsCalRefreshBtn" class="ws-cal-refresh-btn" ' +
-                        'onclick="ProdCalendar.refreshNow()">Обновить сейчас</button></div>' +
-                    '<div>' + this._esc(freshText) + '. ' + this._esc(regNote) + '</div>' +
-                    verLine +
-                    (st.source === 'fallback'
-                        ? '<div>Данных нет (нет сети или год ещё не опубликован) — ' +
-                          'выходные считаются по Сб/Вс и праздникам ТК РФ без переносов' +
-                          (s.region === 42 ? '; День шахтёра — по последнему воскресенью августа; ' +
-                           'День города Кемерово — 12 июня' : '') +
-                          '.</div>'
-                        : '') +
-                    '</div>';
-
-            // Токен расширенного источника
-            html += '<div class="ws-cal-token">' +
-                    '<div class="ws-cal-caption" style="margin-bottom:0;">Расширенный источник (необязательно)</div>' +
-                    '<div class="ws-cal-token-row">' +
-                    '<input type="text" id="wsCalToken" value="' + this._escAttr(s.token) + '" ' +
-                        'placeholder="API-токен production-calendar.ru" autocomplete="off">' +
-                    '<button type="button" onclick="ProdCalendar.saveToken()">Сохранить</button>' +
-                    '</div>' +
-                    '<div class="ws-cal-hint">Основной источник — calendar.legalic.ru (федеральный календарь, ' +
-                        'официальные нормы и цепочки переносов, без ключей). ' +
-                        'Бесплатный токен production-calendar.ru (регистрация на сайте) ' +
-                        'добавляет региональные календари для регионов с собственными ' +
-                        'праздниками (для Кузбасса не требуется). ' +
-                        'Токен хранится только на этом устройстве.</div>' +
-                    '</div>';
-
-            bodyEl.innerHTML = html;
-        },
+        // Task 272: onRegionChange / saveToken / _renderSheet (шторка
+        // с выбором региона и полем токена production-calendar.ru)
+        // УДАЛЕНЫ — интерфейс настройки источника упразднён, регион
+        // фиксирован (42 — Кемеровская область - Кузбасс).
 
         _sourceLabel: function(source) {
             if (source === 'legalic') return 'calendar.legalic.ru (федеральный, официальные нормы)';
