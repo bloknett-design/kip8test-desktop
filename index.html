@@ -35248,11 +35248,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 .then(function(data) {
                     if (genBtn) { genBtn.disabled = false; genBtn.textContent = 'Сформировать'; }
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        // Task 279: отпускные счётчики в тосте —
+                        // «отпуска не формируются» видно сразу (раньше
+                        // нули по отпускам молчали, только смены)
+                        var vacDays = (data && data.vacationDays) || 0;
                         KipToast.show(monthName + ' ' + self._year + ': сформировано ' +
                                       ((data && data.generated) || 0) + ' зап., обновлено ' +
                                       ((data && data.updated) || 0) +
+                                      ', отпусков отмечено ' + vacDays + ' дн.' +
                                       (((data && data.removed) || 0)
                                           ? ', удалено ' + data.removed + ' устаревших отпусков'
+                                          : '') +
+                                      ((data && data.vacationError)
+                                          ? '; отпуска не проверены: ' + data.vacationError
                                           : ''));
                     }
                     self.loadGrid();
@@ -35278,6 +35286,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var totalGenerated = 0;
             var totalUpdated = 0;
             var totalRemoved = 0;
+            // Task 279: сумма отпускных дней за 12 месяцев — в итоговый тост
+            var totalVacDays = 0;
             var monthsDone = 0;
 
             var nextMonth = function(month) {
@@ -35288,6 +35298,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         KipToast.show('Год ' + self._year + ': сформировано ' +
                                       totalGenerated + ' зап., обновлено ' +
                                       totalUpdated +
+                                      ', отпусков отмечено ' + totalVacDays + ' дн.' +
                                       (totalRemoved ? ', удалено ' + totalRemoved +
                                        ' устаревших отпусков' : ''));
                     }
@@ -35302,6 +35313,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         totalUpdated += (data && data.updated) || 0;
                         // Task 274: устаревшие авто-«О» (счётчик removed)
                         totalRemoved += (data && data.removed) || 0;
+                        totalVacDays += (data && data.vacationDays) || 0;
                         nextMonth(month + 1);
                     })
                     .catch(function(err) {
@@ -36057,11 +36069,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     // только если период пересекает границу года
                     var daysNote = (dInYear !== this._vacDays(vv))
                         ? dInYear + ' дн. в ' + year : this._vacDays(vv) + ' дн.';
-                    var delBtn = this._canEdit
-                        ? '<button type="button" class="ws-tr-delete-btn" ' +
-                          'title="Удалить период отпуска" ' +
-                          'onclick="WorkSchedule.deleteVacation(' + vv.id + ')">Удалить</button>'
-                        : '';
+                    // Task 279: id может отсутствовать (строка создана
+                    // вручную без id — до фиксы сервер её отбрасывал).
+                    // «Удалить» требует id; без него — подсказка: id
+                    // дозаполнит vacationsInitSheet() или форма.
+                    var delBtn = '';
+                    if (this._canEdit) {
+                        delBtn = vv.id
+                            ? '<button type="button" class="ws-tr-delete-btn" ' +
+                              'title="Удалить период отпуска" ' +
+                              'onclick="WorkSchedule.deleteVacation(' + vv.id + ')">Удалить</button>'
+                            : '<span class="ws-vac-days" title="id не заполнен в столбце A листа ' +
+                              '«Отпуска». Перезапустите vacationsInitSheet() в Apps Script — ' +
+                              'id дозаполнится автоматически, либо заполните вручную">без id</span>';
+                    }
                     partsHtml += '<div class="ws-vac-part">' + badge +
                             '<span class="ws-vac-dates">' +
                             this._esc(this._fmtDateRu(vv.дата_начала)) + ' — ' +
@@ -36111,7 +36132,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                 this._esc(this._fmtDateRu(u.дата_начала)) + ' — ' +
                                 this._esc(this._fmtDateRu(u.дата_окончания)) + '</span>' +
                                 '<span class="ws-vac-days">' + this._vacDaysInYear(u, year) + ' дн.</span>' +
-                                (this._canEdit
+                                (this._canEdit && u.id
                                     ? '<button type="button" class="ws-tr-delete-btn" ' +
                                       'onclick="WorkSchedule.deleteVacation(' + u.id + ')">Удалить</button>'
                                     : '') +
