@@ -2586,16 +2586,30 @@
     .kip-dialog-input:focus { border-color: rgba(74, 143, 199, 0.6); }
     .kip-dialog-btns {
         display: flex; gap: 8px; justify-content: flex-end;
+        /* Task 278: перенос ряда — три кнопки не всегда влезают
+           в 320px диалога на мобильном */
+        flex-wrap: wrap;
     }
     .kip-dialog-btn {
         font-size: 13px; padding: 8px 18px; border-radius: 8px;
         cursor: pointer; border: none; transition: background 0.15s, opacity 0.15s;
         -webkit-tap-highlight-color: transparent;
     }
+    /* Task 278: три кнопки — компактнее, чтобы ряд помещался */
+    .kip-dialog-btns.with-alt .kip-dialog-btn { padding: 8px 12px; }
+    /* Task 278: диалог с тремя кнопками шире — ряд в одну строку
+       на десктопе (на мобильном по-прежнему переносится) */
+    .kip-dialog.with-alt { max-width: 360px; }
     .kip-dialog-cancel {
         background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5);
     }
     .kip-dialog-cancel:active { background: rgba(255,255,255,0.15); }
+    /* Task 278: альтернативная кнопка выбора (менее акцентная, чем OK) */
+    .kip-dialog-alt {
+        background: rgba(74, 143, 199, 0.16); color: rgba(150, 190, 225, 0.95);
+        font-weight: 500;
+    }
+    .kip-dialog-alt:active { background: rgba(74, 143, 199, 0.3); }
     .kip-dialog-ok {
         background: rgba(74, 143, 199, 0.25); color: #7ab3e0; font-weight: 600;
     }
@@ -2611,6 +2625,8 @@
     [data-theme="light"] .kip-dialog-input:focus { border-color: rgba(42, 93, 143, 0.5); }
     [data-theme="light"] .kip-dialog-cancel { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.45); }
     [data-theme="light"] .kip-dialog-cancel:active { background: rgba(0,0,0,0.12); }
+    [data-theme="light"] .kip-dialog-alt { background: rgba(42, 93, 143, 0.1); color: #2a5d8f; }
+    [data-theme="light"] .kip-dialog-alt:active { background: rgba(42, 93, 143, 0.2); }
     [data-theme="light"] .kip-dialog-ok { background: rgba(42, 93, 143, 0.15); color: #2a5d8f; }
     [data-theme="light"] .kip-dialog-ok:active { background: rgba(42, 93, 143, 0.25); }
     [data-theme="light"] .kip-dialog-ok.danger { background: rgba(180, 40, 40, 0.1); color: #a83030; }
@@ -11343,7 +11359,7 @@
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><polyline points="21 3 21 9 15 9"></polyline></svg>
                         <span id="wsCalChipText">Обновить</span>
                     </button>
-                    <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateYear()" title="Сформировать шахматку на весь выбранный год (12 месяцев) — откроется диалог подтверждения" hidden>Сформировать</button>
+                    <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateYear()" title="Сформировать шахматку на выбранный месяц или весь год — откроется диалог подтверждения" hidden>Сформировать</button>
                     <!-- Task 251: кнопка пакетного сохранения накопленных локальных
                          изменений шахматки (появляется при наличии несохранённых правок) -->
                     <button type="button" id="wsSaveBtn" class="ws-save-btn" onclick="WorkSchedule.saveAll()" hidden>Сохранить</button>
@@ -25220,12 +25236,18 @@ function _kipDialogClose(ov, resolve, value) {
  * @param {object} [opts] — { danger: true } — красная кнопка OK;
  *   { title } — заголовок (по умолчанию «Подтвердите действие»);
  *   { okText } — надпись кнопки подтверждения (по умолчанию «OK»);
- *   { cancelText } — надпись кнопки отмены (по умолчанию «Отмена»)
- * @returns {Promise<boolean>}
+ *   { cancelText } — надпись кнопки отмены (по умолчанию «Отмена»);
+ *   { altText } — Task 278: ТРЕТЬЯ кнопка выбора (между «Отмена» и
+ *     OK) — при клике промис резолвится строкой 'alt'
+ * @returns {Promise<boolean|string>} — true (OK) / false (отмена,
+ *   Escape) / 'alt' (третья кнопка выбора)
  */
 // Task 265: настройки заголовка/кнопок + клавиатура (Escape — отмена,
 // Enter — подтверждение; если фокус на кнопке диалога — Enter жмёт её,
 // а не глобальный обработчик). Повторное срабатывание защищено.
+// Task 278: опция altText — альтернативная кнопка действия
+// (диалог «Сформировать»: месяц или год). Обратная совместимость:
+// без altText — прежние две кнопки, результат boolean.
 function kipConfirm(msg, opts) {
     opts = opts || {};
     return new Promise(function(resolve) {
@@ -25234,12 +25256,16 @@ function kipConfirm(msg, opts) {
         var title = (opts.title != null && String(opts.title)) || 'Подтвердите действие';
         var okText = (opts.okText != null && String(opts.okText)) || 'OK';
         var cancelText = (opts.cancelText != null && String(opts.cancelText)) || 'Отмена';
+        var altText = (opts.altText != null && String(opts.altText)) || '';
         ov.innerHTML =
-            '<div class="kip-dialog">' +
+            '<div class="kip-dialog' + (altText ? ' with-alt' : '') + '">' +
                 '<div class="kip-dialog-title">' + _kipDialogEsc(title) + '</div>' +
                 '<div class="kip-dialog-msg">' + (msg || '').replace(/</g,'&lt;') + '</div>' +
-                '<div class="kip-dialog-btns">' +
+                '<div class="kip-dialog-btns' + (altText ? ' with-alt' : '') + '">' +
                     '<button type="button" class="kip-dialog-btn kip-dialog-cancel">' + _kipDialogEsc(cancelText) + '</button>' +
+                    (altText
+                        ? '<button type="button" class="kip-dialog-btn kip-dialog-alt">' + _kipDialogEsc(altText) + '</button>'
+                        : '') +
                     '<button type="button" class="kip-dialog-btn kip-dialog-ok' + dangerCls + '">' + _kipDialogEsc(okText) + '</button>' +
                 '</div>' +
             '</div>';
@@ -25260,6 +25286,9 @@ function kipConfirm(msg, opts) {
             _kipDialogClose(ov, resolve, value);
         };
         ov.querySelector('.kip-dialog-cancel').onclick = function() { done(false); };
+        // Task 278: альтернативная кнопка (есть только при altText)
+        var altBtn = altText ? ov.querySelector('.kip-dialog-alt') : null;
+        if (altBtn) altBtn.onclick = function() { done('alt'); };
         ov.querySelector('.kip-dialog-ok').onclick = function() { done(true); };
         document.addEventListener('keydown', onKey);
         requestAnimationFrame(function() { ov.classList.add('active'); });
@@ -35167,24 +35196,74 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // серверный эндпоинт workSchedule.generateMonth вызывается
         // последовательно для всех 12 месяцев выбранного года
         // (generateMonth на клиенте переименован в generateYear).
-        // Подтверждение — как в Task 265: диалог с заголовком
-        // «Формирование шахматки» и кнопкой «Сформировать»
-        // (Escape — отмена, Enter — OK).
+        // Task 278: диалог подтверждения предлагает ВЫБОР периода —
+        // «Весь год» (основная кнопка, как было) или «Текущий месяц»
+        // (третья кнопка kipConfirm altText — резолв 'alt'):
+        // месяц = ВЫБРАННЫЙ в тулбаре (по умолчанию — текущий
+        // календарный); когда он совпадает с календарным, надпись
+        // «Текущий месяц», иначе — «Выбранный месяц» (честная
+        // формулировка). Enter — «Весь год», Escape — отмена.
         generateYear: function() {
             if (!this._canEdit) return;
             var self = this;
+            var monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                              'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            var monthName = monthNames[this._month - 1];
+            var now = new Date();
+            var isCurrent = (this._year === now.getFullYear() &&
+                             this._month === now.getMonth() + 1);
             if (typeof kipConfirm === 'function') {
-                kipConfirm('Сформировать шахматку на ' + this._year + ' год (все 12 месяцев)?\n' +
+                kipConfirm('Сформировать шахматку на весь ' + this._year + ' год (все 12 месяцев) ' +
+                           'или только на ' + (isCurrent ? 'текущий' : 'выбранный') +
+                           ' месяц — ' + monthName + ' ' + this._year + '?\n' +
                            'Существующие ручные правки будут сохранены. Плановые смены, инструктажи и отпуска заполнятся автоматически.',
-                           { title: 'Формирование шахматки', okText: 'Сформировать' })
-                    .then(function(ok) {
-                        if (!ok) return;
+                           { title: 'Формирование шахматки', okText: 'Весь год',
+                             altText: isCurrent ? 'Текущий месяц' : 'Выбранный месяц' })
+                    .then(function(sel) {
+                        if (sel === 'alt') { self._doGenerateMonth(); return; }
+                        if (!sel) return;
                         self._doGenerateYear();
                     });
             } else {
                 if (!confirm('Сформировать шахматку на ' + this._year + ' год (все 12 месяцев)?')) return;
                 self._doGenerateYear();
             }
+        },
+
+        // Task 278: генерация ОДНОГО месяца — кнопка «Текущий месяц»
+        // в диалоге «Сформировать». Один вызов серверного
+        // workSchedule.generateMonth для выбранного месяца, итог —
+        // тост с названием месяца и счётчиками (в т.ч. удалённые
+        // устаревшие авто-«О» отпусков — Task 274), перезагрузка
+        // сетки. Ручные правки не трогаются (приоритет manual
+        // на сервере); при сбое — тост ошибки, кнопка возвращается.
+        _doGenerateMonth: function() {
+            var self = this;
+            var genBtn = document.getElementById('wsGenerateBtn');
+            var monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                              'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            var monthName = monthNames[this._month - 1];
+            if (genBtn) { genBtn.disabled = true; genBtn.textContent = 'Формируется…'; }
+            this._api('workSchedule.generateMonth', { year: this._year, month: this._month })
+                .then(function(data) {
+                    if (genBtn) { genBtn.disabled = false; genBtn.textContent = 'Сформировать'; }
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show(monthName + ' ' + self._year + ': сформировано ' +
+                                      ((data && data.generated) || 0) + ' зап., обновлено ' +
+                                      ((data && data.updated) || 0) +
+                                      (((data && data.removed) || 0)
+                                          ? ', удалено ' + data.removed + ' устаревших отпусков'
+                                          : ''));
+                    }
+                    self.loadGrid();
+                })
+                .catch(function(err) {
+                    if (genBtn) { genBtn.disabled = false; genBtn.textContent = 'Сформировать'; }
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Ошибка (' + monthName + ' ' + self._year + '): ' +
+                                      (err.message || err));
+                    }
+                });
         },
 
         // Task 272: последовательная генерация 12 месяцев года.
