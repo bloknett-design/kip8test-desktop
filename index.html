@@ -25207,6 +25207,25 @@ function showToast(msg, actionText, actionFn) {
 }
 
 // ============================================================
+// KipToast — алиас showToast (Task 282)
+// ============================================================
+// В коде модулей (WorkSchedule, Flowmeter, CableJournal) сообщения
+// обратной связи исторически вызываются через KipToast.show(...)
+// под guard'ами «typeof KipToast !== 'undefined'». До Task 282
+// KipToast НИГДЕ не был определён — все ~100 вызовов молча
+// подавлялись: ни ошибок валидации форм («Выберите сотрудника»),
+// ни ошибок сервера («overlap», «sheet_not_found»), ни сообщений
+// об успехе пользователь не видел. Заявка: «нажимаю добавить —
+// и ничего не происходит». Алиас ведёт на реальную тост-систему
+// (#toast / showToast). var на top-level (не const) — доступен
+// всем модулям ниже по файлу и window.KipToast для консоли.
+var KipToast = {
+    show: function(msg) {
+        showToast(msg === null || msg === undefined ? '' : String(msg));
+    }
+};
+
+// ============================================================
 // Кастомные диалоги kipConfirm / kipPrompt
 // Заменяют нативные confirm()/prompt(), чтобы убрать
 // «Подтвердите действие на bloknett-design.github.io»
@@ -28243,6 +28262,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             // Это может быть session_expired, no_session, или бизнес-ошибка.
                             const err = new Error(data.error || 'Неизвестная ошибка сервера');
                             err._kind = 'SERVER';
+                            // Task 282: сервер прикладывает человекочитаемое
+                            // пояснение (message) к бизнес-ошибкам: «Период
+                            // пересекается с уже заданным отпуском…», «Часть N
+                            // уже задана…». Раньше оно терялось — пользователь
+                            // видел только код ('overlap'). Теперь доступно
+                            // как err.serverMessage; модули показывают его
+                            // в тостах: «Ошибка: <serverMessage>».
+                            if (data.message) err.serverMessage = String(data.message);
                             throw err;
                         }
                         return data.data;
@@ -34592,6 +34619,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return KipAuth.api(action, Object.assign({ token: token }, payload || {}));
         },
 
+        // Task 282: текст ошибки API для тостов/страниц ошибок. Сервер
+        // возвращает { ok: false, error: 'код', message: 'пояснение' } —
+        // KipAuth.api кладёт пояснение в err.serverMessage (новое в
+        // Task 282, раньше терялось). Показываем пояснение, иначе код,
+        // иначе строку: «Ошибка: Период пересекается с уже заданным
+        // отпуском…» вместо малопонятного «Ошибка: overlap».
+        _apiErrText: function(err) {
+            if (err && err.serverMessage) return err.serverMessage;
+            if (err && err.message) return err.message;
+            return String(err || 'ошибка');
+        },
+
         _loadStatusCodes: function() {
             var self = this;
             return this._api('workSchedule.getStatusCodes', {})
@@ -36018,7 +36057,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self._renderVacations();
             }).catch(function(err) {
                 if (listEl) listEl.innerHTML =
-                    '<div class="admin-empty">Ошибка: ' + (err.message || err) +
+                    '<div class="admin-empty">Ошибка: ' + self._apiErrText(err) +
                     '<br><span style="font-size:11px;">Лист «Отпуска» и серверная часть ' +
                     'подключаются деплоем Task 274 (см. scripts/DEPLOY-Task274-vacations.md).</span></div>';
                 var sumEl = document.getElementById('wsVacSummary');
@@ -36283,8 +36322,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
                 self.loadVacations();
             }).catch(function(err) {
+                // Task 282: раньше тост подавлялся фантомным KipToast
+                // (не был определён) — «нажимаю добавить и ничего не
+                // происходит». Теперь ошибка видна, с серверным
+                // пояснением (serverMessage), если оно есть.
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
-                    KipToast.show('Ошибка: ' + (err.message || err));
+                    KipToast.show('Ошибка: ' + self._apiErrText(err));
                 }
             });
         },
@@ -36311,7 +36354,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 })
                 .catch(function(err) {
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
-                        KipToast.show('Ошибка: ' + (err.message || err));
+                        KipToast.show('Ошибка: ' + self._apiErrText(err));
                     }
                 });
         },
