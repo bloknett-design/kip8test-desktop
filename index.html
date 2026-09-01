@@ -3675,8 +3675,10 @@
         margin-top: 12px;
         border-top: 1px solid rgba(255,255,255,0.06);
     }
-    /* Task 289: заголовок хронологии — flex-строка: слева «Хронология
-       показаний», справа счётчик «За неделю» (только Хозрасчёт №1). */
+    /* Task 291: заголовок хронологии — обычная блочная строка (счётчик
+       недели перенесён ОТДЕЛЬНОЙ строкой под неё). Непрозрачный фон
+       #372e2a = как нечётные строки детальной карточки: сетка страницы
+       (20×20) больше не просвечивает под текстом заголовка. */
     .flow-archive-title {
         font-size: 12px;
         font-weight: 700;
@@ -3684,29 +3686,29 @@
         text-transform: uppercase;
         letter-spacing: 0.4px;
         padding: 12px 16px 6px 16px;
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        gap: 8px;
-        /* Task 290: счётчик недели стал длиннее (период + Гкал) —
-           на узких экранах переносится на свою строку */
-        flex-wrap: wrap;
+        background: #372e2a;
     }
-    /* Task 289/290: счётчик «За неделю» — сумма суточных показаний
-       последней ПОЛНОЙ календарной недели (пн–вс) с подписью периода,
-       справа от заголовка «Хронология показаний». Обычный регистр
-       (заголовок — uppercase) и тёплый акцент: читается как значение,
-       а не как подпись. Task 290: разрешён перенос внутри счётчика
-       (период + т + Гкал), прижат вправо. */
-    .flow-week-counter {
+    /* Task 291: счётчик «За неделю» — ОТДЕЛЬНОЙ строкой под заголовком
+       «Хронология показаний»: сумма суточных показаний последней
+       ПОЛНОЙ календарной недели (пн–вс) с подписью периода. Обычный
+       регистр (заголовок — uppercase) и тёплый акцент. Непрозрачный
+       фон #463e38 = следующий шаг зебры детальной карточки. Подпись
+       «За неделю ДД.ММ–ДД.ММ.ГГГГ:» и значение — каждый неразрывны
+       (white-space: nowrap); единственная точка переноса — пробел
+       после двоеточия: если вся строка не вмещается в ширину экрана,
+       значение уходит на новую строку целиком. */
+    .flow-week-counter-row {
         font-size: 12px;
         font-weight: 700;
         text-transform: none;
         letter-spacing: 0;
         color: #dfb283;
-        white-space: normal;
-        text-align: right;
-        margin-left: auto;
+        padding: 2px 16px 10px 16px;
+        background: #463e38;
+    }
+    .flow-week-counter-label,
+    .flow-week-counter-value {
+        white-space: nowrap;
     }
     .flow-archive-empty {
         padding: 12px 16px;
@@ -3900,9 +3902,11 @@
     }
     [data-theme="light"] .flow-archive-title {
         color: rgba(20, 20, 19, 0.45);
+        background: #f5f0eb;
     }
-    [data-theme="light"] .flow-week-counter {
+    [data-theme="light"] .flow-week-counter-row {
         color: #8a5a26;
+        background: #ebe5de;
     }
     [data-theme="light"] .flow-archive-vbar {
         background: linear-gradient(0deg, #c87048, #b85e38);
@@ -34455,17 +34459,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             });
         },
 
-        // Task 289/290: HTML счётчика «За неделю» — справа от заголовка
-        // «Хронология показаний». Показывается только для Хозрасчёта №1
-        // (суточный ввод). Task 290: считаются показания, переданные за
-        // КАЖДЫЕ СУТКИ последней ПОЛНОЙ календарной недели (пн–вс,
-        // закрывшейся в прошлое воскресенье) — т и Гкал складываются
-        // по последней записи каждой даты; период недели подписан
+        // Task 289/290/291: HTML счётчика «За неделю» — ОТДЕЛЬНОЙ
+        // строкой под заголовком «Хронология показаний» (Task 289/290
+        // ставил его справа от заголовка, Task 291 перенёс вниз).
+        // Показывается только для Хозрасчёта №1 (суточный ввод).
+        // Task 290: считаются показания, переданные за КАЖДЫЕ СУТКИ
+        // последней ПОЛНОЙ календарной недели (пн–вс, закрывшейся в
+        // прошлое воскресенье) — т и Гкал складываются по последней
+        // записи каждой даты; период недели подписан
         // («24.08–30.08.2026»). В начале каждой новой недели счётчик
         // автоматически переходит на данные только что закрывшейся
         // недели; в архив ничего не пишется. Агрегаты «за месяц» и
         // исторические «за неделю» не учитываются. Нет суточных
         // записей за эту неделю → «За неделю 24.08–30.08.2026: —».
+        // Task 291: строка = два неразрывных спана (подпись до
+        // двоеточия + значение); единственная точка переноса — пробел
+        // после двоеточия: если строка не вмещается в экран, значение
+        // уходит на новую строку целиком.
         _buildWeekCounterHtml: function(records, meter) {
             if (!this._isDailyMode(meter)) return '';
             var wk = flowWeekCounterStats(records, new Date());
@@ -34476,18 +34486,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                        ? ' · ' + wk.gcal.toFixed(3).replace('.', ',') + ' Гкал'
                        : ''))
                 : '—';
-            return '<span class="flow-week-counter"' +
+            return '<div class="flow-week-counter-row"' +
                    ' title="Сумма суточных показаний за последнюю полную календарную неделю (пн–вс, ' + this._esc(period) + '); обновляется в начале каждой недели"' +
-                   '>За неделю ' + this._esc(period) + ': ' + valStr + '</span>';
+                   '><span class="flow-week-counter-label">За неделю ' + this._esc(period) + ':</span>' +
+                   ' <span class="flow-week-counter-value">' + valStr + '</span></div>';
         },
 
         // Рендер секции хронологии (таблица + график)
         _buildArchiveHtml: function(records, meter) {
-            // Task 289: счётчик недели — в строку заголовка (справа)
+            // Task 291: счётчик недели — ОТДЕЛЬНОЙ строкой под заголовком
             var weekCounterHtml = this._buildWeekCounterHtml(records, meter);
             if (!records || records.length === 0) {
                 return '<div class="flow-archive-section">' +
-                       '<div class="flow-archive-title"><span class="flow-archive-title-text">Хронология показаний</span>' + weekCounterHtml + '</div>' +
+                       '<div class="flow-archive-title">Хронология показаний</div>' + weekCounterHtml +
                        '<div class="flow-archive-empty">Записей ещё нет</div>' +
                        '</div>';
             }
@@ -34509,7 +34520,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             var html = '';
             html += '<div class="flow-archive-section">';
-            html += '<div class="flow-archive-title"><span class="flow-archive-title-text">Хронология показаний</span>' + weekCounterHtml + '</div>';
+            html += '<div class="flow-archive-title">Хронология показаний</div>' + weekCounterHtml;
 
             // График расхода (вертикальные бары: даты по X, расход по Y)
             html += this._buildArchiveChart(dayRecords, meter);
