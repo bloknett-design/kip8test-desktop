@@ -34858,8 +34858,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Записи от старых к новым (по X слева направо)
             var chartRecords = records.slice(0, 31).reverse();
 
-            // Заголовок графика зависит от источника данных
-            var chartTitle = dailyMode ? 'Показания' : 'Расход';
+            // Заголовок графика зависит от источника данных.
+            // Task 292: для dailyMode — «Показания (посуточно)», чтобы
+            // явно отличать суточные данные графика от счётчика «За
+            // неделю» (агрегаты «за неделю/месяц» в график не попадают
+            // — Task 286); для остальных — «Расход», как прежде.
+            var chartTitle = dailyMode ? 'Показания (посуточно)' : 'Расход';
 
             var html = '';
             html += '<div class="flow-archive-chart">';
