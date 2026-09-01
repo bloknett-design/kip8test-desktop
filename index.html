@@ -28040,7 +28040,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
     const KipAuth = {
         // URL Apps Script Web App.
-        WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzgPtyya6eMCql4pxZiOyYkfJaBsMRLvKK5bzrsbZpLa5zoNtxSoKeNYJauQVIOtlz2rg/exec',
+        // Task 284: URL развёртывания пользователя (AKfycbyt…) — пробы
+        // 2026-09-01 подтвердили: проект полный (Auth/Sessions/Admin/
+        // CableJournal/Flowmeter/ValidationRules/WorkSchedule) и код
+        // свежий (роутинг отпусков есть). Прежний URL (AKfycbzg…,
+        // Task 202) остался на старом снимке кода — до Task 274.
+        WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbyt2sjbJ8xT5UPKDlYj4q-CV-5pH_Yrv5COrg0PIpp92snpQULUNtJC__pMnQ0h6feNlA/exec',
 
         // Ключ localStorage для session token.
         TOKEN_KEY: 'kip8_session_token',
