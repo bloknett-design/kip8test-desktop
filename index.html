@@ -3375,14 +3375,22 @@
         color: #a5542f;
     }
     /* Task 286: блок «Передано показаний» (суммарный счётчик, контроль) —
-       только в карточке Хозрасчёта №1, перед хронологией */
+       только в карточке Хозрасчёта №1, перед хронологией.
+       Task 287: фон НЕпрозрачный — детальная карточка рисуется прямо на
+       фоне страницы (тёмная сетка), блок был прозрачным и «просвечивал»
+       сетку, мешая чтению цифр. Сплошной цвет ≈ карточка (card-bg на
+       непрозрачном фоне), тёмная/светлая темы. */
     .flow-stats-section {
         margin: 14px 16px 0;
         border: 1px solid rgba(255,255,255,0.07);
         border-radius: 12px;
         overflow: hidden;
+        background: #17212e;
     }
-    [data-theme="light"] .flow-stats-section { border-color: rgba(20,20,19,0.1); }
+    [data-theme="light"] .flow-stats-section {
+        border-color: rgba(20,20,19,0.1);
+        background: #faf9f6;
+    }
     .flow-stats-title {
         font-size: 12px; font-weight: 600; letter-spacing: 0.4px;
         text-transform: uppercase;
@@ -32559,75 +32567,168 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         return (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear();
     }
 
-    /** Task 286: суммарный счётчик ПЕРЕДАННЫХ показаний (контроль, без
-     *  записи в архив — чистое вычисление поверх загруженного архива).
-     *  Считаются только записи СУТОЧНОГО типа (entryType 'сутки'/пусто —
-     *  legacy; записи «за неделю/месяц» — агрегаты, иначе двойной учёт).
+    /** Task 286 + Task 287: суммарный счётчик ПЕРЕДАННЫХ показаний
+     *  (контроль, без записи в архив — чистое вычисление поверх
+     *  загруженного архива).
      *  Периоды (по dateCurr — дате, к которой относится показание):
-     *    • today — за сегодня;
-     *    • week  — за 7 дней, включая сегодня ([today−6, today]);
-     *    • month — за текущий календарный месяц.
+     *    • week  — Task 287: ТЕКУЩАЯ календарная неделя (пн–вс той
+     *      недели, в которую попадает «сейчас»); было «7 дней назад»;
+     *    • month — Task 287: предыдущий ПОЛНЫЙ календарный месяц; если
+     *      в нём записей нет — откат назад к последнему месяцу, за
+     *      который записи ЕСТЬ (пока не введут показания за новый
+     *      прошедший месяц, показываем предыдущий введённый); было
+     *      «текущий месяц». Строка «За сутки» (today) удалена (Task 287).
+     *  Считаются записи СУТОЧНОГО типа (entryType 'сутки'/пусто — legacy;
+     *  записи «за неделю/месяц» — агрегаты, иначе двойной учёт).
+     *  ИСКЛЮЧЕНИЕ для месяца: если в выбранном месяце суточных записей
+     *  нет, но есть агрегат («показания за месяц») — месяц показывается
+     *  ПО АГРЕГАТАМ (aggOnly=true: 1 запись = месячный расход), и сам
+     *  факт наличия агрегата считается «показания введены» при выборе
+     *  месяца. Неделя всегда считается по суточным записям.
      *  Для каждого периода: count — число записей, days — число РАЗНЫХ
      *  дней (контроль пропусков), sum — суммарный расход (т, из
      *  consumption), gcal — суммарные Гкал.
      *  records — массив записей архива (порядок не важен).
-     *  Возвращает { today:{...}, week:{...}, month:{...} }. */
+     *  Возвращает { week:{count,days,sum,gcal,start,end},
+     *              month:{count,days,sum,gcal,start,aggOnly} } —
+     *  start/end — границы периодов (для подписей в UI). */
     function flowCountStats(records, now) {
+        var n = (now instanceof Date) ? now : new Date();
+
+        // --- Неделя: текущая календарная (пн–вс) ---
+        // getDay(): 0=вс…6=сб → сдвиг до понедельника (0=пн…6=вс)
+        var wd = (n.getDay() + 6) % 7;
+        var weekStart = new Date(n.getFullYear(), n.getMonth(), n.getDate() - wd);
+        var weekEnd = new Date(n.getFullYear(), n.getMonth(), n.getDate() - wd + 6);
+
+        // --- Месяц: предыдущий календарный (мог быть в прошлом году) ---
+        var monthStart = new Date(n.getFullYear(), n.getMonth() - 1, 1);
+
         var res = {
-            today: { count: 0, days: 0, sum: 0, gcal: 0 },
-            week:  { count: 0, days: 0, sum: 0, gcal: 0 },
-            month: { count: 0, days: 0, sum: 0, gcal: 0 }
+            week:  { count: 0, days: 0, sum: 0, gcal: 0,
+                     start: weekStart, end: weekEnd },
+            month: { count: 0, days: 0, sum: 0, gcal: 0,
+                     start: monthStart, aggOnly: false }
         };
         if (!records || !records.length) return res;
 
-        var n = (now instanceof Date) ? now : new Date();
-        var todayStart = new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime();
-        var weekStart = new Date(n.getFullYear(), n.getMonth(), n.getDate() - 6).getTime();
-        var monthY = n.getFullYear(), monthM = n.getMonth();
+        var wStart = weekStart.getTime();
+        var wEnd = new Date(weekEnd.getFullYear(), weekEnd.getMonth(),
+                            weekEnd.getDate()).getTime();
 
         // Уникальные дни (по dateCurr) — для контроля пропущенных дней
-        var dayKeys = { today: {}, week: {}, month: {} };
+        var dayKeys = { week: {}, month: {} };
+
+        // Разбор записей: суточные и агрегаты — отдельно
+        var dailies = [];   // суточные (считаются всегда)
+        var monthAggs = []; // агрегаты «за месяц» (для выбора месяца + fallback)
+        var earliest = null; // самая ранняя дата ЛЮБОЙ записи (граница отката)
 
         for (var i = 0; i < records.length; i++) {
             var r = records[i];
-            // Только суточные записи (агрегаты «за неделю/месяц» не считаем)
-            var et = String((r && r.entryType) || '').trim().toLowerCase();
-            if (et === 'неделя' || et === 'месяц') continue;
-
             var d = _flowParseDate(r && r.dateCurr);
             if (!d) continue;
+            if (earliest === null || d < earliest) earliest = d;
+            var et = String((r && r.entryType) || '').trim().toLowerCase();
+            var isAgg = (et === 'неделя' || et === 'месяц');
+            if (!isAgg) dailies.push(d);
+            if (et === 'месяц') monthAggs.push(d);
+        }
 
-            var cons = parseFloat(r.consumption);
-            if (isNaN(cons)) cons = 0;
-            var g = (r && r.gcal !== null && r.gcal !== undefined && r.gcal !== '')
-                     ? (parseFloat(r.gcal) || 0) : 0;
-
-            var key = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-
-            // За текущий календарный месяц
-            if (d.getFullYear() === monthY && d.getMonth() === monthM) {
-                res.month.count++;
-                res.month.sum += cons;
-                res.month.gcal += g;
-                dayKeys.month[key] = true;
+        // --- Выбор месяца: предыдущий → откат назад, пока нет записей ---
+        // «Записи есть» = суточная запись ИЛИ агрегат «за месяц» с
+        // dateCurr в этом месяце (конец периода лежит в месяце).
+        // Откат ограничен месяцем самой ранней записи — дальше пусто.
+        // Сравниваем на уровне НАЧАЛ месяцев (cur — всегда 1-е число,
+        // earliest может быть серединой месяца).
+        if (earliest !== null) {
+            var earliestMonth = new Date(earliest.getFullYear(),
+                                         earliest.getMonth(), 1);
+            var cur = new Date(monthStart.getTime());
+            while (cur >= earliestMonth) {
+                var hasRec = false;
+                for (var j = 0; j < dailies.length && !hasRec; j++) {
+                    if (dailies[j].getFullYear() === cur.getFullYear() &&
+                        dailies[j].getMonth() === cur.getMonth()) hasRec = true;
+                }
+                for (var k = 0; k < monthAggs.length && !hasRec; k++) {
+                    if (monthAggs[k].getFullYear() === cur.getFullYear() &&
+                        monthAggs[k].getMonth() === cur.getMonth()) hasRec = true;
+                }
+                if (hasRec) break;
+                cur = new Date(cur.getFullYear(), cur.getMonth() - 1, 1);
             }
-            // За 7 дней (включая сегодня)
-            if (key >= weekStart && key <= todayStart) {
+            if (cur >= earliestMonth) monthStart = new Date(cur.getTime());
+        }
+        var mY = monthStart.getFullYear(), mM = monthStart.getMonth();
+        res.month.start = monthStart;
+
+        // --- Неделя: суточные записи с пн текущей недели по вс ---
+        for (var q = 0; q < records.length; q++) {
+            var rec = records[q];
+            var dq = _flowParseDate(rec && rec.dateCurr);
+            if (!dq) continue;
+            var etq = String((rec && rec.entryType) || '').trim().toLowerCase();
+            var isAggQ = (etq === 'неделя' || etq === 'месяц');
+
+            var cons = parseFloat(rec.consumption);
+            if (isNaN(cons)) cons = 0;
+            var g = (rec && rec.gcal !== null && rec.gcal !== undefined && rec.gcal !== '')
+                     ? (parseFloat(rec.gcal) || 0) : 0;
+
+            var key = new Date(dq.getFullYear(), dq.getMonth(), dq.getDate()).getTime();
+
+            // Неделя: суточные записи текущей календарной недели
+            if (!isAggQ && key >= wStart && key <= wEnd) {
                 res.week.count++;
                 res.week.sum += cons;
                 res.week.gcal += g;
                 dayKeys.week[key] = true;
             }
-            // За сегодня
-            if (key === todayStart) {
-                res.today.count++;
-                res.today.sum += cons;
-                res.today.gcal += g;
-                dayKeys.today[key] = true;
+        }
+
+        // --- Месяц: суточные; если их нет — агрегаты «за месяц» ---
+        var monthDailies = 0;
+        for (var t = 0; t < records.length; t++) {
+            var rt = records[t];
+            var dt = _flowParseDate(rt && rt.dateCurr);
+            if (!dt) continue;
+            if (dt.getFullYear() !== mY || dt.getMonth() !== mM) continue;
+            var ett = String((rt && rt.entryType) || '').trim().toLowerCase();
+            if (ett === 'неделя') continue; // недельные агрегаты — никогда
+            if (ett === 'месяц') continue;  // сначала считаем суточные
+            monthDailies++;
+            var consT = parseFloat(rt.consumption);
+            if (isNaN(consT)) consT = 0;
+            var gT = (rt && rt.gcal !== null && rt.gcal !== undefined && rt.gcal !== '')
+                     ? (parseFloat(rt.gcal) || 0) : 0;
+            res.month.count++;
+            res.month.sum += consT;
+            res.month.gcal += gT;
+            dayKeys.month[new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime()] = true;
+        }
+        if (monthDailies === 0) {
+            // Месяц без суточных записей: показываем агрегат «за месяц»
+            // (это и есть «показания за месяц» — расход за период)
+            res.month.aggOnly = true;
+            for (var a = 0; a < records.length; a++) {
+                var ra = records[a];
+                var da = _flowParseDate(ra && ra.dateCurr);
+                if (!da) continue;
+                if (da.getFullYear() !== mY || da.getMonth() !== mM) continue;
+                var eta = String((ra && ra.entryType) || '').trim().toLowerCase();
+                if (eta !== 'месяц') continue;
+                var consA = parseFloat(ra.consumption);
+                if (isNaN(consA)) consA = 0;
+                var gA = (ra && ra.gcal !== null && ra.gcal !== undefined && ra.gcal !== '')
+                         ? (parseFloat(ra.gcal) || 0) : 0;
+                res.month.count++;
+                res.month.sum += consA;
+                res.month.gcal += gA;
+                dayKeys.month[new Date(da.getFullYear(), da.getMonth(), da.getDate()).getTime()] = true;
             }
         }
 
-        res.today.days = Object.keys(dayKeys.today).length;
         res.week.days = Object.keys(dayKeys.week).length;
         res.month.days = Object.keys(dayKeys.month).length;
         return res;
@@ -34484,32 +34585,41 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // Рендер секции хронологии (таблица + график)
-        // Task 286: перед хронологией — блок «Передано показаний» —
+        // Task 286 + 287: перед хронологией — блок «Передано показаний» —
         // суммарный счётчик (контроль, БЕЗ записи в архив): сумма
-        // расхода + Гкал и число записей/дней за сутки / 7 дней /
-        // текущий месяц. Только для Хозрасчёта №1 (суточный режим от
-        // Тэкон-19) — по заявке задачи. Вычисляется из уже загруженного
-        // архива (flowCountStats); записи «за неделю/месяц» — агрегаты,
-        // в счётчик не входят (иначе двойной учёт).
+        // расхода + Гкал и число записей/дней за КАЛЕНДАРНУЮ неделю
+        // (пн–вс текущей) и прошедший месяц (Task 287: «за сутки»
+        // убрана; месяц — предыдущий, с откатом назад, пока не введут
+        // показания за новый полный прошедший месяц). Только для
+        // Хозрасчёта №1 (суточный режим от Тэкон-19) — по заявке задачи.
+        // Вычисляется из уже загруженного архива (flowCountStats);
+        // записи «за неделю/месяц» — агрегаты, в счётчике недели их
+        // нет (двойной учёт); месяц без суточных показывается по
+        // агрегату «за месяц».
         _buildStatsHtml: function(records, meter) {
             if (!this._isDailyMode(meter)) return '';
 
             var stats = flowCountStats(records, new Date());
             var now = new Date();
 
-            // Подписи периодов: за сегодня (ДД.ММ), за 7 дней (ДД.ММ–ДД.ММ),
-            // за текущий месяц (название)
+            // Подпись недели: диапазон пн–вс текущей календарной недели
             var fmtShort = function(d) {
                 var m = d.getMonth() + 1, day = d.getDate();
                 return (day < 10 ? '0' : '') + day + '.' + (m < 10 ? '0' : '') + m;
             };
-            var weekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
-            var todayLabel = fmtShort(now);
-            var weekLabel = fmtShort(weekAgo) + '–' + fmtShort(now);
-            var monthLabel = FLOW_MONTHS_RU[now.getMonth()];
+            var weekLabel = fmtShort(stats.week.start) + '–' + fmtShort(stats.week.end);
+
+            // Подпись месяца: «За август»; год — если месяц не текущего
+            // года (откат назад может показать и позапрошлый год)
+            var mStart = stats.month.start;
+            var monthLabel = 'За ' + FLOW_MONTHS_RU[mStart.getMonth()].toLowerCase();
+            if (mStart.getFullYear() !== now.getFullYear()) {
+                monthLabel += ' ' + mStart.getFullYear();
+            }
 
             // Строка: «подпись» слева, «сумма · Гкал — N записей» справа.
-            // Для недели/месяца добавляем «за M дн.» — пропущенные дни видны сразу.
+            // «за M дн.» — пропущенные дни видны сразу; для месяца из
+            // одного агрегата «за M дн.» не показываем (это не дни).
             function fmtVal(st, withDays) {
                 var parts = [];
                 parts.push(FlowmeterData._fmtNum(st.sum) + ' т');
@@ -34527,9 +34637,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var html = '';
             html += '<div class="flow-stats-section">';
             html += '<div class="flow-stats-title">Передано показаний (контроль)</div>';
-            html += '<div class="flow-stats-row"><span class="flow-stats-label">За сутки (' + todayLabel + ')</span><span class="flow-stats-value">' + fmtVal(stats.today, false) + '</span></div>';
-            html += '<div class="flow-stats-row"><span class="flow-stats-label">За 7 дней (' + weekLabel + ')</span><span class="flow-stats-value">' + fmtVal(stats.week, true) + '</span></div>';
-            html += '<div class="flow-stats-row"><span class="flow-stats-label">За ' + monthLabel.toLowerCase() + '</span><span class="flow-stats-value">' + fmtVal(stats.month, true) + '</span></div>';
+            html += '<div class="flow-stats-row"><span class="flow-stats-label">За неделю (' + weekLabel + ')</span><span class="flow-stats-value">' + fmtVal(stats.week, true) + '</span></div>';
+            html += '<div class="flow-stats-row"><span class="flow-stats-label">' + monthLabel + '</span><span class="flow-stats-value">' + fmtVal(stats.month, !stats.month.aggOnly) + '</span></div>';
             html += '</div>';
             return html;
         },
