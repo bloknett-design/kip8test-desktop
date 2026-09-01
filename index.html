@@ -3688,18 +3688,25 @@
         justify-content: space-between;
         align-items: baseline;
         gap: 8px;
+        /* Task 290: счётчик недели стал длиннее (период + Гкал) —
+           на узких экранах переносится на свою строку */
+        flex-wrap: wrap;
     }
-    /* Task 289: счётчик «За неделю» — сумма суточных показаний текущей
-       календарной недели (пн–вс), справа от заголовка «Хронология
-       показаний». Обычный регистр (заголовок — uppercase) и тёплый
-       акцент: читается как значение, а не как подпись. */
+    /* Task 289/290: счётчик «За неделю» — сумма суточных показаний
+       последней ПОЛНОЙ календарной недели (пн–вс) с подписью периода,
+       справа от заголовка «Хронология показаний». Обычный регистр
+       (заголовок — uppercase) и тёплый акцент: читается как значение,
+       а не как подпись. Task 290: разрешён перенос внутри счётчика
+       (период + т + Гкал), прижат вправо. */
     .flow-week-counter {
         font-size: 12px;
         font-weight: 700;
         text-transform: none;
         letter-spacing: 0;
         color: #dfb283;
-        white-space: nowrap;
+        white-space: normal;
+        text-align: right;
+        margin-left: auto;
     }
     .flow-archive-empty {
         padding: 12px 16px;
@@ -32504,31 +32511,48 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         return n.toFixed(2);
     }
 
-    /** Task 289: статистика суточных показаний за ТЕКУЩУЮ календарную
-     *  неделю (пн–вс) — для счётчика «За неделю» справа от заголовка
-     *  «Хронология показаний» в карточке Хозрасчёта №1 (форму ввода
-     *  «за неделю» заменил этот счётчик — недельный расход теперь
-     *  считается из суточных данных, а не вводится вручную).
-     *  records — записи архива (новые сверху; r.curr, r.dateCurr
-     *  'M/D/YYYY', r.entryType); now — Date «сегодня» (необязательно).
-     *  Возвращает { start, end, sum, days }:
-     *   • start/end — понедельник и воскресенье ТЕКУЩЕЙ недели (Date);
-     *   • sum — сумма суточных значений за неделю; агрегаты «за
-     *     неделю/месяц» (entryType) НЕ учитываются;
+    /** Task 289/290: статистика суточных показаний за ПОСЛЕДНЮЮ
+     *  ПОЛНУЮ календарную неделю (пн–вс, уже полностью прошедшую) —
+     *  для счётчика «За неделю» справа от заголовка «Хронология
+     *  показаний» в карточке Хозрасчёта №1 (форму ввода «за неделю»
+     *  заменил этот счётчик — недельный расход считается из суточных
+     *  данных, а не вводится вручную).
+     *  records — записи архива (новые сверху; r.curr, r.gcal,
+     *  r.dateCurr 'M/D/YYYY', r.entryType); now — Date «сегодня»
+     *  (необязательно).
+     *  Возвращает { start, end, sum, gcal, days, gcalDays }:
+     *   • start/end — понедельник и воскресенье последней ПОЛНОЙ
+     *     недели (завершилась в прошлое воскресенье). Ровно в
+     *     понедельник счётчик уже показывает новую — только что
+     *     закрывшуюся — неделю; в архив ничего не пишется
+     *     (Task 290: раньше считалась ТЕКУЩАЯ неделя — из-за чего
+     *     в начале недели счётчик показывал показания одного-двух
+     *     последних суток, а не сумму за неделю);
+     *   • sum — сумма суточных значений «т» за каждый день недели;
+     *     gcal — сумма значений «Гкал» (по тому же принципу);
+     *     агрегаты «за неделю/месяц» (entryType) НЕ учитываются;
      *   • days — число РАЗЛИЧНЫХ дат с суточными записями (правка в
      *     течение дня пишет новую строку архива — каждая дата считается
-     *     один раз, по самой свежей записи). */
+     *     один раз, по самой свежей записи); gcalDays — из них даты, у
+     *     которых в самой свежей записи есть значение Гкал. */
     function flowWeekCounterStats(records, now) {
         var n = (now instanceof Date) ? now : new Date();
         var d = new Date(n.getFullYear(), n.getMonth(), n.getDate());
         // getDay(): 0=вс .. 6=сб → сколько дней назад был понедельник
         var dow = (d.getDay() + 6) % 7;
-        var start = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow);
-        var end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+        var thisMonday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow);
+        // Последняя ПОЛНАЯ неделя — неделя, что завершилась в прошлое
+        // воскресенье (пн..вс НЕДЕЛЮ НАЗАД от понедельника текущей).
+        var start = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() - 7);
+        var end = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() - 1);
         var sum = 0;
+        var gcal = 0;
         var days = 0;
+        var gcalDays = 0;
         var seenDates = {};
         if (records && records.length) {
+            // записи идут «новые сверху» — первая встреченная дата
+            // и есть самая свежая правка этого дня
             for (var i = 0; i < records.length; i++) {
                 var r = records[i];
                 if (!r) continue;
@@ -32541,9 +32565,32 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 seenDates[key] = true;
                 sum += Math.abs(parseFloat(r.curr) || 0);
                 days++;
+                var g = parseFloat(r.gcal);
+                if (r.gcal !== null && r.gcal !== undefined && !isNaN(g)) {
+                    gcal += Math.abs(g);
+                    gcalDays++;
+                }
             }
         }
-        return { start: start, end: end, sum: sum, days: days };
+        return { start: start, end: end, sum: sum, gcal: gcal, days: days, gcalDays: gcalDays };
+    }
+
+    /** Task 290: подпись периода полной недели для счётчика —
+     *  «24.08–30.08.2026» (та же неделя пн–вс). Через границу года,
+     *  когда годы разные, обе даты пишутся полностью:
+     *  «29.12.2026–04.01.2027». start/end — Date (пн и вс недели). */
+    function flowWeekRangeLabel(start, end) {
+        if (!(start instanceof Date) || !(end instanceof Date) ||
+            isNaN(start.getTime()) || isNaN(end.getTime())) return '';
+        var dm = function(d) {
+            return ((d.getDate() < 10 ? '0' : '') + d.getDate()) + '.' +
+                   ((d.getMonth() + 1 < 10 ? '0' : '') + (d.getMonth() + 1));
+        };
+        if (start.getFullYear() !== end.getFullYear()) {
+            return dm(start) + '.' + start.getFullYear() + '–' +
+                   dm(end) + '.' + end.getFullYear();
+        }
+        return dm(start) + '–' + dm(end) + '.' + end.getFullYear();
     }
 
     /** Task 286: границы ПРОШЕДШЕГО календарного месяца от now.
@@ -34408,21 +34455,30 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             });
         },
 
-        // Task 289: HTML счётчика «За неделю» — справа от заголовка
+        // Task 289/290: HTML счётчика «За неделю» — справа от заголовка
         // «Хронология показаний». Показывается только для Хозрасчёта №1
-        // (суточный ввод): сумма суточных показаний ТЕКУЩЕЙ календарной
-        // недели (пн–вс) по последней записи каждой даты; агрегаты
-        // «за месяц» и исторические «за неделю» не учитываются.
-        // Нет суточных записей на этой неделе → «За неделю: —».
+        // (суточный ввод). Task 290: считаются показания, переданные за
+        // КАЖДЫЕ СУТКИ последней ПОЛНОЙ календарной недели (пн–вс,
+        // закрывшейся в прошлое воскресенье) — т и Гкал складываются
+        // по последней записи каждой даты; период недели подписан
+        // («24.08–30.08.2026»). В начале каждой новой недели счётчик
+        // автоматически переходит на данные только что закрывшейся
+        // недели; в архив ничего не пишется. Агрегаты «за месяц» и
+        // исторические «за неделю» не учитываются. Нет суточных
+        // записей за эту неделю → «За неделю 24.08–30.08.2026: —».
         _buildWeekCounterHtml: function(records, meter) {
             if (!this._isDailyMode(meter)) return '';
             var wk = flowWeekCounterStats(records, new Date());
+            var period = flowWeekRangeLabel(wk.start, wk.end);
             var valStr = (wk.days > 0)
-                ? (this._fmtNum(wk.sum) + ' ' + this._esc(meter.unit))
+                ? (this._fmtNum(wk.sum) + ' ' + this._esc(meter.unit) +
+                   (wk.gcalDays > 0
+                       ? ' · ' + wk.gcal.toFixed(3).replace('.', ',') + ' Гкал'
+                       : ''))
                 : '—';
             return '<span class="flow-week-counter"' +
-                   ' title="Сумма суточных показаний за текущую календарную неделю (пн–вс)"' +
-                   '>За неделю: ' + valStr + '</span>';
+                   ' title="Сумма суточных показаний за последнюю полную календарную неделю (пн–вс, ' + this._esc(period) + '); обновляется в начале каждой недели"' +
+                   '>За неделю ' + this._esc(period) + ': ' + valStr + '</span>';
         },
 
         // Рендер секции хронологии (таблица + график)
