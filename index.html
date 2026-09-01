@@ -3675,13 +3675,31 @@
         margin-top: 12px;
         border-top: 1px solid rgba(255,255,255,0.06);
     }
+    /* Task 289: заголовок хронологии — flex-строка: слева «Хронология
+       показаний», справа счётчик «За неделю» (только Хозрасчёт №1). */
     .flow-archive-title {
         font-size: 12px;
         font-weight: 700;
         color: rgba(200, 180, 170, 0.55);
         text-transform: uppercase;
         letter-spacing: 0.4px;
-        padding: 12px 0 6px 16px;
+        padding: 12px 16px 6px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+    }
+    /* Task 289: счётчик «За неделю» — сумма суточных показаний текущей
+       календарной недели (пн–вс), справа от заголовка «Хронология
+       показаний». Обычный регистр (заголовок — uppercase) и тёплый
+       акцент: читается как значение, а не как подпись. */
+    .flow-week-counter {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: none;
+        letter-spacing: 0;
+        color: #dfb283;
+        white-space: nowrap;
     }
     .flow-archive-empty {
         padding: 12px 16px;
@@ -3876,6 +3894,9 @@
     [data-theme="light"] .flow-archive-title {
         color: rgba(20, 20, 19, 0.45);
     }
+    [data-theme="light"] .flow-week-counter {
+        color: #8a5a26;
+    }
     [data-theme="light"] .flow-archive-vbar {
         background: linear-gradient(0deg, #c87048, #b85e38);
     }
@@ -3933,6 +3954,7 @@
         }
         .flow-archive-title {
             padding-left: 12px;
+            padding-right: 12px;
         }
         .flow-archive-table thead th {
             padding-left: 12px;
@@ -14167,13 +14189,14 @@
 <div id="flowInputSheet" class="flow-input-sheet">
     <div class="flow-input-sheet-handle"></div>
     <div class="flow-input-sheet-title" id="flowInputTitle">Ввести показания</div>
-    <!-- Task 286: выбор периода ввода — только для Хозрасчёта №1 (id=1,
+    <!-- Task 286/289: выбор периода ввода — только для Хозрасчёта №1 (id=1,
          расход пара от Тэкон-19). Скрыт в режиме редактирования (правка
-         доступна только суточным записям) и для остальных расходомеров. -->
+         доступна только суточным записям) и для остальных расходомеров.
+         Task 289: chip «За неделю» убран — недельный расход вручную
+         больше не вводится (счётчик недели считается из суточных). -->
     <div class="flow-input-row" id="flowInputPeriodRow" style="display:none;">
         <div class="flow-period-chips">
             <button type="button" class="flow-period-chip active" id="flowChipDay" onclick="FlowmeterData.setEntryType('сутки')">За сутки</button>
-            <button type="button" class="flow-period-chip" id="flowChipWeek" onclick="FlowmeterData.setEntryType('неделя')">За неделю</button>
             <button type="button" class="flow-period-chip" id="flowChipMonth" onclick="FlowmeterData.setEntryType('месяц')">За месяц</button>
         </div>
     </div>
@@ -14196,7 +14219,7 @@
             <label class="flow-input-label" for="flowInputDate" id="flowInputDateLabel">Дата за предыдущие сутки</label>
             <input type="date" id="flowInputDate" class="flow-input-field-small">
         </div>
-        <!-- Task 286: конец периода («по») — виден только для недели/месяца;
+        <!-- Task 286/289: конец периода («по») — виден только для месяца;
              для «сутки» поле скрыто (дата одна, как раньше) -->
         <div class="flow-input-group" id="flowInputDateEndGroup" style="display:none;">
             <label class="flow-input-label" for="flowInputDateEnd" id="flowInputDateEndLabel">по</label>
@@ -32481,21 +32504,46 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         return n.toFixed(2);
     }
 
-    /** Task 286: границы ПРОШЕДШЕЙ календарной недели (пн–вс) от now.
-     *  Возвращает {start, end} — Date-объекты: start = понедельник
-     *  прошлой недели, end = воскресенье прошлой недели. Смещение
-     *  считаем от понедельника ТЕКУЩЕЙ недели — корректно в любой день.
-     *  Пример: now=вт 01.09.2026 → start=пн 24.08.2026, end=вс 30.08.2026. */
-    function flowPrevWeekRange(now) {
+    /** Task 289: статистика суточных показаний за ТЕКУЩУЮ календарную
+     *  неделю (пн–вс) — для счётчика «За неделю» справа от заголовка
+     *  «Хронология показаний» в карточке Хозрасчёта №1 (форму ввода
+     *  «за неделю» заменил этот счётчик — недельный расход теперь
+     *  считается из суточных данных, а не вводится вручную).
+     *  records — записи архива (новые сверху; r.curr, r.dateCurr
+     *  'M/D/YYYY', r.entryType); now — Date «сегодня» (необязательно).
+     *  Возвращает { start, end, sum, days }:
+     *   • start/end — понедельник и воскресенье ТЕКУЩЕЙ недели (Date);
+     *   • sum — сумма суточных значений за неделю; агрегаты «за
+     *     неделю/месяц» (entryType) НЕ учитываются;
+     *   • days — число РАЗЛИЧНЫХ дат с суточными записями (правка в
+     *     течение дня пишет новую строку архива — каждая дата считается
+     *     один раз, по самой свежей записи). */
+    function flowWeekCounterStats(records, now) {
         var n = (now instanceof Date) ? now : new Date();
         var d = new Date(n.getFullYear(), n.getMonth(), n.getDate());
         // getDay(): 0=вс .. 6=сб → сколько дней назад был понедельник
         var dow = (d.getDay() + 6) % 7;
-        var thisMonday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow);
-        // Прошедшая неделя = [понедельник прошлой недели .. его воскресенье]
-        var start = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() - 7);
+        var start = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow);
         var end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
-        return { start: start, end: end };
+        var sum = 0;
+        var days = 0;
+        var seenDates = {};
+        if (records && records.length) {
+            for (var i = 0; i < records.length; i++) {
+                var r = records[i];
+                if (!r) continue;
+                var et = String(r.entryType || '').trim().toLowerCase();
+                if (et === 'неделя' || et === 'месяц') continue;  // только суточные
+                var dt = _flowParseDate(r.dateCurr);
+                if (!dt || dt < start || dt > end) continue;
+                var key = (dt.getMonth() + 1) + '/' + dt.getDate() + '/' + dt.getFullYear();
+                if (Object.prototype.hasOwnProperty.call(seenDates, key)) continue;
+                seenDates[key] = true;
+                sum += Math.abs(parseFloat(r.curr) || 0);
+                days++;
+            }
+        }
+        return { start: start, end: end, sum: sum, days: days };
     }
 
     /** Task 286: границы ПРОШЕДШЕГО календарного месяца от now.
@@ -33342,9 +33390,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return !!(m && m.id === 1);
         },
 
-        // Task 286: выбранный тип записи в шите ввода — 'сутки' (по
-        // умолчанию) / 'неделя' / 'месяц'. Переключатель виден только для
-        // Хозрасчёта №1 и только при НОВОМ вводе (не при редактировании).
+        // Task 286/289: выбранный тип записи в шите ввода — 'сутки' (по
+        // умолчанию) / 'месяц' (ввод «за неделю» убран в Task 289 —
+        // недельный расход считается из суточных данных). Переключатель
+        // виден только для Хозрасчёта №1 и только при НОВОМ вводе.
         _inputEntryType: 'сутки',
 
         // Открыть детальную карточку
@@ -33739,16 +33788,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             setTimeout(function() { if (field) field.focus(); }, 350);
         },
 
-        // Task 286: применить выбранный тип записи к полям шита ввода —
-        // активный chip, заголовок, placeholder, подписи и значения дат.
-        // Вызывается из openInput (сброс в «сутки» — с isEdit) и из
-        // setEntryType (переключение chip'ов — только новый ввод).
+        // Task 286/289: применить выбранный тип записи к полям шита
+        // ввода — активный chip, заголовок, placeholder, подписи и
+        // значения дат. Вызывается из openInput (сброс в «сутки» — с
+        // isEdit) и из setEntryType (переключение chip'ов — только
+        // новый ввод).
         _applyEntryTypeFields: function(m, isEdit) {
             var dailyMode = this._isDailyMode(m);
             var type = dailyMode ? this._inputEntryType : 'сутки';
 
-            // Подсветка активного chip
-            var chipIds = { 'сутки': 'flowChipDay', 'неделя': 'flowChipWeek', 'месяц': 'flowChipMonth' };
+            // Подсветка активного chip (Task 289: «За неделю» убран)
+            var chipIds = { 'сутки': 'flowChipDay', 'месяц': 'flowChipMonth' };
             for (var t in chipIds) {
                 if (Object.prototype.hasOwnProperty.call(chipIds, t)) {
                     var chip = document.getElementById(chipIds[t]);
@@ -33773,10 +33823,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 return;
             }
 
-            // Недельный/месячный ввод: «Период с … по …» — по умолчанию
-            // границы прошедшей недели (пн–вс) / прошедшего месяца
-            var range = (type === 'неделя') ? flowPrevWeekRange(now)
-                        : flowPrevMonthRange(now);
+            // Месячный ввод: «Период с … по …» — по умолчанию границы
+            // прошедшего календарного месяца (Task 289: недели больше нет)
+            var range = flowPrevMonthRange(now);
             if (dateLabel) dateLabel.textContent = 'Период с';
             if (dateEndLabel) dateEndLabel.textContent = 'по';
             if (dateEndGroup) dateEndGroup.style.display = '';
@@ -33791,16 +33840,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
                 var field = document.getElementById('flowInputField');
                 if (field) {
-                    field.placeholder = (type === 'неделя')
-                        ? 'Расход за прошедшую неделю, ' + m.unit
-                        : 'Расход за прошедший месяц, ' + m.unit;
+                    field.placeholder = 'Расход за прошедший месяц, ' + m.unit;
                 }
             }
         },
 
-        // Task 286: переключить тип записи (chips «За сутки/неделю/месяц»
-        // в шите ввода). Доступно только для Хозрасчёта №1 при новом вводе;
-        // chips скрыты при редактировании и для остальных расходомеров.
+        // Task 286/289: переключить тип записи (chips «За сутки/месяц»
+        // в шите ввода; «За неделю» убран в Task 289). Доступно только
+        // для Хозрасчёта №1 при новом вводе; chips скрыты при
+        // редактировании и для остальных расходомеров.
         setEntryType: function(type) {
             var id = window._flowDetailId;
             var m = null;
@@ -33808,7 +33856,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (this._METERS[i].id === id) { m = this._METERS[i]; break; }
             }
             if (!m || !this._isDailyMode(m)) return;  // только №1
-            if (type !== 'сутки' && type !== 'неделя' && type !== 'месяц') return;
+            if (type !== 'сутки' && type !== 'месяц') return;  // Task 289: недели нет
 
             this._inputEntryType = type;
             this._applyEntryTypeFields(m, false);
@@ -33872,12 +33920,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
             }
 
-            // Task 286: ввод «расход за неделю/месяц» — отдельная ветка.
+            // Task 286/289: ввод «расход за месяц» — отдельная ветка.
             // Запись идёт ТОЛЬКО в архив (meters-строка не меняется, поэтому
             // «Последние показания» остаются суточными) — оптимистичного
             // обновления карточки нет; после сохранения load() перезагрузит
-            // данные и перерисует хронологию + счётчик.
-            if (this._inputEntryType === 'неделя' || this._inputEntryType === 'месяц') {
+            // данные и перерисует хронологию (и счётчик недели).
+            if (this._inputEntryType === 'месяц') {
                 this._submitPeriodEntry(num, gcalVal);
                 return;
             }
@@ -34184,8 +34232,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._sendUpdateReading(payload, isEdit);
         },
 
-        // Task 286: собрать и отправить «расход за неделю/месяц».
-        // Ветка submitInput при _inputEntryType='неделя'|'месяц'.
+        // Task 286/289: собрать и отправить «расход за месяц».
+        // Ветка submitInput при _inputEntryType='месяц' (неделя убрана
+        // в Task 289 — счётчик недели считается из суточных данных).
         // Полная логика: даты периода (с/по), клиентские hard-проверки
         // (зеркало серверных), отправка через ОТДЕЛЬНЫЙ маршрут
         // flowmeter.updatePeriodReading — старый сервер без поддержки
@@ -34194,16 +34243,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // meters-строку — см. DEPLOY-Task286).
         // Мeters-строка не меняется → нет оптимистичного обновления;
         // после успеха load() перезагружает данные, openDetail перерисует
-        // хронологию (новая запись с бейджем «нед»/«мес») и счётчик.
+        // хронологию (новая запись с бейджем «мес») и счётчик недели (Task 289).
         _submitPeriodEntry: function(num, gcalVal) {
             var id = window._flowDetailId;
             var type = this._inputEntryType;
-            if (!id || (type !== 'неделя' && type !== 'месяц')) return;
+            if (!id || type !== 'месяц') return;  // Task 289: только месяц
 
-            // Даты периода: пустые поля → границы прошедшего периода
+            // Даты периода: пустые поля → границы прошедшего месяца
             var now = new Date();
-            var defRange = (type === 'неделя') ? flowPrevWeekRange(now)
-                                               : flowPrevMonthRange(now);
+            var defRange = flowPrevMonthRange(now);
             var dateField = document.getElementById('flowInputDate');
             var dateEndField = document.getElementById('flowInputDateEnd');
             var startStr = (dateField && dateField.value)
@@ -34360,11 +34408,30 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             });
         },
 
+        // Task 289: HTML счётчика «За неделю» — справа от заголовка
+        // «Хронология показаний». Показывается только для Хозрасчёта №1
+        // (суточный ввод): сумма суточных показаний ТЕКУЩЕЙ календарной
+        // недели (пн–вс) по последней записи каждой даты; агрегаты
+        // «за месяц» и исторические «за неделю» не учитываются.
+        // Нет суточных записей на этой неделе → «За неделю: —».
+        _buildWeekCounterHtml: function(records, meter) {
+            if (!this._isDailyMode(meter)) return '';
+            var wk = flowWeekCounterStats(records, new Date());
+            var valStr = (wk.days > 0)
+                ? (this._fmtNum(wk.sum) + ' ' + this._esc(meter.unit))
+                : '—';
+            return '<span class="flow-week-counter"' +
+                   ' title="Сумма суточных показаний за текущую календарную неделю (пн–вс)"' +
+                   '>За неделю: ' + valStr + '</span>';
+        },
+
         // Рендер секции хронологии (таблица + график)
         _buildArchiveHtml: function(records, meter) {
+            // Task 289: счётчик недели — в строку заголовка (справа)
+            var weekCounterHtml = this._buildWeekCounterHtml(records, meter);
             if (!records || records.length === 0) {
                 return '<div class="flow-archive-section">' +
-                       '<div class="flow-archive-title">Хронология показаний</div>' +
+                       '<div class="flow-archive-title"><span class="flow-archive-title-text">Хронология показаний</span>' + weekCounterHtml + '</div>' +
                        '<div class="flow-archive-empty">Записей ещё нет</div>' +
                        '</div>';
             }
@@ -34386,7 +34453,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             var html = '';
             html += '<div class="flow-archive-section">';
-            html += '<div class="flow-archive-title">Хронология показаний</div>';
+            html += '<div class="flow-archive-title"><span class="flow-archive-title-text">Хронология показаний</span>' + weekCounterHtml + '</div>';
 
             // График расхода (вертикальные бары: даты по X, расход по Y)
             html += this._buildArchiveChart(dayRecords, meter);
