@@ -28245,6 +28245,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _SECRET_PAGES: ['minesweeper', 'phonebook'],
         _WHATS_NEW_PAGES: ['whats-new'],
 
+        // Task 296 (Этап 4): серверная карта прав из матрицы KIP8_Access
+        // (action getMyAccess, RoleMatrixGate.gs Task 295). Применяется
+        // как ОВЕРЛЕЙ над легаси-ROLE_ACCESS: матрица доступна → списки
+        // страниц и флаг ввода показаний берутся из неё; недоступна
+        // (старый сервер / сеть) → работаем по прежней карте (сервер всё
+        // равно проверяет каждый запрос, клиентская видимость прав не даёт).
+        _serverAccess: null,
+        _accessBase: null,  // нетронутая копия init()-карты — база пересборки
+
         ROLE_ACCESS: null,  // вычисляется в init()
 
         // ============================================================
@@ -28299,6 +28308,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 'ИТР ИОС': LVL_KIP_IOS_WITH_FLOW, // + canEdit (право записи в каб. журнал)
                 'Админ': ['*']
             };
+
+            // Task 296: снимок легаси-карты — база для пересборки списков
+            // по серверной матрице (_applyServerAccess). ROLE_ACCESS[role]
+            // пересобирается от этого снимка, поэтому храним оригиналы.
+            this._accessBase = {};
+            var _roleKey;
+            for (_roleKey in this.ROLE_ACCESS) {
+                this._accessBase[_roleKey] = this.ROLE_ACCESS[_roleKey].slice();
+            }
         },
 
         // ============================================================
@@ -28530,6 +28548,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self._startHeartbeat();
                 self._updateSidebarUserInfo();
                 self._applyRoleToUI();
+                // Task 296: подтянуть серверную карту прав (матрица KIP8_Access).
+                self._fetchMyAccess();
 
                 // Перейти на главную страницу.
                 if (typeof navigateTo === 'function') navigateTo('dashboard');
@@ -28679,6 +28699,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self.api('heartbeat', { token: token }).catch(function(err) {
                     self.handleSessionExpired(err.message);
                 });
+                // Task 296: заодно обновить серверную карту прав — правка
+                // галочки в матрице доезжает до открытого клиента ≤ ~10 мин
+                // (TTL серверного кэша 5 мин + интервал heartbeat 5 мин).
+                self._fetchMyAccess();
             }, this.HEARTBEAT_INTERVAL);
         },
 
@@ -28698,6 +28722,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 localStorage.removeItem('kip8_cached_email');
                 localStorage.removeItem('kip8_cached_user_id');
             } catch (e) {}
+            // Task 296: сбросить серверную карту прав и вернуть легаси-карту.
+            this._resetServerAccess();
             this._cachedRole = null;
             this._cachedEmail = null;
             this._cachedUserId = null;
@@ -28756,6 +28782,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 localStorage.removeItem('kip8_cached_email');
                 localStorage.removeItem('kip8_cached_user_id');
             } catch (e) {}
+            // Task 296: сбросить серверную карту прав (сессии больше нет).
+            this._resetServerAccess();
             if (this._heartbeatTimer) {
                 clearInterval(this._heartbeatTimer);
                 this._heartbeatTimer = null;
@@ -28801,6 +28829,170 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!allowed) return false;
             if (allowed.indexOf('*') !== -1) return true;
             return allowed.indexOf(page) !== -1;
+        },
+
+        // ============================================================
+        // Task 296 (Этап 4): СЕРВЕРНАЯ КАРТА ПРАВ (матрица KIP8_Access).
+        // ============================================================
+        // Источник истины прав — сервер: getMyAccess (RoleMatrixGate.gs,
+        // Task 295) возвращает права роли из матрицы. Клиент применяет их
+        // как ОВЕРЛЕЙ над легаси-ROLE_ACCESS:
+        //   · карта получена (found=true) → ROLE_ACCESS[role] пересобирается
+        //     по правам матрицы: правка галочки в таблице меняет видимость
+        //     разделов БЕЗ релиза PWA (обновляется при входе, загрузке
+        //     страницы и каждым heartbeat — ≤ ~10 мин);
+        //   · роли нет в матрице (found=false) → матричные разделы
+        //     снимаются — fail-closed, зеркалит поведение сервера;
+        //   · карта недоступна (старый сервер без getMyAccess, сеть) →
+        //     работаем по прежней легаси-карте; сервер всё равно гейтит
+        //     каждый запрос (Task 295), клиентская видимость прав не даёт.
+        // Кэш kip8_my_access в localStorage убирает мигание разделов при
+        // быстром старте из кэша (применяется только при совпадении роли).
+        // ============================================================
+
+        /**
+         * Право из серверной матрицы. null = «не знаем» (матрица не
+         * получена) → вызывающий использует легаси-список.
+         */
+        _serverPerm: function(permId) {
+            var acc = this._serverAccess;
+            if (!acc || !acc.found) return null;
+            return !!(acc.permissions && acc.permissions[permId] === true);
+        },
+
+        /**
+         * Загрузить серверную карту прав и применить к UI. Ошибки не
+         * показываются пользователю: no_session обработают verify/
+         * heartbeat, «Unknown action» означает старый сервер, NETWORK —
+         * сеть; во всех случаях остаёмся на текущей карте.
+         */
+        _fetchMyAccess: function() {
+            var self = this;
+            var token = this.getToken();
+            if (!token) return Promise.resolve(null);
+            return this.api('getMyAccess', { token: token }).then(function(data) {
+                if (!data || typeof data !== 'object') return null;
+                self._serverAccess = data;
+                try {
+                    localStorage.setItem('kip8_my_access', JSON.stringify(data));
+                } catch (e) { /* private mode и т.п. — не критично */ }
+                self._applyServerAccess();
+                self._applyRoleToUI();
+                // Если раздел расходомеров открыт — перерисовать карточки:
+                // кнопка «Ввести показания» зависит от _canInputReadings.
+                try {
+                    var fmSection = document.getElementById('flowmeter-data');
+                    if (fmSection && fmSection.style.display !== 'none' &&
+                        typeof FlowmeterData !== 'undefined' &&
+                        FlowmeterData._loaded) {
+                        FlowmeterData.renderList();
+                    }
+                } catch (e) { /* ignore */ }
+                return data;
+            }).catch(function(err) {
+                console.warn('[KipAuth._fetchMyAccess] серверная карта прав недоступна, работаем по легаси-карте:',
+                    (err && err.message) || err);
+                return null;
+            });
+        },
+
+        /**
+         * Применить кэш карты прав из localStorage (быстрый старт).
+         * Кэш валиден только для той же роли (роль могла измениться).
+         */
+        _loadCachedMyAccess: function(role) {
+            try {
+                var raw = localStorage.getItem('kip8_my_access');
+                if (!raw) return;
+                var data = JSON.parse(raw);
+                if (data && typeof data === 'object' && data.role === role) {
+                    this._serverAccess = data;
+                    this._applyServerAccess();
+                }
+            } catch (e) { /* битый кэш игнорируем */ }
+        },
+
+        /**
+         * Пересобрать ROLE_ACCESS[role] по правам матрицы (от снимка
+         * легаси-карты). Соответствие прав → групп страниц (лист
+         * permissions, Task 293):
+         *   calc.view              → калькуляторы
+         *   library.view           → библиотека (включая «Документация»)
+         *   kipios.view|restricted → разделы КИП ИОС
+         *   kipios.restricted      → «Документация» (ИТР ТОКЕМ, фильтр 4)
+         *   secret.view            → секретные кнопки
+         *   whatsnew.view          → «Что нового»
+         *   charts.view            → графики (Electron)
+         *   flowmeter.view         → расходомеры (+ «Документация ИОС»
+         *                            для ролей без КИП ИОС — КИП8 pro)
+         *   workschedule.view      → график работы
+         * Админ ('*') не трогаем: сервер принудительно даёт админу все
+         * права матрицы (RoleMatrix.gs), текущее поведение сохраняется.
+         */
+        _applyServerAccess: function() {
+            var role = this._cachedRole;
+            if (!role || !this._accessBase || !this._accessBase[role] ||
+                !this.ROLE_ACCESS) {
+                return;
+            }
+            var base = this._accessBase[role];
+            if (base.indexOf('*') !== -1) return; // Админ — как было
+
+            var acc = this._serverAccess;
+            var found = !!(acc && acc.found);
+            var perm = function(id) {
+                return found && !!(acc.permissions && acc.permissions[id] === true);
+            };
+            var kipios = perm('kipios.view') || perm('kipios.restricted');
+
+            // Пересборка от снимка: снять все матричные группы, вернуть
+            // по правам. Нематричные страницы (главная) остаются от базы.
+            var list = base.slice();
+            var _drop = function(pages) {
+                for (var i = 0; i < pages.length; i++) {
+                    var j = list.indexOf(pages[i]);
+                    if (j !== -1) list.splice(j, 1);
+                }
+            };
+            var _add = function(pages) {
+                for (var i = 0; i < pages.length; i++) {
+                    if (list.indexOf(pages[i]) === -1) list.push(pages[i]);
+                }
+            };
+            _drop(this._CALC_PAGES);
+            _drop(this._LIBRARY_PAGES);
+            _drop(this._KIP_IOS_PAGES);
+            _drop(this._SECRET_PAGES);
+            _drop(this._WHATS_NEW_PAGES);
+            _drop(this._CHARTS_PAGES);
+            _drop(this._FLOWMETER_PAGES);
+            _drop(this._WORK_SCHEDULE_PAGES);
+            if (perm('calc.view')) _add(this._CALC_PAGES);
+            if (perm('library.view')) _add(this._LIBRARY_PAGES);
+            if (kipios) _add(this._KIP_IOS_PAGES);
+            if (perm('kipios.restricted')) _add(['docs']);
+            if (perm('secret.view')) _add(this._SECRET_PAGES);
+            if (perm('whatsnew.view')) _add(this._WHATS_NEW_PAGES);
+            if (perm('charts.view')) _add(this._CHARTS_PAGES);
+            if (perm('flowmeter.view')) {
+                _add(this._FLOWMETER_PAGES);
+                // «Документация ИОС» — вход к расходомерам для ролей без
+                // доступа к КИП ИОС (КИП8 pro, Task 117); ролям с КИП ИОС
+                // docs-ios уже добавлен через _KIP_IOS_PAGES.
+                if (!kipios) _add(['docs-ios']);
+            }
+            if (perm('workschedule.view')) _add(this._WORK_SCHEDULE_PAGES);
+            this.ROLE_ACCESS[role] = list;
+        },
+
+        /** Сброс серверной карты прав (logout / истечение сессии). */
+        _resetServerAccess: function() {
+            var role = this._cachedRole;
+            if (role && this._accessBase && this._accessBase[role] && this.ROLE_ACCESS) {
+                this.ROLE_ACCESS[role] = this._accessBase[role].slice();
+            }
+            this._serverAccess = null;
+            try { localStorage.removeItem('kip8_my_access'); } catch (e) {}
         },
 
         // Task 113: Проверка, имеет ли текущая роль ограниченный доступ к КИП ИОС (фильтр 4).
@@ -29207,7 +29399,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             // ============================================================
             // Обновить право ввода показаний в расходомеры хозрасчётные.
-            // Роли с правом: КИП ИОС дежурный, Админ.
+            // Task 296: право flowmeter.input берётся из серверной матрицы
+            // (getMyAccess); легаси-список (КИП ИОС дежурный, Админ) — запас
+            // на случай недоступности матрицы. По текущей матрице право
+            // имеют также «ИТР ИОС» (осознанное решение, Task 293).
             // ============================================================
             if (typeof FlowmeterData !== 'undefined') {
                 FlowmeterData._canInputReadings = FlowmeterData._computeCanInputReadings();
@@ -29323,6 +29518,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self._cachedEmail = cachedEmail;
                 self._cachedUserId = cachedUserId;
                 self._lastRoleFetch = Date.now();
+                // Task 296: применить кэшированную серверную карту прав
+                // (как кэш роли — убирает мигание разделов до ответа
+                // сервера; _verifySessionInBackground обновит её в фоне).
+                self._loadCachedMyAccess(cachedRole);
                 self._startHeartbeat();
                 self._updateSidebarUserInfo();
                 self._applyRoleToUI();
@@ -29349,6 +29548,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self._startHeartbeat();
                 self._updateSidebarUserInfo();
                 self._applyRoleToUI();
+                // Task 296: серверная карта прав из матрицы.
+                self._fetchMyAccess();
                 self._initializing = false;
             }).catch(function(err) {
                 self._initializing = false;
@@ -29423,6 +29624,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // Пере-применить роль к UI (на случай если изменилась).
                 self._updateSidebarUserInfo();
                 self._applyRoleToUI();
+                // Task 296: обновить серверную карту прав (матрица могла
+                // измениться галочками с прошлого визита).
+                self._fetchMyAccess();
                 console.log('[KipAuth] Фоновая проверка сессии OK');
             }).catch(function(err) {
                 const msg = (err && err.message) || '';
@@ -33529,6 +33733,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
             } catch (e) { /* ignore */ }
             if (!role) return false;
+            // Task 296: приоритет — серверная матрица (getMyAccess).
+            // null = матрица недоступна (старый сервер/сеть) → легаси-список
+            // ниже (сервер при этом всё равно проверяет каждый запрос).
+            try {
+                if (typeof KipAuth !== 'undefined' && typeof KipAuth._serverPerm === 'function') {
+                    var sp = KipAuth._serverPerm('flowmeter.input');
+                    if (sp !== null) return sp;
+                }
+            } catch (e) { /* ignore */ }
             // Админ всегда имеет доступ
             if (role === 'Админ') return true;
             return this._INPUT_READINGS_ROLES.indexOf(role) !== -1;
