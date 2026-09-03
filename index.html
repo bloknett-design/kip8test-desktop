@@ -4058,11 +4058,11 @@
     .ws-save-btn:disabled { opacity: 0.6; cursor: default; }
 
     /* Task 269: ЕДИНАЯ ВЫСОТА всех элементов ряда кнопок тулбара —
-       селекты месяца/года, чип «Календарь», «Сформировать» и
-       «Сохранить». Раньше чип «Календарь» был ниже селектов (шрифт
+       селекты месяца/года, «Сформировать» и «Сохранить». Раньше чип
+       «Календарь» (Task 306 удалён) был ниже селектов (шрифт
        12px против 14px — высоты отличались на ~5px); теперь все
        элементы одного роста, ряд выглядит ровным. */
-    .ws-month-sel, .ws-year-sel, .ws-cal-chip, .ws-generate-btn, .ws-save-btn {
+    .ws-month-sel, .ws-year-sel, .ws-generate-btn, .ws-save-btn {
         height: 34px;
         box-sizing: border-box;
     }
@@ -4466,52 +4466,21 @@
         font-weight: 700;
     }
 
-    /* Task 272: кнопка «Обновить» в тулбаре (была «Календарь"). Клик —
-       диалог с источником данных (calendar.legalic.ru, федеральный,
-       официальные нормы) и подтверждением обновления
-       (ProdCalendar.confirmRefresh). На время запроса выключена и
-       показывает «Обновление…». */
-    .ws-cal-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: var(--bg-tertiary, #0e1621);
-        color: var(--text-secondary, rgba(255,255,255,0.7));
-        border: 1px solid var(--card-border, rgba(255,255,255,0.08));
-        /* Task 254: кнопки тулбара без скруглений — чип в том же стиле */
-        border-radius: 0;
-        padding: 5px 10px;
-        font-size: 12px;
-        font-family: inherit;
-        font-weight: 600;
-        white-space: nowrap;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-    }
-    .ws-cal-chip:active { opacity: 0.85; }
-    /* Task 272: идёт обновление календаря — кнопка выключена */
-    .ws-cal-chip:disabled { opacity: 0.6; cursor: default; }
-    .ws-cal-chip svg {
-        width: 14px;
-        height: 14px;
-        stroke: var(--accent-blue, #4a8fc7);
-        fill: none;
-        stroke-width: 2;
-        stroke-linecap: round;
-        flex-shrink: 0;
-    }
-    /* Очень узкие экраны: у чипа остаётся только иконка (текст не влезает
-       в тулбар рядом с селектами месяца/года) */
-    @media (max-width: 400px) {
-        .ws-cal-chip span { display: none; }
-    }
+    /* Task 306: кнопка «Обновить» (.ws-cal-chip, Task 272 — была
+       «Календарь») УДАЛЕНА — кнопки «Обновить» и «Сформировать»
+       объединены в одну «Сформировать»: подтверждённое формирование
+       тихо обновляет производственный календарь
+       (WorkSchedule._refreshProdCalendarQuiet →
+       ProdCalendar.refreshNow(true)). Стили кнопки удалены как
+       мёртвые; окошко норм (#wsCalPanel, .ws-cp-*) осталось. */
 
     /* Task 266/269: окошко производственного календаря в баре кнопок
        графика (#wsCalPanel в .ws-toolbar) — столбики: группа норм
        (Task 269: ДВА столбика — дни слева, часы справа) и столбик
        праздников/переносов. Источник данных и время обновления из
-       окошка убраны (Task 272: источник — в диалоге кнопки
-       «Обновить», шторка настроек удалена). Task 269: ширина окна —
+       окошка убраны (Task 272; Task 306: и диалог кнопки «Обновить»
+       удалён — кнопки объединены в «Сформировать», источник —
+       calendar.legalic.ru). Task 269: ширина окна —
        ПО ТЕКСТУ (fit-content,
        не растягивается на свободную часть бара). Task 270: высота —
        95px = ПОД ПЯТЬ СТРОК (плашка-заголовок + 4 строки столбика
@@ -4679,8 +4648,9 @@
        .ws-cal-hint и их светлые варианты) УДАЛЕНЫ вместе с
        интерфейсом выбора региона и поля токена
        production-calendar.ru. Осталось окошко тулбара (.ws-cp-*),
-       бейдж «предварительно» (.ws-cal-prelim) и кнопка
-       «Обновить» (.ws-cal-chip). */
+       бейдж «предварительно» (.ws-cal-prelim). Task 306: кнопка
+       «Обновить» (.ws-cal-chip) тоже удалена — обновление календаря
+       вошло в «Сформировать». */
 
     /* Task 262: бейдж «предварительные данные» (2027 — проект Минтруда)
        в окошке тулбара (Task 264). Task 266: бейдж «официальные нормы»
@@ -4706,16 +4676,11 @@
         color: #a06b00;
         border-color: rgba(255,160,0,0.4);
     }
-    /* Task 260: светлая тема — кнопка «Обновить» и окошко тулбара */
-    [data-theme="light"] .ws-cal-chip {
-        background: #fff;
-        color: #555;
-        border-color: rgba(0, 0, 0, 0.12);
-    }
     /* Task 264/266: светлая тема — окошко календаря в тулбаре.
        Task 270: фон окна НЕМНОГО ТЕМНЕЕ белого (#e9e7de — на тон
        темнее тулбара #f0eee6): окно читается как углублённый блок
-       данных, не выбеливается на светлом баре. */
+       данных, не выбеливается на светлом баре. Task 306: светлая
+       тема кнопки «Обновить» удалена вместе с кнопкой. */
     [data-theme="light"] .ws-cal-panel {
         background: #e9e7de;
         border-color: rgba(0, 0, 0, 0.12);
@@ -4811,6 +4776,12 @@
     .ws-tr-card .ws-tr-type.ws-type-И { background: #B3E5FC; color: #01579b; }
     .ws-tr-card .ws-tr-type.ws-type-ОБ { background: #D1C4E9; color: #4a148c; }
     .ws-tr-card .ws-tr-type.ws-type-ПЗ { background: #FFCDD2; color: #b71c1c; }
+    /* Task 306: новые типы мероприятий «прогул» (ПР) и «примечание» (*) —
+       цвета как у кодов в «Коды_статусов» (ПР #EF5350, * #FFAB91).
+       Селектор класса с «*» — через escape (\\.ws-type-\\*), иначе
+       правило невалидно и игнорируется парсером CSS */
+    .ws-tr-card .ws-tr-type.ws-type-ПР { background: #EF5350; color: #fff; }
+    .ws-tr-card .ws-tr-type.ws-type-\* { background: #FFAB91; color: #5d1f0a; }
     .ws-tr-card .ws-tr-title {
         color: var(--text-primary, #e0e0e0);
         font-weight: 600;
@@ -11503,17 +11474,18 @@
                 <div class="ws-toolbar-main">
                     <select id="wsMonthSel" class="ws-month-sel" onchange="WorkSchedule.onMonthChange()"></select>
                     <select id="wsYearSel" class="ws-year-sel" onchange="WorkSchedule.onMonthChange()"></select>
-                    <!-- Task 272: кнопка «Обновить» (была «Календарь"): клик —
-                         диалог с источником данных (calendar.legalic.ru,
-                         федеральный, официальные нормы) и подтверждением
-                         обновления. Шторка настроек с выбором региона и
-                         токеном production-calendar.ru УБРАНА — регион
-                         один (42 — Кемеровская область - Кузбасс) -->
-                    <button type="button" id="wsCalChip" class="ws-cal-chip" onclick="ProdCalendar.confirmRefresh()" title="Обновить производственный календарь (источник — calendar.legalic.ru, федеральный, официальные нормы)">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><polyline points="21 3 21 9 15 9"></polyline></svg>
-                        <span id="wsCalChipText">Обновить</span>
-                    </button>
-                    <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateYear()" title="Сформировать шахматку на выбранный месяц или весь год — откроется диалог подтверждения" hidden>Сформировать</button>
+                    <!-- Task 306: кнопки «Обновить» и «Сформировать»
+                         ОБЪЕДИНЕНЫ в одну «Сформировать» (заявка
+                         пользователя). Прежняя кнопка «Обновить»
+                         (Task 272, была «Календарь»; диалог
+                         ProdCalendar.confirmRefresh) УДАЛЕНА: клик по
+                         «Сформировать» ПОДТВЕРЖДЁННЫМ действием теперь
+                         тихо обновляет и производственный календарь
+                         (calendar.legalic.ru, федеральный, официальные
+                         нормы) — см. WorkSchedule._refreshProdCalendarQuiet
+                         в _doGenerateMonth/_doGenerateYear. Нормы и
+                         праздники месяца — в окошке #wsCalPanel справа -->
+                    <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateYear()" title="Сформировать шахматку на выбранный месяц или весь год (производственный календарь обновится автоматически) — откроется диалог подтверждения" hidden>Сформировать</button>
                     <!-- Task 251: кнопка пакетного сохранения накопленных локальных
                          изменений шахматки (появляется при наличии несохранённых правок) -->
                     <button type="button" id="wsSaveBtn" class="ws-save-btn" onclick="WorkSchedule.saveAll()" hidden>Сохранить</button>
@@ -14454,10 +14426,16 @@
         </div>
         <div class="flow-input-group" style="flex:1 1 65%;">
             <label class="flow-input-label" for="wsTrType">Тип</label>
+            <!-- Task 306: добавлены «прогул» (ПР) и «примечание» (*) —
+                 по заявке пользователя к И/ОБ/ПЗ; карта тип→код —
+                 _trainingCodeOf (клиент) / TRAINING_TYPE_TO_STATUS
+                 (сервер), цвета бейджа — из «Коды_статусов» -->
             <select id="wsTrType" class="flow-input-field-small">
                 <option value="инструктаж">инструктаж</option>
                 <option value="обучение">обучение</option>
                 <option value="проверка_знаний">проверка знаний</option>
+                <option value="прогул">прогул</option>
+                <option value="примечание">примечание</option>
             </select>
         </div>
     </div>
@@ -35233,19 +35211,26 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _PATTERNS: [],
         _STATUS_CODES: [],
         // Task 303: слой мероприятий в ячейке («два значения»):
-        // _EVENT_CODES — коды мероприятий (И/ОБ/ПЗ, из листа
-        // «Инструктажи»); _ABSENCE_CODES — коды отсутствия (на таких
-        // днях бейдж мероприятия скрывается — событие остаётся в
-        // тултипе; см. _renderCell).
-        _EVENT_CODES: ['И', 'ОБ', 'ПЗ'],
+        // _EVENT_CODES — коды мероприятий (из листа «Инструктажи»).
+        // Task 306: к И/ОБ/ПЗ добавлены ПР (прогул) и * (примечание)
+        // — типы «прогул»/«примечание» в форме «Новое мероприятие»
+        // (сервер: TRAINING_TYPE_TO_STATUS/_isEventStatusCode).
+        // _ABSENCE_CODES — коды отсутствия (на таких днях бейдж
+        // мероприятия скрывается — событие остаётся в тултипе; см.
+        // _renderCell). ПР остаётся и здесь: день-прогул = день
+        // отсутствия, чужие бейджи скрыты, своё событие — в тултипе.
+        _EVENT_CODES: ['И', 'ОБ', 'ПЗ', 'ПР', '*'],
         _ABSENCE_CODES: ['ОТ', 'У', 'ОВ', 'Б', 'ПР'],
-        // Task 305: «отпуск в приоритете, плановая смена — рядом». Коды
-        // семейства отпусков: на таких днях (основной код ячейки —
-        // ОТ/У, либо пустая ячейка внутри периода листа «Отпуска»)
-        // плановая смена по циклу («Дни_цикла») показывается бейджем
-        // в правом нижнем углу — в формате мероприятия (Task 303).
-        // Генерация (generateMonth 4.5) пишет в Записи_графика только
-        // код отпуска — смена вычисляется на клиенте (_plannedShiftAt).
+        // Task 305: «отпуск в приоритете, плановая смена — рядом».
+        // Task 306: бейдж плановой смены — ТОЛЬКО у сотрудников типа
+        // «сменный» (дневные Д8/Д7,2 его больше не показывают —
+        // заявка пользователя). Коды семейства отпусков: на таких
+        // днях (основной код ячейки — ОТ/У, либо пустая ячейка внутри
+        // периода листа «Отпуска») плановая смена по циклу
+        // («Дни_цикла») показывается бейджем в правом нижнем углу —
+        // в формате мероприятия (Task 303). Генерация (generateMonth
+        // 4.5) пишет в Записи_графика только код отпуска — смена
+        // вычисляется на клиенте (_plannedShiftAt).
         _VAC_CODES: ['ОТ', 'У'],
         // Task 274: план отпусков (лист «Отпуска» табель_КИП_ИОС).
         // _VACATIONS — периоды года ШАХМАТКИ (план «ОТ» в пустых
@@ -35580,25 +35565,36 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return dw === 0 || dw === 6;
         },
 
-        // Кнопка «Обновить» в тулбаре (Task 272: была «Календарь») —
-        // клик открывает диалог с источником данных и подтверждением
-        // обновления (ProdCalendar.confirmRefresh). Нормы времени и
-        // праздники месяца — в окошке тулбара (wsCalPanel — рисует
-        // ProdCalendar.renderPanel, вызывается отсюда при каждом
-        // обновлении сетки/данных календаря).
+        // Task 306: кнопка «Обновить» в тулбаре УДАЛЕНА — «Обновить» и
+        // «Сформировать» объединены в одну кнопку «Сформировать» (по
+        // заявке пользователя): подтверждённое формирование ТИХО
+        // обновляет и производственный календарь (хелпер
+        // _refreshProdCalendarQuiet ниже). Хелпер _updateCalChip
+        // остаётся точкой перерисовки окошка норм (wsCalPanel) при
+        // каждом обновлении сетки/данных календаря (вызовы: loadGrid
+        // и ProdCalendar._syncWorkSchedule).
         _updateCalChip: function() {
-            var textEl = document.getElementById('wsCalChipText');
-            var chip = document.getElementById('wsCalChip');
-            if (textEl) textEl.textContent = 'Обновить';
-            if (chip) {
-                chip.title = 'Обновить производственный календарь ' +
-                             '(источник — calendar.legalic.ru, федеральный, ' +
-                             'официальные нормы). Нормы времени и праздники ' +
-                             'месяца — в окошке ниже.';
-            }
             if (typeof ProdCalendar !== 'undefined' && ProdCalendar.renderPanel) {
                 ProdCalendar.renderPanel();
             }
+        },
+
+        // Task 306: тихое обновление производственного календаря в
+        // составе «Сформировать» (бывшая отдельная кнопка «Обновить»,
+        // Task 272). Без диалога и тостов: календарь — клиентская
+        // витрина (нормы/праздники в тулбаре и подсветка сетки),
+        // генерация на сервере от него НЕ зависит; сбой обновления не
+        // мешает формированию — календарь остаётся на офлайн-кэше
+        // (TTL 7 суток, тихая деградация как при фоновой загрузке
+        // Task 260). По завершении обновления ProdCalendar сам
+        // перерисует окошко и сетку (_syncWorkSchedule).
+        _refreshProdCalendarQuiet: function() {
+            try {
+                if (typeof ProdCalendar !== 'undefined' &&
+                    typeof ProdCalendar.refreshNow === 'function') {
+                    ProdCalendar.refreshNow(true);
+                }
+            } catch (e) { /* тихо: календарь не критичен для генерации */ }
         },
 
         _buildEntryIndex: function() {
@@ -35630,11 +35626,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // ============================================================
 
         // Тип мероприятия → код статуса (как TRAINING_TYPE_TO_STATUS
-        // на сервере; _renderTrainings использует ту же карту inline)
+        // на сервере; _renderTrainings использует ту же карту inline).
+        // Task 306: добавлены «прогул» → ПР и «примечание» → * —
+        // новые типы в форме «Новое мероприятие» (заявка: к кодам
+        // И/ОБ/ПЗ добавить ПР и *). ПР и * уже есть в справочнике
+        // «Коды_статусов» (цвета бейджа: ПР #EF5350, * #FFAB91).
         _trainingCodeOf: function(тип) {
             if (тип === 'инструктаж') return 'И';
             if (тип === 'обучение') return 'ОБ';
             if (тип === 'проверка_знаний') return 'ПЗ';
+            if (тип === 'прогул') return 'ПР';
+            if (тип === 'примечание') return '*';
             return '';
         },
 
@@ -35674,6 +35676,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // (_PATTERNS), иначе '' — ячейка остаётся без бейджа. Обе даты —
         // локальные полуночи: деление на 86400000 даёт целые дни точно
         // (как на сервере; отрицательный остаток JS % учтён формулой).
+        // Task 306: сам расчёт НЕ зависит от типа сотрудника (чистая
+        // арифметика цикла, паритет с сервером) — фильтр «только
+        // сменный» стоит в _renderCell (vacMain), см. блок выше.
         _plannedShiftAt: function(isoDate, emp) {
             if (!emp || !emp.шаблон_ротации || !emp.старт_цикла) return '';
             var pat = null;
@@ -36035,12 +36040,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // (как план «Отпуска» — производное листа «Отпуска»):
             // в Записи_графика смена под отпуском НЕ хранится, при
             // «Сформировать» день получает код отпуска (приоритет 4.5).
+            // Task 306 (заявка): бейдж — ТОЛЬКО у сотрудников типа
+            // «сменный» (Д/Н); дневные (Д8/Д7,2) и без типа — без
+            // бейджа, их день отпуска показывает только код отпуска.
             // Дни отсутствия вне семейства отпусков (Б/ОВ/ПР), сменные
             // и пустые дни — без бейджа.
             var shiftChip = '';
             var shiftName = '';
-            var vacMain = (status && this._VAC_CODES.indexOf(status) >= 0) ||
-                          (!status && !!vacPlan);
+            var empIsShift = String(emp['тип'] || '').trim() === 'сменный';
+            var vacMain = empIsShift &&
+                          ((status && this._VAC_CODES.indexOf(status) >= 0) ||
+                           (!status && !!vacPlan));
             if (vacMain) {
                 var shiftCode = this._plannedShiftAt(isoDate, emp);
                 if (shiftCode) {
@@ -36253,6 +36263,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь',
                               'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
             var monthName = monthNames[this._month - 1];
+            // Task 306: объединение кнопок — «Сформировать» тихо
+            // обновляет и производственный календарь (бывш. «Обновить»);
+            // идёт параллельно серверной генерации, сбой не мешает
+            this._refreshProdCalendarQuiet();
             if (genBtn) { genBtn.disabled = true; genBtn.textContent = 'Формируется…'; }
             this._api('workSchedule.generateMonth', { year: this._year, month: this._month })
                 .then(function(data) {
@@ -36360,6 +36374,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         if (monthsDone > 0) self.loadGrid();
                     });
             };
+            // Task 306: объединение кнопок — «Сформировать» тихо
+            // обновляет и производственный календарь (бывш. «Обновить»);
+            // идёт параллельно циклу генерации, сбой не мешает
+            this._refreshProdCalendarQuiet();
             if (genBtn) { genBtn.disabled = true; genBtn.textContent = 'Формируется… 1/12'; }
             nextMonth(1);
         },
@@ -36933,7 +36951,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var html = '';
             for (var i = 0; i < this._TRAININGS.length; i++) {
                 var t = this._TRAININGS[i];
-                var code = t.тип === 'инструктаж' ? 'И' : (t.тип === 'обучение' ? 'ОБ' : 'ПЗ');
+                // Task 306: код типа — из единой карты _trainingCodeOf
+                // (была inline-тернарка на 3 типа); новые типы: прогул →
+                // ПР, примечание → *. Неизвестный тип (легаси-строка) —
+                // код «?» без цветного стиля.
+                var code = this._trainingCodeOf(t.тип) || '?';
                 var typeClass = 'ws-type-' + code;
                 var emp = null;
                 for (var j = 0; j < this._EMPLOYEES.length; j++) {
@@ -38222,37 +38244,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return { y: y, m: m };
         },
 
-        // Клик по кнопке «Обновить»: диалог с источником данных
-        // и кнопкой подтверждения обновления (kipConfirm).
-        confirmRefresh: function() {
-            var self = this;
-            var ym = this._currentYM();
-            var st = this.monthStats(ym.y, ym.m);
-            // Подпись фактического источника данных; основной —
-            // calendar.legalic.ru (федеральный, официальные нормы)
-            var srcLabel = this._sourceLabel(st.source);
-            var freshText = '';
-            if (st.fetchedAtMs) {
-                freshText = 'Обновлено: ' + this._fmtDateTime(st.fetchedAtMs) + '.';
-                if (Date.now() - st.fetchedAtMs > this._TTL_MS) {
-                    freshText += ' (офлайн-кэш, старше 7 суток)';
-                }
-            }
-            var msg = 'Источник: ' + srcLabel + '.' +
-                      (freshText ? '\n' + freshText : '') +
-                      '\nОбновить производственный календарь на ' + ym.y + ' год?';
-            if (typeof kipConfirm === 'function') {
-                kipConfirm(msg, { title: 'Обновление календаря', okText: 'Обновить' })
-                    .then(function(ok) {
-                        if (!ok) return;
-                        self.refreshNow();
-                    });
-            } else {
-                if (confirm(msg)) self.refreshNow();
-            }
-        },
+        // Task 306: метод confirmRefresh (диалог «Обновить
+        // производственный календарь» с источником и кнопкой)
+        // УДАЛЁН вместе с отдельной кнопкой «Обновить» в тулбаре —
+        // кнопки «Обновить» и «Сформировать» объединены в одну
+        // «Сформировать» (заявка пользователя): подтверждённое
+        // формирование ТИХО обновляет календарь (вызов —
+        // WorkSchedule._refreshProdCalendarQuiet из
+        // _doGenerateMonth/_doGenerateYear).
 
-        // Перерисовать шахматку и кнопку после прихода новых данных
+        // Перерисовать шахматку и окошко календаря после прихода
+        // новых данных
         _syncWorkSchedule: function() {
             try {
                 if (typeof WorkSchedule !== 'undefined' && WorkSchedule) {
@@ -38272,8 +38274,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // счётчики дней слева, нормы часов справа от них) и столбик
         // праздников / переносов выбранного месяца. Источник данных и
         // время обновления из окошка УБРАНЫ (Task 266), шторка настроек
-        // удалена (Task 272) — источник показывается в диалоге кнопки
-        // «Обновить»; бейдж «официальные нормы» убран, официальность —
+        // удалена (Task 272); Task 306: диалог кнопки «Обновить»
+        // удалён — кнопки объединены в «Сформировать» (обновление
+        // календаря идёт тихо вместе с формированием); бейдж
+        // «официальные нормы» убран, официальность —
         // в тултипе группы норм. На десктопе (Task 272) кнопки — в
         // ЛЕВОМ ВЕРХНЕМ углу бара, окошко — в ПРАВОЙ, ширина окошка —
         // по тексту; высота бара СТАТИЧЕСКАЯ: окошко фиксированной
@@ -38375,30 +38379,27 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             el.hidden = false;
         },
 
-        // Task 272: обновление по подтверждению диалога — принудительный
-        // запрос года (force=true, TTL игнорируется). Пока идёт запрос,
-        // кнопка «Обновить» в тулбаре выключена и показывает
-        // «Обновление…»; после — перерисовка шахматки/окошка и тост.
-        refreshNow: function() {
+        // Task 272: обновление — принудительный запрос года
+        // (force=true, TTL игнорируется).
+        // Task 306: refreshNow обновляет календарь ГОДА формируемой
+        // шахматки (ensureYear force — TTL игнорируется). Параметр
+        // silent=true — «тихий» режим объединённой кнопки
+        // «Сформировать»: без тостов (успех виден в окошке норм, сбой
+        // тихо оставляет офлайн-кэш; генерация не блокируется).
+        // Прежняя манипуляция кнопкой wsCalChip (disabled,
+        // «Обновление…») удалена вместе с кнопкой.
+        refreshNow: function(silent) {
             var self = this;
-            var chip = document.getElementById('wsCalChip');
-            var chipText = document.getElementById('wsCalChipText');
-            if (chip) chip.disabled = true;
-            if (chipText) chipText.textContent = 'Обновление…';
             var ym = this._currentYM();
             this.ensureYear(ym.y, true).then(function() {
-                if (chip) chip.disabled = false;
-                if (chipText) chipText.textContent = 'Обновить';
                 self._syncWorkSchedule();
-                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                if (!silent && typeof KipToast !== 'undefined' && KipToast.show) {
                     var st = self.monthStats(ym.y, ym.m);
                     KipToast.show(st.hasData
                         ? 'Календарь обновлён'
                         : 'Не удалось обновить: источник недоступен');
                 }
             }).catch(function() {
-                if (chip) chip.disabled = false;
-                if (chipText) chipText.textContent = 'Обновить';
                 self._syncWorkSchedule();
             });
         },
