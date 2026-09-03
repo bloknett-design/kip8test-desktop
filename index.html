@@ -4410,6 +4410,15 @@
         border-color: rgba(0, 0, 0, 0.55);
         color: var(--text-primary, #333);
     }
+    /* Task 305: бейдж плановой смены на днях отпуска (.ws-ev-shift) —
+       переиспользует формат мероприятия (Task 303) один в один: тот же
+       .ws-ev-badge, цвет — из справочника кода смены (Д/Н/Д8/Д7,2),
+       тот же правый нижний угол. Класс — семантический маркер (стили
+       не отличаются): отличить «смену под отпуском» от «мероприятия»
+       можно по коду и тултипу («по циклу (Дни_цикла): …»). */
+    .ws-grid tbody td.ws-cell .ws-ev-badge.ws-ev-shift {
+        /* без переопределений — см. комментарий выше */
+    }
     .ws-grid tbody td.ws-cell[data-editable="1"]:hover {
         outline: 2px solid var(--accent-blue, #4a8fc7);
         outline-offset: -2px;
@@ -35230,6 +35239,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // тултипе; см. _renderCell).
         _EVENT_CODES: ['И', 'ОБ', 'ПЗ'],
         _ABSENCE_CODES: ['ОТ', 'У', 'ОВ', 'Б', 'ПР'],
+        // Task 305: «отпуск в приоритете, плановая смена — рядом». Коды
+        // семейства отпусков: на таких днях (основной код ячейки —
+        // ОТ/У, либо пустая ячейка внутри периода листа «Отпуска»)
+        // плановая смена по циклу («Дни_цикла») показывается бейджем
+        // в правом нижнем углу — в формате мероприятия (Task 303).
+        // Генерация (generateMonth 4.5) пишет в Записи_графика только
+        // код отпуска — смена вычисляется на клиенте (_plannedShiftAt).
+        _VAC_CODES: ['ОТ', 'У'],
         // Task 274: план отпусков (лист «Отпуска» табель_КИП_ИОС).
         // _VACATIONS — периоды года ШАХМАТКИ (план «ОТ» в пустых
         // ячейках, грузится в loadGrid вместе с записями);
@@ -35506,6 +35523,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 this._loadEmployees(),
                 this._loadEntries(),
                 this._loadTrainings(),
+                // Task 305: шаблоны ротации («Дни_цикла») — для бейджа
+                // плановой смены на днях отпуска (_plannedShiftAt);
+                // собственный catch — сбой не блокирует рендер сетки
+                // (бейджи просто не показываются)
+                this._loadPatterns(),
                 // Task 274: план отпусков — с собственным catch, сбой
                 // не блокирует рендер сетки
                 this._loadVacations()
@@ -35641,6 +35663,33 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (this._STATUS_CODES[si].code === code) return this._STATUS_CODES[si];
             }
             return null;
+        },
+
+        // Task 305: плановая смена дня по циклу сотрудника — для бейджа
+        // на днях отпуска. Повторяет алгоритм generateMonth (шаг 3,
+        // WorkSchedule.gs): день_цикла = ((дней от старта % цикл) +
+        // цикл) % цикл + 1; код — из «Дни_цикла» шаблона (пустой
+        // статус = регулярный выходной → бейджа нет). Работает только
+        // при шаблон_ротации + старт_цикла + загруженных шаблонах
+        // (_PATTERNS), иначе '' — ячейка остаётся без бейджа. Обе даты —
+        // локальные полуночи: деление на 86400000 даёт целые дни точно
+        // (как на сервере; отрицательный остаток JS % учтён формулой).
+        _plannedShiftAt: function(isoDate, emp) {
+            if (!emp || !emp.шаблон_ротации || !emp.старт_цикла) return '';
+            var pat = null;
+            for (var pi = 0; pi < (this._PATTERNS || []).length; pi++) {
+                if (this._PATTERNS[pi].id === emp.шаблон_ротации) { pat = this._PATTERNS[pi]; break; }
+            }
+            if (!pat || !pat.cycle || !pat.days || !pat.days.length) return '';
+            var dt = this._parseIsoLocal(isoDate);
+            var st = this._parseIsoLocal(emp.старт_цикла);
+            if (!dt || !st) return '';
+            var diffDays = Math.floor((dt.getTime() - st.getTime()) / 86400000);
+            var dayOfCycle = ((diffDays % pat.cycle) + pat.cycle) % pat.cycle + 1;
+            for (var pd = 0; pd < pat.days.length; pd++) {
+                if (pat.days[pd].day === dayOfCycle) return pat.days[pd].status || '';
+            }
+            return '';
         },
 
         // Длительность периода в календарных днях (включительно)
@@ -35976,6 +36025,33 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             if (!status && !vacPlan) classes.push('ws-status-empty');
 
+            // Task 305: плановая смена по циклу — «отпуск в приоритете,
+            // смена рядом». У работника с шаблоном ротации день отпуска
+            // (основной код ОТ/У — запись/локальная правка, либо план
+            // «Отпуска» в пустой ячейке) показывает код отпуска как
+            // основной, а плановую смену этого дня по «Дни_цикла»
+            // (Д/Н/Д8/Д7,2) — бейджем в правом нижнем углу, в формате
+            // мероприятия (Task 303). Чип — производное данных цикла
+            // (как план «Отпуска» — производное листа «Отпуска»):
+            // в Записи_графика смена под отпуском НЕ хранится, при
+            // «Сформировать» день получает код отпуска (приоритет 4.5).
+            // Дни отсутствия вне семейства отпусков (Б/ОВ/ПР), сменные
+            // и пустые дни — без бейджа.
+            var shiftChip = '';
+            var shiftName = '';
+            var vacMain = (status && this._VAC_CODES.indexOf(status) >= 0) ||
+                          (!status && !!vacPlan);
+            if (vacMain) {
+                var shiftCode = this._plannedShiftAt(isoDate, emp);
+                if (shiftCode) {
+                    var shMeta = this._statusMeta(shiftCode) || {};
+                    shiftName = shMeta.name || shiftCode;
+                    shiftChip = '<span class="ws-ev-badge ws-ev-shift"' +
+                                (shMeta.color ? ' style="background:' + shMeta.color + ';"' : '') +
+                                '>' + this._esc(shiftCode) + '</span>';
+                }
+            }
+
             // Task 303: слой мероприятий — события дня из листа
             // «Инструктажи» (И/ОБ/ПЗ). Бейдж — «второе значение» в
             // ячейке: смена остаётся основным кодом, мероприятие —
@@ -36007,6 +36083,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     }
                     evHtml = '<span class="ws-ev-wrap">' + evChips + '</span>';
                 }
+            }
+
+            // Task 305: бейдж плановой смены — в тот же контейнер-позицию
+            // (правый нижний угол). На днях отпуска бейдж мероприятия не
+            // рендерится (правило Task 303: отсутствие ⇒ событие только в
+            // тултипе), поэтому evHtml здесь всегда пуст и контейнеры не
+            // наложатся; страховка от будущих правок — чип смены
+            // отображается только при пустом evHtml (мероприятие в тултипе
+            // остаётся).
+            var shiftWrap = '';
+            if (shiftChip && !evHtml) {
+                shiftWrap = '<span class="ws-ev-wrap">' + shiftChip + '</span>';
+                classes.push('ws-has-events');
             }
 
             // Task 260 (развитие Tasks 254/255): выходные и праздники — по
@@ -36074,6 +36163,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                 ' · ' + this._vacDays(vacPlan) + ' дн.');
                 titleParts.push('заполнится кодом «ОТ» при «Сформировать»');
             }
+            // Task 305: плановая смена по циклу — в тултип дня отпуска
+            // (бейдж показывает код, тултип — полное название)
+            if (shiftChip) {
+                titleParts.push('по циклу (Дни_цикла): ' + shiftName);
+            }
             // Task 303: мероприятия дня — всегда в тултип (бейдж скрыт
             // на днях отсутствия — ОТ/Б/… — но событие видно в подсказке)
             if (events.length) {
@@ -36103,7 +36197,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                    // Task 298: код отпуска «О» → «ОТ» (Т-12/Т-13).
                    // Task 274: пустая ячейка в периоде отпуска — код «ОТ»
                    // плана (фоновый цвет и рамка — классом ws-vac-plan)
-                   (status || (vacPlan ? 'ОТ' : '·')) + evHtml +
+                   // Task 305: рядом — бейдж плановой смены по циклу
+                   (status || (vacPlan ? 'ОТ' : '·')) + evHtml + shiftWrap +
                    '</td>';
         },
 
