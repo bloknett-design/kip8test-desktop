@@ -4812,6 +4812,11 @@
         font-size: 11px;
         color: var(--text-secondary, rgba(255,255,255,0.6));
     }
+    /* Task 304: маркер «таб не найден в справочнике» */
+    .ws-tr-card .ws-tr-warn {
+        color: #ef5350;
+        font-weight: 600;
+    }
     .ws-tr-delete-btn {
         float: right;
         background: transparent;
@@ -5006,6 +5011,9 @@
     [data-theme="light"] .ws-emp-card .ws-meta,
     [data-theme="light"] .ws-tr-card .ws-tr-meta {
         color: #666;
+    }
+    [data-theme="light"] .ws-tr-card .ws-tr-warn {
+        color: #d32f2f;   /* Task 304: темнее — читается на светлом фоне */
     }
     /* Task 274: светлая тема — субнавигация и отпуска */
     [data-theme="light"] .ws-subnav {
@@ -36159,6 +36167,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         // «отпуска не формируются» видно сразу (раньше
                         // нули по отпускам молчали, только смены)
                         var vacDays = (data && data.vacationDays) || 0;
+                        // Task 304: предупреждения генерации — таб_номера
+                        // мероприятий/отпусков не из справочника (типично:
+                        // потерян ведущий ноль, «871» вместо «0871»). Раньше
+                        // — тихая ошибка: бейдж не показывался
+                        var genWarns = (data && data.warnings) || [];
                         KipToast.show(monthName + ' ' + self._year + ': сформировано ' +
                                       ((data && data.generated) || 0) + ' зап., обновлено ' +
                                       ((data && data.updated) || 0) +
@@ -36168,6 +36181,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                           : '') +
                                       ((data && data.vacationError)
                                           ? '; отпуска не проверены: ' + data.vacationError
+                                          : '') +
+                                      (genWarns.length
+                                          ? '; ⚠ ' + genWarns.slice(0, 3).join('; ') +
+                                            (genWarns.length > 3
+                                                ? ' (и ещё ' + (genWarns.length - 3) + ')'
+                                                : '')
                                           : ''));
                     }
                     self.loadGrid();
@@ -36195,6 +36214,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var totalRemoved = 0;
             // Task 279: сумма отпускных дней за 12 месяцев — в итоговый тост
             var totalVacDays = 0;
+            // Task 304: предупреждения всех месяцев (таб не из справочника)
+            var totalWarns = [];
             var monthsDone = 0;
 
             var nextMonth = function(month) {
@@ -36207,7 +36228,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                       totalUpdated +
                                       ', отпусков отмечено ' + totalVacDays + ' дн.' +
                                       (totalRemoved ? ', удалено ' + totalRemoved +
-                                       ' устаревших отпусков' : ''));
+                                       ' устаревших отпусков' : '') +
+                                      (totalWarns.length
+                                          ? '; ⚠ ' + totalWarns.slice(0, 3).join('; ') +
+                                            (totalWarns.length > 3
+                                                ? ' (и ещё ' + (totalWarns.length - 3) + ')'
+                                                : '')
+                                          : ''));
                     }
                     self.loadGrid();
                     return;
@@ -36221,6 +36248,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         // Task 274: устаревшие авто-«О» (счётчик removed)
                         totalRemoved += (data && data.removed) || 0;
                         totalVacDays += (data && data.vacationDays) || 0;
+                        // Task 304: предупреждения месяца (таб не из справочника)
+                        if (data && data.warnings && data.warnings.length) {
+                            totalWarns = totalWarns.concat(data.warnings);
+                        }
                         nextMonth(month + 1);
                     })
                     .catch(function(err) {
@@ -36813,13 +36844,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 for (var j = 0; j < this._EMPLOYEES.length; j++) {
                     if (this._EMPLOYEES[j]['таб_номер'] === t['таб_номер']) { emp = this._EMPLOYEES[j]; break; }
                 }
+                // Task 304: таб не найден в справочнике — видимый маркер
+                // (типичная причина: таб записан в лист числом, «871»
+                // вместо «0871» — потерян ведущий ноль)
+                var empMiss = !emp;
                 var empName = emp ? emp['ФИО'] : 'таб. №' + t['таб_номер'];
                 var dateStr = t.дата_начала + (t.дата_окончания && t.дата_окончания !== t.дата_начала ? ' — ' + t.дата_окончания : '');
                 var delBtn = this._canEdit ? '<button type="button" class="ws-tr-delete-btn" onclick="WorkSchedule.deleteTraining(' + t.id + ')">Удалить</button>' : '';
                 html += '<div class="ws-tr-card">' + delBtn +
                         '<div><span class="ws-tr-type ' + typeClass + '">' + code + '</span>' +
                         '<span class="ws-tr-title">' + this._esc(t.тема) + '</span></div>' +
-                        '<div class="ws-tr-meta">таб. № ' + this._esc(t['таб_номер']) + ' · ' + this._esc(empName) + '</div>' +
+                        '<div class="ws-tr-meta">таб. № ' + this._esc(t['таб_номер']) + ' · ' + this._esc(empName) +
+                        (empMiss ? ' · <span class="ws-tr-warn">⚠ нет в справочнике</span>' : '') + '</div>' +
                         '<div class="ws-tr-meta">' + dateStr + ' · ' + t.длительность_дней + ' дн.</div>' +
                         (t.комментарий ? '<div class="ws-tr-meta" style="margin-top:4px;">' + this._esc(t.комментарий) + '</div>' : '') +
                         '</div>';
