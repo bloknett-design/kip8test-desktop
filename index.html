@@ -14264,18 +14264,12 @@
     <div class="flow-input-row">
         <div class="flow-input-group" style="flex:1 1 100%;">
             <label class="flow-input-label" for="wsCellStatus">Статус</label>
+            <!-- Task 298: опции статусов строятся динамически из листа
+                 «Коды_статусов» (WorkSchedule._fillStatusSelect);
+                 статический список из 10 кодов удалён — он расходился
+                 с попапом Task 251 при смене состава справочника -->
             <select id="wsCellStatus" class="flow-input-field-small">
                 <option value="">— выходной —</option>
-                <option value="Д">Д — День</option>
-                <option value="Н">Н — Ночь</option>
-                <option value="О">О — Отпуск</option>
-                <option value="Б">Б — Больничный</option>
-                <option value="ОТ">ОТ — Отгул</option>
-                <option value="П">П — Прогул</option>
-                <option value="*">* — Работа в праздник</option>
-                <option value="И">И — Инструктаж</option>
-                <option value="ОБ">ОБ — Обучение</option>
-                <option value="ПЗ">ПЗ — Проверка знаний</option>
             </select>
         </div>
     </div>
@@ -35164,7 +35158,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _PATTERNS: [],
         _STATUS_CODES: [],
         // Task 274: план отпусков (лист «Отпуска» табель_КИП_ИОС).
-        // _VACATIONS — периоды года ШАХМАТКИ (план «О» в пустых
+        // _VACATIONS — периоды года ШАХМАТКИ (план «ОТ» в пустых
         // ячейках, грузится в loadGrid вместе с записями);
         // _VAC_PAGE — периоды года страницы «Отпуска» (свой селект года)
         _VACATIONS: [],
@@ -35315,21 +35309,64 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return this._api('workSchedule.getStatusCodes', {})
                 .then(function(data) {
                     self._STATUS_CODES = data.codes || [];
+                    self._fillStatusSelect();
                 })
                 .catch(function() {
+                    // Task 298: fallback-набор = новый состав 16 кодов
+                    // (Т-12/Т-13 + строчные д/н + «.» плановый выходной).
+                    // Используется только при недоступности сервера
+                    // (офлайн/старый бэкенд) — чтобы попап и select не
+                    // пустовали; состав совпадает с листом «Коды_статусов».
                     self._STATUS_CODES = [
-                        {code:'Д', name:'День', color:'#FFE082'},
-                        {code:'Н', name:'Ночь', color:'#B0BEC5'},
-                        {code:'О', name:'Отпуск', color:'#ECEFF1'},
-                        {code:'Б', name:'Больничный', color:'#F8BBD0'},
-                        {code:'ОТ', name:'Отгул', color:'#C5E1A5'},
-                        {code:'П', name:'Прогул', color:'#EF5350'},
-                        {code:'*', name:'Праздник', color:'#FFD54F'},
-                        {code:'И', name:'Инструктаж', color:'#B3E5FC'},
-                        {code:'ОБ', name:'Обучение', color:'#D1C4E9'},
-                        {code:'ПЗ', name:'Проверка знаний', color:'#FFCDD2'}
+                        {code:'Д',    name:'День (12-час, 7:30–19:30)', color:'#FFE082'},
+                        {code:'Д8',   name:'День 8-час (7:30–16:30)', color:'#FFF9C4'},
+                        {code:'Д7,2', name:'День 7,2-час (пятн./предпраздн.)', color:'#FFF176'},
+                        {code:'Н',    name:'Ночь (12-час, 19:30–7:30)', color:'#B0BEC5'},
+                        {code:'д',    name:'День в вых./праздник', color:'#FFD54F'},
+                        {code:'н',    name:'Ночь в вых./праздник', color:'#78909C'},
+                        {code:'ОТ',   name:'Отпуск ежегодный основной', color:'#ECEFF1'},
+                        {code:'У',    name:'Учебный отпуск', color:'#80CBC4'},
+                        {code:'ОВ',   name:'Отгул (оплачиваемый)', color:'#C5E1A5'},
+                        {code:'Б',    name:'Больничный', color:'#F8BBD0'},
+                        {code:'ПР',   name:'Прогул', color:'#EF5350'},
+                        {code:'И',    name:'Инструктаж', color:'#B3E5FC'},
+                        {code:'ОБ',   name:'Обучение', color:'#D1C4E9'},
+                        {code:'ПЗ',   name:'Проверка знаний', color:'#FFCDD2'},
+                        {code:'*',    name:'Примечание (с комментарием)', color:'#FFAB91'},
+                        {code:'.',    name:'Плановый выходной день', color:'#CFD8DC'}
                     ];
+                    self._fillStatusSelect();
                 });
+        },
+
+        // Task 298: select «Статус» в шите расширенной правки
+        // («Дополнительно…») раньше был СТАТИЧНЫМ HTML со старыми 10
+        // кодами — при смене состава листа он бы разошёлся с попапом
+        // (Task 251). Теперь опции строются из _STATUS_CODES (лист
+        // «Коды_статусов» = единственный источник истины), вызывается
+        // после загрузки кодов и при каждом открытии шита (на случай
+        // обновления кодов между открытиями). Незнакомое ТЕКУЩЕЕ
+        // значение (легаси-код удалён из листа) временно добавляется
+        // опцией с пометкой «(нет в справочнике)» — чтобы значение не
+        // «пропадало» при открытии шита.
+        _fillStatusSelect: function(current) {
+            var sel = document.getElementById('wsCellStatus');
+            if (!sel) return;
+            var codes = this._STATUS_CODES || [];
+            if (!codes.length) return; // коды ещё не загружены — опции не трогаем
+            var hasCurrent = false;
+            var html = '<option value="">— выходной —</option>';
+            for (var i = 0; i < codes.length; i++) {
+                var c = codes[i];
+                if (current && current === c.code) hasCurrent = true;
+                html += '<option value="' + this._escAttr(c.code) + '">' +
+                        this._esc(c.code) + ' — ' + this._esc(c.name) + '</option>';
+            }
+            if (current && !hasCurrent) {
+                html += '<option value="' + this._escAttr(current) + '">' +
+                        this._esc(current) + ' — (нет в справочнике)</option>';
+            }
+            sel.innerHTML = html;
         },
 
         _loadPatterns: function() {
@@ -35889,7 +35926,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                 this._fmtDateRu(vacPlan.дата_начала) + ' — ' +
                                 this._fmtDateRu(vacPlan.дата_окончания) +
                                 ' · ' + this._vacDays(vacPlan) + ' дн.');
-                titleParts.push('заполнится кодом «О» при «Сформировать»');
+                titleParts.push('заполнится кодом «ОТ» при «Сформировать»');
             }
             // Task 251: пометка о несохранённой локальной правке
             if (isPending) titleParts.push('не сохранено');
@@ -35904,9 +35941,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                    'data-editable="' + editable + '" ' +
                    'onclick="' + clickHandler + '" ' +
                    'title="' + this._escAttr(titleParts.join(' / ')) + '">' +
-                   // Task 274: пустая ячейка в периоде отпуска — код «О»
+                   // Task 298: код отпуска «О» → «ОТ» (Т-12/Т-13).
+                   // Task 274: пустая ячейка в периоде отпуска — код «ОТ»
                    // плана (фоновый цвет и рамка — классом ws-vac-plan)
-                   (status || (vacPlan ? 'О' : '·')) +
+                   (status || (vacPlan ? 'ОТ' : '·')) +
                    '</td>';
         },
 
@@ -36350,7 +36388,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 isoDate + ' · ' + (emp ? emp['ФИО'] : 'таб. №' + tabNo) +
                 (entry ? (entry.источник === 'руч' ? ' · ручная запись' : ' · авто-запись') : ' · нет записи') +
                 (pending ? ' · НЕ СОХРАНЕНО' : '');
-            document.getElementById('wsCellStatus').value = entry ? entry.статус : '';
+            // Task 298: опции select — из актуального справочника кодов;
+            // текущее значение (даже легаси-код, удалённый из листа)
+            // добавляется временной опцией — value не теряется.
+            var curStatus = entry ? (entry.статус || '') : '';
+            this._fillStatusSelect(curStatus);
+            document.getElementById('wsCellStatus').value = curStatus;
             document.getElementById('wsCellOvertime').value = entry && entry.переработка === 1 ? '1' : '0';
             document.getElementById('wsCellSubstitute').value = entry && entry.замещает ? entry.замещает : '';
             document.getElementById('wsCellComment').value = entry ? (entry.комментарий || '') : '';
