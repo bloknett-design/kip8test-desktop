@@ -4262,6 +4262,10 @@
     [data-theme="light"] .ws-emp-field .ws-emp-v { color: #222; }
     [data-theme="light"] .ws-emp-empty { color: #999; }
     [data-theme="light"] .ws-emp-total { color: #555; border-color: rgba(0,0,0,0.08); }
+    /* Task 310: итог года отпусков ПРЕВЫСИЛ лимит 42 дн. (хим.
+       производство, ТК РФ) — красным, чтобы бросалось в глаза */
+    .ws-emp-total.ws-emp-overlimit { color: #ef5350; }
+    [data-theme="light"] .ws-emp-total.ws-emp-overlimit { color: #c62828; }
 
     /* Task 251: маркер несохранённой ячейки — янтарная пунктирная рамка
        (отличима от hover-подсветки — сплошной синий outline) */
@@ -4531,12 +4535,27 @@
        полупрозрачная рамка), строчные д/н по цвету заливки близки
        к плановым Д/Н — вручну выставленный код должен быть отличим
        от сгенерированного. Рамка видна и ДО сохранения (локальная
-       правка уже имеет источник «руч»). */
-    .ws-grid tbody td.ws-cell.ws-manual-dn {
-        box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85);
+       правка уже имеет источник «руч»).
+       Task 310: рамка стала 1px с ЗАКРУГЛЁННЫМИ углами (было 2px
+       box-shadow без скругления) — в точности как у миниатюры
+       .ws-popup-swatch (border 1px + border-radius 3px). Сеть
+       таблицы border-collapse: collapse — border-radius на td
+       браузеры игнорируют, поэтому рамка — псевдоэлемент ::before
+       (у ws-cell ::after уже занят точкой переработки Task 250);
+       pointer-events: none — клики по ячейке проходят сквозь рамку. */
+    .ws-grid tbody td.ws-cell.ws-manual-dn::before {
+        content: '';
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        bottom: 2px;
+        left: 2px;
+        border: 1px solid rgba(255, 255, 255, 0.85);
+        border-radius: 3px;
+        pointer-events: none;
     }
-    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-manual-dn {
-        box-shadow: inset 0 0 0 2px rgba(38, 50, 56, 0.75);
+    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-manual-dn::before {
+        border-color: rgba(38, 50, 56, 0.75);
     }
     /* Task 309: колонка ФИО — интерактивна (карточка сотрудника по
        наведению/клику): курсор-указатель и сплошная подсветка при
@@ -4933,6 +4952,10 @@
     [data-theme="light"] .ws-vac-form-info {
         color: #333;
     }
+    /* Task 310: строка годового лимита в шторке отпуска — красная,
+       когда новый период выводит сотрудника за 42 дн. (ТК РФ) */
+    .ws-vac-form-info.ws-vac-overlimit { color: #ef5350; }
+    [data-theme="light"] .ws-vac-form-info.ws-vac-overlimit { color: #c62828; }
     [data-theme="light"] .ws-vac-form-hint {
         background: rgba(20, 20, 19, 0.04);
         color: rgba(20, 20, 19, 0.6);
@@ -14388,7 +14411,10 @@
         </div>
     </div>
     <div class="ws-vac-form-info" id="wsVacDaysInfo">Период: —</div>
-    <div class="ws-vac-form-hint">Отпуск делится на 2–3 части в год, одна из частей — не менее 14 календарных дней (ст. 125 ТК РФ). Дни периода отметятся в шахматке кодом «О» после нажатия «Сформировать».</div>
+    <!-- Task 310: годовой лимит отпуска — 42 дн. (хим. производство,
+         ТК РФ), дни за вычетом праздников ст. 112 (ст. 120 ТК РФ) -->
+    <div class="ws-vac-form-info" id="wsVacYearInfo">—</div>
+    <div class="ws-vac-form-hint">Отпуск делится на 2–3 части в год, одна из частей — не менее 14 календарных дней (ст. 125 ТК РФ). Праздничные нерабочие дни (ст. 112 ТК РФ) в число дней отпуска не включаются (ст. 120 ТК РФ); годовой лимит — 42 дня. Дни периода отметятся в шахматке кодом «О» после нажатия «Сформировать».</div>
     <textarea id="wsVacComment" class="flow-comment-field" rows="2" maxlength="500" placeholder="Комментарий (необязательно)" autocomplete="off"></textarea>
     <button type="button" class="flow-input-submit" onclick="WorkSchedule.submitVacationForm()">Добавить</button>
     <button type="button" class="flow-input-cancel" onclick="WorkSchedule.closeVacationForm()">Отмена</button>
@@ -35126,6 +35152,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _VAC_PAGE: [],
         _vacYear: null,
 
+        // Task 310: годовой ЛИМИТ отпуска — 42 календарных дня
+        // (химическое производство, ТК РФ: 28 дней основного отпуска
+        // + 7 дней дополнительного за вредные условия труда, ст. 117
+        // + 7 дней за особый характер работы, ст. 118). Лимит считают
+        // «чистые» дни: праздничные нерабочие дни ст. 112 в число
+        // дней отпуска не входят (ст. 120 ТК РФ) — см. хелперы
+        // _vacIsHoliday/_vacSplitDays/_vacNetDays ниже.
+        _VAC_YEAR_LIMIT: 42,
+
         _year: null,
         _month: null,
         _canEdit: false,
@@ -35634,6 +35669,72 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return Math.floor(to / 86400000) - Math.floor(from / 86400000) + 1;
         },
 
+        // ============================================================
+        // Task 310: праздники ТК РФ × дни отпуска (ст. 112 + ст. 120)
+        // ============================================================
+        // Нерабочие праздничные дни (ст. 112: 1–8 января, 23.02, 08.03,
+        // 01.05, 09.05, 12.06, 04.11 + День шахтёра Кузбасса) НЕ
+        // включаются в число календарных дней отпуска (ст. 120 ТК РФ):
+        // попал праздник на период — отпуск «расходуется» на день
+        // меньше. Источник — ProdCalendar (данные года шахматки уже
+        // загружены при рендере; без данных dayInfo сам делает фолбэк
+        // на фиксированные даты ст. 112, см. ProdCalendar.dayInfo).
+
+        // Дата — нерабочий праздничный день ТК РФ?
+        _vacIsHoliday: function(dt) {
+            if (!dt) return false;
+            if (typeof ProdCalendar !== 'undefined' && ProdCalendar.dayInfo) {
+                var info = ProdCalendar.dayInfo(
+                    dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+                return !!(info && info.holiday);
+            }
+            return false;
+        },
+
+        // Разбор периода: {cal, hol, net} — cal календарных дней (как
+        // _vacDays), hol из них праздничных, net = cal − hol — дни,
+        // реально расходующие годовой лимит отпуска («чистые»).
+        // Периоды короткие (десятки дней) — простой посуточный обход.
+        _vacSplitDays: function(s, e) {
+            var res = { cal: 0, hol: 0, net: 0 };
+            if (!s || !e || e.getTime() < s.getTime()) return res;
+            var cur = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+            var endTs = e.getTime();
+            while (cur.getTime() <= endTs) {
+                res.cal++;
+                if (this._vacIsHoliday(cur)) res.hol++;
+                cur.setDate(cur.getDate() + 1);
+            }
+            res.net = res.cal - res.hol;
+            return res;
+        },
+
+        // «Чистые» дни отпуска периода: календарные минус праздники
+        // ст. 112, попавшие на период (ст. 120 ТК РФ). Это число
+        // показывается в карточке сотрудника, тултипах и шторке.
+        _vacNetDays: function(v) {
+            var s = this._parseIsoLocal(v.дата_начала);
+            var e = this._parseIsoLocal(v.дата_окончания) || s;
+            if (!s) return 0;
+            return this._vacSplitDays(s, e).net;
+        },
+
+        // «Чистые» дни периода, попадающие в указанный год (аналог
+        // _vacDaysInYear с вычетом праздников): вычет распределяется
+        // тому году, в котором праздник фактически лежит. Итог года
+        // в карточке сотрудника и проверка лимита 42 считают эти дни.
+        _vacNetDaysInYear: function(v, year) {
+            var s = this._parseIsoLocal(v.дата_начала);
+            var e = this._parseIsoLocal(v.дата_окончания) || s;
+            if (!s || !e) return 0;
+            var yStart = new Date(year, 0, 1);
+            var yEnd = new Date(year + 1, 0, 1);
+            var from = new Date(Math.max(s.getTime(), yStart.getTime()));
+            var to = new Date(Math.min(e.getTime(), yEnd.getTime() - 1));
+            if (to.getTime() < from.getTime()) return 0;
+            return this._vacSplitDays(from, to).net;
+        },
+
         // ISO YYYY-MM-DD → Date (локальная полночь, без сдвига TZ)
         _parseIsoLocal: function(iso) {
             if (!iso) return null;
@@ -35942,6 +36043,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // выставленный код должен читаться с одного взгляда.
             // Локальная правка (pending) уже даёт источник «руч» —
             // рамка появляется сразу, до сохранения.
+            // Task 310: рамка 1px с закруглёнными углами (::before,
+            // border-radius 3px — как у свотча .ws-popup-swatch).
             if (isManual && (status === 'д' || status === 'н')) {
                 classes.push('ws-manual-dn');
             }
@@ -36099,10 +36202,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Task 274: тултип плана отпуска в пустой ячейке
             if (vacPlan) {
                 var pNo = parseInt(vacPlan.часть, 10);
+                // Task 310: дни — «чистые» (за вычетом праздников ст. 112
+                // по ст. 120 ТК РФ), с пометкой о вычтенных
+                var vpNet = this._vacNetDays(vacPlan);
+                var vpCal = this._vacDays(vacPlan);
                 titleParts.push('ОТПУСК (план' + (pNo ? ', часть ' + pNo : '') + '): ' +
                                 this._fmtDateRu(vacPlan.дата_начала) + ' — ' +
                                 this._fmtDateRu(vacPlan.дата_окончания) +
-                                ' · ' + this._vacDays(vacPlan) + ' дн.');
+                                ' · ' + vpNet + ' дн.' +
+                                (vpCal > vpNet ? ' (−' + (vpCal - vpNet) + ' праздн.)' : ''));
                 titleParts.push('заполнится кодом «ОТ» при «Сформировать»');
             }
             // Task 305: плановая смена по циклу — в тултип дня отпуска
@@ -36507,8 +36615,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // сотрудника слева от шахматки открывают окно с данными,
         // которые раньше были в удалённых вкладках (Task 307/308):
         //   • «Сотрудники» — профиль: тип/смена, должность, шаблон
-        //     ротации, старт цикла, дата приёма, комментарий;
-        //   • «Отпуска» — периоды года шахматки по частям + итог;
+        //     ротации, дата приёма, комментарий (Task 310: строка
+        //     «старт цикла» убрана из карточки по заявке);
+        //   • «Отпуска» — периоды года шахматки по частям + итог
+        //     (Task 310: чистыми днями за вычетом праздников ст. 112,
+        //     лимит 42 дн. в год);
         //   • «Инструктажи» — мероприятия месяца (тема, период) с
         //     кнопками ✎/✕ (правка/удаление — только редакторам).
         // Два режима: hover (закрывается при уходе курсора, с
@@ -36713,11 +36824,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
                 if (!patName) patName = '№' + emp['шаблон_ротации'];
             }
+            // Task 310: строка «Старт цикла» убрана из карточки по
+            // заявке пользователя (данные остаются в шторке «+
+            // Сотрудник» и на сервере — показывать в карточке не нужно)
             var fields = [
                 ['Тип', tipVal],
                 ['Должность', String(emp['должность'] || '').trim() || '—'],
                 ['Шаблон ротации', patName || '—'],
-                ['Старт цикла', emp['старт_цикла'] ? this._fmtDateRu(emp['старт_цикла']) : '—'],
                 ['Дата приёма', emp['дата_приёма'] ? this._fmtDateRu(emp['дата_приёма']) : '—'],
                 ['Комментарий', String(emp['комментарий'] || '').trim()]
             ];
@@ -36751,22 +36864,45 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!vacs.length) {
                 html += '<div class="ws-emp-empty">нет запланированных периодов</div>';
             } else {
-                var vacTotal = 0;
+                // Task 310: итог считается «чистыми» днями — календарные
+                // дни периодов года МИНУС нерабочие праздничные дни
+                // ст. 112 ТК РФ, попавшие на периоды (ст. 120 ТК РФ:
+                // праздники не расходуют отпуск). Годовой лимит — 42 дн.
+                // (хим. производство: 28 осн. + 7 ст. 117 + 7 ст. 118);
+                // превышение — красная строка итога (ws-emp-overlimit).
+                var vacTotal = 0;   // чистые дни года (в счёт лимита)
+                var vacHols = 0;    // праздники, вычтенные из периодов
                 for (var vk = 0; vk < vacs.length; vk++) {
                     var vv = vacs[vk];
-                    vacTotal += this._vacDaysInYear(vv, this._year);
+                    var vNet = this._vacNetDaysInYear(vv, this._year);
+                    var vCal = this._vacDaysInYear(vv, this._year);
+                    vacTotal += vNet;
+                    vacHols += vCal - vNet;
                     var pNo = parseInt(vv.часть, 10);
                     html += '<div class="ws-emp-field"><span class="ws-emp-k">Часть ' +
                             (pNo ? pNo : '—') + '</span><span class="ws-emp-v">' +
                             this._fmtDateRu(vv.дата_начала) + ' — ' +
                             this._fmtDateRu(vv.дата_окончания) + ' · ' +
-                            this._vacDays(vv) + ' дн.' +
+                            vNet + ' ' + this._plural(vNet, ['день', 'дня', 'дней']) +
+                            (vCal > vNet ? ' (−' + (vCal - vNet) + ' праздн.)' : '') +
                             (String(vv.комментарий || '').trim()
                                 ? ' · «' + this._esc(vv.комментарий) + '»' : '') +
                             '</span></div>';
                 }
-                html += '<div class="ws-emp-total">Итого в году: ' + vacTotal +
-                        ' ' + this._plural(vacTotal, ['день', 'дня', 'дней']) + '</div>';
+                var overLimit = vacTotal > this._VAC_YEAR_LIMIT;
+                var vacTotalHtml = 'Итого в году: ' + vacTotal + ' ' +
+                        this._plural(vacTotal, ['день', 'дня', 'дней']) +
+                        (vacHols > 0 ? ' (вычтено праздников: ' + vacHols + ')' : '');
+                if (overLimit) {
+                    vacTotalHtml = 'Итого в году: ' + vacTotal + ' дн. — ' +
+                            'ПРЕВЫШЕН лимит ' + this._VAC_YEAR_LIMIT + ' дн. (ТК РФ)' +
+                            (vacHols > 0 ? ' (вычтено праздников: ' + vacHols + ')' : '');
+                } else {
+                    vacTotalHtml += ' · лимит ' + this._VAC_YEAR_LIMIT;
+                }
+                html += '<div class="ws-emp-total' +
+                        (overLimit ? ' ws-emp-overlimit' : '') + '">' +
+                        vacTotalHtml + '</div>';
             }
 
             // --- Секция 3: мероприятия месяца (бывшая вкладка
@@ -37433,9 +37569,55 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (free <= 3) partSel.value = String(free);
             // все 3 части заняты — оставляем выбор пользователю,
             // сервер отклонит дубль (duplicate_часть) с пояснением
+            // Task 310: смена сотрудника пересчитывает строку лимита
+            this._vacUpdateYearInfo();
+        },
+
+        // Task 310: строка годового ЛИМИТА в шторке отпуска: сколько
+        // «чистых» дней (календарные минус праздники ст. 112 — ст. 120
+        // ТК РФ) уже запланировано у выбранного сотрудника в году дат
+        // начала периода и сколько выйдет с текущим периодом формы.
+        // Лимит — 42 дн. (хим. производство: 28 осн. + 7 ст. 117 + 7
+        // ст. 118 ТК РФ); превышение подсвечивается красным
+        // (ws-vac-overlimit), жёсткая блокировка — в submitVacationForm.
+        _vacUpdateYearInfo: function() {
+            var info = document.getElementById('wsVacYearInfo');
+            if (!info) return;
+            var empSel = document.getElementById('wsVacTabNo');
+            var tabNo = empSel ? empSel.value.trim() : '';
+            var s = document.getElementById('wsVacStart') ?
+                    document.getElementById('wsVacStart').value : '';
+            var year = parseInt(String(s || '').slice(0, 4), 10);
+            if (!year) year = this._vacYear || this._year;
+            var used = 0;
+            for (var i = 0; i < (this._VAC_PAGE || []).length; i++) {
+                var v = this._VAC_PAGE[i];
+                if (v['таб_номер'] !== tabNo) continue;
+                used += this._vacNetDaysInYear(v, year);
+            }
+            var e = document.getElementById('wsVacEnd') ?
+                    (document.getElementById('wsVacEnd').value || s) : s;
+            var add = 0;
+            if (s && e && e >= s) {
+                add = this._vacSplitDays(
+                    this._parseIsoLocal(s), this._parseIsoLocal(e)).net;
+            }
+            var total = used + add;
+            var over = total > this._VAC_YEAR_LIMIT;
+            info.className = 'ws-vac-form-info' + (over ? ' ws-vac-overlimit' : '');
+            info.textContent = 'Год ' + year + ': запланировано ' + used +
+                    ' из ' + this._VAC_YEAR_LIMIT + ' дн. за вычетом праздников' +
+                    (add > 0
+                        ? (over
+                            ? '; с этим периодом: ' + total + ' — ПРЕВЫШЕНИЕ'
+                            : '; с этим периодом: ' + total)
+                        : '');
         },
 
         // Смена дат → строка «Период: N кал. дн.» (+подсказка про 14 дн.)
+        // Task 310: дни периода считаются в двух вариантах — все
+        // календарные и «чистые» (минус праздники ст. 112 по ст. 120
+        // ТК РФ); строка лимита года ниже обновляется вместе с датами
         onVacDatesChange: function() {
             var info = document.getElementById('wsVacDaysInfo');
             if (!info) return;
@@ -37444,10 +37626,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!s || !e) { info.textContent = 'Период: —'; return; }
             if (e < s) { info.textContent = 'Дата окончания раньше начала'; return; }
             var sd = this._parseIsoLocal(s), ed = this._parseIsoLocal(e);
-            var days = Math.round((ed.getTime() - sd.getTime()) / 86400000) + 1;
-            info.textContent = 'Период: ' + days + ' кал. дн.' +
-                    (days < 14 ? ' (часть менее 14 дней — допустима, если ' +
-                                'другая часть ≥ 14)' : '');
+            var split = this._vacSplitDays(sd, ed);
+            var txt = 'Период: ' + split.cal + ' кал. дн.';
+            if (split.hol > 0) {
+                txt += ', в счёт отпуска ' + split.net +
+                        ' (вычтено праздников: ' + split.hol + ', ст. 120 ТК РФ)';
+            } else {
+                txt += ' (праздников нет)';
+            }
+            if (split.cal < 14) {
+                txt += ' — часть менее 14 дней (допустима, если другая часть ≥ 14)';
+            }
+            info.textContent = txt;
+            // Task 310: даты изменились — пересчитать и лимит года
+            this._vacUpdateYearInfo();
         },
 
         submitVacationForm: function() {
@@ -37476,6 +37668,31 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         this._fmtDateRu(v.дата_окончания));
                     return;
                 }
+            }
+
+            // Task 310: годовой ЛИМИТ отпуска — 42 «чистых» дня (хим.
+            // производство, ТК РФ: 28 осн. + 7 ст. 117 + 7 ст. 118).
+            // Праздничные нерабочие дни ст. 112, попавшие на период,
+            // в счёт не идут (ст. 120 ТК РФ) — считаем как и в строке
+            // лимита шторки (_vacUpdateYearInfo). Период, выводящий
+            // сумму за лимит, НЕ отправляется на сервер.
+            var vacYear = parseInt(String(startDate).slice(0, 4), 10) || this._year;
+            var usedNet = 0;
+            for (var li = 0; li < (this._VAC_PAGE || []).length; li++) {
+                var lv = this._VAC_PAGE[li];
+                if (lv['таб_номер'] !== tabNo) continue;
+                usedNet += this._vacNetDaysInYear(lv, vacYear);
+            }
+            var addNet = this._vacSplitDays(
+                this._parseIsoLocal(startDate),
+                this._parseIsoLocal(endDate)).net;
+            if (usedNet + addNet > this._VAC_YEAR_LIMIT) {
+                if (typeof KipToast !== 'undefined') KipToast.show(
+                    'Превышен годовой лимит отпуска ' + this._VAC_YEAR_LIMIT +
+                    ' дн. (ТК РФ): уже запланировано ' + usedNet +
+                    ', этот период добавит ' + addNet +
+                    ' — всего ' + (usedNet + addNet) + ' дн.');
+                return;
             }
 
             this._api('workSchedule.addVacation', {
