@@ -4627,6 +4627,26 @@
         background-image: linear-gradient(rgba(74, 143, 199, 0.20), rgba(74, 143, 199, 0.20));
         color: var(--accent-blue, #4a8fc7);
     }
+    /* Task 316: НАВЕДЕНИЕ/КЛИК на дату в шапке — выделяется ВЕСЬ
+       столбец (как «сегодня» Task 313). Два состояния: ws-hover-col —
+       мышь над датой (снимается при уходе), ws-sel-col — день ВЫБРАН
+       кликом (держится до клика по другой области). Вид — тот же
+       синий градиент поверх фона th + число акцентом; выбранный —
+       чуть насыщеннее, чтобы отличался от простого наведения.
+       Классы ставит JS (_dayHover/_daySelect) на th[data-day] и
+       все td[data-day] столбца. Курсор-палец — дата кликабельна
+       (фильтр окна мероприятий месяца по дню). */
+    .ws-grid thead th.ws-day-col {
+        cursor: pointer;
+    }
+    .ws-grid thead th.ws-day-col.ws-hover-col {
+        background-image: linear-gradient(rgba(74, 143, 199, 0.20), rgba(74, 143, 199, 0.20));
+        color: var(--accent-blue, #4a8fc7);
+    }
+    .ws-grid thead th.ws-day-col.ws-sel-col {
+        background-image: linear-gradient(rgba(74, 143, 199, 0.30), rgba(74, 143, 199, 0.30));
+        color: var(--accent-blue, #4a8fc7);
+    }
     .ws-grid tbody td {
         border: 1px solid var(--card-border, rgba(255,255,255,0.06));
         padding: 0;
@@ -4818,6 +4838,25 @@
     }
     .ws-grid tbody td.ws-cell.ws-today.ws-source-manual {
         box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.16),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    /* Task 316: столбец НАВЕДЁННОЙ (ws-hover) / ВЫБРАННОЙ (ws-sel)
+       даты — inset-«заливка», как у «сегодня» (Task 313): работает
+       поверх inline-цветов статусов и планов; выбранный — насыщеннее
+       наведения. Составные правила с ws-source-manual — рамка не
+       затирается заливкой (принцип Task 313). */
+    .ws-grid tbody td.ws-cell.ws-hover {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.16);
+    }
+    .ws-grid tbody td.ws-cell.ws-hover.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.16),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    .ws-grid tbody td.ws-cell.ws-sel {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.24);
+    }
+    .ws-grid tbody td.ws-cell.ws-sel.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.24),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     .ws-grid tbody td.ws-cell.ws-status-empty {
@@ -5237,6 +5276,30 @@
     }
     [data-theme="light"] .ws-grid tbody td.ws-cell.ws-today.ws-source-manual {
         box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.10),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    /* Task 316: светлая тема — столбец наведённой/выбранной даты
+       (тон мягче тёмной, выбранный — насыщеннее наведения) */
+    [data-theme="light"] .ws-grid thead th.ws-day-col.ws-hover-col {
+        background-image: linear-gradient(rgba(42, 93, 143, 0.13), rgba(42, 93, 143, 0.13));
+        color: #2a5d8f;
+    }
+    [data-theme="light"] .ws-grid thead th.ws-day-col.ws-sel-col {
+        background-image: linear-gradient(rgba(42, 93, 143, 0.20), rgba(42, 93, 143, 0.20));
+        color: #2a5d8f;
+    }
+    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-hover {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.10);
+    }
+    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-hover.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.10),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-sel {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.15);
+    }
+    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-sel.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.15),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     /* Task 254: светлая тема — должность под ФИО потемнее */
@@ -35548,6 +35611,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 251: флаг идущего пакетного сохранения (блокирует правки)
         _saving: false,
 
+        // Task 316: столбец дня под КУРСОРОМ (число дня месяца) и
+        // ВЫБРАННЫЙ кликом день — подсветка ВСЕГО столбца
+        // (шапка+ячейки, как «сегодня» Task 313, но по наведению/
+        // клику). _hoverDay — снимается уходом курсора; _selDay —
+        // держится до клика по другой области (document-listener),
+        // Esc или смены месяца, и фильтрует окно мероприятий месяца
+        // по выбранному дню. Оба штампуются в разметку при каждом
+        // _renderGrid — переживают перерисовку (правка/«Отменить»/
+        // «Обновить»).
+        _hoverDay: null,
+        _selDay: null,
+
         // Task 314: локальная копия данных графика (localStorage) —
         // график открывается МГНОВЕННО без сети; обновление — кнопкой
         // «Обновить» (refreshData) и авто-сохранением после каждой
@@ -35577,6 +35652,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (ev.key === 'Escape') {
                     selfOnce.closeCellPopup();
                     selfOnce.closeEmpPopup();
+                    // Task 316: Esc снимает и выбор дня (столбца)
+                    selfOnce._daySelect(null);
                 }
             });
             window.addEventListener('beforeunload', function(ev) {
@@ -35585,6 +35662,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     ev.returnValue = '';
                 }
             });
+            // Task 316: клик по ЛЮБОЙ области вне дат шапки снимает
+            // ВЫБОР дня (выделение столбца + фильтр окна мероприятий).
+            // Capture-фаза: срабатывает раньше inline-обработчиков и
+            // не зависит от их stopPropagation. Клик по самой дате
+            // здесь пропускается — его разбирает собственный onclick
+            // шапки (_daySelect: выбор дня / повторный клик — сброс).
+            document.addEventListener('click', function(ev) {
+                var t = ev.target;
+                if (t && t.closest && t.closest('th.ws-day-col')) return;
+                selfOnce._daySelect(null);
+            }, true);
 
             var now = new Date();
             this._year  = now.getFullYear();
@@ -35684,6 +35772,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 this._month = parseInt(monthSel.value, 10);
                 this._year  = parseInt(yearSel.value, 10);
             }
+            // Task 316: смена месяца/года — выбор дня (столбца)
+            // сбрасывается: подсветка и фильтр окна привязаны к
+            // открытому месяцу (наведение снимется само — курсор
+            // уже не над датой прежнего месяца)
+            this._hoverDay = null;
+            this._selDay = null;
             // Task 260: мог смениться год — гарантируем данные календаря
             this._ensureCal();
             this.loadGrid();
@@ -36410,8 +36504,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             // Task 313: колонка сегодняшней даты слегка
                             // подсвечена (градиент + число акцентом;
                             // ячейки столбца — класс ws-today в _renderCell)
-                            (this._isoDate(dt) === todayIso ? ' ws-today-col' : '');
-                html += '<th class="' + thCls + '">' +
+                            (this._isoDate(dt) === todayIso ? ' ws-today-col' : '') +
+                            // Task 316: столбец НАВЕДЁННОЙ/ВЫБРАННОЙ даты
+                            // (классы живут и в _renderCell — ячейки тела;
+                            // хандлеры — _dayHover/_daySelect ниже)
+                            (this._hoverDay === d ? ' ws-hover-col' : '') +
+                            (this._selDay === d ? ' ws-sel-col' : '');
+                // Task 316: дата в шапке — КЛИКАБЕЛЬНА: наведение/
+                // клик подсвечивают ВЕСЬ столбец (шапка+тело, как
+                // «сегодня» Task 313), клик ВЫБИРАЕТ день (держится
+                // до клика по другой области) и фильтрует окно
+                // мероприятий месяца по этому дню. Курсор-палец —
+                // CSS .ws-day-col { cursor: pointer }
+                html += '<th class="' + thCls + '" data-day="' + d + '"' +
+                        ' onmouseenter="WorkSchedule._dayHover(' + d + ')"' +
+                        ' onmouseleave="WorkSchedule._dayHover(null)"' +
+                        ' onclick="WorkSchedule._daySelect(' + d + ')">' +
                         d + (isShort ? '<i class="ws-short-star">*</i>' : '') +
                         '<span class="ws-dow">' + dow + '</span></th>';
             }
@@ -36520,6 +36628,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var pad = function(num) { return (num < 10 ? '0' : '') + num; };
             var mStart = y + '-' + pad(m) + '-01';
             var mEnd = y + '-' + pad(m) + '-' + pad(new Date(y, m, 0).getDate());
+            // Task 316: клик по дате шапки ВЫБИРАЕТ день — окно
+            // показывает ТОЛЬКО мероприятия, НАКРЫВАЮЩИЕ этот день
+            // (дата_начала <= день <= дата_окончания; выбирается день
+            // открытого месяца). null/вне месяца — обычный вид (весь
+            // месяц); сброс — клик по другой области / повторный клик
+            // по дате / Esc / смена месяца
+            var selDay = (this._selDay === null || this._selDay === undefined)
+                ? null : this._selDay;
+            var selIso = null;
+            if (selDay !== null) {
+                var cand = y + '-' + pad(m) + '-' + pad(selDay);
+                if (cand >= mStart && cand <= mEnd) selIso = cand;
+            }
             // Мероприятия, пересекающие открытый месяц
             var list = [];
             var trs = this._TRAININGS || [];
@@ -36529,6 +36650,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (!s) continue;
                 var e = t['дата_окончания'] || s;
                 if (e < mStart || s > mEnd) continue;
+                // Task 316: выбранный день — только накрывающие записи
+                if (selIso && (s > selIso || e < selIso)) continue;
                 list.push(t);
             }
             list.sort(function(a, b) {
@@ -36555,10 +36678,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 return fmtDay(sIso) + '–' + fmtDay(eIso);
             };
             var html = '<span class="ws-cp-cap ws-ep-cap">Мероприятия · ' +
-                       this._esc(monthsNom[m - 1]) + ' ' + y +
+                       (selIso ? this._esc(fmtDay(selIso))
+                               : this._esc(monthsNom[m - 1]) + ' ' + y) +
                        (list.length ? ' · ' + list.length : '') + '</span>';
             if (!list.length) {
-                html += '<span class="ws-cp-empty">нет мероприятий в этом месяце</span>';
+                html += '<span class="ws-cp-empty">' +
+                        (selIso ? 'нет мероприятий в этот день'
+                                : 'нет мероприятий в этом месяце') +
+                        '</span>';
             }
             for (var k = 0; k < list.length; k++) {
                 var tr = list[k];
@@ -36580,6 +36707,57 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             el.innerHTML = html;
             el.hidden = false;
+        },
+
+        // Task 316: НАВЕДЕНИЕ на дату шапки — подсветка ВСЕГО столбца
+        // (th[data-day] + td[data-day] тела, CSS .ws-hover-col/
+        // .ws-hover — тот же вид, что у «сегодня» Task 313, но мягче).
+        // Снимается уходом курсора (onmouseleave → null). Классы
+        // ставятся ПРЯМО в DOM (без перерисовки сетки — быстро и без
+        // мигания); _renderGrid штампует их из состояния, поэтому
+        // наведение/выбор переживают перерисовку (правка, «Отменить»,
+        // «Обновить»).
+        _dayHover: function(day) {
+            if (this._hoverDay === day) return;
+            var prev = this._hoverDay;
+            this._hoverDay = day;
+            this._dayColClass(prev, 'ws-hover-col', 'ws-hover', false);
+            this._dayColClass(day, 'ws-hover-col', 'ws-hover', true);
+        },
+
+        // Task 316: ВЫБОР дня КЛИКОМ по дате шапки — столбец выделен
+        // (CSS .ws-sel-col/.ws-sel, насыщеннее наведения), окно
+        // мероприятий месяца фильтруется по дню (записи, НАКРЫВАЮЩИЕ
+        // дату). Повторный клик по той же дате — сброс; клик по любой
+        // другой области (document-listener в init, capture) — сброс;
+        // Esc — сброс; смена месяца — сброс (onMonthChange).
+        // day = null — программный сброс (no-op, если ничего не выбрано).
+        _daySelect: function(day) {
+            var prev = this._selDay;
+            var next = (day === null || day === undefined || day === prev)
+                ? null : day;
+            if (prev === next) return;
+            this._selDay = next;
+            this._dayColClass(prev, 'ws-sel-col', 'ws-sel', false);
+            this._dayColClass(next, 'ws-sel-col', 'ws-sel', true);
+            // окно мероприятий месяца — новый фильтр (или полный вид)
+            this._renderMonthEventsPanel();
+        },
+
+        // Task 316: (пере)установка классов столбца дня d по всей сетке:
+        // thCls — на th[data-day] (шапка), cellCls — на td[data-day]
+        // (тело). Мягко относится к мок-DOM в тестах (нет wrap/
+        // querySelectorAll/classList — тихо пропускает).
+        _dayColClass: function(d, thCls, cellCls, on) {
+            if (d === null || d === undefined) return;
+            var wrap = document.getElementById('wsGridWrap');
+            if (!wrap || !wrap.querySelectorAll) return;
+            var cells = wrap.querySelectorAll('[data-day="' + d + '"]');
+            for (var i = 0; i < cells.length; i++) {
+                var el = cells[i];
+                if (!el.classList || !el.classList.toggle) continue;
+                el.classList.toggle(el.tagName === 'TH' ? thCls : cellCls, on);
+            }
         },
 
         // Task 256: авто-подгонка шахматки под размер окна приложения.
@@ -36765,6 +36943,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // обновляется каждым _renderGrid; не задан (ячейку
             // рендерят вне сетки) — подсветки нет
             if (isoDate === this._todayIso) classes.push('ws-today');
+            // Task 316: ячейки столбца НАВЕДЁННОЙ/ВЫБРАННОЙ даты шапки —
+            // лёгкая тонирующая заливка (inset, поверх inline-цветов
+            // статусов и планов, как у «сегодня»), выбранный —
+            // насыщеннее наведения (см. CSS .ws-hover/.ws-sel;
+            // состояние живёт в _hoverDay/_selDay, снимается уходом
+            // курсора / кликом по другой области / Esc / сменой месяца)
+            if (day === this._hoverDay) classes.push('ws-hover');
+            if (day === this._selDay) classes.push('ws-sel');
 
             // Task 274: ПУСТАЯ ячейка внутри периода отпуска — план «О»
             // (пунктирная рамка, цвет отпуска): период задан в листе
@@ -36921,6 +37107,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return '<td class="' + classes.join(' ') + '" ' +
                    (style ? 'style="' + style + '" ' : '') +
                    'data-editable="' + editable + '" ' +
+                   'data-day="' + day + '" ' +
                    'onclick="' + clickHandler + '">' +
                    // Task 298: код отпуска «О» → «ОТ» (Т-12/Т-13).
                    // Task 274: пустая ячейка в периоде отпуска — код «ОТ»
