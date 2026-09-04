@@ -4033,7 +4033,8 @@
         font-family: inherit;
     }
     .ws-generate-btn {
-        margin-left: auto;
+        /* Task 315: авто-прижатие к правому краю удалено — кнопка
+           теперь в СОБСТВЕННОЙ строке 3 тулбара (.ws-generate-row) */
         background: var(--accent-blue, #4a8fc7);
         color: #fff;
         border: none;
@@ -4109,6 +4110,134 @@
         max-width: 160px;
         min-width: 0;
     }
+
+    /* Task 315: строка 1 бара — ТРИ РАВНЫЕ ЧАСТИ. Базовая (мобильная,
+       <1024px) компоновка — КОЛОНКА: ряд кнопок сверху, оба окна под
+       ним (как прежде с #wsCalPanel). На десктопе (media-запрос ниже)
+       .ws-bar-row — grid 1fr 1fr 1fr: кнопки | окно мероприятий |
+       окно времени и праздников, равные доли ширины. */
+    .ws-bar-row {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        align-items: stretch;
+    }
+
+    /* Task 315: строки 2 и 3 тулбара — «Сохранить»/«Отменить» (появляются
+       при несохранённых правках) и «Сформировать». Кнопки в ряд слева,
+       на узких экранах ряд переносится (wrap). Пустая строка скрыта —
+       [hidden] ставит JS: wsActionsRow — вместе с кнопками в
+       _updateSaveBtn (при наличии правок), wsGenerateRow — в init по
+       праву записи; строка без содержимого не занимает места в баре. */
+    .ws-actions-row,
+    .ws-generate-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .ws-actions-row[hidden],
+    .ws-generate-row[hidden] { display: none; }
+
+    /* Task 315: кнопка «Отменить» — ОТМЕНА ВВОДА ИЗМЕНЕНИЙ: сброс всех
+       накопленных несохранённых правок (_PENDING), ячейки возвращаются
+       к серверным данным. Приглушённо-красная — деструктивное действие,
+       но не «кричащая» (рядом с зелёной «Сохранить»); рамка и прямые
+       углы — как у всех кнопок тулбара (Task 254). */
+    .ws-cancel-btn {
+        background: rgba(255, 107, 107, 0.14);
+        color: #ff8a8a;
+        border: 1px solid rgba(255, 107, 107, 0.38);
+        border-radius: 0;
+        padding: 6px 14px;
+        font-size: 14px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        height: 34px;
+        box-sizing: border-box;
+    }
+    .ws-cancel-btn:active { opacity: 0.85; }
+    .ws-cancel-btn:disabled { opacity: 0.6; cursor: default; }
+    [data-theme="light"] .ws-cancel-btn {
+        background: rgba(255, 107, 107, 0.12);
+        color: #b02c2c;
+        border-color: rgba(176, 44, 44, 0.38);
+    }
+
+    /* Task 315: окно 2 бара — данные ВСЕХ мероприятий открытого месяца
+       (лист «Инструктажи"). Стиль — единый с окошком календаря (Task 270):
+       прямые углы, фон вторичного уровня, высота 95px, скролл внутри
+       (overscroll не тянет страницу). Строки — «точка-цвет · даты ·
+       код · тема · ФИО»; текст ПЕРЕНОСИТСЯ на строку ниже (заявка:
+       «если текст в окнах не будет помещаться в одну строку, он
+       должен переноситься на строку ниже»), длинные слова не рвут
+       окно (overflow-wrap). На десктопе окно занимает 1/3 бара
+       (grid), на мобиле — всю ширину. */
+    .ws-events-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        width: 100%;
+        height: 95px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        background: var(--bg-tertiary, #0e1621);
+        border: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        border-radius: 0;
+        padding: 6px 10px;
+    }
+    .ws-events-panel[hidden] { display: none; }
+    /* Заголовок окна — плашка в духе столбиков календаря (Task 270),
+       зелёная — «мероприятия»; в заголовке месяц, год и счётчик
+       записей; длинный заголовок переносится (normal) */
+    .ws-ep-cap {
+        background: rgba(76, 199, 113, 0.22);
+        color: #4ac771;
+        white-space: normal;
+        overflow-wrap: break-word;
+    }
+    [data-theme="light"] .ws-ep-cap {
+        background: rgba(76, 199, 113, 0.16);
+        color: #1d7a37;
+    }
+    .ws-ep-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        font-size: 12px;
+        line-height: 1.35;
+        color: var(--text-secondary, rgba(255,255,255,0.65));
+        /* ПЕРЕНОС строки — заявка Task 315 */
+        white-space: normal;
+        overflow-wrap: break-word;
+    }
+    .ws-ep-dot {
+        flex: none;
+        width: 8px;
+        height: 8px;
+        margin-top: 3px;
+        border-radius: 2px;
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+    .ws-ep-date {
+        flex: none;
+        font-weight: 700;
+        color: var(--text-primary, #e0e0e0);
+        white-space: nowrap;   /* «02–05.09» не рвётся внутри */
+    }
+    .ws-ep-text {
+        min-width: 0;
+        color: var(--text-primary, #e0e0e0);
+        /* перенос внутри текста разрешён по умолчанию (normal) */
+    }
+    [data-theme="light"] .ws-events-panel {
+        background: #e9e7de;
+        border-color: rgba(0, 0, 0, 0.12);
+    }
+    [data-theme="light"] .ws-ep-item { color: #666; }
+    [data-theme="light"] .ws-ep-text,
+    [data-theme="light"] .ws-ep-date { color: #333; }
 
     /* Task 308: «+ Отпуск» — кнопка в тулбаре (перенесена со
        страницы «Отпуска»). Нейтральный стиль в духе селектов
@@ -4852,7 +4981,14 @@
         background: rgba(255, 107, 107, 0.20);
         color: #ff9c9c;
     }
-    .ws-cp-item { white-space: nowrap; }
+    .ws-cp-item {
+        /* Task 315: перенос строки разрешён (заявка: текст в окнах
+           бара переносится, а не обрезается) — в равной 1/3 доле
+           бара узкие счётчики укладываются, при нехватке — вторая
+           строка */
+        white-space: normal;
+        overflow-wrap: break-word;
+    }
     .ws-cp-item b {
         color: var(--text-primary, #e0e0e0);
         font-weight: 700;
@@ -4871,7 +5007,11 @@
         border-radius: 3px;
         font-size: 11px;
         font-weight: 600;
-        white-space: nowrap;
+        /* Task 315: чип праздника ПЕРЕНОСИТСЯ на строку ниже в 1/3
+           бара («1 янв · Новогодние каникулы» длинные) — раньше
+           nowrap сжимал/выпирал; окно скроллится по вертикали */
+        white-space: normal;
+        overflow-wrap: break-word;
     }
     .ws-cp-day.k-hol { background: rgba(255,107,107,0.16); color: #ff6b6b; }
     .ws-cp-day.k-reg { background: rgba(255,193,7,0.16); color: #ffc107; }
@@ -4890,32 +5030,38 @@
         white-space: normal;   /* в узком столбике переносится строками */
         margin-top: 3px;
     }
-    /* Task 269 → Task 272: ДЕСКТОП — все кнопки (селекты + кнопка
-       «Обновить» + «Сформировать» + «Сохранить») в ЛЕВОМ ВЕРХНЕМ
-       углу бара (ряд прижат к верхней кромке, align-self:
-       flex-start — Task 272 перенесла кнопки из левой нижней части),
-       окошко с данными — в ПРАВОЙ части бара. Ширина окошка — по
-       тексту (наследуется из базового правила width: fit-content),
-       оно не растягивается на свободное место. Task 270: высота
-       окошка — 95px (под 5 строк), внутренние отступы бара и
-       зазор между рядами — 5px: бар узкий, по высоте окошка. */
+    /* Task 269 → Task 272 → Task 315: ДЕСКТОП — СТРОКА 1 бара
+       (.ws-bar-row) делится на ТРИ РАВНЫЕ ЧАСТИ (grid 1fr 1fr 1fr):
+       ряд кнопок (селекты + «Обновить» + штамп) в ЛЕВОЙ трети,
+       окно мероприятий месяца — в ЦЕНТРЕ, окно времени и праздников
+       — в ПРАВОЙ. Прежняя компоновка Task 269/272 (кнопки слева,
+       одно окошко справа на fit-content) заменена равными долями.
+       Оба окна растягиваются на свою 1/3 (width: auto выключает
+       базовый fit-content у календаря), высота 95px (Task 270),
+       текст внутри переносится на строку ниже, при большом объёме —
+       скролл внутри окна. Строки 2 («Сохранить»/«Отменить») и 3
+       («Сформировать») — под строкой 1, во всю ширину бара.
+       Тулбар остаётся КОЛОНКОЙ (базовый flex-direction: column):
+       строка 1 → строка 2 → строка 3. */
     @media (min-width: 1024px) {
-        .ws-toolbar {
-            flex-direction: row;
-            align-items: center;
-            gap: 5px;
+        .ws-bar-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;   /* ТРИ РАВНЫЕ ЧАСТИ */
+            gap: 8px;
+            align-items: stretch;
         }
         .ws-toolbar-main {
-            order: 0;                /* кнопки — левая часть бара */
-            align-self: flex-start;  /* Task 272: прижаты к ВЕРХНЕЙ кромке бара */
-            margin-right: auto;      /* окошко уходит в правую часть */
-            flex-shrink: 0;
-            flex-wrap: nowrap;
+            /* 1/3 ширины бара: ряд кнопок переносится (wrap) на
+               узких десктопах, не выпирает из своей трети */
+            flex-wrap: wrap;
+            align-content: flex-start;
         }
+        .ws-events-panel,
         .ws-cal-panel {
-            order: 1;              /* окошко — правая часть бара */
-            flex: 0 1 auto;       /* ширина по содержимому (по тексту) */
-            height: 95px;         /* статическая высота бара на десктопе */
+            width: auto;        /* grid растягивает на 1/3 (базовый
+                                   fit-content календаря выключен) */
+            justify-self: stretch;
+            height: 95px;       /* статическая высота строки 1 бара */
         }
     }
 
@@ -11558,6 +11704,15 @@
                 <div class="page-inline-header-title">График работы</div>
             </div>
             <div class="ws-toolbar">
+                <!-- Task 315: СТРОКА 1 — бар из ТРЁХ РАВНЫХ частей.
+                     Десктоп (≥1024px): grid 1fr 1fr 1fr — кнопки |
+                     окно мероприятий месяца (новое) | окно времени
+                     и праздников. Ниже 1024px — колонка: кнопки
+                     сверху, оба окна под ними. Текст в окнах
+                     ПЕРЕНОСИТСЯ на строку ниже (white-space:
+                     normal), при большом объёме — скролл внутри
+                     окна (высота 95px, как у календаря). -->
+                <div class="ws-bar-row">
                 <div class="ws-toolbar-main">
                     <select id="wsMonthSel" class="ws-month-sel" onchange="WorkSchedule.onMonthChange()"></select>
                     <select id="wsYearSel" class="ws-year-sel" onchange="WorkSchedule.onMonthChange()"></select>
@@ -11600,20 +11755,47 @@
                          нормы) — см. WorkSchedule._refreshProdCalendarQuiet
                          в _doGenerateMonth/_doGenerateYear. Нормы и
                          праздники месяца — в окошке #wsCalPanel справа -->
-                    <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateYear()" title="Сформировать шахматку на выбранный месяц или весь год (производственный календарь обновится автоматически) — откроется диалог подтверждения" hidden>Сформировать</button>
-                    <!-- Task 251: кнопка пакетного сохранения накопленных локальных
-                         изменений шахматки (появляется при наличии несохранённых правок) -->
-                    <button type="button" id="wsSaveBtn" class="ws-save-btn" onclick="WorkSchedule.saveAll()" hidden>Сохранить</button>
                 </div>
+                <!-- Task 315: окно 2 бара — данные ВСЕХ мероприятий
+                     открытого месяца (заявка: «второе окно с данными
+                     всех мероприятий на открытый месяц», между
+                     кнопками и окном времени и праздников):
+                     мероприятия из листа «Инструктажи», пересекающие
+                     месяц; строки «точка-цвет · даты · код · тема ·
+                     ФИО», текст переносится. Заполняет
+                     WorkSchedule._renderMonthEventsPanel (вызывается
+                     из _renderGrid — смена месяца/загрузка/обновление) -->
+                <div id="wsEventsPanel" class="ws-events-panel" hidden></div>
                 <!-- Task 264/266/269/272: окошко производственного календаря
                      в баре кнопок графика — группа норм (заголовок +
                      ДВА столбика: счётчики дней слева, часы справа) и
                      столбик праздников/переносов выбранного месяца
-                     видны постоянно. На десктопе кнопки — в ЛЕВОМ
-                     ВЕРХНЕМ углу бара, окошко — в ПРАВОЙ; ширина окна —
-                     по тексту, высота статическая, при нехватке места —
+                     видны постоянно. Task 315: окно — ТРЕТЬЯ равная
+                     часть бара (1/3 ширины на десктопе), текст чипов
+                     переносится на строку ниже, при нехватке места —
                      скролл внутри. Заполняет ProdCalendar.renderPanel() -->
                 <div id="wsCalPanel" class="ws-cal-panel" hidden></div>
+                </div>
+                <!-- Task 315: СТРОКА 2 — «Сохранить» и «Отменить».
+                     Появляются при вводе изменений в ячейки шахматки
+                     (локальные правки _PENDING, только редакторам):
+                     «Сохранить» — пакетная отправка на сервер
+                     (saveAll, Task 251), «Отменить» — сброс всех
+                     несохранённых правок, ячейки возвращаются к
+                     данным сервера (cancelAll, Task 315). Расположены
+                     ПОД кнопками выбора месяца и года. -->
+                <div class="ws-actions-row" id="wsActionsRow" hidden>
+                    <button type="button" id="wsSaveBtn" class="ws-save-btn" onclick="WorkSchedule.saveAll()" hidden>Сохранить</button>
+                    <button type="button" id="wsCancelBtn" class="ws-cancel-btn" onclick="WorkSchedule.cancelAll()" title="Отменить ввод изменений: все несохранённые правки шахматки сбрасываются, ячейки возвращаются к данным сервера" hidden>Отменить</button>
+                </div>
+                <!-- Task 315: СТРОКА 3 — «Сформировать» (генерация
+                     записей на сервере, только редакторам; Task 306:
+                     подтверждённое действие также тихо обновляет
+                     производственный календарь). Ещё ниже строки 2,
+                     третьей строкой над шахматкой -->
+                <div class="ws-generate-row" id="wsGenerateRow" hidden>
+                    <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateYear()" title="Сформировать шахматку на выбранный месяц или весь год (производственный календарь обновится автоматически) — откроется диалог подтверждения" hidden>Сформировать</button>
+                </div>
             </div>
             <!-- Task 308: субнавигация модуля «График работы» УДАЛЕНА
                  по заявке пользователя: вкладки «Инструктажи» и «Отпуска»
@@ -35436,6 +35618,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             var genBtn = document.getElementById('wsGenerateBtn');
             if (genBtn) genBtn.hidden = !this._canEdit;
+            // Task 315: строка 3 тулбара (.ws-generate-row с кнопкой
+            // «Сформировать») скрыта/показана синхронно с кнопкой по
+            // праву записи — пустая строка не занимает места в баре
+            // (скрытие и кнопки, и строки — двойное, на случай
+            // рассинхрона состояний)
+            var genRow = document.getElementById('wsGenerateRow');
+            if (genRow) genRow.hidden = !this._canEdit;
 
             // Task 312: «+ Отпуск» из тулбара УБРАНА — её функцию
             // выполняет строка «+ Отпуск…» в блоке отпусков карточки
@@ -36300,6 +36489,97 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._fitGrid();
             // Task 251: актуализировать кнопку «Сохранить» (счётчик правок)
             this._updateSaveBtn();
+            // Task 315: окно мероприятий месяца (вторая часть бара) —
+            // обновляется при каждом рендере сетки: смена месяца,
+            // загрузка данных (сеть/локальная копия), «Обновить»,
+            // подтверждение шторки мероприятия (перезагрузка сетки)
+            this._renderMonthEventsPanel();
+        },
+
+        // Task 315: окно 2 бара — данные ВСЕХ мероприятий открытого
+        // месяца (заявка: «второе окно с данными всех мероприятий на
+        // открытый месяц, между кнопками и окном времени и
+        // праздников»). Источник — слой мероприятий _TRAININGS (лист
+        // «Инструктажи»): в окно попадают записи, ПЕРЕСЕКАЮЩИЕ месяц
+        // (дата_начала..дата_окончания; ISO-строки сравниваются
+        // лексикографически = хронологически, как в _eventsAt —
+        // мероприятие 29.08–02.09 видно и в августе, и в сентябре).
+        // Строка: цветная точка кода (цвет — справочник
+        // «Коды_статусов», как у бейджей ячеек), диапазон дат
+        // («02.09», «02–05.09», «29.09–02.10»), код, тема, ФИО.
+        // Текст ПЕРЕНОСИТСЯ на строку ниже (white-space: normal —
+        // заявка), при большом объёме — скролл внутри окна (95px).
+        // Сортировка — по дате начала, затем по таб. номеру. Пустой
+        // месяц — строка «нет мероприятий в этом месяце».
+        _renderMonthEventsPanel: function() {
+            var el = document.getElementById('wsEventsPanel');
+            if (!el) return;
+            var monthsNom = ['январь','февраль','март','апрель','май','июнь',
+                             'июль','август','сентябрь','октябрь','ноябрь','декабрь'];
+            var y = this._year, m = this._month;
+            var pad = function(num) { return (num < 10 ? '0' : '') + num; };
+            var mStart = y + '-' + pad(m) + '-01';
+            var mEnd = y + '-' + pad(m) + '-' + pad(new Date(y, m, 0).getDate());
+            // Мероприятия, пересекающие открытый месяц
+            var list = [];
+            var trs = this._TRAININGS || [];
+            for (var i = 0; i < trs.length; i++) {
+                var t = trs[i];
+                var s = t['дата_начала'];
+                if (!s) continue;
+                var e = t['дата_окончания'] || s;
+                if (e < mStart || s > mEnd) continue;
+                list.push(t);
+            }
+            list.sort(function(a, b) {
+                return String(a['дата_начала']).localeCompare(String(b['дата_начала'])) ||
+                       String(a['таб_номер']).localeCompare(String(b['таб_номер']));
+            });
+            // ФИО по таб. номеру
+            var fioIdx = {};
+            var emps = this._EMPLOYEES || [];
+            for (var ei = 0; ei < emps.length; ei++) {
+                fioIdx[emps[ei]['таб_номер']] = emps[ei]['ФИО'];
+            }
+            // «02.09» из ISO; диапазон: один месяц — «02–05.09»,
+            // через границу — «29.09–02.10»
+            var fmtDay = function(iso) {
+                var pp = String(iso).split('-');
+                return pp[2] + '.' + pp[1];
+            };
+            var fmtRange = function(sIso, eIso) {
+                if (!eIso || sIso === eIso) return fmtDay(sIso);
+                if (String(sIso).slice(0, 7) === String(eIso).slice(0, 7)) {
+                    return String(sIso).slice(8) + '–' + fmtDay(eIso);
+                }
+                return fmtDay(sIso) + '–' + fmtDay(eIso);
+            };
+            var html = '<span class="ws-cp-cap ws-ep-cap">Мероприятия · ' +
+                       this._esc(monthsNom[m - 1]) + ' ' + y +
+                       (list.length ? ' · ' + list.length : '') + '</span>';
+            if (!list.length) {
+                html += '<span class="ws-cp-empty">нет мероприятий в этом месяце</span>';
+            }
+            for (var k = 0; k < list.length; k++) {
+                var tr = list[k];
+                var code = this._trainingCodeOf(tr['тип']);
+                var meta = this._statusMeta(code) || {};
+                var fio = fioIdx[tr['таб_номер']] || ('таб. №' + tr['таб_номер']);
+                var range = fmtRange(tr['дата_начала'], tr['дата_окончания']);
+                var text = (code ? code + ' · ' : '') +
+                           (tr['тема'] || meta.name || '—') + ' · ' + fio;
+                var tip = range + ' · ' + (meta.name || tr['тип'] || '') +
+                          (tr['тема'] ? ' — ' + tr['тема'] : '') + ' · ' + fio +
+                          ((tr['длительность_дней'] > 1)
+                              ? ' (' + tr['длительность_дней'] + ' дн.)' : '') +
+                          (tr['комментарий'] ? ' — ' + tr['комментарий'] : '');
+                html += '<span class="ws-ep-item" title="' + this._escAttr(tip) + '">' +
+                        '<i class="ws-ep-dot" style="background:' + (meta.color || '#3a3a3a') + ';"></i>' +
+                        '<b class="ws-ep-date">' + this._esc(range) + '</b>' +
+                        '<span class="ws-ep-text">' + this._esc(text) + '</span></span>';
+            }
+            el.innerHTML = html;
+            el.hidden = false;
         },
 
         // Task 256: авто-подгонка шахматки под размер окна приложения.
@@ -37416,12 +37696,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Кнопка «Сохранить» в тулбаре: видна только редакторам и только
         // при наличии несохранённых правок; текст — со счётчиком.
+        // Task 315: рядом с «Сохранить» появляется «Отменить» (отмена
+        // ввода изменений — cancelAll); вся СТРОКА 2 (.ws-actions-row)
+        // скрыта без правок — не занимает места в баре.
         _updateSaveBtn: function() {
             var btn = document.getElementById('wsSaveBtn');
             if (!btn) return;
             var n = Object.keys(this._PENDING).length;
-            btn.hidden = !this._canEdit || n === 0;
+            var show = this._canEdit && n > 0;
+            btn.hidden = !show;
             btn.textContent = n > 0 ? 'Сохранить (' + n + ')' : 'Сохранить';
+            var cancelBtn = document.getElementById('wsCancelBtn');
+            if (cancelBtn) cancelBtn.hidden = !show;
+            var row = document.getElementById('wsActionsRow');
+            if (row) row.hidden = !show;
         },
 
         // Пакетное сохранение: все накопленные правки отправляются на сервер
@@ -37482,6 +37770,42 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
             };
             chain.then(finish).catch(finish);
+        },
+
+        // Task 315: кнопка «Отменить» (рядом с «Сохранить», строка 2
+        // тулбара) — ОТМЕНА ВВОДА ИЗМЕНЕНИЙ (заявка: «для отмены ввода
+        // изменений»). Сбрасывает ВСЕ накопленные локальные правки
+        // ячеек (_PENDING): ячейки возвращаются к серверным данным,
+        // сетка перерисовывается, кнопки «Сохранить»/«Отменить» и
+        // строка 2 исчезают. Мероприятия НЕ копятся локально (шторка
+        // «+ Мероприятие…» отправляет их на сервер сразу при
+        // подтверждении) — несохранённого ввода мероприятий не бывает,
+        // отменить их до подтверждения можно кнопкой «Отмена» шторки.
+        // Подтверждение — kipConfirm с danger-кнопкой (как у
+        // «Сформировать»): случайный клик не теряет накопленные правки.
+        // Блокируется во время пакетного сохранения (_saving).
+        cancelAll: function() {
+            if (this._saving) return;
+            var keys = Object.keys(this._PENDING);
+            if (!keys.length) return;
+            var self = this;
+            var n = keys.length;
+            var doRevert = function() {
+                self._PENDING = {};
+                self._updateSaveBtn();
+                self._renderGrid();
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Изменения отменены (' + n + ')');
+                }
+            };
+            if (typeof kipConfirm === 'function') {
+                kipConfirm('Отменить ввод изменений — все несохранённые правки шахматки (' + n + ')?\n' +
+                           'Ячейки вернутся к данным сервера, отменённое НЕ сохранится.',
+                           { title: 'Отмена изменений', okText: 'Отменить правки', danger: true })
+                    .then(function(ok) { if (ok) doRevert(); });
+            } else {
+                if (confirm('Отменить все несохранённые правки (' + n + ')?')) doRevert();
+            }
         },
 
         // Task 251: sheet расширенной правки открывается из попапа
