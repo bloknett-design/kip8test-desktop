@@ -4188,6 +4188,80 @@
     }
     .ws-popup-row.ws-popup-event { cursor: default; }
     .ws-popup-row.ws-popup-event:hover { background: transparent; }
+    /* Task 309: кнопки-действия в строках мероприятий (попап ячейки
+       «Мероприятия в этот день» и карточка сотрудника): ✎ — правка
+       (шторка #wsTrSheet с префиллом), ✕ — удаление (deleteTraining
+       с подтверждением). Редакторам только (строки без кнопок —
+       зрители). Кнопки компактные 22px, цвет — акцент/красный,
+       клики не «залипают» на строке (stopPropagation в onclick). */
+    .ws-popup-act {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 5px;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1;
+        color: var(--accent-blue, #4a8fc7);
+        cursor: pointer;
+        flex-shrink: 0;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+    }
+    .ws-popup-act:hover { background: rgba(74, 143, 199, 0.25); }
+    .ws-popup-act.ws-popup-act-del { color: #ef5350; }
+    .ws-popup-act.ws-popup-act-del:hover { background: rgba(239, 83, 80, 0.2); }
+    [data-theme="light"] .ws-popup-act:hover { background: rgba(42, 93, 143, 0.18); }
+    /* Task 309: карточка сотрудника — попап у колонки ФИО (наведение
+       или клик). Данные из удалённых вкладок (Task 307/308): профиль
+       «Сотрудники», план отпусков «Отпуска», мероприятия «Инструктажи».
+       База — .ws-cell-popup (позиционирование/фон/рамка/скролл);
+       специфичное: чуть шире, поля «метка: значение», периоды и
+       мероприятия с кнопками ✎/✕ (только редакторам). */
+    .ws-cell-popup.ws-emp-popup {
+        min-width: 280px;
+        max-width: 380px;
+        max-height: 440px;
+    }
+    .ws-emp-field {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        padding: 3px 10px 3px 8px;
+        font-size: 12px;
+        line-height: 1.35;
+    }
+    .ws-emp-field .ws-emp-k {
+        min-width: 108px;
+        flex-shrink: 0;
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+    }
+    .ws-emp-field .ws-emp-v {
+        color: var(--text-primary, #e0e0e0);
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .ws-emp-empty {
+        padding: 3px 10px 6px 8px;
+        font-size: 11px;
+        color: var(--text-secondary, rgba(255,255,255,0.45));
+        font-style: italic;
+    }
+    .ws-emp-total {
+        padding: 4px 10px 6px 8px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-secondary, rgba(255,255,255,0.6));
+        border-bottom: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        margin-bottom: 2px;
+    }
+    [data-theme="light"] .ws-emp-field .ws-emp-k { color: #777; }
+    [data-theme="light"] .ws-emp-field .ws-emp-v { color: #222; }
+    [data-theme="light"] .ws-emp-empty { color: #999; }
+    [data-theme="light"] .ws-emp-total { color: #555; border-color: rgba(0,0,0,0.08); }
 
     /* Task 251: маркер несохранённой ячейки — янтарная пунктирная рамка
        (отличима от hover-подсветки — сплошной синий outline) */
@@ -4449,6 +4523,30 @@
     .ws-grid tbody td.ws-cell[data-editable="1"]:hover {
         outline: 2px solid var(--accent-blue, #4a8fc7);
         outline-offset: -2px;
+    }
+    /* Task 309: ручные коды «д»/«н» (работа в выходной/праздник) —
+       РАМКА по краям ячейки, как в миниатюре-свотче попапа выбора
+       статуса (заливка цветом кода + контур). В отличие от общего
+       маркера ручных записей ws-source-manual (тонкая 1.5px
+       полупрозрачная рамка), строчные д/н по цвету заливки близки
+       к плановым Д/Н — вручну выставленный код должен быть отличим
+       от сгенерированного. Рамка видна и ДО сохранения (локальная
+       правка уже имеет источник «руч»). */
+    .ws-grid tbody td.ws-cell.ws-manual-dn {
+        box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85);
+    }
+    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-manual-dn {
+        box-shadow: inset 0 0 0 2px rgba(38, 50, 56, 0.75);
+    }
+    /* Task 309: колонка ФИО — интерактивна (карточка сотрудника по
+       наведению/клику): курсор-указатель и сплошная подсветка при
+       наведении (сплошная — колонка sticky, сквозь полупрозрачный
+       фон просвечивали бы прокручиваемые ячейки дней) */
+    .ws-grid tbody td.ws-emp-col:hover {
+        background: #15202f;
+    }
+    [data-theme="light"] .ws-grid tbody td.ws-emp-col:hover {
+        background: #e2e8ef;
     }
     /* Подсветка ячейки по источнику: ручные записи — рамка темнее */
     .ws-grid tbody td.ws-cell.ws-source-manual {
@@ -14125,6 +14223,17 @@
 <div id="wsPopupCloser" class="ws-popup-closer" onclick="WorkSchedule.closeCellPopup()"></div>
 <div id="wsCellPopup" class="ws-cell-popup" role="menu"></div>
 
+<!-- Task 309: карточка сотрудника — попап у колонки ФИО шахматки
+     (наведение курсора с задержкой или клик). Показывает данные,
+     которые были в удалённых вкладках (Task 307/308): профиль
+     («Сотрудники» — тип/смена/должность/шаблон/даты), план отпусков
+     («Отпуска» — периоды года шахматки по частям) и мероприятия
+     («Инструктажи» — события месяца с кнопками правки/удаления).
+     Наведение — всплывающий режим (закрывается при уходе курсора);
+     клик — прикреплённый режим (закрытие по фону-кловеру и Esc). -->
+<div id="wsEmpPopupCloser" class="ws-popup-closer" onclick="WorkSchedule.closeEmpPopup()"></div>
+<div id="wsEmpPopup" class="ws-cell-popup ws-emp-popup" role="dialog" aria-label="Карточка сотрудника"></div>
+
 <!-- Task 272: bottom sheet производственного календаря УДАЛЁН —
      шторка с выбором региона, источником и API-токеном
      production-calendar.ru больше не нужна: регион один (42 —
@@ -14196,7 +14305,9 @@
 <div id="wsTrOverlay" class="pin-sheet-overlay" onclick="WorkSchedule.closeTrainingForm()"></div>
 <div id="wsTrSheet" class="flow-input-sheet" style="max-height: 90vh; overflow-y: auto;">
     <div class="flow-input-sheet-handle"></div>
-    <div class="flow-input-sheet-title">Новое мероприятие</div>
+    <!-- Task 309: id для переключения заголовка — режим правки
+         (editTraining → «Правка мероприятия») против создания -->
+    <div class="flow-input-sheet-title" id="wsTrSheetTitle">Новое мероприятие</div>
     <div class="flow-input-row">
         <div class="flow-input-group" style="flex:0 0 35%;">
             <label class="flow-input-label" for="wsTrTabNo">Таб. №</label>
@@ -14238,7 +14349,8 @@
         </div>
     </div>
     <textarea id="wsTrComment" class="flow-comment-field" rows="2" maxlength="500" placeholder="Комментарий (необязательно)" autocomplete="off"></textarea>
-    <button type="button" class="flow-input-submit" onclick="WorkSchedule.submitTrainingForm()">Добавить</button>
+    <!-- Task 309: id для смены подписи в режиме правки («Сохранить») -->
+    <button type="button" class="flow-input-submit" id="wsTrSubmitBtn" onclick="WorkSchedule.submitTrainingForm()">Добавить</button>
     <button type="button" class="flow-input-cancel" onclick="WorkSchedule.closeTrainingForm()">Отмена</button>
 </div>
 
@@ -35040,10 +35152,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             // Task 251: Esc закрывает попап выбора статуса; beforeunload
             // предупреждает о несохранённых правках шахматки (обработчики
-            // вешаются один раз — init больше не пройдёт мимо этой точки)
+            // вешаются один раз — init больше не пройдёт мимо этой точки).
+            // Task 309: Esc закрывает и карточку сотрудника (wsEmpPopup)
             var selfOnce = this;
             document.addEventListener('keydown', function(ev) {
-                if (ev.key === 'Escape') selfOnce.closeCellPopup();
+                if (ev.key === 'Escape') {
+                    selfOnce.closeCellPopup();
+                    selfOnce.closeEmpPopup();
+                }
             });
             window.addEventListener('beforeunload', function(ev) {
                 if (Object.keys(selfOnce._PENDING).length > 0) {
@@ -35099,6 +35215,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Task 256: следим за размером области шахматки — пересчёт
             // целочисленных высот строк при изменении окна/показе страницы
             this._attachFitResize();
+
+            // Task 309: наведение на колонку ФИО — карточка сотрудника
+            // (делегированные mouseover/mouseout по .ws-grid-wrap:
+            // сетка перерисовывается innerHTML, слушатели на контейнере
+            // живут вечно). Тач-устройства без hover — только клик.
+            this._attachEmpPopupHover();
 
             var self = this;
             this._loadStatusCodes().then(function() {
@@ -35615,7 +35737,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var empPos = empPosLabel
                     ? '<div class="ws-emp-pos">' + this._esc(empPosLabel) + '</div>'
                     : '';
-                html += '<td class="ws-emp-col"><div class="ws-emp-name">' +
+                // Task 309: колонка ФИО — клик открывает карточку
+                // сотрудника (данные бывших вкладок: профиль, отпуска,
+                // мероприятия); наведение — тот же попап во всплывающем
+                // режиме (_attachEmpPopupHover, data-tab для делегата)
+                var safeEmpTab = String(emp['таб_номер'] || '').replace(/'/g, '');
+                html += '<td class="ws-emp-col" data-tab="' + this._escAttr(safeEmpTab) + '"' +
+                        ' onclick="WorkSchedule.onEmpCellClick(event, \'' + safeEmpTab + '\')"' +
+                        ' title="Карточка сотрудника: профиль, отпуска, мероприятия">' +
+                        '<div class="ws-emp-name">' +
                         '<span class="ws-tab-no">' + this._esc(emp['таб_номер']) + '</span>' +
                         this._esc(emp['ФИО']) + '</div>' + empPos + '</td>';
                 for (var day = 1; day <= daysInMonth; day++) {
@@ -35805,6 +35935,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             var classes = ['ws-cell'];
             if (isManual) classes.push('ws-source-manual');
+            // Task 309: ручные «д»/«н» (работа в выходной/праздник) —
+            // яркая рамка по краям ячейки (класс ws-manual-dn, стиль —
+            // как у миниатюры-свотча в попапе выбора статуса): строчные
+            // д/н по цвету фона близки к плановым Д/Н, вручную
+            // выставленный код должен читаться с одного взгляда.
+            // Локальная правка (pending) уже даёт источник «руч» —
+            // рамка появляется сразу, до сохранения.
+            if (isManual && (status === 'д' || status === 'н')) {
+                classes.push('ws-manual-dn');
+            }
             if (isOvertime) classes.push('ws-overtime');
             if (isPending) classes.push('ws-pending');
 
@@ -36181,6 +36321,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Клик по ячейке: открыть попап со списком статусов рядом с ячейкой.
         onCellClick: function(ev, isoDate, tabNo) {
+            // Task 309: взаимная блокировка попапов — при открытии
+            // статусного попапа карточка сотрудника закрывается
+            // (обратное делает onEmpCellClick)
+            this.closeEmpPopup();
             if (!this._canEdit) {
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
                     KipToast.show('У вас нет прав на правку графика');
@@ -36245,10 +36389,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 html += '<div class="ws-popup-sec">Мероприятия в этот день</div>';
                 for (var de = 0; de < dayEvents.length; de++) {
                     var deMeta = this._statusMeta(dayEvents[de].code) || {};
+                    // Task 309: кнопки правки/удаления мероприятия —
+                    // только ролям с правом записи (зрители видят
+                    // справку без действий). stopPropagation — клик не
+                    // дойдёт до строки (строка не кликабельна, но
+                    // подстрахуемся на будущее)
+                    var deT = dayEvents[de].training;
+                    var deId = parseInt(deT.id, 10);
+                    var deActs = '';
+                    if (this._canEdit && deId) {
+                        deActs = '<span class="ws-popup-act" title="Редактировать"' +
+                                 ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + deId + ')">✎</span>' +
+                                 '<span class="ws-popup-act ws-popup-act-del" title="Удалить"' +
+                                 ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + deId + ')">✕</span>';
+                    }
                     html += '<div class="ws-popup-row ws-popup-event">' +
                             '<span class="ws-popup-swatch" style="background:' + (deMeta.color || '#3a3a3a') + ';"></span>' +
                             '<span class="ws-popup-code">' + this._esc(dayEvents[de].code) + '</span>' +
-                            '<span class="ws-popup-name">' + this._esc(dayEvents[de].training.тема || deMeta.name || '') + '</span></div>';
+                            '<span class="ws-popup-name">' + this._esc(deT.тема || deMeta.name || '') + '</span>' +
+                            deActs + '</div>';
                 }
             }
             // Task 303: быстрое добавление мероприятия на эту дату (в
@@ -36339,6 +36498,320 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var tabNo = this._popupCell['таб_номер'];
             this.closeCellPopup();
             this.openTrainingForm(tabNo, date);
+        },
+
+        // ============================================================
+        // Task 309: карточка сотрудника — попап у колонки ФИО
+        // ============================================================
+        // Наведение курсора (с задержкой 350 мс) или клик по полю
+        // сотрудника слева от шахматки открывают окно с данными,
+        // которые раньше были в удалённых вкладках (Task 307/308):
+        //   • «Сотрудники» — профиль: тип/смена, должность, шаблон
+        //     ротации, старт цикла, дата приёма, комментарий;
+        //   • «Отпуска» — периоды года шахматки по частям + итог;
+        //   • «Инструктажи» — мероприятия месяца (тема, период) с
+        //     кнопками ✎/✕ (правка/удаление — только редакторам).
+        // Два режима: hover (закрывается при уходе курсора, с
+        // задержкой 400 мс — успевает сработать вход в сам попап,
+        // где кнопки кликабельны) и pinned по клику (закрытие —
+        // фоновый кловер #wsEmpPopupCloser или Esc).
+
+        // Делегированные mouseover/mouseout по контейнеру сетки:
+        // сетка перерисовывается innerHTML, слушатели на .ws-grid-wrap
+        // навешиваются ОДИН раз (init) и переживают все рендеры.
+        // Тач-устройства (hover: none) игнорируются — там карточка
+        // открывается кликом (onEmpCellClick).
+        _attachEmpPopupHover: function() {
+            if (this._empHoverAttached) return;
+            this._empHoverAttached = true;
+            var wrap = document.getElementById('wsGridWrap');
+            var popup = document.getElementById('wsEmpPopup');
+            if (!wrap || !popup) return;
+            var canHover = window.matchMedia
+                && window.matchMedia('(hover: hover)').matches;
+            if (!canHover) return;   // тач: только клик
+            var self = this;
+            var hoverCell = null;
+            wrap.addEventListener('mouseover', function(ev) {
+                var td = null;
+                try {
+                    if (ev.target && ev.target.closest) {
+                        td = ev.target.closest('td.ws-emp-col');
+                    }
+                } catch (e) {}
+                if (td === hoverCell) return;   // плавание внутри ячейки
+                hoverCell = td;
+                // отменять отложенное закрытие — только при входе
+                // в ячейку ФИО: переход на ячейку ДНЯ не должен
+                // «замораживать» попап (закрытие уже запланировано
+                // mouseout'ом; сам попап отменит его своим mouseenter)
+                if (td) self._cancelEmpPopupClose();
+                if (!td) return;   // ушли с колонки ФИО — закрытие по mouseout
+                // попап, прикреплённый кликом, наведение не трогает
+                if (self._empPinned) return;
+                var tabNo = td.getAttribute('data-tab');
+                if (!tabNo) return;
+                self._cancelEmpPopupOpen();
+                self._empOpenTimer = setTimeout(function() {
+                    self._empOpenTimer = null;
+                    if (self._empPinned) return;
+                    self._openEmpPopup(td, tabNo, false);
+                }, 350);
+            });
+            wrap.addEventListener('mouseout', function(ev) {
+                var to = null;
+                try {
+                    if (ev.relatedTarget && ev.relatedTarget.closest) {
+                        to = ev.relatedTarget.closest('td.ws-emp-col');
+                    }
+                } catch (e) {}
+                if (to) return;   // переход внутри колонки ФИО — не закрываем
+                hoverCell = null;
+                self._cancelEmpPopupOpen();
+                self._scheduleEmpPopupClose();
+            });
+            // Вход курсора в попап отменяет отложенное закрытие (кнопки
+            // ✎/✕ кликабельны); уход из попапа — снова планирует
+            popup.addEventListener('mouseenter', function() {
+                self._cancelEmpPopupClose();
+            });
+            popup.addEventListener('mouseleave', function() {
+                self._scheduleEmpPopupClose();
+            });
+        },
+
+        _cancelEmpPopupOpen: function() {
+            if (this._empOpenTimer) {
+                clearTimeout(this._empOpenTimer);
+                this._empOpenTimer = null;
+            }
+        },
+
+        _cancelEmpPopupClose: function() {
+            if (this._empCloseTimer) {
+                clearTimeout(this._empCloseTimer);
+                this._empCloseTimer = null;
+            }
+        },
+
+        _scheduleEmpPopupClose: function() {
+            this._cancelEmpPopupClose();
+            if (!this._empPopupOpen || this._empPinned) return;
+            var self = this;
+            this._empCloseTimer = setTimeout(function() {
+                self._empCloseTimer = null;
+                self.closeEmpPopup();
+            }, 400);
+        },
+
+        // Клик по полю сотрудника — прикреплённая карточка (кловер
+        // активен, закрытие — клик мимо попапа или Esc). На таче —
+        // единственный способ открыть карточку.
+        onEmpCellClick: function(ev, tabNo) {
+            this._cancelEmpPopupOpen();
+            this._cancelEmpPopupClose();
+            // взаимная блокировка попапов (обратное — onCellClick)
+            this.closeCellPopup();
+            var td = null;
+            try {
+                if (ev && ev.target && ev.target.closest) {
+                    td = ev.target.closest('td.ws-emp-col');
+                }
+            } catch (e) {}
+            this._openEmpPopup(td, tabNo, true);
+        },
+
+        // Открыть карточку рядом с ячейкой ФИО: правее ячейки, не
+        // влезает — прижать к правому краю (колонка sticky слева,
+        // «левее ячейки» места нет); по вертикали — от верха ячейки,
+        // не влезает вниз — прижать к низу вьюпорта. Геометрия — как
+        // у статусного попапа (_openCellPopup).
+        _openEmpPopup: function(td, tabNo, pinned) {
+            var popup = document.getElementById('wsEmpPopup');
+            var closer = document.getElementById('wsEmpPopupCloser');
+            if (!popup || !closer) return;
+            this._empPopupTab = tabNo;
+            this._empPinned = !!pinned;
+            popup.innerHTML = this._renderEmpPopup(tabNo);
+            closer.classList.toggle('active', !!pinned);
+            popup.classList.add('active');
+            // сначала скрыто в левом верхнем углу — измерить габариты
+            popup.style.left = '0px';
+            popup.style.top = '0px';
+            popup.style.visibility = 'hidden';
+            var pw = popup.offsetWidth;
+            var ph = popup.offsetHeight;
+            var vw = window.innerWidth;
+            var vh = window.innerHeight;
+            var left, top;
+            var rect = td ? td.getBoundingClientRect() : null;
+            if (rect) {
+                left = rect.right + 6;
+                if (left + pw > vw - 8) left = Math.max(8, vw - pw - 8);
+                top = rect.top;
+                if (top + ph > vh - 8) top = Math.max(8, vh - ph - 8);
+            } else {
+                left = Math.max(8, (vw - pw) / 2);
+                top = Math.max(8, (vh - ph) / 2);
+            }
+            popup.style.left = Math.round(left) + 'px';
+            popup.style.top = Math.round(top) + 'px';
+            popup.style.visibility = '';
+            this._empPopupOpen = true;
+        },
+
+        closeEmpPopup: function() {
+            this._cancelEmpPopupOpen();
+            this._cancelEmpPopupClose();
+            var popup = document.getElementById('wsEmpPopup');
+            var closer = document.getElementById('wsEmpPopupCloser');
+            if (popup) {
+                popup.classList.remove('active');
+                popup.innerHTML = '';
+            }
+            if (closer) closer.classList.remove('active');
+            this._empPopupOpen = false;
+            this._empPinned = false;
+            this._empPopupTab = null;
+        },
+
+        // Содержимое карточки: шапка (ФИО · таб. №) + три секции
+        // (профиль / отпуска года / мероприятия месяца). Кнопки ✎/✕
+        // в секции мероприятий — только ролям с правом записи.
+        _renderEmpPopup: function(tabNo) {
+            var emp = null;
+            for (var j = 0; j < this._EMPLOYEES.length; j++) {
+                if (this._EMPLOYEES[j]['таб_номер'] === tabNo) {
+                    emp = this._EMPLOYEES[j];
+                    break;
+                }
+            }
+            if (!emp) {
+                return '<div class="ws-popup-title">таб. №' +
+                       this._esc(tabNo) + ' — не найден</div>';
+            }
+            var monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                              'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+            var html = '<div class="ws-popup-title">' + this._esc(emp['ФИО']) +
+                       ' · таб. №' + this._esc(emp['таб_номер']) + '</div>';
+
+            // --- Секция 1: профиль (бывшая вкладка «Сотрудники») ---
+            var tip = String(emp['тип'] || '').trim();
+            var smena = parseInt(emp['смена'], 10);
+            var tipVal = tip === 'сменный'
+                ? ('сменный' + (smena >= 1 && smena <= 5 ? ', смена №' + smena : ''))
+                : (tip || '—');
+            var patName = '';
+            if (emp['шаблон_ротации']) {
+                for (var pi = 0; pi < (this._PATTERNS || []).length; pi++) {
+                    if (parseInt(this._PATTERNS[pi].id, 10) ===
+                        parseInt(emp['шаблон_ротации'], 10)) {
+                        patName = this._PATTERNS[pi].name || '';
+                        break;
+                    }
+                }
+                if (!patName) patName = '№' + emp['шаблон_ротации'];
+            }
+            var fields = [
+                ['Тип', tipVal],
+                ['Должность', String(emp['должность'] || '').trim() || '—'],
+                ['Шаблон ротации', patName || '—'],
+                ['Старт цикла', emp['старт_цикла'] ? this._fmtDateRu(emp['старт_цикла']) : '—'],
+                ['Дата приёма', emp['дата_приёма'] ? this._fmtDateRu(emp['дата_приёма']) : '—'],
+                ['Комментарий', String(emp['комментарий'] || '').trim()]
+            ];
+            html += '<div class="ws-popup-sec">Сотрудник</div>';
+            for (var fi = 0; fi < fields.length; fi++) {
+                if (!fields[fi][1] || fields[fi][1] === '—') {
+                    // пустые значения (кроме явных «—») не показываем
+                    if (!fields[fi][1]) continue;
+                }
+                html += '<div class="ws-emp-field"><span class="ws-emp-k">' +
+                        this._esc(fields[fi][0]) + '</span><span class="ws-emp-v">' +
+                        this._esc(fields[fi][1]) + '</span></div>';
+            }
+
+            // --- Секция 2: отпуска года шахматки (бывшая вкладка
+            //     «Отпуска»; _VACATIONS уже отфильтрованы по году
+            //     сервером listVacations, дополнительно сверяем
+            //     пересечение с годом — период 29.12–11.01 попадает
+            //     в оба, дни года считает _vacDaysInYear) ---
+            var vacs = [];
+            for (var vi = 0; vi < (this._VACATIONS || []).length; vi++) {
+                var v = this._VACATIONS[vi];
+                if (v['таб_номер'] !== tabNo) continue;
+                if (this._vacDaysInYear(v, this._year) <= 0) continue;
+                vacs.push(v);
+            }
+            vacs.sort(function(a, b) {
+                return String(a.дата_начала).localeCompare(String(b.дата_начала));
+            });
+            html += '<div class="ws-popup-sec">Отпуска · ' + this._year + '</div>';
+            if (!vacs.length) {
+                html += '<div class="ws-emp-empty">нет запланированных периодов</div>';
+            } else {
+                var vacTotal = 0;
+                for (var vk = 0; vk < vacs.length; vk++) {
+                    var vv = vacs[vk];
+                    vacTotal += this._vacDaysInYear(vv, this._year);
+                    var pNo = parseInt(vv.часть, 10);
+                    html += '<div class="ws-emp-field"><span class="ws-emp-k">Часть ' +
+                            (pNo ? pNo : '—') + '</span><span class="ws-emp-v">' +
+                            this._fmtDateRu(vv.дата_начала) + ' — ' +
+                            this._fmtDateRu(vv.дата_окончания) + ' · ' +
+                            this._vacDays(vv) + ' дн.' +
+                            (String(vv.комментарий || '').trim()
+                                ? ' · «' + this._esc(vv.комментарий) + '»' : '') +
+                            '</span></div>';
+                }
+                html += '<div class="ws-emp-total">Итого в году: ' + vacTotal +
+                        ' ' + this._plural(vacTotal, ['день', 'дня', 'дней']) + '</div>';
+            }
+
+            // --- Секция 3: мероприятия месяца (бывшая вкладка
+            //     «Инструктажи»; _TRAININGS загружены listTrainings
+            //     для года/месяца шахматки) ---
+            var trs = [];
+            for (var ti = 0; ti < (this._TRAININGS || []).length; ti++) {
+                if (this._TRAININGS[ti]['таб_номер'] === tabNo) {
+                    trs.push(this._TRAININGS[ti]);
+                }
+            }
+            trs.sort(function(a, b) {
+                return String(a.дата_начала).localeCompare(String(b.дата_начала));
+            });
+            html += '<div class="ws-popup-sec">Мероприятия · ' +
+                    monthNames[this._month - 1] + ' ' + this._year + '</div>';
+            if (!trs.length) {
+                html += '<div class="ws-emp-empty">нет мероприятий в месяце</div>';
+            } else {
+                for (var tk = 0; tk < trs.length; tk++) {
+                    var t = trs[tk];
+                    var code = this._trainingCodeOf(t.тип);
+                    var meta = this._statusMeta(code) || {};
+                    var trId = parseInt(t.id, 10);
+                    var acts = '';
+                    if (this._canEdit && trId) {
+                        acts = '<span class="ws-popup-act" title="Редактировать"' +
+                               ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + trId + ')">✎</span>' +
+                               '<span class="ws-popup-act ws-popup-act-del" title="Удалить"' +
+                               ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + trId + ')">✕</span>';
+                    }
+                    var period = (t.дата_начала === t.дата_окончания)
+                        ? this._fmtDateRu(t.дата_начала)
+                        : (this._fmtDateRu(t.дата_начала) + ' — ' +
+                           this._fmtDateRu(t.дата_окончания));
+                    html += '<div class="ws-popup-row ws-popup-event">' +
+                            '<span class="ws-popup-swatch" style="background:' +
+                            (meta.color || '#3a3a3a') + ';"></span>' +
+                            '<span class="ws-popup-code">' + this._esc(code || '—') + '</span>' +
+                            '<span class="ws-popup-name">' +
+                            this._esc(t.тема || meta.name || t.тип) +
+                            ' · ' + period + '</span>' + acts + '</div>';
+                }
+            }
+            return html;
         },
 
         // Серверная запись по ключу (без pending-наложения)
@@ -36683,8 +37156,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // (_eventsAt/_trainingCodeOf); добавление — «+ Мероприятие…»
         // в попапе ячейки → openTrainingForm (шторка #wsTrSheet).
 
-        openTrainingForm: function(prefillTab, prefillDate) {
+        openTrainingForm: function(prefillTab, prefillDate, editTraining) {
             if (!this._canEdit) return;
+            var sheetTitle = document.getElementById('wsTrSheetTitle');
+            var submitBtn = document.getElementById('wsTrSubmitBtn');
             var empSel = document.getElementById('wsTrTabNo');
             if (empSel) {
                 var html = '<option value="">— выберите —</option>';
@@ -36701,14 +37176,42 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // к форме «Новое мероприятие»)
                 if (prefillTab) empSel.value = String(prefillTab);
             }
-            // Task 303: дата ячейки (или сегодня — прежнее поведение)
-            var today = prefillDate || this._isoDate(new Date());
-            document.getElementById('wsTrStart').value = today;
-            document.getElementById('wsTrEnd').value = today;
-            document.getElementById('wsTrDays').value = 1;
-            document.getElementById('wsTrType').value = 'инструктаж';
-            document.getElementById('wsTrTitle').value = '';
-            document.getElementById('wsTrComment').value = '';
+            // Task 309: два режима формы — создание (по умолчанию) и
+            // ПРАВКА существующего мероприятия (editTraining: запись из
+            // _TRAININGS, найденная по id в editTraining()). В правке
+            // форма заполняется значениями записи, заголовок и кнопка
+            // меняются, id сохраняется в _editTrainingId — submit
+            // применяет изменения (add новой записи + delete старой)
+            this._editTrainingId = null;
+            if (editTraining && editTraining.id) {
+                this._editTrainingId = parseInt(editTraining.id, 10);
+                if (empSel) empSel.value = String(editTraining['таб_номер'] || '');
+                document.getElementById('wsTrType').value =
+                    String(editTraining.тип || 'инструктаж');
+                document.getElementById('wsTrTitle').value =
+                    String(editTraining.тема || '');
+                document.getElementById('wsTrStart').value =
+                    String(editTraining.дата_начала || '');
+                document.getElementById('wsTrEnd').value =
+                    String(editTraining.дата_окончания || editTraining.дата_начала || '');
+                document.getElementById('wsTrDays').value =
+                    parseInt(editTraining.длительность_дней, 10) || 1;
+                document.getElementById('wsTrComment').value =
+                    String(editTraining.комментарий || '');
+                if (sheetTitle) sheetTitle.textContent = 'Правка мероприятия';
+                if (submitBtn) submitBtn.textContent = 'Сохранить';
+            } else {
+                // Task 303: дата ячейки (или сегодня — прежнее поведение)
+                var today = prefillDate || this._isoDate(new Date());
+                document.getElementById('wsTrStart').value = today;
+                document.getElementById('wsTrEnd').value = today;
+                document.getElementById('wsTrDays').value = 1;
+                document.getElementById('wsTrType').value = 'инструктаж';
+                document.getElementById('wsTrTitle').value = '';
+                document.getElementById('wsTrComment').value = '';
+                if (sheetTitle) sheetTitle.textContent = 'Новое мероприятие';
+                if (submitBtn) submitBtn.textContent = 'Добавить';
+            }
 
             document.getElementById('wsTrOverlay').classList.add('active');
             document.getElementById('wsTrSheet').classList.add('active');
@@ -36716,6 +37219,32 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var f = document.getElementById('wsTrTabNo');
                 if (f) f.focus();
             }, 350);
+        },
+
+        // Task 309: правка мероприятия из попапов (ячейки и карточки
+        // сотрудника — кнопки ✎). Находит запись в _TRAININGS по id
+        // и открывает форму в режиме правки. Попапы закрываются —
+        // форма мероприятия поверх, подтверждение на сервер уйдёт
+        // из submitTrainingForm.
+        editTraining: function(id) {
+            if (!this._canEdit) return;
+            var tid = parseInt(id, 10);
+            var rec = null;
+            for (var i = 0; i < (this._TRAININGS || []).length; i++) {
+                if (parseInt(this._TRAININGS[i].id, 10) === tid) {
+                    rec = this._TRAININGS[i];
+                    break;
+                }
+            }
+            if (!rec) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Мероприятие не найдено — обновите график');
+                }
+                return;
+            }
+            this.closeCellPopup();
+            this.closeEmpPopup();
+            this.openTrainingForm(null, null, rec);
         },
 
         closeTrainingForm: function() {
@@ -36737,19 +37266,61 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!tema) { if (typeof KipToast !== 'undefined') KipToast.show('Введите тему мероприятия'); return; }
             if (!startDate) { if (typeof KipToast !== 'undefined') KipToast.show('Укажите дату начала'); return; }
 
-            this._api('workSchedule.addTraining', {
+            var payload = {
                 'таб_номер': tabNo, тип: tip, тема: tema,
                 дата_начала: startDate, дата_окончания: endDate,
                 длительность_дней: days, комментарий: comment
-            }).then(function() {
+            };
+
+            // Task 309: РЕЖИМ ПРАВКИ — сохранить изменения существующего
+            // мероприятия. Серверного updateTraining нет (Apps Script
+            // не трогаем), поэтому правка = добавить запись с новыми
+            // значениями + удалить старую. Порядок add→delete выбран
+            // из отказа от потери данных: сбой add не трогает старую
+            // запись (просто тост ошибки); сбой delete после успешного
+            // add оставляет дубль, который виден в сетке/карточке и
+            // удаляется вручную. Старые авто-строки Записи_графика с FK
+            // удалённого id снимет «Сформировать» (шаг 4.6), новые
+            // создаст с новым id (шаг 4) — регенерация сходится.
+            if (this._editTrainingId) {
+                var oldId = this._editTrainingId;
+                this._api('workSchedule.addTraining', payload)
+                    .then(function() {
+                        return self._api('workSchedule.deleteTraining', { id: oldId });
+                    })
+                    .then(function() {
+                        self._editTrainingId = null;
+                        self.closeTrainingForm();
+                        if (typeof KipToast !== 'undefined' && KipToast.show) {
+                            KipToast.show('Мероприятие обновлено');
+                        }
+                        self.loadGrid();
+                    })
+                    .catch(function(err) {
+                        // частичный сбой (add прошёл, delete нет): карточка
+                        // может показать дубль — перезагружаем сетку и
+                        // сообщаем, что именно не получилось
+                        self._editTrainingId = null;
+                        self.closeTrainingForm();
+                        if (typeof KipToast !== 'undefined' && KipToast.show) {
+                            KipToast.show('Ошибка: ' + self._apiErrText(err));
+                        }
+                        self.loadGrid();
+                    });
+                return;
+            }
+
+            this._api('workSchedule.addTraining', payload).then(function() {
                 self.closeTrainingForm();
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
                     KipToast.show('Мероприятие добавлено');
                 }
-                self.loadTrainings();
-                // Task 303: перезагрузка шахматки — бейдж мероприятия
-                // на ячейке (дата/сотрудник могут относиться к сетке,
-                // например при добавлении из попапа ячейки)
+                // Task 309: регресс-фикс Task 308 — здесь звался удалённый
+                // loadTrainings() (страница «Инструктажи»): TypeError
+                // внутри .then уходил в .catch с ложным тостом «Ошибка»,
+                // а перезагрузка сетки не выполнялась. loadGrid()
+                // перезагружает ВСЁ (в т.ч. _loadTrainings) — отдельный
+                // вызов не нужен.
                 self.loadGrid();
             }).catch(function(err) {
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
@@ -36760,6 +37331,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         deleteTraining: function(id) {
             if (!this._canEdit) return;
+            // Task 309: кнопки ✕ есть в попапе ячейки и карточке
+            // сотрудника — закрываем их до диалога подтверждения
+            this.closeCellPopup();
+            this.closeEmpPopup();
             var self = this;
             if (typeof kipConfirm === 'function') {
                 kipConfirm('Удалить мероприятие id=' + id + '?', { danger: true })
@@ -36776,10 +37351,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
                         KipToast.show('Мероприятие удалено');
                     }
-                    self.loadTrainings();
-                    // Task 303: бейджи мероприятия исчезают из сетки
-                    // сразу; авто-строка И/ОБ/ПЗ (день без смены) будет
-                    // снята при следующем «Сформировать» (шаг 4.6)
+                    // Task 309: регресс-фикс Task 308 — удалённый
+                    // loadTrainings() заменён на loadGrid() (сетка
+                    // перезагружается и бейджи исчезают сразу; см.
+                    // комментарий в submitTrainingForm)
                     self.loadGrid();
                 })
                 .catch(function(err) {
@@ -36946,7 +37521,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
                         KipToast.show('Период отпуска удалён. Пересформируйте шахматку, чтобы снять «О»');
                     }
-                    self.loadVacations();
+                    // Task 309: регресс-фикс Task 308 — удалённый
+                    // loadVacations() (страница «Отпуска») заменили на
+                    // loadGrid(): перезагружаются и план «ОТ», и сетка
+                    self.loadGrid();
                 })
                 .catch(function(err) {
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
