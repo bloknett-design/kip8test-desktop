@@ -4011,11 +4011,15 @@
         background: #17212b;
         border-bottom: 1px solid var(--card-border, rgba(255,255,255,0.06));
     }
-    /* Task 264: ряд кнопок тулбара — прежняя строка селектов и кнопок */
+    /* Task 264: ряд кнопок тулбара — прежняя строка селектов и кнопок.
+       Task 307: перенос строки разрешён — с кнопкой «+ Сотрудник»
+       ряд на узких экранах аккуратно складывается в две строки
+       (на десктопе media-запрос ставит nowrap) */
     .ws-toolbar-main {
         display: flex;
         gap: 8px;
         align-items: center;
+        flex-wrap: wrap;
     }
     .ws-month-sel, .ws-year-sel {
         background: var(--bg-tertiary, #0e1621);
@@ -4057,12 +4061,29 @@
     .ws-save-btn:active { opacity: 0.85; }
     .ws-save-btn:disabled { opacity: 0.6; cursor: default; }
 
+    /* Task 307: «+ Сотрудник» — кнопка добавления сотрудника в тулбаре
+       (перенесена со страницы «Сотрудники»). Нейтральный стиль в духе
+       селектов месяца/года, но жирнее — кнопка-действие; видимость
+       только у ролей с правом правки (как «Сформировать») */
+    .ws-addemp-btn {
+        background: var(--bg-tertiary, #0e1621);
+        color: var(--text-primary, #e0e0e0);
+        border: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        border-radius: 0;
+        padding: 6px 12px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .ws-addemp-btn:active { opacity: 0.85; }
+
     /* Task 269: ЕДИНАЯ ВЫСОТА всех элементов ряда кнопок тулбара —
-       селекты месяца/года, «Сформировать» и «Сохранить». Раньше чип
-       «Календарь» (Task 306 удалён) был ниже селектов (шрифт
+       селекты месяца/года, «+ Сотрудник», «Сформировать» и «Сохранить».
+       Раньше чип «Календарь» (Task 306 удалён) был ниже селектов (шрифт
        12px против 14px — высоты отличались на ~5px); теперь все
        элементы одного роста, ряд выглядит ровным. */
-    .ws-month-sel, .ws-year-sel, .ws-generate-btn, .ws-save-btn {
+    .ws-month-sel, .ws-year-sel, .ws-generate-btn, .ws-save-btn,
+    .ws-addemp-btn {
         height: 34px;
         box-sizing: border-box;
     }
@@ -4718,51 +4739,21 @@
         border-radius: 6px;
     }
 
-    /* Список сотрудников */
-    .ws-employees-list, .ws-trainings-list {
+    /* Списки инструктажей/отпусков (Task 307: класс .ws-employees-list
+       удалён вместе со страницей «Сотрудники») */
+    .ws-trainings-list {
         padding: 8px 12px 80px;
         display: flex;
         flex-direction: column;
         gap: 8px;
     }
-    .ws-emp-card, .ws-tr-card {
+    /* Карточки мероприятий/отпусков (Task 307: .ws-emp-card удалён вместе
+       со страницей «Сотрудники») */
+    .ws-tr-card {
         background: var(--card-bg, rgba(30, 42, 56, 0.55));
         border: 1px solid var(--card-border, rgba(255,255,255,0.06));
         border-radius: 8px;
         padding: 10px 12px;
-    }
-    .ws-emp-card-header {
-        display: flex;
-        align-items: baseline;
-        gap: 8px;
-        margin-bottom: 4px;
-    }
-    .ws-emp-card .ws-tab-no {
-        font-family: Consolas, monospace;
-        color: var(--accent-blue, #4a8fc7);
-        font-weight: 700;
-        font-size: 13px;
-    }
-    .ws-emp-card .ws-fio {
-        color: var(--text-primary, #e0e0e0);
-        font-weight: 600;
-        font-size: 14px;
-    }
-    .ws-emp-card .ws-meta {
-        font-size: 12px;
-        color: var(--text-secondary, rgba(255,255,255,0.6));
-    }
-    .ws-emp-card .ws-meta .ws-tag {
-        display: inline-block;
-        padding: 1px 6px;
-        border-radius: 3px;
-        background: rgba(74, 143, 199, 0.18);
-        color: var(--accent-blue, #4a8fc7);
-        margin-right: 6px;
-    }
-    .ws-emp-card .ws-meta .ws-tag.ws-tag-day {
-        background: rgba(255, 193, 7, 0.18);
-        color: #ffc107;
     }
 
     .ws-tr-card .ws-tr-type {
@@ -4972,6 +4963,12 @@
     [data-theme="light"] .ws-popup-name { color: #555; }
     [data-theme="light"] .ws-popup-swatch { border-color: rgba(0, 0, 0, 0.15); }
     [data-theme="light"] .ws-save-btn { background: #2e8b57; }
+    /* Task 307: светлая тема — «+ Сотрудник» в тон селектов тулбара */
+    [data-theme="light"] .ws-addemp-btn {
+        background: rgba(240, 240, 240, 0.95);
+        color: #333;
+        border-color: rgba(0, 0, 0, 0.2);
+    }
     /* Task 254: светлая тема — тулбар непрозрачный (сплошной аналог
        --header-bg светлой темы rgb 240,238,230) */
     [data-theme="light"] .ws-toolbar { background: #f0eee6; }
@@ -4988,7 +4985,6 @@
     [data-theme="light"] .ws-grid tbody td.ws-cell.ws-pending {
         outline-color: rgba(176, 122, 0, 0.95);
     }
-    [data-theme="light"] .ws-emp-card .ws-meta,
     [data-theme="light"] .ws-tr-card .ws-tr-meta {
         color: #666;
     }
@@ -11474,6 +11470,12 @@
                 <div class="ws-toolbar-main">
                     <select id="wsMonthSel" class="ws-month-sel" onchange="WorkSchedule.onMonthChange()"></select>
                     <select id="wsYearSel" class="ws-year-sel" onchange="WorkSchedule.onMonthChange()"></select>
+                    <!-- Task 307: «Добавить сотрудника» перенесён в тулбар
+                         со страницы «Сотрудники» (вкладка и страница
+                         удалены по заявке пользователя). Открывает прежний
+                         bottom-sheet #wsEmpSheet (openEmployeeForm);
+                         видимость — как у «Сформировать» (только _canEdit) -->
+                    <button type="button" id="wsEmpBtn" class="ws-addemp-btn" onclick="WorkSchedule.openEmployeeForm()" title="Добавить сотрудника" hidden>+ Сотрудник</button>
                     <!-- Task 306: кнопки «Обновить» и «Сформировать»
                          ОБЪЕДИНЕНЫ в одну «Сформировать» (заявка
                          пользователя). Прежняя кнопка «Обновить»
@@ -11503,10 +11505,12 @@
             <!-- Task 274: субнавигация модуля «График работы» — переходы
                  между шахматкой и справочными страницами (раньше
                  «Сотрудники» и «Инструктажи» были достижимы только по
-                 прямой ссылке). Активный пункт подсвечен. -->
+                 прямой ссылке). Активный пункт подсвечивается.
+                 Task 307: вкладка «Сотрудники» УДАЛЕНА по заявке
+                 пользователя (добавление сотрудника — кнопка «+
+                 Сотрудник» в тулбаре над шахматкой); осталось 3 пункта. -->
             <div class="ws-subnav">
                 <button type="button" class="ws-subnav-btn active" onclick="navigateTo('work-schedule')">Шахматка</button>
-                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-employees')">Сотрудники</button>
                 <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-trainings')">Инструктажи</button>
                 <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-vacations')">Отпуска</button>
             </div>
@@ -11521,25 +11525,12 @@
             </div>
         </div>
 
-        <!-- ======================== ГРАФИК РАБОТЫ — справочник сотрудников ======================== -->
-        <div id="page-work-schedule-employees" class="page-content">
-            <div class="page-inline-header">
-                <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
-                <div class="page-inline-header-title">Сотрудники</div>
-            </div>
-            <div class="ws-subnav">
-                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule')">Шахматка</button>
-                <button type="button" class="ws-subnav-btn active" onclick="navigateTo('work-schedule-employees')">Сотрудники</button>
-                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-trainings')">Инструктажи</button>
-                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-vacations')">Отпуска</button>
-            </div>
-            <div id="wsEmployeesList" class="ws-employees-list">
-                <div class="admin-empty" id="wsEmployeesEmpty">Загрузка…</div>
-            </div>
-            <div class="ws-add-bar" id="wsAddEmployeeBar" hidden>
-                <button type="button" class="ws-add-btn" onclick="WorkSchedule.openEmployeeForm()">+ Добавить сотрудника</button>
-            </div>
-        </div>
+        <!-- Task 307: страница «Сотрудники» (#page-work-schedule-employees)
+             УДАЛЕНА по заявке пользователя — вкладки в субнавигации больше
+             нет; добавление сотрудника — кнопкой «+ Сотрудник» в тулбаре
+             над шахматкой (тот же bottom-sheet #wsEmpSheet /
+             openEmployeeForm). Справочник сотрудников виден в шахматке
+             (строки) и попапе ячейки. -->
 
         <!-- ======================== ГРАФИК РАБОТЫ — инструктажи/обучения/проверки ======================== -->
         <div id="page-work-schedule-trainings" class="page-content">
@@ -11549,7 +11540,6 @@
             </div>
             <div class="ws-subnav">
                 <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule')">Шахматка</button>
-                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-employees')">Сотрудники</button>
                 <button type="button" class="ws-subnav-btn active" onclick="navigateTo('work-schedule-trainings')">Инструктажи</button>
                 <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-vacations')">Отпуска</button>
             </div>
@@ -11572,7 +11562,6 @@
             </div>
             <div class="ws-subnav">
                 <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule')">Шахматка</button>
-                <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-employees')">Сотрудники</button>
                 <button type="button" class="ws-subnav-btn" onclick="navigateTo('work-schedule-trainings')">Инструктажи</button>
                 <button type="button" class="ws-subnav-btn active" onclick="navigateTo('work-schedule-vacations')">Отпуска</button>
             </div>
@@ -22566,11 +22555,9 @@
             // Task 130: крошки и .active класс уже установлены выше (перед сменой active страницы)
         }
         // Task 201: График работы — инициализация страниц модуля
+        // (Task 307: хук work-schedule-employees удалён вместе со страницей)
         if (page === 'work-schedule') {
             setTimeout(() => { if (typeof WorkSchedule !== 'undefined') WorkSchedule.init(); }, 30);
-        }
-        if (page === 'work-schedule-employees') {
-            setTimeout(() => { if (typeof WorkSchedule !== 'undefined') WorkSchedule.initEmployeesPage(); }, 30);
         }
         if (page === 'work-schedule-trainings') {
             setTimeout(() => { if (typeof WorkSchedule !== 'undefined') WorkSchedule.initTrainingsPage(); }, 30);
@@ -22893,7 +22880,6 @@
         // «Главная / График работы»). Подразделы (сотрудники/инструктажи)
         // получают родителя work-schedule: «… / График работы / <Подраздел>».
         'work-schedule':            'docs-ios',
-        'work-schedule-employees':  'work-schedule',
         'work-schedule-trainings':  'work-schedule',
         'work-schedule-vacations':  'work-schedule',
         // Инженерные калькуляторы
@@ -23087,7 +23073,6 @@
         // (до фикса fallback на raw id: «Главная / work-schedule»).
         // Метки совпадают с заголовками страниц (page-inline-header-title).
         'work-schedule':            'График работы',
-        'work-schedule-employees':  'Сотрудники',
         'work-schedule-trainings':  'Инструктажи и обучения',
         'work-schedule-vacations':  'Отпуска',
         'admin':            'Админ-панель',
@@ -28285,7 +28270,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 201: График работы — 3 страницы (шахматка + сотрудники + инструктажи)
         // Task 204: доступен ТОЛЬКО Админу (как и _CHARTS_PAGES).
         // READ_ROLES/WRITE_ROLES в WorkSchedule.gs также ограничены до ['Админ'].
-        _WORK_SCHEDULE_PAGES: ['work-schedule', 'work-schedule-employees',
+        _WORK_SCHEDULE_PAGES: ['work-schedule',
                                'work-schedule-trainings', 'work-schedule-vacations'],
         // Графики КИП ИОС — отдельная группа доступа (только Админ)
         _CHARTS_PAGES: ['charts'],
@@ -35194,9 +35179,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     //
     // Страницы:
     //   #page-work-schedule              — шахматка на месяц
-    //   #page-work-schedule-employees    — справочник сотрудников
     //   #page-work-schedule-trainings     — инструктажи/обучения/проверки
     //   #page-work-schedule-vacations     — отпуска (план периодов, Task 274)
+    //   (Task 307: страница «Сотрудники» удалена — добавление сотрудника
+    //    кнопкой «+ Сотрудник» в тулбаре над шахматкой)
     // ============================================================
 
     var WorkSchedule = {
@@ -35310,6 +35296,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             var genBtn = document.getElementById('wsGenerateBtn');
             if (genBtn) genBtn.hidden = !this._canEdit;
+
+            // Task 307: «+ Сотрудник» в тулбаре — та же видимость, что
+            // у «Сформировать» (только ролям с правом правки)
+            var empBtn = document.getElementById('wsEmpBtn');
+            if (empBtn) empBtn.hidden = !this._canEdit;
 
             // Task 256: следим за размером области шахматки — пересчёт
             // целочисленных высот строк при изменении окна/показе страницы
@@ -36792,55 +36783,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
         },
 
-        initEmployeesPage: function() {
-            var addBar = document.getElementById('wsAddEmployeeBar');
-            if (addBar) addBar.hidden = !this._canEdit;
-            this.loadEmployees();
-        },
-
-        loadEmployees: function() {
-            var self = this;
-            var listEl = document.getElementById('wsEmployeesList');
-            if (listEl) listEl.innerHTML = '<div class="admin-empty">Загрузка…</div>';
-            this._loadEmployees().then(function() {
-                self._renderEmployees();
-            }).catch(function(err) {
-                if (listEl) listEl.innerHTML = '<div class="admin-empty">Ошибка: ' + (err.message || err) + '</div>';
-            });
-        },
-
-        _renderEmployees: function() {
-            var listEl = document.getElementById('wsEmployeesList');
-            if (!listEl) return;
-            if (!this._EMPLOYEES.length) {
-                listEl.innerHTML = '<div class="admin-empty">Сотрудники не найдены. Добавьте первого.</div>';
-                return;
-            }
-            var html = '';
-            for (var i = 0; i < this._EMPLOYEES.length; i++) {
-                var e = this._EMPLOYEES[i];
-                var tagClass = e.тип === 'сменный' ? 'ws-tag' : 'ws-tag ws-tag-day';
-                // Task 255: тип (столбец C) остаётся тегом-бейджем, а смена
-                // (столбец D) переносится в подпись должности справа от
-                // неё — единый формат «Слесарь КИПиА смена №1» /
-                // «Слесарь КИПиА дневной» (см. _posLabel), отдельный
-                // фрагмент «· смена N» убран как дублирующий.
-                var posLabel = this._posLabel(e);
-                html += '<div class="ws-emp-card">' +
-                        '<div class="ws-emp-card-header">' +
-                            '<span class="ws-tab-no">' + this._esc(e['таб_номер']) + '</span>' +
-                            '<span class="ws-fio">' + this._esc(e['ФИО']) + '</span>' +
-                        '</div>' +
-                        '<div class="ws-meta">' +
-                            '<span class="' + tagClass + '">' + this._esc(e.тип) + '</span> ' +
-                            (posLabel ? ' · ' + this._esc(posLabel) : '') +
-                            (e.старт_цикла ? ' · старт: ' + this._esc(e.старт_цикла) : '') +
-                        '</div>' +
-                        (e.комментарий ? '<div class="ws-meta" style="margin-top:4px;">' + this._esc(e.комментарий) + '</div>' : '') +
-                        '</div>';
-            }
-            listEl.innerHTML = html;
-        },
+        // Task 307: initEmployeesPage/loadEmployees/_renderEmployees
+        // УДАЛЕНЫ вместе со страницей «Сотрудники» (вкладки в субнави-
+        // гации больше нет). Справочник сотрудников виден в шахматке
+        // (строки), попапе ячейки и селектах форм; добавление — кнопкой
+        // «+ Сотрудник» в тулбаре над шахматкой (openEmployeeForm ниже);
+        // после добавления submitEmployeeForm перезагружает шахматку
+        // (loadGrid), а не список сотрудников.
 
         openEmployeeForm: function() {
             if (!this._canEdit) return;
@@ -36916,7 +36865,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
                     KipToast.show('Сотрудник добавлен');
                 }
-                self.loadEmployees();
+                // Task 307: страницы «Сотрудники» больше нет — после
+                // добавления перезагружаем ШАХМАТКУ (новая строка
+                // сотрудника), а не удалённый список сотрудников
+                self.loadGrid();
             }).catch(function(err) {
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
                     KipToast.show('Ошибка: ' + (err.message || err));
