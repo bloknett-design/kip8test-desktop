@@ -4115,6 +4115,36 @@
         color: var(--text-primary, #e0e0e0);
     }
     .ws-cell-popup.active { display: block; }
+    /* Task 313: окно «Мероприятия в этот день» — ОТДЕЛЬНОЕ окно над
+       окном кодов при клике по ячейке (секция из попапа кодов
+       переехала сюда по заявке): все мероприятия ячейки с цветом,
+       кодом и названием. База — .ws-cell-popup (фон/рамка/скролл);
+       своё: компактная высота и z-index выше окна кодов (при тесном
+       вьюпорте окно мероприятий остаётся сверху — порядок «над
+       окном кодов» не нарушается). Подстрока «дата · ФИО» — контекст
+       (окна развело по краям вьюпорта), пустой день — курсив-строка. */
+    .ws-cell-popup.ws-events-popup {
+        min-width: 230px;
+        max-width: 320px;
+        max-height: 300px;
+        z-index: 9402;
+    }
+    .ws-events-popup .ws-events-sub {
+        padding: 4px 10px 6px;
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--text-secondary, rgba(255,255,255,0.45));
+        border-bottom: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .ws-events-popup .ws-events-empty {
+        padding: 6px 10px 8px;
+        font-size: 11px;
+        font-style: italic;
+        color: var(--text-secondary, rgba(255,255,255,0.45));
+    }
     .ws-popup-title {
         padding: 8px 10px 6px;
         font-size: 11px;
@@ -4166,9 +4196,12 @@
         color: var(--accent-blue, #4a8fc7);
         font-weight: 600;
     }
-    /* Task 303: заголовок секции «Мероприятия в этот день» в попапе
-       ячейки — события (И/ОБ/ПЗ) из листа «Инструктажи»; строки секции
-       НЕ кликабельны (справка), добавление — строкой «+ Мероприятие…» */
+    /* Task 303: заголовок секции — события (И/ОБ/ПЗ) из листа
+       «Инструктажи». Task 313: класс жив у секций КАРТОЧКИ сотрудника
+       («Отпуска · год», «Мероприятия · месяц»); в окне кодов секции
+       больше нет (мероприятия — отдельное окно #wsEventsPopup,
+       заголовок — .ws-popup-title); строки секции НЕ кликабельны
+       (справка), добавление — строкой «+ Мероприятие…» */
     .ws-popup-sec {
         padding: 6px 10px 2px;
         font-size: 10px;
@@ -4181,11 +4214,11 @@
     }
     .ws-popup-row.ws-popup-event { cursor: default; }
     .ws-popup-row.ws-popup-event:hover { background: transparent; }
-    /* Task 309: кнопки-действия в строках мероприятий (попап ячейки
-       «Мероприятия в этот день» и карточка сотрудника): ✎ — правка
-       (шторка #wsTrSheet с префиллом), ✕ — удаление (deleteTraining
-       с подтверждением). Редакторам только (строки без кнопок —
-       зрители). Кнопки компактные 22px, цвет — акцент/красный,
+    /* Task 309: кнопки-действия в строках мероприятий (Task 313: окно
+       «Мероприятия в этот день» над окном кодов и карточка сотрудника):
+       ✎ — правка (шторка #wsTrSheet с префиллом), ✕ — удаление
+       (deleteTraining с подтверждением). Редакторам только (строки без
+       кнопок — зрители). Кнопки компактные 22px, цвет — акцент/красный,
        клики не «залипают» на строке (stopPropagation в onclick). */
     .ws-popup-act {
         margin-left: auto;
@@ -4396,6 +4429,16 @@
         color: #4ac771;
         font-weight: 700;
     }
+    /* Task 313: подсветка СЕГОДНЯШНЕЙ даты в шахматке — колонка дня
+       слегка тонирована. Шапка: градиент ПОВЕРХ непрозрачного фона th
+       (строка sticky — фон обязан оставаться непрозрачным, иначе сквозь
+       заголовок просвечивает прокручиваемое тело), число даты —
+       акцентом. Тон мягкий, чтобы не спорить с красным «выходным» и
+       зелёной звёздочкой сокращённого дня в той же шапке. */
+    .ws-grid thead th.ws-day-col.ws-today-col {
+        background-image: linear-gradient(rgba(74, 143, 199, 0.20), rgba(74, 143, 199, 0.20));
+        color: var(--accent-blue, #4a8fc7);
+    }
     .ws-grid tbody td {
         border: 1px solid var(--card-border, rgba(255,255,255,0.06));
         padding: 0;
@@ -4572,6 +4615,22 @@
     /* Подсветка ячейки по источнику: ручные записи — рамка темнее */
     .ws-grid tbody td.ws-cell.ws-source-manual {
         box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    /* Task 313: подсветка СЕГОДНЯШНЕЙ даты — ячейки столбца дня.
+       Статусные ячейки красятся INLINE-цветом справочника (background),
+       CSS-фон их не перекроет — поэтому лёгкая тонировка делается
+       inset-тенью «заливкой» (inset рисуется поверх background, под
+       текстом): работает и на пустых, и на статусных, и на плановых
+       отпусках/бейджах. Псевдоэлементы не заняты (::before — рамка
+       ручных д/н Task 309, ::after — точка переработки Task 250).
+       Совпадение «сегодня + ручная запись»: обе тени составные (ниже),
+       иначе box-shadow ws-source-manual затирался бы заливкой дня. */
+    .ws-grid tbody td.ws-cell.ws-today {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.16);
+    }
+    .ws-grid tbody td.ws-cell.ws-today.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.16),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     .ws-grid tbody td.ws-cell.ws-status-empty {
         color: var(--text-secondary, rgba(255,255,255,0.25));
@@ -4922,6 +4981,12 @@
     [data-theme="light"] .ws-popup-code { color: #222; }
     [data-theme="light"] .ws-popup-name { color: #555; }
     [data-theme="light"] .ws-popup-swatch { border-color: rgba(0, 0, 0, 0.15); }
+    /* Task 313: светлая тема — окно «Мероприятия в этот день» */
+    [data-theme="light"] .ws-events-popup .ws-events-sub {
+        color: #777;
+        border-bottom-color: rgba(0, 0, 0, 0.08);
+    }
+    [data-theme="light"] .ws-events-popup .ws-events-empty { color: #999; }
     [data-theme="light"] .ws-save-btn { background: #2e8b57; }
     /* Task 308: светлая тема — «+ Отпуск» в тон селектов тулбара.
        Task 312: правило УДАЛЕНО вместе с кнопкой (стиль мёртв —
@@ -4933,6 +4998,20 @@
        ячеек выходных (заметно мягче «Больничного» #F8BBD0) */
     [data-theme="light"] .ws-grid tbody td.ws-cell.ws-weekend.ws-status-empty {
         background: #f7d9e3;
+    }
+    /* Task 313: светлая тема — подсветка сегодняшней даты (шапка +
+       ячейки столбца): тон мягче тёмной темы (белый фон «громче»
+       показывает наложение), число — тёмно-синим акцентом */
+    [data-theme="light"] .ws-grid thead th.ws-day-col.ws-today-col {
+        background-image: linear-gradient(rgba(42, 93, 143, 0.13), rgba(42, 93, 143, 0.13));
+        color: #2a5d8f;
+    }
+    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-today {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.10);
+    }
+    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-today.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.10),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     /* Task 254: светлая тема — должность под ФИО потемнее */
     [data-theme="light"] .ws-grid tbody td.ws-emp-col .ws-emp-pos {
@@ -14250,6 +14329,16 @@
      в тулбаре (WorkSchedule.saveAll). -->
 <div id="wsPopupCloser" class="ws-popup-closer" onclick="WorkSchedule.closeCellPopup()"></div>
 <div id="wsCellPopup" class="ws-cell-popup" role="menu"></div>
+<!-- Task 313: ОТДЕЛЬНОЕ окно «Мероприятия в этот день» — открывается
+     НАД окном кодов при клике по ячейке (секция из окна кодов
+     переехала сюда по заявке): все мероприятия ячейки с цветом,
+     кодом и названием, кнопки ✎/✕ — редакторам (Task 309).
+     Позиционируется в _openCellPopup строго над #wsCellPopup
+     (левые края выровнены, зазор 8px; сверху не влезает — окно
+     кодов сдвигается вниз). Закрытие — вместе с окном кодов:
+     closeCellPopup (кловер, выбор статуса, «+ Мероприятие…»,
+     «Дополнительно…», Esc, карточка сотрудника). -->
+<div id="wsEventsPopup" class="ws-cell-popup ws-events-popup" role="dialog" aria-label="Мероприятия в этот день"></div>
 
 <!-- Task 309: карточка сотрудника — попап у колонки ФИО шахматки
      (КЛИК; Task 311: наведение больше не открывает — пояснительные
@@ -35777,7 +35866,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             var entryIdx = this._buildEntryIndex();
             var daysInMonth = new Date(this._year, this._month, 0).getDate();
+            // Task 313: ISO сегодняшней даты — маркер колонки «сегодня»
+            // (шапка ws-today-col + ячейки ws-today в _renderCell);
+            // кэшируется на отрисовку: ячейки не зовут new Date()
+            // по сто раз, а локальная правка (onPopupStatus →
+            // _renderGrid) пересчитывает дату заново
             var todayIso = this._isoDate(new Date());
+            this._todayIso = todayIso;
 
             var html = '<table class="ws-grid"><thead><tr>';
             // Task 311: заголовок «Сотрудник» — КНОПКА добавления
@@ -35820,7 +35915,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // Шапке остаются классы выходных (ws-holiday) и
                 // праздников (ws-feast).
                 var thCls = 'ws-day-col' + (isOff ? ' ws-holiday' : '') +
-                            (isFeast ? ' ws-feast' : '');
+                            (isFeast ? ' ws-feast' : '') +
+                            // Task 313: колонка сегодняшней даты слегка
+                            // подсвечена (градиент + число акцентом;
+                            // ячейки столбца — класс ws-today в _renderCell)
+                            (this._isoDate(dt) === todayIso ? ' ws-today-col' : '');
                 html += '<th class="' + thCls + '">' +
                         d + (isShort ? '<i class="ws-short-star">*</i>' : '') +
                         '<span class="ws-dow">' + dow + '</span></th>';
@@ -36064,6 +36163,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             if (isOvertime) classes.push('ws-overtime');
             if (isPending) classes.push('ws-pending');
+            // Task 313: ячейка столбца СЕГОДНЯШНЕЙ даты — лёгкая
+            // тонировка (inset-«заливка»: работает и поверх
+            // inline-цветов статусов; см. CSS .ws-today). _todayIso
+            // обновляется каждым _renderGrid; не задан (ячейку
+            // рендерят вне сетки) — подсветки нет
+            if (isoDate === this._todayIso) classes.push('ws-today');
 
             // Task 274: ПУСТАЯ ячейка внутри периода отпуска — план «О»
             // (пунктирная рамка, цвет отпуска): период задан в листе
@@ -36115,9 +36220,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // мини-чип в правом нижнем углу. Код мероприятия НЕ
             // дублируем бейджем, если он уже основной код ячейки
             // (день-мероприятие без смены); на днях отсутствия
-            // (ОТ/Б/…) бейдж скрываем — событие остаётся в попапе
-            // ячейки (секция «Мероприятия в этот день», Task 311:
-            // пояснительные тултипы убраны). Пустая ячейка с
+            // (ОТ/Б/…) бейдж скрываем — событие остаётся в окне
+            // «Мероприятия в этот день» над окном кодов (Task 313;
+            // Task 311: пояснительные тултипы убраны). Пустая ячейка с
             // мероприятием — пунктирный бейдж-подсказка
             // («заполнится при Сформировать»), если дату не занимает
             // план отпуска (план отпуска приоритетнее).
@@ -36416,8 +36521,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // «Коды_статусов»; очистка ячейки — «Дополнительно…», select
         // «— выходной —» там же); коды мероприятий (И/ОБ/ПЗ/ПР/* —
         // _EVENT_CODES) исключены из списка основных — мероприятия
-        // добавляются «+ Мероприятие…» и живут в ячейках бейджами,
-        // справка о событиях дня — секция «Мероприятия в этот день»
+        // добавляются «+ Мероприятие…» и живут в ячейках бейджами.
+        // Task 313: секция «Мероприятия в этот день» УДАЛЕНА из окна
+        // кодов (по заявке) — справка/кнопки ✎/✕ переехали в
+        // ОТДЕЛЬНОЕ окно #wsEventsPopup НАД окном кодов
+        // (_renderEventsPopup + _openCellPopup)
         _renderCellPopup: function(isoDate, tabNo) {
             var emp = null;
             for (var j = 0; j < this._EMPLOYEES.length; j++) {
@@ -36452,11 +36560,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // Task 312: коды мероприятий (добавляются «+ Мероприятие…»)
                 // не предлагаются основным статусом ячейки — они
                 // отображаются только бейджами-«иконками» в ячейках
-                // (Task 303) и строками секции «Мероприятия в этот
-                // день» ниже (с кнопками ✎/✕, Task 309). Сервер может
-                // писать их основным кодом (generateMonth — день
-                // события без смены) — такой день в попапе не
-                // подсвечен строкой, событие видно в секции ниже
+                // (Task 303) и строками окна «Мероприятия в этот день»
+                // НАД окном кодов (Task 313; кнопки ✎/✕ — Task 309).
+                // Сервер может писать их основным кодом (generateMonth —
+                // день события без смены) — такой день в попапе не
+                // подсвечен строкой, событие видно в окне мероприятий
                 if (this._EVENT_CODES.indexOf(c.code) !== -1) continue;
                 html += '<div class="ws-popup-row' + (current === c.code ? ' ws-popup-active' : '') + '"' +
                         ' onclick="WorkSchedule.onPopupStatus(\'' + this._esc(c.code) + '\')">' +
@@ -36464,37 +36572,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         '<span class="ws-popup-code">' + this._esc(c.code) + '</span>' +
                         '<span class="ws-popup-name">' + this._esc(c.name) + '</span></div>';
             }
-            // Task 303: секция «Мероприятия в этот день» — слой событий
-            // (И/ОБ/ПЗ) из листа «Инструктажи». Показывается при наличии
-            // мероприятий на дату (и на смене — рядом с кодом бейдж — и
-            // на пустом дне). Строки НЕ кликабельны (это справка);
-            // добавление — строка «+ Мероприятие…» ниже.
-            var dayEvents = this._eventsAt(isoDate, tabNo);
-            if (dayEvents.length) {
-                html += '<div class="ws-popup-sec">Мероприятия в этот день</div>';
-                for (var de = 0; de < dayEvents.length; de++) {
-                    var deMeta = this._statusMeta(dayEvents[de].code) || {};
-                    // Task 309: кнопки правки/удаления мероприятия —
-                    // только ролям с правом записи (зрители видят
-                    // справку без действий). stopPropagation — клик не
-                    // дойдёт до строки (строка не кликабельна, но
-                    // подстрахуемся на будущее)
-                    var deT = dayEvents[de].training;
-                    var deId = parseInt(deT.id, 10);
-                    var deActs = '';
-                    if (this._canEdit && deId) {
-                        deActs = '<span class="ws-popup-act" title="Редактировать"' +
-                                 ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + deId + ')">✎</span>' +
-                                 '<span class="ws-popup-act ws-popup-act-del" title="Удалить"' +
-                                 ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + deId + ')">✕</span>';
-                    }
-                    html += '<div class="ws-popup-row ws-popup-event">' +
-                            '<span class="ws-popup-swatch" style="background:' + (deMeta.color || '#3a3a3a') + ';"></span>' +
-                            '<span class="ws-popup-code">' + this._esc(dayEvents[de].code) + '</span>' +
-                            '<span class="ws-popup-name">' + this._esc(deT.тема || deMeta.name || '') + '</span>' +
-                            deActs + '</div>';
-                }
-            }
+            // Task 313: секция «Мероприятия в этот день» УДАЛЕНА из
+            // окна кодов — все мероприятия ячейки (цвет/код/название,
+            // кнопки ✎/✕ Task 309) показывает ОТДЕЛЬНОЕ окно
+            // #wsEventsPopup НАД этим окном: рендер —
+            // _renderEventsPopup, позиционирование — _openCellPopup;
+            // слой событий прежний (_eventsAt, лист «Инструктажи»),
+            // клики строк — справка (не статус), добавление — строка
+            // «+ Мероприятие…» ниже.
             // Task 303: быстрое добавление мероприятия на эту дату (в
             // форму вписаны сотрудник и дата ячейки) — только редакторам
             if (this._canEdit) {
@@ -36505,17 +36590,82 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return html;
         },
 
+        // Task 313: содержимое ОТДЕЛЬНОГО окна «Мероприятия в этот
+        // день» — открывается НАД окном кодов при клике по ячейке
+        // (по заявке пользователя секция переехала из окна кодов).
+        // Заголовок + подстрока «дата · ФИО» (контекст ячейки — окно
+        // остаётся понятным, даже если вьюпорт развёл окна по краям),
+        // далее строки мероприятий: свотч ЦВЕТА + КОД + НАЗВАНИЕ
+        // (тема из листа «Инструктажи», иначе название кода), кнопки
+        // ✎/✕ — только редакторам (Task 309, правка/удаление с
+        // stopPropagation). Строки — справка, НЕ кликабельны (выбор
+        // статуса — окно кодов ниже); добавление — «+ Мероприятие…»
+        // в окне кодов. Пустой день — курсив «нет мероприятий»
+        // (окно открывается всегда вместе с окном кодов — поведение
+        // предсказуемо, пустота видна сразу).
+        _renderEventsPopup: function(isoDate, tabNo) {
+            var emp = null;
+            for (var j = 0; j < this._EMPLOYEES.length; j++) {
+                if (this._EMPLOYEES[j]['таб_номер'] === tabNo) { emp = this._EMPLOYEES[j]; break; }
+            }
+            var html = '<div class="ws-popup-title">Мероприятия в этот день</div>' +
+                       '<div class="ws-events-sub">' + this._esc(isoDate) + ' · ' +
+                       this._esc(emp ? emp['ФИО'] : 'таб. №' + tabNo) + '</div>';
+            var dayEvents = this._eventsAt(isoDate, tabNo);
+            if (!dayEvents.length) {
+                html += '<div class="ws-events-empty">нет мероприятий</div>';
+                return html;
+            }
+            for (var de = 0; de < dayEvents.length; de++) {
+                var deMeta = this._statusMeta(dayEvents[de].code) || {};
+                // Task 309: кнопки правки/удаления мероприятия —
+                // только ролям с правом записи (зрители видят
+                // справку без действий). stopPropagation — клик не
+                // дойдёт до строки (строка не кликабельна, но
+                // подстрахуемся на будущее)
+                var deT = dayEvents[de].training;
+                var deId = parseInt(deT.id, 10);
+                var deActs = '';
+                if (this._canEdit && deId) {
+                    deActs = '<span class="ws-popup-act" title="Редактировать"' +
+                             ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + deId + ')">✎</span>' +
+                             '<span class="ws-popup-act ws-popup-act-del" title="Удалить"' +
+                             ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + deId + ')">✕</span>';
+                }
+                html += '<div class="ws-popup-row ws-popup-event">' +
+                        '<span class="ws-popup-swatch" style="background:' + (deMeta.color || '#3a3a3a') + ';"></span>' +
+                        '<span class="ws-popup-code">' + this._esc(dayEvents[de].code) + '</span>' +
+                        '<span class="ws-popup-name">' + this._esc(deT.тема || deMeta.name || '') + '</span>' +
+                        deActs + '</div>';
+            }
+            return html;
+        },
+
         // Открыть попап рядом с ячейкой: правее ячейки, не влезает — левее,
         // затем клампы по краям вьюпорта; по вертикали — от верха ячейки,
         // не влезает вниз — прижать к низу вьюпорта.
+        // Task 313: вместе с окном кодов открывается окно «Мероприятия
+        // в этот день» — СТРОГО НАД ним (левые края выровнены, зазор
+        // 8px; не влезает сверху — окно кодов сдвигается вниз,
+        // порядок «мероприятия сверху» сохраняется всегда).
         _openCellPopup: function(cellEl, isoDate, tabNo) {
             var popup = document.getElementById('wsCellPopup');
             var closer = document.getElementById('wsPopupCloser');
             if (!popup || !closer) return;
+            // Task 313: окно «Мероприятия в этот день» — рендерится и
+            // открывается ВМЕСТЕ с окном кодов (нет событий — пустое
+            // состояние «нет мероприятий»), закрывается — тоже вместе
+            // (closeCellPopup). Контейнер #wsEventsPopup объявлен в
+            // HTML рядом с #wsCellPopup (после него)
+            var evp = document.getElementById('wsEventsPopup');
             this._popupCell = { date: isoDate, 'таб_номер': tabNo };
             popup.innerHTML = this._renderCellPopup(isoDate, tabNo);
             closer.classList.add('active');
             popup.classList.add('active');
+            if (evp) {
+                evp.innerHTML = this._renderEventsPopup(isoDate, tabNo);
+                evp.classList.add('active');
+            }
             // Сначала скрыто в левом верхнем углу — измерить габариты,
             // затем позиционировать и показать
             popup.style.left = '0px';
@@ -36523,6 +36673,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             popup.style.visibility = 'hidden';
             var pw = popup.offsetWidth;
             var ph = popup.offsetHeight;
+            // Task 313: габариты окна мероприятий — до позиционирования
+            var ew = 0, eh = 0;
+            if (evp) {
+                evp.style.left = '0px';
+                evp.style.top = '0px';
+                evp.style.visibility = 'hidden';
+                ew = evp.offsetWidth;
+                eh = evp.offsetHeight;
+            }
             var vw = window.innerWidth;
             var vh = window.innerHeight;
             var left, top;
@@ -36538,6 +36697,26 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 left = Math.max(8, (vw - pw) / 2);
                 top = Math.max(8, (vh - ph) / 2);
             }
+            // Task 313: окно мероприятий — НАД окном кодов: левые края
+            // выровнены, зазор 8px. Сверху не влезает — окно кодов
+            // сдвигается вниз на недостающее (низ прижимается к краю
+            // вьюпорта, окна не меняются местами: мероприятия всегда
+            // сверху). Совсем тесный вьюпорт — окно мероприятий
+            // прижимается к верху (касание допустимо, z-index выше).
+            if (evp) {
+                var eLeft = left;
+                if (eLeft + ew > vw - 8) eLeft = Math.max(8, vw - 8 - ew);
+                var eTop = top - eh - 8;
+                if (eTop < 8) {
+                    top += (8 - eTop);
+                    if (top + ph > vh - 8) top = Math.max(8, vh - ph - 8);
+                    eTop = top - eh - 8;
+                    if (eTop < 8) eTop = 8;
+                }
+                evp.style.left = Math.round(eLeft) + 'px';
+                evp.style.top = Math.round(eTop) + 'px';
+                evp.style.visibility = '';
+            }
             popup.style.left = Math.round(left) + 'px';
             popup.style.top = Math.round(top) + 'px';
             popup.style.visibility = '';
@@ -36546,6 +36725,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         closeCellPopup: function() {
             var popup = document.getElementById('wsCellPopup');
             var closer = document.getElementById('wsPopupCloser');
+            // Task 313: окно «Мероприятия в этот день» закрывается
+            // ВМЕСТЕ с окном кодов (один жизненный цикл: кловер,
+            // выбор статуса, «+ Мероприятие…», «Дополнительно…»,
+            // Esc, editTraining/deleteTraining, onEmpCellClick —
+            // все пути идут через closeCellPopup)
+            var evp = document.getElementById('wsEventsPopup');
+            if (evp) { evp.classList.remove('active'); evp.innerHTML = ''; }
             if (popup) { popup.classList.remove('active'); popup.innerHTML = ''; }
             if (closer) closer.classList.remove('active');
             this._popupCell = null;
@@ -37337,8 +37523,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         deleteTraining: function(id) {
             if (!this._canEdit) return;
-            // Task 309: кнопки ✕ есть в попапе ячейки и карточке
-            // сотрудника — закрываем их до диалога подтверждения
+            // Task 309: кнопки ✕ есть в окне «Мероприятия в этот день»
+            // (Task 313, над окном кодов) и карточке сотрудника —
+            // закрываем их до диалога подтверждения
             this.closeCellPopup();
             this.closeEmpPopup();
             var self = this;
