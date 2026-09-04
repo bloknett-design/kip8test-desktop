@@ -4061,6 +4061,55 @@
     .ws-save-btn:active { opacity: 0.85; }
     .ws-save-btn:disabled { opacity: 0.6; cursor: default; }
 
+    /* Task 314: кнопка «Обновить» — принудительная загрузка свежих
+       данных графика с сервера (сотрудники, записи, мероприятия,
+       планы отпусков, справочник кодов). Нейтральный стиль в духе
+       селектов месяца/года; видна ВСЕМ ролям (зритель обновляет свои
+       данные так же, как редактор). Отличие от «Сформировать»:
+       «Сформировать» ГЕНЕРИРУЕТ записи на сервере, «Обновить» —
+       только перечитывает данные. При загрузке — иконка крутится
+       (класс .ws-refreshing), кнопка блокируется. */
+    .ws-refresh-btn {
+        background: var(--bg-tertiary, #0e1621);
+        color: var(--text-primary, #e0e0e0);
+        border: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        border-radius: 0;
+        padding: 6px 12px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .ws-refresh-btn:active { opacity: 0.85; }
+    .ws-refresh-btn:disabled { opacity: 0.6; cursor: default; }
+    .ws-refresh-btn svg {
+        width: 14px;
+        height: 14px;
+        flex: none;
+        display: block;
+    }
+    .ws-refresh-btn.ws-refreshing svg {
+        animation: wsRefreshSpin 0.9s linear infinite;
+    }
+    @keyframes wsRefreshSpin {
+        to { transform: rotate(360deg); }
+    }
+    /* Task 314: штамп возраста данных «данные от 04.09, 14:22» —
+       когда последний раз загружали/обновляли график (локальная
+       копия). Мелкий вторичный текст рядом с кнопкой «Обновить»;
+       ellipsis на узких экранах */
+    .ws-cache-stamp {
+        font-size: 11px;
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 160px;
+        min-width: 0;
+    }
+
     /* Task 308: «+ Отпуск» — кнопка в тулбаре (перенесена со
        страницы «Отпуска»). Нейтральный стиль в духе селектов
        месяца/года, но жирнее — кнопка-действие; видимость только
@@ -4083,7 +4132,7 @@
        теперь через заголовок «Сотрудник» в шапке сетки.
        Task 312: «+ Отпуск» убрана из ряда — добавление периода
        теперь из карточки сотрудника) */
-    .ws-month-sel, .ws-year-sel, .ws-generate-btn, .ws-save-btn {
+    .ws-month-sel, .ws-year-sel, .ws-generate-btn, .ws-save-btn, .ws-refresh-btn {
         height: 34px;
         box-sizing: border-box;
     }
@@ -4173,6 +4222,16 @@
         border-radius: 3px;
         border: 1px solid rgba(255,255,255,0.2);
         flex-shrink: 0;
+    }
+    /* Task 314: свотч кода «.» в попапе — показывает, как выглядит
+       ячейка: фон ПУСТОЙ ячейки (тема), а НЕ цвет из листа. Без
+       inline-background в разметке (класс перекрывает базовый
+       .ws-popup-swatch по специфичности), светлая тема — ниже */
+    .ws-popup-swatch.ws-swatch-dot {
+        background: var(--bg-primary, #1a2233);
+    }
+    [data-theme="light"] .ws-popup-swatch.ws-swatch-dot {
+        background: #eef0f2;
     }
     /* Task 312: .ws-popup-swatch-empty (пустой пунктирный свотч строки
        «— выходной —») УДАЛЁН — строка убрана из попапа, классов-«жителей»
@@ -4635,6 +4694,20 @@
     .ws-grid tbody td.ws-cell.ws-status-empty {
         color: var(--text-secondary, rgba(255,255,255,0.25));
     }
+    /* Task 314: код «.» (плановый выходной) — ячейка выглядит как
+       ПУСТАЯ: тот же фон (var(--bg-primary), светлая тема — #eef0f2,
+       см. override ниже), символ «·» (U+00B7 — как у пустых ячеек)
+       вторичным цветом (.ws-status-empty). Inline-цвет из листа
+       «Коды_статусов» для «.» НЕ применяется (_renderCell не ставит
+       background) — совпадение с пустой ячейкой в ЛЮБОЙ теме;
+       выходной день — розовый, как пустая ячейка выходного
+       (.ws-weekend.ws-status-empty выше по специфичности). Класс —
+       и маркер для тестов. Светлая тема: --bg-primary страницы
+       #FAF9F5 — но фон ЯЧЕЕК сетки #eef0f2 (Task 250), совпадаем
+       с ячейками, а не со страницей. */
+    .ws-grid tbody td.ws-cell.ws-dot-code {
+        background: var(--bg-primary, #1a2233);
+    }
     /* Task 254: пустые ячейки выходных дней (Сб/Вс) — слабый
        пастельно-розовый фон. Только ПУСТЫЕ ячейки: статусные (Д/Н/Б…)
        сохраняют цвет справочника кодов. Фон сплошной (инвариант
@@ -4969,6 +5042,13 @@
     /* Task 250: светлая тема — сплошной фон пустых ячеек шахматки
        (раньше transparent, просвечивал фон страницы) */
     [data-theme="light"] .ws-grid tbody td.ws-cell {
+        background: #eef0f2;
+    }
+    /* Task 314: светлая тема — «.»-ячейка = пустая (#eef0f2);
+       правило выше специфичности базового, чтобы не зависеть от
+       порядка с Task 250. Выходные — #f7d9e3 (правило weekend ниже
+       специфичнее) */
+    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-dot-code {
         background: #eef0f2;
     }
     /* Task 251: светлая тема — попап выбора статуса */
@@ -11481,6 +11561,18 @@
                 <div class="ws-toolbar-main">
                     <select id="wsMonthSel" class="ws-month-sel" onchange="WorkSchedule.onMonthChange()"></select>
                     <select id="wsYearSel" class="ws-year-sel" onchange="WorkSchedule.onMonthChange()"></select>
+                    <!-- Task 314: кнопка «Обновить» — перезагрузка ДАННЫХ
+                         графика с сервера (сотрудники, записи, мероприятия,
+                         планы отпусков, справочник кодов). График
+                         открывается мгновенно из локальной копии на
+                         устройстве (localStorage, kip8_ws_cache_v1),
+                         сеть дёргает ТОЛЬКО эта кнопка — «без ожидания
+                         подгрузки» при открытии (заявка пользователя).
+                         Это НЕ «Сформировать»: генерации записей нет,
+                         только чтение. Видна всем ролям; рядом — штамп
+                         «данные от …» (возраст локальной копии). -->
+                    <button type="button" id="wsRefreshBtn" class="ws-refresh-btn" onclick="WorkSchedule.refreshData()" title="Обновить данные графика с сервера: сотрудники, записи, мероприятия, планы отпусков, коды. Локальная копия открывается мгновенно — эта кнопка подгружает свежие данные"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" fill="currentColor"/></svg>Обновить</button>
+                    <span id="wsCacheStamp" class="ws-cache-stamp" title=""></span>
                     <!-- Task 311: кнопка «+ Сотрудник» УДАЛЕНА из тулбара
                          (Task 307 приносил её сюда со страницы
                          «Сотрудники»). Её функцию теперь выполняет
@@ -35220,10 +35312,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 306: к И/ОБ/ПЗ добавлены ПР (прогул) и * (примечание)
         // — типы «прогул»/«примечание» в форме «Новое мероприятие»
         // (сервер: TRAINING_TYPE_TO_STATUS/_isEventStatusCode).
-        // _ABSENCE_CODES — коды отсутствия (на таких днях бейдж
-        // мероприятия скрывается — событие остаётся в тултипе; см.
-        // _renderCell). ПР остаётся и здесь: день-прогул = день
-        // отсутствия, чужие бейджи скрыты, своё событие — в тултипе.
+        // _ABSENCE_CODES — коды отсутствия. Task 314: бейджи
+        // мероприятий теперь показываются и на днях отсутствия
+        // (заявка: «мероприятия должны отображаться в ячейках
+        // бейджами-«иконками»»); константа остаётся справочником
+        // семейства отсутствий (документация/тесты).
         _EVENT_CODES: ['И', 'ОБ', 'ПЗ', 'ПР', '*'],
         _ABSENCE_CODES: ['ОТ', 'У', 'ОВ', 'Б', 'ПР'],
         // Task 305: «отпуск в приоритете, плановая смена — рядом».
@@ -35272,6 +35365,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _popupCell: null,
         // Task 251: флаг идущего пакетного сохранения (блокирует правки)
         _saving: false,
+
+        // Task 314: локальная копия данных графика (localStorage) —
+        // график открывается МГНОВЕННО без сети; обновление — кнопкой
+        // «Обновить» (refreshData) и авто-сохранением после каждой
+        // загрузки/правки (loadGrid(true) → _cacheWrite). Ключ общий
+        // для kip8test/kip8 (как kip8_cj_cache — бэкенд один).
+        _wsCacheKey: 'kip8_ws_cache_v1',
+        // Task 314: время последней загрузки ТЕКУЩЕГО вида (штамп
+        // «данные от …» в тулбаре)
+        _cacheTs: 0,
+        // Task 314: флаг идущего обновления по кнопке (блокирует
+        // повторные клики, крутит иконку)
+        _refreshing: false,
 
         init: function() {
             if (this._initialized) {
@@ -35344,14 +35450,27 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._attachFitResize();
 
             var self = this;
-            this._loadStatusCodes().then(function() {
-                self._loadPatterns().then(function() {
-                    // Task 252: легенда под шахматкой убрана — коды статусов
-                    // снова выводятся в ячейках (_renderCell), расшифровка
-                    // цветов не нужна (попап Task 251 показывает код+название).
-                    self._refreshFromUrlState();
+            // Task 314: локальная копия данных — МГНОВЕННОЕ открытие
+            // без сети (заявка: «открывался моментально без ожидания
+            // подгрузки»). _restoreCachedView поднимает из localStorage
+            // ВСЁ для текущего месяца (коды, шаблоны, сотрудники,
+            // записи, мероприятия, отпуска) — loadGrid() тогда не
+            // ходит в сеть, а рисует сразу. Кэша нет (первый запуск/
+            // другой месяц) — прежний путь: справочник кодов →
+            // шаблоны → загрузка вида. Обновление данных — кнопкой
+            // «Обновить» (refreshData), НЕ авто-загрузкой.
+            if (this._restoreCachedView()) {
+                self._refreshFromUrlState();
+            } else {
+                this._loadStatusCodes().then(function() {
+                    self._loadPatterns().then(function() {
+                        // Task 252: легенда под шахматкой убрана — коды статусов
+                        // снова выводятся в ячейках (_renderCell), расшифровка
+                        // цветов не нужна (попап Task 251 показывает код+название).
+                        self._refreshFromUrlState();
+                    });
                 });
-            });
+            }
 
             // Task 260: производственный календарь — фоновая загрузка года
             // (isDayOff GitHub / production-calendar.ru). Пока данных нет,
@@ -35407,7 +35526,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return String(err || 'ошибка');
         },
 
-        _loadStatusCodes: function() {
+        // Task 314: параметр quiet — при тихом обновлении (кнопка
+        // «Обновить») сбой сети НЕ затирает уже известный справочник
+        // кодов fallback-набором: живой _STATUS_CODES ценнее (цвета
+        // из листа). Fallback — только когда кодов ещё нет.
+        _loadStatusCodes: function(quiet) {
             var self = this;
             return this._api('workSchedule.getStatusCodes', {})
                 .then(function(data) {
@@ -35415,14 +35538,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     self._fillStatusSelect();
                 })
                 .catch(function() {
+                    if (quiet && self._STATUS_CODES && self._STATUS_CODES.length) return;
                     // Task 298: fallback-набор = новый состав 16 кодов
                     // (Т-12/Т-13 + строчные д/н + «.» плановый выходной).
                     // Используется только при недоступности сервера
                     // (офлайн/старый бэкенд) — чтобы попап и select не
                     // пустовали; состав совпадает с листом «Коды_статусов».
-                    // Task 312: цвет «.» синхронизирован с новым значением
-                    // в листе — БЕЛЫЙ, как фон пустых ячеек с точкой
-                    // (светлая тема: --bg-primary #FAF9F5)
+                    // Task 314: цвет «.» — фон ПУСТОЙ ячейки светлой
+                    // темы #EEF0F2 (Task 250, фон ячеек сетки; раньше
+                    // #FAF9F5 — цвет СТРАНИЦЫ, ячейки чуть темнее).
+                    // Значение справочное: «.»-ячейка красится CSS-
+                    // классом ws-dot-code (обе темы), цвет из листа
+                    // НЕ применяется к фону ячейки
                     self._STATUS_CODES = [
                         {code:'Д',    name:'День (12-час, 7:30–19:30)', color:'#FFE082'},
                         {code:'Д8',   name:'День 8-час (7:30–16:30)', color:'#FFF9C4'},
@@ -35439,7 +35566,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         {code:'ОБ',   name:'Обучение', color:'#D1C4E9'},
                         {code:'ПЗ',   name:'Проверка знаний', color:'#FFCDD2'},
                         {code:'*',    name:'Примечание (с комментарием)', color:'#FFAB91'},
-                        {code:'.',    name:'Плановый выходной день', color:'#FAF9F5'}
+                        {code:'.',    name:'Плановый выходной день', color:'#EEF0F2'}
                     ];
                     self._fillStatusSelect();
                 });
@@ -35470,8 +35597,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var c = codes[i];
                 if (this._EVENT_CODES.indexOf(c.code) !== -1 && c.code !== current) continue;
                 if (current && current === c.code) hasCurrent = true;
+                // Task 314: «.» в списке — символ «·» (как в ячейке);
+                // value остаётся «.» (данные/сервер не меняются)
+                var label = (c.code === '.') ? '·' : c.code;
                 html += '<option value="' + this._escAttr(c.code) + '">' +
-                        this._esc(c.code) + ' — ' + this._esc(c.name) + '</option>';
+                        this._esc(label) + ' — ' + this._esc(c.name) + '</option>';
             }
             if (current && !hasCurrent) {
                 html += '<option value="' + this._escAttr(current) + '">' +
@@ -35540,14 +35670,177 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 });
         },
 
-        loadGrid: function() {
+        // ============================================================
+        // Task 314: локальная копия данных графика (localStorage)
+        // ============================================================
+        // Заявка: «последняя загруженная информация по графику работы
+        // сохранялась локально в приложении на устройстве, график
+        // открывался моментально без ожидания подгрузки, обновление —
+        // кнопкой (не формированием)». Схема как у кэшей журналов
+        // (KipCableJournal kip8_cj_cache_v1): сохраняем ПОСЛЕДНЕЕ
+        // состояние справочников (коды/шаблоны/сотрудники) + планы
+        // отпусков ПО ГОДАМ + записи/мероприятия ПО ВИДАМ «год-месяц»
+        // (последние 12). Побочно — офлайн-толерантность: без сети
+        // график всё равно открывается.
+
+        // Вид «год-месяц» в ключ кэша (YYYY-MM, месяц с ведущим нулём)
+        _ymKey: function() {
+            var m = this._month < 10 ? '0' + this._month : String(this._month);
+            return this._year + '-' + m;
+        },
+
+        // Прочитать кэш целиком (или null). Ошибки распаковки = нет кэша
+        _cacheRead: function() {
+            try {
+                var raw = localStorage.getItem(this._wsCacheKey);
+                if (!raw) return null;
+                var c = JSON.parse(raw);
+                if (!c || c.v !== 1) return null;
+                return c;
+            } catch (e) { return null; }
+        },
+
+        // Восстановить ТЕКУЩИЙ вид (this._year/_month уже установлены
+        // селектами — init/onMonthChange) из локальной копии. Полный
+        // набор (справочники + отпуска года + вид) → поднимаем всё
+        // состояние и возвращаем true; иначе false (звавший решает,
+        // идти ли в сеть). Идемпотентен: безопасно звать из loadGrid
+        // при каждом открытии/смене месяца.
+        _restoreCachedView: function() {
+            if (!this._year || !this._month) return false;
+            var c = this._cacheRead();
+            if (!c) return false;
+            var view = c.views && c.views[this._ymKey()];
+            if (!view || !Array.isArray(view.entries) ||
+                !Array.isArray(view.trainings)) return false;
+            if (!Array.isArray(c.codes) || !c.codes.length) return false;
+            if (!Array.isArray(c.employees) || !c.employees.length) return false;
+            if (!Array.isArray(c.patterns)) return false;
+            var vacs = c.vacations && c.vacations[String(this._year)];
+            if (!Array.isArray(vacs)) return false;
+            this._STATUS_CODES = c.codes;
+            this._PATTERNS = c.patterns;
+            this._EMPLOYEES = c.employees;
+            this._ENTRIES = view.entries;
+            this._TRAININGS = view.trainings;
+            this._VACATIONS = vacs;
+            this._VAC_PAGE = vacs;
+            this._vacYear = this._year;
+            this._cacheTs = view.ts || 0;
+            // select «Статус» шита «Дополнительно…» — из восстановленных
+            // кодов (как после _loadStatusCodes)
+            this._fillStatusSelect();
+            return true;
+        },
+
+        // Сохранить текущее состояние в локальную копию: справочники
+        // + отпуска текущего года + текущий вид (записи/мероприятия,
+        // отметка времени). Остальные виды/годы не трогаем — месяц
+        // переключили, старое остаётся для мгновенного возврата.
+        // Лимит 12 видов (год) — от распухания квоты localStorage;
+        // вытесняем самые старые. Квота/приватный режим — тихо
+        // пропускаем (кэш необязателен, сетка жива).
+        _cacheWrite: function() {
+            try {
+                var c = this._cacheRead() || { v: 1 };
+                c.codes = this._STATUS_CODES;
+                c.patterns = this._PATTERNS;
+                c.employees = this._EMPLOYEES;
+                if (!c.vacations || typeof c.vacations !== 'object') c.vacations = {};
+                c.vacations[String(this._year)] = this._VACATIONS;
+                if (!c.views || typeof c.views !== 'object') c.views = {};
+                var ym = this._ymKey();
+                c.views[ym] = { entries: this._ENTRIES, trainings: this._TRAININGS, ts: Date.now() };
+                var keys = Object.keys(c.views);
+                if (keys.length > 12) {
+                    keys.sort(function(a, b) {
+                        return (c.views[a].ts || 0) - (c.views[b].ts || 0);
+                    });
+                    for (var k = 0; k < keys.length - 12; k++) delete c.views[keys[k]];
+                }
+                localStorage.setItem(this._wsCacheKey, JSON.stringify(c));
+                this._cacheTs = c.views[ym].ts;
+            } catch (e) { /* quota/недоступен — тихо */ }
+        },
+
+        // Task 314: штамп «данные от 04.09, 14:22» — возраст локальной
+        // копии рядом с кнопкой «Обновить». Пусто = данных ещё не было
+        _updateCacheStamp: function() {
+            var el = document.getElementById('wsCacheStamp');
+            if (!el) return;
+            if (!this._cacheTs) {
+                el.textContent = '';
+                return;
+            }
+            var d = new Date(this._cacheTs);
+            var two = function(n) { return (n < 10 ? '0' : '') + n; };
+            el.textContent = 'данные от ' + two(d.getDate()) + '.' + two(d.getMonth() + 1) +
+                             ', ' + two(d.getHours()) + ':' + two(d.getMinutes());
+        },
+
+        // Task 314: кнопка «Обновить» — перезагрузка данных графика с
+        // сервера (НЕ «Сформировать»: записи не генерируются). Тихо
+        // обновляет и справочник кодов (цвета из листа), затем вид.
+        // Сетка на время обновления НЕ пропадает (индикатор — крутящаяся
+        // иконка на кнопке); по успеху — тост «Данные графика обновлены»,
+        // локальная копия перезаписана. Сбой — тост от loadGrid, старые
+        // данные остаются на экране.
+        refreshData: function() {
+            if (this._refreshing) return;
+            this._refreshing = true;
+            var btn = document.getElementById('wsRefreshBtn');
+            if (btn) { btn.disabled = true; btn.classList.add('ws-refreshing'); }
+            var self = this;
+            var done = function(ok) {
+                self._refreshing = false;
+                if (btn) { btn.disabled = false; btn.classList.remove('ws-refreshing'); }
+                if (ok && typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Данные графика обновлены');
+                }
+            };
+            this._loadStatusCodes(true).then(function() {
+                return self.loadGrid(true);
+            }).then(function(ok) {
+                done(ok !== false);
+            }).catch(function() {
+                done(false);
+            });
+        },
+
+        // force (Task 314): true — сеть обязательно (кнопка «Обновить»
+        // и перезагрузки после правок/генерации — свежие данные с
+        // сервера + запись в локальную копию); false/undefined — сперва
+        // локальная копия: полный кэш текущего вида → мгновенный рендер
+        // БЕЗ сети (заявка: «открывался моментально без ожидания
+        // подгрузки»), кэша нет — обычная загрузка с «Загрузка…».
+        // Возвращает промис: true — данные показаны, false — ошибка
+        // (тост/экран ошибки уже показаны).
+        loadGrid: function(force) {
             var self = this;
             var wrapEl = document.getElementById('wsGridWrap');
-            // Task 267: анимированные точки «Загрузка…» (по примеру
-            // расходомеров — те же классы .flow-loading-dots)
-            if (wrapEl) wrapEl.innerHTML = '<div class="flow-loading" id="wsEmpty"><div class="flow-loading-text">Загрузка<span class="flow-loading-dots"><span>.</span><span>.</span><span>.</span></span></div></div>';
+            if (!force && this._restoreCachedView()) {
+                this._renderGrid();
+                // Task 260: чип норм месяца в тулбаре
+                this._updateCalChip();
+                this._updateCacheStamp();
+                return Promise.resolve(true);
+            }
+            // Task 314: при принудительном обновлении сетка ОСТАЁТСЯ на
+            // экране (не мигает «Загрузка…») — индикатор на кнопке;
+            // «Загрузка…» — только первый показ вида без данных
+            var keepGrid = !!(force && this._EMPLOYEES.length && wrapEl &&
+                             wrapEl.querySelector('.ws-grid'));
+            if (wrapEl && !keepGrid) {
+                // Task 267: анимированные точки «Загрузка…» (по примеру
+                // расходомеров — те же классы .flow-loading-dots)
+                wrapEl.innerHTML = '<div class="flow-loading" id="wsEmpty"><div class="flow-loading-text">Загрузка<span class="flow-loading-dots"><span>.</span><span>.</span><span>.</span></span></div></div>';
+                // штамп очищаем: данные ЭТОГО вида ещё грузятся (время
+                // прежнего вида вводило бы в заблуждение)
+                this._cacheTs = 0;
+            }
+            this._updateCacheStamp();
 
-            Promise.all([
+            return Promise.all([
                 this._loadEmployees(),
                 this._loadEntries(),
                 this._loadTrainings(),
@@ -35563,14 +35856,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self._renderGrid();
                 // Task 260: чип норм месяца в тулбаре
                 self._updateCalChip();
+                // Task 314: свежие данные — в локальную копию
+                self._cacheWrite();
+                self._updateCacheStamp();
+                return true;
             }).catch(function(err) {
-                if (wrapEl) wrapEl.innerHTML = '<div class="admin-empty">Ошибка загрузки: ' + (err.message || err) + '</div>';
+                // Task 314: при обновлении живой сетки — НЕ стираем её
+                // экраном ошибки: тост достаточен, данные остались
+                if (!keepGrid && wrapEl) {
+                    wrapEl.innerHTML = '<div class="admin-empty">Ошибка загрузки: ' + (err.message || err) + '</div>';
+                }
                 // Task 264: окошко календаря рисуем и при ошибке загрузки
                 // сетки — календарь не зависит от бэкенда шахматки
                 self._updateCalChip();
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
                     KipToast.show('Ошибка загрузки графика: ' + (err.message || err));
                 }
+                return false;
             });
         },
 
@@ -36137,8 +36439,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var isManual = (source === 'руч');
             var isOvertime = entry && entry.переработка === 1;
 
+            // Task 314: «.» (плановый выходной) — рендерится как ПУСТАЯ
+            // ячейка: символ «·» (U+00B7), фон темы (класс ws-dot-code,
+            // inline-цвет из листа НЕ ставится), цвет точки — вторичный
+            // (.ws-status-empty). Статус-мероприятие (И/ОБ/ПЗ/ПР/* —
+            // generateMonth пишет его днём события без смены) больше НЕ
+            // показывается большим кодом по центру: заявка — «мероприятия
+            // отображаются в ячейках маленькими бейджами-«иконками»»,
+            // поэтому ячейка выглядит пустой, событие — сплошным бейджем
+            // (ниже). Для остальных статусов — прежний вид: большой код
+            // + inline-фон из справочника.
+            var isDotCode = (status === '.');
+            var isEventStatus = !!status && this._EVENT_CODES.indexOf(status) !== -1;
+            var showMainCode = !!status && !isDotCode && !isEventStatus;
+
             var color = '#3a3a3a';
-            if (status) {
+            if (showMainCode) {
                 for (var i = 0; i < this._STATUS_CODES.length; i++) {
                     if (this._STATUS_CODES[i].code === status) {
                         color = this._STATUS_CODES[i].color || color;
@@ -36182,7 +36498,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 vacPlan = this._vacationAt(isoDate, emp['таб_номер']);
                 if (vacPlan) classes.push('ws-vac-plan');
             }
-            if (!status && !vacPlan) classes.push('ws-status-empty');
+            // Task 314: «пустой» вид — и для настоящих пустых, и для «.»/
+            // статуса-мероприятия (без vacPlan): тот же фон/выходной
+            // розовый/цвет точки. Маркер ws-dot-code — для селекторов/тестов
+            if (!showMainCode && !vacPlan) classes.push('ws-status-empty');
+            if (isDotCode) classes.push('ws-dot-code');
 
             // Task 305: плановая смена по циклу — «отпуск в приоритете,
             // смена рядом». У работника с шаблоном ротации день отпуска
@@ -36214,48 +36534,58 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
             }
 
-            // Task 303: слой мероприятий — события дня из листа
-            // «Инструктажи» (И/ОБ/ПЗ). Бейдж — «второе значение» в
-            // ячейке: смена остаётся основным кодом, мероприятие —
-            // мини-чип в правом нижнем углу. Код мероприятия НЕ
-            // дублируем бейджем, если он уже основной код ячейки
-            // (день-мероприятие без смены); на днях отсутствия
-            // (ОТ/Б/…) бейдж скрываем — событие остаётся в окне
-            // «Мероприятия в этот день» над окном кодов (Task 313;
-            // Task 311: пояснительные тултипы убраны). Пустая ячейка с
-            // мероприятием — пунктирный бейдж-подсказка
-            // («заполнится при Сформировать»), если дату не занимает
-            // план отпуска (план отпуска приоритетнее).
+            // Task 303/314: слой мероприятий — события дня из листа
+            // «Инструктажи». Заявка Task 314: «мероприятия из таблицы
+            // "Инструктажи" должны отображаться в ячейках шахматки
+            // маленькими бейджами-"иконками"" — бейдж теперь ГЛАВНАЯ
+            // форма показа мероприятий:
+            //   • статус-мероприятие (И/ОБ/ПЗ/ПР/* в Записи_графика —
+            //     generateMonth пишет его днём события без смены)
+            //     рисуется бейджем, ячейка выглядит пустой (см. выше);
+            //     если записи в «Инструктажи» уже нет (событие удалено,
+            //     строка осталась) — ВИРТУАЛЬНЫЙ бейдж из самого статуса,
+            //     чтобы день не «потерял» мероприятие;
+            //   • бейджи видны и на днях отсутствия (ОТ/Б/… — раньше
+            //     скрывались по правилу Task 303, событие жило только
+            //     в окне «Мероприятия в этот день») — сплошные: день
+            //     сформирован;
+            //   • пустая ячейка (в т.ч. план отпуска) — пунктирный бейдж
+            //     («заполнится при Сформировать»; план закроется кодом
+            //     отпуска — бейдж станет сплошным);
+            //   • смена остаётся основным кодом, мероприятие — мини-чип
+            //     в правом нижнем углу (точка переработки — в правом
+            //     верхнем, конфликтов нет).
             var events = this._eventsAt(isoDate, emp['таб_номер']);
+            if (isEventStatus) {
+                var covered = false;
+                for (var ci = 0; ci < events.length; ci++) {
+                    if (events[ci].code === status) { covered = true; break; }
+                }
+                if (!covered) {
+                    events = events.concat([{ code: status, training: null }]);
+                }
+            }
             var evHtml = '';
             if (events.length) {
-                var badgeEvents = [];
-                for (var evi = 0; evi < events.length; evi++) {
-                    if (events[evi].code !== status) badgeEvents.push(events[evi]);
+                // сплошные — день сформирован (любой статус, вкл.
+                // статус-мероприятие); пунктирные — пустая/план ячейка
+                var solidBadges = !!status;
+                classes.push('ws-has-events');
+                var evChips = '';
+                for (var evj = 0; evj < events.length; evj++) {
+                    var evMeta = this._statusMeta(events[evj].code) || {};
+                    evChips += '<span class="ws-ev-badge' + (solidBadges ? '' : ' ws-ev-pending') + '"' +
+                               (solidBadges && evMeta.color ? ' style="background:' + evMeta.color + ';"' : '') +
+                               '>' + this._esc(events[evj].code) + '</span>';
                 }
-                var solidBadges = !!(status && this._ABSENCE_CODES.indexOf(status) < 0 && badgeEvents.length);
-                var dashedBadges = !status && !vacPlan;
-                if (solidBadges || dashedBadges) {
-                    classes.push('ws-has-events');
-                    var evList = solidBadges ? badgeEvents : events;
-                    var evChips = '';
-                    for (var evj = 0; evj < evList.length; evj++) {
-                        var evMeta = this._statusMeta(evList[evj].code) || {};
-                        evChips += '<span class="ws-ev-badge' + (solidBadges ? '' : ' ws-ev-pending') + '"' +
-                                   (solidBadges && evMeta.color ? ' style="background:' + evMeta.color + ';"' : '') +
-                                   '>' + this._esc(evList[evj].code) + '</span>';
-                    }
-                    evHtml = '<span class="ws-ev-wrap">' + evChips + '</span>';
-                }
+                evHtml = '<span class="ws-ev-wrap">' + evChips + '</span>';
             }
 
             // Task 305: бейдж плановой смены — в тот же контейнер-позицию
-            // (правый нижний угол). На днях отпуска бейдж мероприятия не
-            // рендерится (правило Task 303: отсутствие ⇒ событие только в
-            // попапе ячейки), поэтому evHtml здесь всегда пуст и контейнеры не
-            // наложатся; страховка от будущих правок — чип смены
-            // отображается только при пустом evHtml (мероприятие в попапе
-            // остаётся).
+            // (правый нижний угол). Приоритет: событие важнее плановой
+            // смены — чип смены показывается только при пустом evHtml
+            // (мероприятие и смена в одном углу не сталкиваются; событие
+            // остаётся и в окне «Мероприятия в этот день»).
             var shiftWrap = '';
             if (shiftChip && !evHtml) {
                 shiftWrap = '<span class="ws-ev-wrap">' + shiftChip + '</span>';
@@ -36295,7 +36625,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // попапе клика (Task 311: тултипы с ячеек убраны), маркер
             // переработки — красная точка в углу (ws-overtime::after).
             var style = '';
-            if (status) style += 'background:' + color + ';';
+            // Task 314: inline-фон — только «настоящие» статусы; «.» и
+            // статус-мероприятие красятся CSS (пустая ячейка + бейдж)
+            if (showMainCode) style += 'background:' + color + ';';
 
             var editable = this._canEdit ? '1' : '0';
             var safeTabNo = (emp['таб_номер'] || '').replace(/'/g, '');
@@ -36313,8 +36645,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                    // Task 298: код отпуска «О» → «ОТ» (Т-12/Т-13).
                    // Task 274: пустая ячейка в периоде отпуска — код «ОТ»
                    // плана (фоновый цвет и рамка — классом ws-vac-plan)
-                   // Task 305: рядом — бейдж плановой смены по циклу
-                   (status || (vacPlan ? 'ОТ' : '·')) + evHtml + shiftWrap +
+                   // Task 305: рядом — бейдж плановой смены по циклу.
+                   // Task 314: «.» и статус-мероприятие БЕЗ большого кода —
+                   // ячейка показывает «·» как пустая (событие — бейджем)
+                   (showMainCode ? status : (vacPlan ? 'ОТ' : '·')) + evHtml + shiftWrap +
                    '</td>';
         },
 
@@ -36404,7 +36738,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                                 : '')
                                           : ''));
                     }
-                    self.loadGrid();
+                    self.loadGrid(true);
                 })
                 .catch(function(err) {
                     if (genBtn) { genBtn.disabled = false; genBtn.textContent = 'Сформировать'; }
@@ -36451,7 +36785,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                                 : '')
                                           : ''));
                     }
-                    self.loadGrid();
+                    self.loadGrid(true);
                     return;
                 }
                 if (genBtn) { genBtn.textContent = 'Формируется… ' + month + '/12'; }
@@ -36477,7 +36811,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             KipToast.show('Ошибка (месяц ' + month + ', готово ' +
                                           monthsDone + '/12): ' + (err.message || err));
                         }
-                        if (monthsDone > 0) self.loadGrid();
+                        if (monthsDone > 0) self.loadGrid(true);
                     });
             };
             // Task 306: объединение кнопок — «Сформировать» тихо
@@ -36566,10 +36900,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // день события без смены) — такой день в попапе не
                 // подсвечен строкой, событие видно в окне мероприятий
                 if (this._EVENT_CODES.indexOf(c.code) !== -1) continue;
+                // Task 314: код «.» в попапе — символ «·» (как в ячейке);
+                // свотч «.» — ws-swatch-dot (фон пустой ячейки, тема),
+                // inline-цвет листа не показываем: свотч предпросмотр
+                // ячейки, а «.»-ячейка = пустая
+                var isDot = (c.code === '.');
                 html += '<div class="ws-popup-row' + (current === c.code ? ' ws-popup-active' : '') + '"' +
                         ' onclick="WorkSchedule.onPopupStatus(\'' + this._esc(c.code) + '\')">' +
-                        '<span class="ws-popup-swatch" style="background:' + (c.color || '#3a3a3a') + ';"></span>' +
-                        '<span class="ws-popup-code">' + this._esc(c.code) + '</span>' +
+                        (isDot
+                            ? '<span class="ws-popup-swatch ws-swatch-dot"></span>'
+                            : '<span class="ws-popup-swatch" style="background:' + (c.color || '#3a3a3a') + ';"></span>') +
+                        '<span class="ws-popup-code">' + this._esc(isDot ? '·' : c.code) + '</span>' +
                         '<span class="ws-popup-name">' + this._esc(c.name) + '</span></div>';
             }
             // Task 313: секция «Мероприятия в этот день» УДАЛЕНА из
@@ -37130,7 +37471,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self._updateSaveBtn();
                 // Синхронизация: перечитать данные с сервера (актуальное
                 // состояние БД) и перерисовать шахматку
-                self.loadGrid();
+                self.loadGrid(true);
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
                     if (failCount === 0) {
                         KipToast.show('Сохранено записей: ' + okCount);
@@ -37334,7 +37675,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // Task 307: страницы «Сотрудники» больше нет — после
                 // добавления перезагружаем ШАХМАТКУ (новая строка
                 // сотрудника), а не удалённый список сотрудников
-                self.loadGrid();
+                self.loadGrid(true);
             }).catch(function(err) {
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
                     KipToast.show('Ошибка: ' + (err.message || err));
@@ -37486,7 +37827,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         if (typeof KipToast !== 'undefined' && KipToast.show) {
                             KipToast.show('Мероприятие обновлено');
                         }
-                        self.loadGrid();
+                        self.loadGrid(true);
                     })
                     .catch(function(err) {
                         // частичный сбой (add прошёл, delete нет): карточка
@@ -37497,7 +37838,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         if (typeof KipToast !== 'undefined' && KipToast.show) {
                             KipToast.show('Ошибка: ' + self._apiErrText(err));
                         }
-                        self.loadGrid();
+                        self.loadGrid(true);
                     });
                 return;
             }
@@ -37513,7 +37854,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // а перезагрузка сетки не выполнялась. loadGrid()
                 // перезагружает ВСЁ (в т.ч. _loadTrainings) — отдельный
                 // вызов не нужен.
-                self.loadGrid();
+                self.loadGrid(true);
             }).catch(function(err) {
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
                     KipToast.show('Ошибка: ' + (err.message || err));
@@ -37548,7 +37889,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     // loadTrainings() заменён на loadGrid() (сетка
                     // перезагружается и бейджи исчезают сразу; см.
                     // комментарий в submitTrainingForm)
-                    self.loadGrid();
+                    self.loadGrid(true);
                 })
                 .catch(function(err) {
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
@@ -37783,7 +38124,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // добавления перезагружаем ШАХМАТКУ: план «ОТ» в пустых
                 // ячейках подтянется сразу (как новая строка у «+
                 // Сотрудника» в Task 307)
-                self.loadGrid();
+                self.loadGrid(true);
             }).catch(function(err) {
                 // Task 282: раньше тост подавлялся фантомным KipToast
                 // (не был определён) — «нажимаю добавить и ничего не
@@ -37816,7 +38157,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     // Task 309: регресс-фикс Task 308 — удалённый
                     // loadVacations() (страница «Отпуска») заменили на
                     // loadGrid(): перезагружаются и план «ОТ», и сетка
-                    self.loadGrid();
+                    self.loadGrid(true);
                 })
                 .catch(function(err) {
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
