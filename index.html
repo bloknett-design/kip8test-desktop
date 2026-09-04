@@ -4012,9 +4012,9 @@
         border-bottom: 1px solid var(--card-border, rgba(255,255,255,0.06));
     }
     /* Task 264: ряд кнопок тулбара — прежняя строка селектов и кнопок.
-       Task 307: перенос строки разрешён — с кнопкой «+ Сотрудник»
-       ряд на узких экранах аккуратно складывается в две строки
-       (на десктопе media-запрос ставит nowrap) */
+       Task 307: перенос строки разрешён — ряд на узких экранах
+       аккуратно складывается в две строки (на десктопе media-запрос
+       ставит nowrap) */
     .ws-toolbar-main {
         display: flex;
         gap: 8px;
@@ -4061,13 +4061,13 @@
     .ws-save-btn:active { opacity: 0.85; }
     .ws-save-btn:disabled { opacity: 0.6; cursor: default; }
 
-    /* Task 307: «+ Сотрудник» — кнопка добавления сотрудника в тулбаре
-       (перенесена со страницы «Сотрудники»). Нейтральный стиль в духе
+    /* Task 308: «+ Отпуск» — кнопка добавления периода отпуска в
+       тулбаре (перенесена со страницы «Отпуска», Task 307 до этого
+       приносил сюда же «+ Сотрудник»). Нейтральный стиль в духе
        селектов месяца/года, но жирнее — кнопка-действие; видимость
        только у ролей с правом правки (как «Сформировать»).
-       Task 308: тот же стиль у «+ Отпуск» (перенесена со страницы
-       «Отпуска») — две однотипные кнопки-действия в ряду тулбара */
-    .ws-addemp-btn,
+       Task 311: «+ Сотрудник» из тулбара УБРАНА — её функцию выполняет
+       заголовок «Сотрудник» в шапке шахматки (.ws-emp-head-add) */
     .ws-addvac-btn {
         background: var(--bg-tertiary, #0e1621);
         color: var(--text-primary, #e0e0e0);
@@ -4078,17 +4078,16 @@
         font-weight: 600;
         cursor: pointer;
     }
-    .ws-addemp-btn:active,
     .ws-addvac-btn:active { opacity: 0.85; }
 
     /* Task 269: ЕДИНАЯ ВЫСОТА всех элементов ряда кнопок тулбара —
-       селекты месяца/года, «+ Сотрудник», «+ Отпуск» (Task 308),
-       «Сформировать» и «Сохранить». Раньше чип «Календарь» (Task 306
-       удалён) был ниже селектов (шрифт 12px против 14px — высоты
-       отличались на ~5px); теперь все элементы одного роста, ряд
-       выглядит ровным. */
+       селекты месяца/года, «+ Отпуск» (Task 308), «Сформировать» и
+       «Сохранить». Раньше чип «Календарь» (Task 306 удалён) был ниже
+       селектов (шрифт 12px против 14px — высоты отличались на ~5px);
+       теперь все элементы одного роста, ряд выглядит ровным.
+       (Task 311: «+ Сотрудник» убрана из ряда — добавление сотрудника
+       теперь через заголовок «Сотрудник» в шапке сетки) */
     .ws-month-sel, .ws-year-sel, .ws-generate-btn, .ws-save-btn,
-    .ws-addemp-btn,
     .ws-addvac-btn {
         height: 34px;
         box-sizing: border-box;
@@ -4250,22 +4249,9 @@
         color: var(--text-secondary, rgba(255,255,255,0.45));
         font-style: italic;
     }
-    .ws-emp-total {
-        padding: 4px 10px 6px 8px;
-        font-size: 11px;
-        font-weight: 600;
-        color: var(--text-secondary, rgba(255,255,255,0.6));
-        border-bottom: 1px solid var(--card-border, rgba(255,255,255,0.08));
-        margin-bottom: 2px;
-    }
     [data-theme="light"] .ws-emp-field .ws-emp-k { color: #777; }
     [data-theme="light"] .ws-emp-field .ws-emp-v { color: #222; }
     [data-theme="light"] .ws-emp-empty { color: #999; }
-    [data-theme="light"] .ws-emp-total { color: #555; border-color: rgba(0,0,0,0.08); }
-    /* Task 310: итог года отпусков ПРЕВЫСИЛ лимит 42 дн. (хим.
-       производство, ТК РФ) — красным, чтобы бросалось в глаза */
-    .ws-emp-total.ws-emp-overlimit { color: #ef5350; }
-    [data-theme="light"] .ws-emp-total.ws-emp-overlimit { color: #c62828; }
 
     /* Task 251: маркер несохранённой ячейки — янтарная пунктирная рамка
        (отличима от hover-подсветки — сплошной синий outline) */
@@ -4369,6 +4355,27 @@
         min-width: 130px;
         max-width: 180px;
         padding: 6px 10px;
+    }
+    /* Task 311: заголовок «Сотрудник» — КНОПКА добавления сотрудника
+       (кнопка «+ Сотрудник» из тулбара удалена по заявке). Класс
+       ws-emp-head-add вешается в _renderGrid только ролям с правом
+       правки: плюсик-индикатор акцентом у текста, курсор-палец и
+       подсветка при наведении; клик открывает шторку #wsEmpSheet
+       (openEmployeeForm — внутри ещё проверка _canEdit). Зрителям —
+       обычный заголовок без клика. */
+    .ws-grid thead th.ws-emp-col.ws-emp-head-add { cursor: pointer; }
+    .ws-grid thead th.ws-emp-col.ws-emp-head-add:hover {
+        background: rgba(74, 143, 199, 0.16);
+        color: var(--text-primary, #e0e0e0);
+    }
+    .ws-grid thead th.ws-emp-col .ws-emp-head-plus {
+        font-style: normal;
+        font-weight: 700;
+        color: var(--accent-blue, #4a8fc7);
+        margin-left: 6px;
+    }
+    [data-theme="light"] .ws-grid thead th.ws-emp-col.ws-emp-head-add:hover {
+        background: rgba(42, 93, 143, 0.16);
     }
     .ws-grid thead th.ws-day-col {
         min-width: 30px;
@@ -4558,9 +4565,10 @@
         border-color: rgba(38, 50, 56, 0.75);
     }
     /* Task 309: колонка ФИО — интерактивна (карточка сотрудника по
-       наведению/клику): курсор-указатель и сплошная подсветка при
-       наведении (сплошная — колонка sticky, сквозь полупрозрачный
-       фон просвечивали бы прокручиваемые ячейки дней) */
+       клику; Task 311: hover-режим убран — клик единственный триггер):
+       курсор-указатель и сплошная подсветка при наведении (сплошная —
+       колонка sticky, сквозь полупрозрачный фон просвечивали бы
+       прокручиваемые ячейки дней) */
     .ws-grid tbody td.ws-emp-col:hover {
         background: #15202f;
     }
@@ -4921,9 +4929,9 @@
     [data-theme="light"] .ws-popup-name { color: #555; }
     [data-theme="light"] .ws-popup-swatch { border-color: rgba(0, 0, 0, 0.15); }
     [data-theme="light"] .ws-save-btn { background: #2e8b57; }
-    /* Task 307: светлая тема — «+ Сотрудник» в тон селектов тулбара
-       (Task 308: «+ Отпуск» — тоже) */
-    [data-theme="light"] .ws-addemp-btn,
+    /* Task 308: светлая тема — «+ Отпуск» в тон селектов тулбара
+       (Task 307 приносил сюда же «+ Сотрудник» — Task 311 убрал её
+       из тулбара: добавление теперь через заголовок сетки) */
     [data-theme="light"] .ws-addvac-btn {
         background: rgba(240, 240, 240, 0.95);
         color: #333;
@@ -11405,12 +11413,13 @@
                 <div class="ws-toolbar-main">
                     <select id="wsMonthSel" class="ws-month-sel" onchange="WorkSchedule.onMonthChange()"></select>
                     <select id="wsYearSel" class="ws-year-sel" onchange="WorkSchedule.onMonthChange()"></select>
-                    <!-- Task 307: «Добавить сотрудника» перенесён в тулбар
-                         со страницы «Сотрудники» (вкладка и страница
-                         удалены по заявке пользователя). Открывает прежний
-                         bottom-sheet #wsEmpSheet (openEmployeeForm);
-                         видимость — как у «Сформировать» (только _canEdit) -->
-                    <button type="button" id="wsEmpBtn" class="ws-addemp-btn" onclick="WorkSchedule.openEmployeeForm()" title="Добавить сотрудника" hidden>+ Сотрудник</button>
+                    <!-- Task 311: кнопка «+ Сотрудник» УДАЛЕНА из тулбара
+                         (Task 307 приносил её сюда со страницы
+                         «Сотрудники»). Её функцию теперь выполняет
+                         заголовок колонки «Сотрудник» в шапке сетки:
+                         редакторам — клик открывает прежний bottom-sheet
+                         #wsEmpSheet (openEmployeeForm, см. _renderGrid:
+                         класс ws-emp-head-add + плюсик-индикатор). -->
                     <!-- Task 308: «Добавить отпуск» перенесён сюда же со
                          страницы «Отпуска» (вкладка и страница удалены
                          по заявке пользователя). Открывает прежний
@@ -11449,10 +11458,11 @@
                  по заявке пользователя: вкладки «Инструктажи» и «Отпуска»
                  убраны вместе со страницами (Task 307 до этого убрал
                  «Сотрудники») — модуль стал одностраничным (шахматка).
-                 Добавление сотрудника — «+ Сотрудник» (Task 307),
-                 периода отпуска — «+ Отпуск» (Task 308) в тулбаре
-                 выше; мероприятие — «+ Мероприятие…» в попапе ячейки
-                 (Task 303). -->
+                 Добавление сотрудника — заголовок «Сотрудник» в шапке
+                 сетки (Task 311; до этого — кнопка «+ Сотрудник»,
+                 Task 307), периода отпуска — «+ Отпуск» (Task 308)
+                 в тулбаре выше; мероприятие — «+ Мероприятие…»
+                 в попапе ячейки (Task 303). -->
             <div id="wsGridWrap" class="ws-grid-wrap">
                 <!-- Task 267/269: «Загрузка…» с анимированными точками и
                      ШРИФТОМ КАК У РАСХОДОМЕРОВ — та же связка классов
@@ -11466,9 +11476,10 @@
 
         <!-- Task 307: страница «Сотрудники» (#page-work-schedule-employees)
              УДАЛЕНА по заявке пользователя — вкладки в субнавигации больше
-             нет; добавление сотрудника — кнопкой «+ Сотрудник» в тулбаре
-             над шахматкой (тот же bottom-sheet #wsEmpSheet /
-             openEmployeeForm). Справочник сотрудников виден в шахматке
+             нет; добавление сотрудника — заголовком «Сотрудник» в шапке
+             шахматки (Task 311; тот же bottom-sheet #wsEmpSheet /
+             openEmployeeForm — до Task 311 кнопкой в тулбаре).
+             Справочник сотрудников виден в шахматке
              (строки) и попапе ячейки. -->
 
         <!-- Task 308: страницы «Инструктажи» (#page-work-schedule-trainings)
@@ -14247,13 +14258,14 @@
 <div id="wsCellPopup" class="ws-cell-popup" role="menu"></div>
 
 <!-- Task 309: карточка сотрудника — попап у колонки ФИО шахматки
-     (наведение курсора с задержкой или клик). Показывает данные,
+     (КЛИК; Task 311: наведение больше не открывает — пояснительные
+     окна при наведении убраны по заявке). Показывает данные,
      которые были в удалённых вкладках (Task 307/308): профиль
-     («Сотрудники» — тип/смена/должность/шаблон/даты), план отпусков
+     («Сотрудники» — тип/смена/должность), план отпусков
      («Отпуска» — периоды года шахматки по частям) и мероприятия
      («Инструктажи» — события месяца с кнопками правки/удаления).
-     Наведение — всплывающий режим (закрывается при уходе курсора);
-     клик — прикреплённый режим (закрытие по фону-кловеру и Esc). -->
+     Карточка прикреплена к клику: закрытие — фоновый кловер
+     и Esc. -->
 <div id="wsEmpPopupCloser" class="ws-popup-closer" onclick="WorkSchedule.closeEmpPopup()"></div>
 <div id="wsEmpPopup" class="ws-cell-popup ws-emp-popup" role="dialog" aria-label="Карточка сотрудника"></div>
 
@@ -35103,7 +35115,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     // Страницы:
     //   #page-work-schedule              — шахматка на месяц
     //   (Task 307: страница «Сотрудники» удалена — добавление сотрудника
-    //    кнопкой «+ Сотрудник» в тулбаре над шахматкой)
+    //    заголовком «Сотрудник» в шапке шахматки, Task 311)
     //   (Task 308: страницы «Инструктажи» и «Отпуска» удалены — модуль
     //    одностраничный; добавление отпуска — кнопкой «+ Отпуск»
     //    в тулбаре, мероприятия — «+ Мероприятие…» в попапе ячейки)
@@ -35236,26 +35248,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var genBtn = document.getElementById('wsGenerateBtn');
             if (genBtn) genBtn.hidden = !this._canEdit;
 
-            // Task 307: «+ Сотрудник» в тулбаре — та же видимость, что
-            // у «Сформировать» (только ролям с правом правки)
-            var empBtn = document.getElementById('wsEmpBtn');
-            if (empBtn) empBtn.hidden = !this._canEdit;
-
             // Task 308: «+ Отпуск» в тулбаре — видимость как у
-            // «Сформировать»/«+ Сотрудник» (только ролям с правом
-            // правки; кнопка перенесена с удалённой страницы «Отпуска»)
+            // «Сформировать» (только ролям с правом правки; кнопка
+            // перенесена с удалённой страницы «Отпуска». Task 311:
+            // «+ Сотрудник» из тулбара убрана — её функцию выполняет
+            // заголовок «Сотрудник» в шапке сетки, см. _renderGrid)
             var vacBtn = document.getElementById('wsVacBtn');
             if (vacBtn) vacBtn.hidden = !this._canEdit;
 
             // Task 256: следим за размером области шахматки — пересчёт
             // целочисленных высот строк при изменении окна/показе страницы
             this._attachFitResize();
-
-            // Task 309: наведение на колонку ФИО — карточка сотрудника
-            // (делегированные mouseover/mouseout по .ws-grid-wrap:
-            // сетка перерисовывается innerHTML, слушатели на контейнере
-            // живут вечно). Тач-устройства без hover — только клик.
-            this._attachEmpPopupHover();
 
             var self = this;
             this._loadStatusCodes().then(function() {
@@ -35775,15 +35778,32 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var todayIso = this._isoDate(new Date());
 
             var html = '<table class="ws-grid"><thead><tr>';
-            html += '<th class="ws-emp-col">Сотрудник</th>';
+            // Task 311: заголовок «Сотрудник» — КНОПКА добавления
+            // (кнопка «+ Сотрудник» из тулбара удалена): редакторам —
+            // плюсик-индикатор, курсор-палец и подсветка наведения
+            // (класс ws-emp-head-add), клик открывает шторку
+            // #wsEmpSheet (openEmployeeForm); зрителям — обычный
+            // заголовок без клика. Двойная защита: класс/onclick
+            // вешаются по _canEdit, а сам openEmployeeForm внутри
+            // ещё раз проверяет право записи.
+            var empHeadAdd = this._canEdit ? ' ws-emp-head-add' : '';
+            html += '<th class="ws-emp-col' + empHeadAdd + '"' +
+                    (this._canEdit
+                        ? ' onclick="WorkSchedule.openEmployeeForm()"'
+                        : '') +
+                    '>Сотрудник' +
+                    (this._canEdit ? '<i class="ws-emp-head-plus">+</i>' : '') +
+                    '</th>';
             for (var d = 1; d <= daysInMonth; d++) {
                 var dt = new Date(this._year, this._month - 1, d);
                 var dow = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][dt.getDay()];
                 // Task 260: праздник/выходной — по производственному
                 // календарю (ProdCalendar): Сб/Вс + гос. праздники +
                 // перенесённые выходные − рабочие субботы. Праздники
-                // (ws-feast) ярче обычных выходных, название — в тултипе
-                // заголовка («9 Вс — День Победы»).
+                // (ws-feast) ярче обычных выходных; название праздника —
+                // в окошке производственного календаря в тулбаре
+                // (Task 311: пояснительные тултипы с ячеек сетки
+                // убраны по заявке пользователя).
                 var dInfo = (typeof ProdCalendar !== 'undefined' && ProdCalendar.dayInfo)
                     ? ProdCalendar.dayInfo(this._year, this._month, d) : null;
                 var isOff = dInfo ? dInfo.off
@@ -35799,13 +35819,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // праздников (ws-feast).
                 var thCls = 'ws-day-col' + (isOff ? ' ws-holiday' : '') +
                             (isFeast ? ' ws-feast' : '');
-                var thTitle = '';
-                if (dInfo && dInfo.title) {
-                    thTitle = d + ' ' + dow + ' — ' + dInfo.title +
-                              (dInfo.short ? ' (сокращённый день, −1 час)' : '');
-                }
-                html += '<th class="' + thCls + '"' +
-                        (thTitle ? ' title="' + this._escAttr(thTitle) + '"' : '') + '>' +
+                html += '<th class="' + thCls + '">' +
                         d + (isShort ? '<i class="ws-short-star">*</i>' : '') +
                         '<span class="ws-dow">' + dow + '</span></th>';
             }
@@ -35838,14 +35852,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var empPos = empPosLabel
                     ? '<div class="ws-emp-pos">' + this._esc(empPosLabel) + '</div>'
                     : '';
-                // Task 309: колонка ФИО — клик открывает карточку
+                // Task 309: колонка ФИО — КЛИК открывает карточку
                 // сотрудника (данные бывших вкладок: профиль, отпуска,
-                // мероприятия); наведение — тот же попап во всплывающем
-                // режиме (_attachEmpPopupHover, data-tab для делегата)
+                // мероприятия; data-tab — таб. номер для обработчика).
+                // Task 311: пояснительные окна при наведении убраны по
+                // заявке — тултип (title) снят, hover-режим карточки
+                // удалён; назначение клика видно по курсору-пальцу
                 var safeEmpTab = String(emp['таб_номер'] || '').replace(/'/g, '');
                 html += '<td class="ws-emp-col" data-tab="' + this._escAttr(safeEmpTab) + '"' +
-                        ' onclick="WorkSchedule.onEmpCellClick(event, \'' + safeEmpTab + '\')"' +
-                        ' title="Карточка сотрудника: профиль, отпуска, мероприятия">' +
+                        ' onclick="WorkSchedule.onEmpCellClick(event, \'' + safeEmpTab + '\')">' +
                         '<div class="ws-emp-name">' +
                         '<span class="ws-tab-no">' + this._esc(emp['таб_номер']) + '</span>' +
                         this._esc(emp['ФИО']) + '</div>' + empPos + '</td>';
@@ -36013,22 +36028,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // Task 251: isPending — в ячейке есть несохранённая локальная правка
-        // (янтарная пунктирная рамка .ws-pending + пометка в tooltip).
+        // (янтарная пунктирная рамка .ws-pending; Task 311: пояснительные
+        // тултипы с ячеек шахматки убраны — информация в попапе клика).
         _renderCell: function(day, isoDate, emp, entry, isPending) {
             var status = entry ? entry.статус : '';
             var source = entry ? entry.источник : '';
-            var substitute = entry ? entry.замещает : null;
-            var instructionId = entry ? entry.инструкция : null;
             var isManual = (source === 'руч');
             var isOvertime = entry && entry.переработка === 1;
 
             var color = '#3a3a3a';
-            var statusName = status;
             if (status) {
                 for (var i = 0; i < this._STATUS_CODES.length; i++) {
                     if (this._STATUS_CODES[i].code === status) {
                         color = this._STATUS_CODES[i].color || color;
-                        statusName = this._STATUS_CODES[i].name || status;
                         break;
                     }
                 }
@@ -36081,7 +36093,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Дни отсутствия вне семейства отпусков (Б/ОВ/ПР), сменные
             // и пустые дни — без бейджа.
             var shiftChip = '';
-            var shiftName = '';
             var empIsShift = String(emp['тип'] || '').trim() === 'сменный';
             var vacMain = empIsShift &&
                           ((status && this._VAC_CODES.indexOf(status) >= 0) ||
@@ -36090,7 +36101,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var shiftCode = this._plannedShiftAt(isoDate, emp);
                 if (shiftCode) {
                     var shMeta = this._statusMeta(shiftCode) || {};
-                    shiftName = shMeta.name || shiftCode;
                     shiftChip = '<span class="ws-ev-badge ws-ev-shift"' +
                                 (shMeta.color ? ' style="background:' + shMeta.color + ';"' : '') +
                                 '>' + this._esc(shiftCode) + '</span>';
@@ -36103,8 +36113,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // мини-чип в правом нижнем углу. Код мероприятия НЕ
             // дублируем бейджем, если он уже основной код ячейки
             // (день-мероприятие без смены); на днях отсутствия
-            // (ОТ/Б/…) бейдж скрываем — событие остаётся в тултипе.
-            // Пустая ячейка с мероприятием — пунктирный бейдж-подсказка
+            // (ОТ/Б/…) бейдж скрываем — событие остаётся в попапе
+            // ячейки (секция «Мероприятия в этот день», Task 311:
+            // пояснительные тултипы убраны). Пустая ячейка с
+            // мероприятием — пунктирный бейдж-подсказка
             // («заполнится при Сформировать»), если дату не занимает
             // план отпуска (план отпуска приоритетнее).
             var events = this._eventsAt(isoDate, emp['таб_номер']);
@@ -36133,9 +36145,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Task 305: бейдж плановой смены — в тот же контейнер-позицию
             // (правый нижний угол). На днях отпуска бейдж мероприятия не
             // рендерится (правило Task 303: отсутствие ⇒ событие только в
-            // тултипе), поэтому evHtml здесь всегда пуст и контейнеры не
+            // попапе ячейки), поэтому evHtml здесь всегда пуст и контейнеры не
             // наложатся; страховка от будущих правок — чип смены
-            // отображается только при пустом evHtml (мероприятие в тултипе
+            // отображается только при пустом evHtml (мероприятие в попапе
             // остаётся).
             var shiftWrap = '';
             if (shiftChip && !evHtml) {
@@ -36172,78 +36184,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // поэтому в ячейке снова выводится код статуса. Сплошной
             // (непрозрачный) фон Task 250 сохранён: пустые ячейки берут фон
             // из CSS (.ws-grid tbody td.ws-cell), статусные перекрывают его
-            // inline-цветом из справочника кодов. Tooltip по-прежнему
-            // показывает название статуса, маркер переработки — красная
-            // точка в углу (ws-overtime::after).
+            // inline-цветом из справочника кодов. Название статуса — в
+            // попапе клика (Task 311: тултипы с ячеек убраны), маркер
+            // переработки — красная точка в углу (ws-overtime::after).
             var style = '';
             if (status) style += 'background:' + color + ';';
-
-            // Task 252: переработка — красная точка в углу ячейки
-            // (класс ws-overtime + ::after в CSS). Код статуса снова в
-            // ячейке, но маркер остаётся точкой (заметнее прежнего
-            // underline и не путается с текстом кода).
-            var titleParts = [isoDate, emp['ФИО']];
-            // Task 260: название праздника/переноса/сокращённого дня —
-            // сразу после даты в тултипе ячейки
-            var cellInfo = (typeof ProdCalendar !== 'undefined' && ProdCalendar.dayInfo)
-                ? ProdCalendar.dayInfo(this._year, this._month, day) : null;
-            if (cellInfo && cellInfo.title &&
-                (cellInfo.off || cellInfo.work || cellInfo.short)) {
-                titleParts.splice(1, 0, cellInfo.title);
-            }
-            if (entry) {
-                titleParts.push('статус: ' + (statusName || '—'));
-                if (isOvertime) titleParts.push('переработка');
-                if (source) titleParts.push('источник: ' + source);
-                if (substitute) titleParts.push('замещает таб. №' + substitute);
-                if (instructionId) titleParts.push('инструктаж id=' + instructionId);
-                if (entry.комментарий) titleParts.push('«' + entry.комментарий + '»');
-            }
-            // Task 274: тултип плана отпуска в пустой ячейке
-            if (vacPlan) {
-                var pNo = parseInt(vacPlan.часть, 10);
-                // Task 310: дни — «чистые» (за вычетом праздников ст. 112
-                // по ст. 120 ТК РФ), с пометкой о вычтенных
-                var vpNet = this._vacNetDays(vacPlan);
-                var vpCal = this._vacDays(vacPlan);
-                titleParts.push('ОТПУСК (план' + (pNo ? ', часть ' + pNo : '') + '): ' +
-                                this._fmtDateRu(vacPlan.дата_начала) + ' — ' +
-                                this._fmtDateRu(vacPlan.дата_окончания) +
-                                ' · ' + vpNet + ' дн.' +
-                                (vpCal > vpNet ? ' (−' + (vpCal - vpNet) + ' праздн.)' : ''));
-                titleParts.push('заполнится кодом «ОТ» при «Сформировать»');
-            }
-            // Task 305: плановая смена по циклу — в тултип дня отпуска
-            // (бейдж показывает код, тултип — полное название)
-            if (shiftChip) {
-                titleParts.push('по циклу (Дни_цикла): ' + shiftName);
-            }
-            // Task 303: мероприятия дня — всегда в тултип (бейдж скрыт
-            // на днях отсутствия — ОТ/Б/… — но событие видно в подсказке)
-            if (events.length) {
-                for (var evt = 0; evt < events.length; evt++) {
-                    var evtMeta = this._statusMeta(events[evt].code) || {};
-                    titleParts.push((evtMeta.name || events[evt].code) +
-                                    (events[evt].training.тема ? ': ' + events[evt].training.тема : '') +
-                                    ' (' + this._fmtDateRu(events[evt].training.дата_начала) + ')');
-                }
-                if (!status && !vacPlan) {
-                    titleParts.push('заполнится кодом «' + events[0].code + '» при «Сформировать»');
-                }
-            }
-            // Task 251: пометка о несохранённой локальной правке
-            if (isPending) titleParts.push('не сохранено');
 
             var editable = this._canEdit ? '1' : '0';
             var safeTabNo = (emp['таб_номер'] || '').replace(/'/g, '');
             // Task 251: клик по ячейке открывает попап выбора статуса рядом
             // с ячейкой (вместо мгновенно сохраняющего bottom-sheet)
             var clickHandler = 'WorkSchedule.onCellClick(event, \'' + isoDate + '\',\'' + safeTabNo + '\')';
+            // Task 311: пояснительные тултипы (title) с ячеек шахматки
+            // убраны по заявке — вся информация (статус/название,
+            // праздник, мероприятия с кнопками, «Дополнительно…») — в
+            // попапе клика; отпуск — в карточке сотрудника
             return '<td class="' + classes.join(' ') + '" ' +
                    (style ? 'style="' + style + '" ' : '') +
                    'data-editable="' + editable + '" ' +
-                   'onclick="' + clickHandler + '" ' +
-                   'title="' + this._escAttr(titleParts.join(' / ')) + '">' +
+                   'onclick="' + clickHandler + '">' +
                    // Task 298: код отпуска «О» → «ОТ» (Т-12/Т-13).
                    // Task 274: пустая ячейка в периоде отпуска — код «ОТ»
                    // плана (фоновый цвет и рамка — классом ws-vac-plan)
@@ -36611,116 +36570,27 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // ============================================================
         // Task 309: карточка сотрудника — попап у колонки ФИО
         // ============================================================
-        // Наведение курсора (с задержкой 350 мс) или клик по полю
-        // сотрудника слева от шахматки открывают окно с данными,
-        // которые раньше были в удалённых вкладках (Task 307/308):
-        //   • «Сотрудники» — профиль: тип/смена, должность, шаблон
-        //     ротации, дата приёма, комментарий (Task 310: строка
-        //     «старт цикла» убрана из карточки по заявке);
-        //   • «Отпуска» — периоды года шахматки по частям + итог
-        //     (Task 310: чистыми днями за вычетом праздников ст. 112,
-        //     лимит 42 дн. в год);
+        // КЛИК по полю сотрудника слева от шахматки открывает окно
+        // с данными, которые раньше были в удалённых вкладках
+        // (Task 307/308):
+        //   • «Сотрудники» — профиль: тип/смена, должность, дата
+        //     приёма, комментарий (Task 310/311: строки «старт цикла» и
+        //     «шаблон ротации» убраны из карточки по заявкам);
+        //   • «Отпуска» — периоды года шахматки по частям (Task 310:
+        //     чистыми днями за вычетом праздников ст. 112; Task 311:
+        //     итог-строка года убрана — лимит 42 дн. контролирует
+        //     шторка «+ Отпуск»);
         //   • «Инструктажи» — мероприятия месяца (тема, период) с
         //     кнопками ✎/✕ (правка/удаление — только редакторам).
-        // Два режима: hover (закрывается при уходе курсора, с
-        // задержкой 400 мс — успевает сработать вход в сам попап,
-        // где кнопки кликабельны) и pinned по клику (закрытие —
-        // фоновый кловер #wsEmpPopupCloser или Esc).
-
-        // Делегированные mouseover/mouseout по контейнеру сетки:
-        // сетка перерисовывается innerHTML, слушатели на .ws-grid-wrap
-        // навешиваются ОДИН раз (init) и переживают все рендеры.
-        // Тач-устройства (hover: none) игнорируются — там карточка
-        // открывается кликом (onEmpCellClick).
-        _attachEmpPopupHover: function() {
-            if (this._empHoverAttached) return;
-            this._empHoverAttached = true;
-            var wrap = document.getElementById('wsGridWrap');
-            var popup = document.getElementById('wsEmpPopup');
-            if (!wrap || !popup) return;
-            var canHover = window.matchMedia
-                && window.matchMedia('(hover: hover)').matches;
-            if (!canHover) return;   // тач: только клик
-            var self = this;
-            var hoverCell = null;
-            wrap.addEventListener('mouseover', function(ev) {
-                var td = null;
-                try {
-                    if (ev.target && ev.target.closest) {
-                        td = ev.target.closest('td.ws-emp-col');
-                    }
-                } catch (e) {}
-                if (td === hoverCell) return;   // плавание внутри ячейки
-                hoverCell = td;
-                // отменять отложенное закрытие — только при входе
-                // в ячейку ФИО: переход на ячейку ДНЯ не должен
-                // «замораживать» попап (закрытие уже запланировано
-                // mouseout'ом; сам попап отменит его своим mouseenter)
-                if (td) self._cancelEmpPopupClose();
-                if (!td) return;   // ушли с колонки ФИО — закрытие по mouseout
-                // попап, прикреплённый кликом, наведение не трогает
-                if (self._empPinned) return;
-                var tabNo = td.getAttribute('data-tab');
-                if (!tabNo) return;
-                self._cancelEmpPopupOpen();
-                self._empOpenTimer = setTimeout(function() {
-                    self._empOpenTimer = null;
-                    if (self._empPinned) return;
-                    self._openEmpPopup(td, tabNo, false);
-                }, 350);
-            });
-            wrap.addEventListener('mouseout', function(ev) {
-                var to = null;
-                try {
-                    if (ev.relatedTarget && ev.relatedTarget.closest) {
-                        to = ev.relatedTarget.closest('td.ws-emp-col');
-                    }
-                } catch (e) {}
-                if (to) return;   // переход внутри колонки ФИО — не закрываем
-                hoverCell = null;
-                self._cancelEmpPopupOpen();
-                self._scheduleEmpPopupClose();
-            });
-            // Вход курсора в попап отменяет отложенное закрытие (кнопки
-            // ✎/✕ кликабельны); уход из попапа — снова планирует
-            popup.addEventListener('mouseenter', function() {
-                self._cancelEmpPopupClose();
-            });
-            popup.addEventListener('mouseleave', function() {
-                self._scheduleEmpPopupClose();
-            });
-        },
-
-        _cancelEmpPopupOpen: function() {
-            if (this._empOpenTimer) {
-                clearTimeout(this._empOpenTimer);
-                this._empOpenTimer = null;
-            }
-        },
-
-        _cancelEmpPopupClose: function() {
-            if (this._empCloseTimer) {
-                clearTimeout(this._empCloseTimer);
-                this._empCloseTimer = null;
-            }
-        },
-
-        _scheduleEmpPopupClose: function() {
-            this._cancelEmpPopupClose();
-            if (!this._empPopupOpen || this._empPinned) return;
-            var self = this;
-            this._empCloseTimer = setTimeout(function() {
-                self._empCloseTimer = null;
-                self.closeEmpPopup();
-            }, 400);
-        },
+        // Task 311: пояснительные окна при НАВЕДЕНИИ убраны по заявке
+        // пользователя — единственный триггер карточки теперь КЛИК
+        // (в т.ч. на таче; hover-делегат с задержками 350/400 мс
+        // удалён вместе со своим методом). Закрытие —
+        // фоновый кловер #wsEmpPopupCloser или Esc.
 
         // Клик по полю сотрудника — прикреплённая карточка (кловер
-        // активен, закрытие — клик мимо попапа или Esc). На таче —
-        // единственный способ открыть карточку.
+        // активен, закрытие — клик мимо попапа или Esc).
         onEmpCellClick: function(ev, tabNo) {
-            this._cancelEmpPopupOpen();
-            this._cancelEmpPopupClose();
             // взаимная блокировка попапов (обратное — onCellClick)
             this.closeCellPopup();
             var td = null;
@@ -36729,22 +36599,24 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     td = ev.target.closest('td.ws-emp-col');
                 }
             } catch (e) {}
-            this._openEmpPopup(td, tabNo, true);
+            this._openEmpPopup(td, tabNo);
         },
 
         // Открыть карточку рядом с ячейкой ФИО: правее ячейки, не
         // влезает — прижать к правому краю (колонка sticky слева,
         // «левее ячейки» места нет); по вертикали — от верха ячейки,
         // не влезает вниз — прижать к низу вьюпорта. Геометрия — как
-        // у статусного попапа (_openCellPopup).
-        _openEmpPopup: function(td, tabNo, pinned) {
+        // у статусного попапа (_openCellPopup). Карточка всегда
+        // «прикреплена» (Task 311: hover-режим удалён — теперь только
+        // клик, кловер активен, закрытие — клик мимо/Esc).
+        _openEmpPopup: function(td, tabNo) {
             var popup = document.getElementById('wsEmpPopup');
             var closer = document.getElementById('wsEmpPopupCloser');
             if (!popup || !closer) return;
             this._empPopupTab = tabNo;
-            this._empPinned = !!pinned;
+            this._empPinned = true;
             popup.innerHTML = this._renderEmpPopup(tabNo);
-            closer.classList.toggle('active', !!pinned);
+            closer.classList.add('active');
             popup.classList.add('active');
             // сначала скрыто в левом верхнем углу — измерить габариты
             popup.style.left = '0px';
@@ -36772,8 +36644,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         closeEmpPopup: function() {
-            this._cancelEmpPopupOpen();
-            this._cancelEmpPopupClose();
             var popup = document.getElementById('wsEmpPopup');
             var closer = document.getElementById('wsEmpPopupCloser');
             if (popup) {
@@ -36786,9 +36656,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._empPopupTab = null;
         },
 
-        // Содержимое карточки: шапка (ФИО · таб. №) + три секции
-        // (профиль / отпуска года / мероприятия месяца). Кнопки ✎/✕
-        // в секции мероприятий — только ролям с правом записи.
+        // Содержимое карточки: шапка (ФИО · таб. №) + блоки — профиль
+        // (Task 311: без строки-заголовка «Сотрудник», поля сразу после
+        // шапки), отпуска года, мероприятия месяца. Кнопки ✎/✕ в блоке
+        // мероприятий — только ролям с правом записи.
         _renderEmpPopup: function(tabNo) {
             var emp = null;
             for (var j = 0; j < this._EMPLOYEES.length; j++) {
@@ -36807,34 +36678,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var html = '<div class="ws-popup-title">' + this._esc(emp['ФИО']) +
                        ' · таб. №' + this._esc(emp['таб_номер']) + '</div>';
 
-            // --- Секция 1: профиль (бывшая вкладка «Сотрудники») ---
+            // --- Блок 1: профиль (бывшая вкладка «Сотрудники») ---
             var tip = String(emp['тип'] || '').trim();
             var smena = parseInt(emp['смена'], 10);
             var tipVal = tip === 'сменный'
                 ? ('сменный' + (smena >= 1 && smena <= 5 ? ', смена №' + smena : ''))
                 : (tip || '—');
-            var patName = '';
-            if (emp['шаблон_ротации']) {
-                for (var pi = 0; pi < (this._PATTERNS || []).length; pi++) {
-                    if (parseInt(this._PATTERNS[pi].id, 10) ===
-                        parseInt(emp['шаблон_ротации'], 10)) {
-                        patName = this._PATTERNS[pi].name || '';
-                        break;
-                    }
-                }
-                if (!patName) patName = '№' + emp['шаблон_ротации'];
-            }
-            // Task 310: строка «Старт цикла» убрана из карточки по
-            // заявке пользователя (данные остаются в шторке «+
-            // Сотрудник» и на сервере — показывать в карточке не нужно)
+            // Task 310/311: строки «Старт цикла» и «Шаблон ротации»
+            // убраны из карточки по заявкам пользователя (данные
+            // остаются в шторке добавления и на сервере — в карточке
+            // не показываются); Task 311 также снят заголовок-строка
+            // «Сотрудник» — профиль идёт сразу после шапки ФИО
             var fields = [
                 ['Тип', tipVal],
                 ['Должность', String(emp['должность'] || '').trim() || '—'],
-                ['Шаблон ротации', patName || '—'],
                 ['Дата приёма', emp['дата_приёма'] ? this._fmtDateRu(emp['дата_приёма']) : '—'],
                 ['Комментарий', String(emp['комментарий'] || '').trim()]
             ];
-            html += '<div class="ws-popup-sec">Сотрудник</div>';
             for (var fi = 0; fi < fields.length; fi++) {
                 if (!fields[fi][1] || fields[fi][1] === '—') {
                     // пустые значения (кроме явных «—») не показываем
@@ -36864,20 +36724,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!vacs.length) {
                 html += '<div class="ws-emp-empty">нет запланированных периодов</div>';
             } else {
-                // Task 310: итог считается «чистыми» днями — календарные
-                // дни периодов года МИНУС нерабочие праздничные дни
-                // ст. 112 ТК РФ, попавшие на периоды (ст. 120 ТК РФ:
-                // праздники не расходуют отпуск). Годовой лимит — 42 дн.
-                // (хим. производство: 28 осн. + 7 ст. 117 + 7 ст. 118);
-                // превышение — красная строка итога (ws-emp-overlimit).
-                var vacTotal = 0;   // чистые дни года (в счёт лимита)
-                var vacHols = 0;    // праздники, вычтенные из периодов
+                // Task 310/311: дни каждого периода — «чистые» (календарные
+                // года МИНУС нерабочие праздничные ст. 112 ТК РФ — ст. 120:
+                // праздники не расходуют отпуск), с пометкой о вычтенных.
+                // Строка-итог года с лимитом убрана из карточки по заявке
+                // (Task 311) — контроль лимита 42 дн. (хим. производство,
+                // ТК РФ) остался в шторке «+ Отпуск»: строка годового
+                // лимита + блокировка превышения до отправки на сервер
                 for (var vk = 0; vk < vacs.length; vk++) {
                     var vv = vacs[vk];
                     var vNet = this._vacNetDaysInYear(vv, this._year);
                     var vCal = this._vacDaysInYear(vv, this._year);
-                    vacTotal += vNet;
-                    vacHols += vCal - vNet;
                     var pNo = parseInt(vv.часть, 10);
                     html += '<div class="ws-emp-field"><span class="ws-emp-k">Часть ' +
                             (pNo ? pNo : '—') + '</span><span class="ws-emp-v">' +
@@ -36889,20 +36746,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                 ? ' · «' + this._esc(vv.комментарий) + '»' : '') +
                             '</span></div>';
                 }
-                var overLimit = vacTotal > this._VAC_YEAR_LIMIT;
-                var vacTotalHtml = 'Итого в году: ' + vacTotal + ' ' +
-                        this._plural(vacTotal, ['день', 'дня', 'дней']) +
-                        (vacHols > 0 ? ' (вычтено праздников: ' + vacHols + ')' : '');
-                if (overLimit) {
-                    vacTotalHtml = 'Итого в году: ' + vacTotal + ' дн. — ' +
-                            'ПРЕВЫШЕН лимит ' + this._VAC_YEAR_LIMIT + ' дн. (ТК РФ)' +
-                            (vacHols > 0 ? ' (вычтено праздников: ' + vacHols + ')' : '');
-                } else {
-                    vacTotalHtml += ' · лимит ' + this._VAC_YEAR_LIMIT;
-                }
-                html += '<div class="ws-emp-total' +
-                        (overLimit ? ' ws-emp-overlimit' : '') + '">' +
-                        vacTotalHtml + '</div>';
             }
 
             // --- Секция 3: мероприятия месяца (бывшая вкладка
@@ -37196,10 +37039,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 307: initEmployeesPage/loadEmployees/_renderEmployees
         // УДАЛЕНЫ вместе со страницей «Сотрудники» (вкладки в субнави-
         // гации больше нет). Справочник сотрудников виден в шахматке
-        // (строки), попапе ячейки и селектах форм; добавление — кнопкой
-        // «+ Сотрудник» в тулбаре над шахматкой (openEmployeeForm ниже);
-        // после добавления submitEmployeeForm перезагружает шахматку
-        // (loadGrid), а не список сотрудников.
+        // (строки), попапе ячейки и селектах форм; добавление — кликом
+        // по заголовку «Сотрудник» в шапке шахматки (Task 311, до
+        // этого кнопкой «+ Сотрудник» в тулбаре; openEmployeeForm
+        // ниже); после добавления submitEmployeeForm перезагружает
+        // шахматку (loadGrid), а не список сотрудников.
 
         openEmployeeForm: function() {
             if (!this._canEdit) return;
