@@ -4011,11 +4011,23 @@
         background: #17212b;
         border-bottom: 1px solid var(--card-border, rgba(255,255,255,0.06));
     }
-    /* Task 264: ряд кнопок тулбара — прежняя строка селектов и кнопок.
-       Task 307: перенос строки разрешён — ряд на узких экранах
-       аккуратно складывается в две строки (на десктопе media-запрос
-       ставит nowrap) */
+    /* Task 317: колонка кнопок левой трети бара — ТРИ РЯДА
+       (раньше — единственная строка селектов и кнопок, а строки
+       2/3 были отдельными рядами бара во всю ширину). Зазор между
+       рядами — 3px (заявка); на десктопе (media-запрос ниже)
+       колонка — РОВНО высота окон справа (95px). Мобильный базовый
+       вид: кнопки 34px, ряды переносятся (wrap) на узких экранах. */
     .ws-toolbar-main {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+    /* Task 317: ряды колонки кнопок (1/2/3): внутри ряда —
+       горизонтальный ряд с зазором 8px; на мобильном ряд
+       переносится (wrap), не выпирает */
+    .ws-toolbar-row,
+    .ws-actions-row,
+    .ws-generate-row {
         display: flex;
         gap: 8px;
         align-items: center;
@@ -4097,19 +4109,49 @@
     @keyframes wsRefreshSpin {
         to { transform: rotate(360deg); }
     }
-    /* Task 314: штамп возраста данных «данные от 04.09, 14:22» —
-       когда последний раз загружали/обновляли график (локальная
-       копия). Мелкий вторичный текст рядом с кнопкой «Обновить»;
-       ellipsis на узких экранах */
-    .ws-cache-stamp {
-        font-size: 11px;
-        color: var(--text-secondary, rgba(255,255,255,0.55));
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 160px;
-        min-width: 0;
+    /* Task 317: ИНФОРМАЦИОННОЕ ОКНО «данные от …» кнопки «Обновить» —
+       строка возраста локальной копии УБРАНА из бара (занимала место
+       в ряду 1, Task 314) и живёт в окне, появляющемся при НАВЕДЕНИИ
+       указателя мыши на кнопку. Позиция — fixed (считает JS
+       относительно кнопки: над кнопкой, не хватает места сверху —
+       под ней), клики сквозь него проходят (pointer-events: none),
+       z-index — выше попапов ячеек (9401–9402), ниже тостов. Стиль
+       в духе попапа кодов: фон вторичного уровня, рамка, тень. */
+    .ws-refresh-tip {
+        position: fixed;
+        z-index: 9450;
+        max-width: 300px;
+        background: var(--bg-tertiary, #0e1621);
+        border: 1px solid var(--card-border, rgba(74, 143, 199, 0.25));
+        border-radius: 6px;
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+        padding: 8px 12px;
+        pointer-events: none;
     }
+    .ws-refresh-tip[hidden] { display: none; }
+    /* строка-дата «данные от 04.09, 14:22» — главная (яркая, жирная) */
+    .ws-rt-date {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-primary, #e0e0e0);
+        white-space: nowrap;
+    }
+    /* описание кнопки — вторичная мелкая строка (бывший title),
+       переносится на несколько строк в пределах max-width */
+    .ws-rt-desc {
+        margin-top: 3px;
+        max-width: 280px;
+        font-size: 11px;
+        line-height: 1.4;
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+    }
+    [data-theme="light"] .ws-refresh-tip {
+        background: #fbf8f0;
+        border-color: rgba(0, 0, 0, 0.15);
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
+    }
+    [data-theme="light"] .ws-rt-date { color: #333; }
+    [data-theme="light"] .ws-rt-desc { color: #777; }
 
     /* Task 315: строка 1 бара — ТРИ РАВНЫЕ ЧАСТИ. Базовая (мобильная,
        <1024px) компоновка — КОЛОНКА: ряд кнопок сверху, оба окна под
@@ -4124,18 +4166,12 @@
     }
 
     /* Task 315: строки 2 и 3 тулбара — «Сохранить»/«Отменить» (появляются
-       при несохранённых правках) и «Сформировать». Кнопки в ряд слева,
-       на узких экранах ряд переносится (wrap). Пустая строка скрыта —
-       [hidden] ставит JS: wsActionsRow — вместе с кнопками в
-       _updateSaveBtn (при наличии правок), wsGenerateRow — в init по
-       праву записи; строка без содержимого не занимает места в баре. */
-    .ws-actions-row,
-    .ws-generate-row {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        flex-wrap: wrap;
-    }
+       при несохранённых правках) и «Сформировать» — ряды КОЛОНКИ кнопок
+       (Task 317: внутри .ws-toolbar-main, базовые flex-правила — выше в
+       блоке .ws-toolbar-row). Пустая строка скрыта — [hidden] ставит JS:
+       wsActionsRow — вместе с кнопками в _updateSaveBtn (при наличии
+       правок), wsGenerateRow — в init по праву записи; строка без
+       содержимого не занимает места в колонке. */
     .ws-actions-row[hidden],
     .ws-generate-row[hidden] { display: none; }
 
@@ -5069,19 +5105,23 @@
         white-space: normal;   /* в узком столбике переносится строками */
         margin-top: 3px;
     }
-    /* Task 269 → Task 272 → Task 315: ДЕСКТОП — СТРОКА 1 бара
-       (.ws-bar-row) делится на ТРИ РАВНЫЕ ЧАСТИ (grid 1fr 1fr 1fr):
-       ряд кнопок (селекты + «Обновить» + штамп) в ЛЕВОЙ трети,
-       окно мероприятий месяца — в ЦЕНТРЕ, окно времени и праздников
-       — в ПРАВОЙ. Прежняя компоновка Task 269/272 (кнопки слева,
-       одно окошко справа на fit-content) заменена равными долями.
-       Оба окна растягиваются на свою 1/3 (width: auto выключает
-       базовый fit-content у календаря), высота 95px (Task 270),
-       текст внутри переносится на строку ниже, при большом объёме —
-       скролл внутри окна. Строки 2 («Сохранить»/«Отменить») и 3
-       («Сформировать») — под строкой 1, во всю ширину бара.
-       Тулбар остаётся КОЛОНКОЙ (базовый flex-direction: column):
-       строка 1 → строка 2 → строка 3. */
+    /* Task 269 → Task 272 → Task 315 → Task 317: ДЕСКТОП — СТРОКА 1
+       бара (.ws-bar-row) делится на ТРИ РАВНЫЕ ЧАСТИ (grid 1fr 1fr
+       1fr): колонка кнопок в ЛЕВОЙ трети, окно мероприятий месяца —
+       в ЦЕНТРЕ, окно времени и праздников — в ПРАВОЙ. Task 317:
+       колонка кнопок — ТРИ РЯДА, межрядные зазоры 3px, суммарная
+       высота — РОВНО высота окон справа: 95px (три ряда ×
+       calc((95px − 6px) / 3) + два зазора 3px, border-box).
+       Скрытый ряд (нет правок / нет права записи) высоты НЕ
+       двигает: габариты кнопок постоянны, освободившийся слот
+       остаётся пустым — сетка под баром не прыгает. Кнопки и
+       селекты — во всю высоту своего ряда (≈29.7px). Рамка бара —
+       5px со всех сторон (базовое правило .ws-toolbar, НЕ меняется
+       ни в одной теме/брейкпоинте — заявка). Оба окна
+       растягиваются на свою 1/3 (width: auto выключает базовый
+       fit-content у календаря), высота 95px (Task 270), текст
+       внутри переносится на строку ниже, при большом объёме —
+       скролл внутри окна. */
     @media (min-width: 1024px) {
         .ws-bar-row {
             display: grid;
@@ -5090,10 +5130,27 @@
             align-items: stretch;
         }
         .ws-toolbar-main {
-            /* 1/3 ширины бара: ряд кнопок переносится (wrap) на
-               узких десктопах, не выпирает из своей трети */
-            flex-wrap: wrap;
-            align-content: flex-start;
+            /* ТРИ ряда кнопок — РОВНО высота окон справа */
+            height: 95px;
+            flex-wrap: nowrap;
+        }
+        .ws-toolbar-row,
+        .ws-actions-row,
+        .ws-generate-row {
+            flex: 0 0 auto;
+            /* (95px − два зазора 3px) / три ряда ≈ 29.7px — ровно,
+               без переполнения (border-box у всех элементов) */
+            height: calc((95px - 6px) / 3);
+            flex-wrap: nowrap;
+            align-items: stretch;
+            overflow: hidden;
+        }
+        .ws-month-sel, .ws-year-sel, .ws-generate-btn, .ws-save-btn,
+        .ws-cancel-btn, .ws-refresh-btn {
+            height: 100%;          /* во всю высоту своего ряда */
+            padding: 4px 12px;     /* компактнее базовых 6px — текст
+                                       14px входит в ряд ≈29.7px */
+            white-space: nowrap;
         }
         .ws-events-panel,
         .ws-cal-panel {
@@ -11777,6 +11834,16 @@
                      окна (высота 95px, как у календаря). -->
                 <div class="ws-bar-row">
                 <div class="ws-toolbar-main">
+                    <!-- Task 317: колонка кнопок левой трети — ТРИ РЯДА:
+                         ряд 1 — селекты месяца/года и «Обновить»; ряд 2 —
+                         «Сохранить»/«Отменить»; ряд 3 — «Сформировать».
+                         На десктопе три ряда и два зазора по 3px занимают
+                         РОВНО высоту окон справа (95px); рамка бара —
+                         5px со всех сторон (не меняется). Штамп «данные
+                         от …» из бара УБРАН — строка живёт в
+                         информационном окне кнопки «Обновить»
+                         (#wsRefreshTip, появляется при наведении). -->
+                    <div class="ws-toolbar-row" id="wsSelectsRow">
                     <select id="wsMonthSel" class="ws-month-sel" onchange="WorkSchedule.onMonthChange()"></select>
                     <select id="wsYearSel" class="ws-year-sel" onchange="WorkSchedule.onMonthChange()"></select>
                     <!-- Task 314: кнопка «Обновить» — перезагрузка ДАННЫХ
@@ -11787,10 +11854,15 @@
                          сеть дёргает ТОЛЬКО эта кнопка — «без ожидания
                          подгрузки» при открытии (заявка пользователя).
                          Это НЕ «Сформировать»: генерации записей нет,
-                         только чтение. Видна всем ролям; рядом — штамп
-                         «данные от …» (возраст локальной копии). -->
-                    <button type="button" id="wsRefreshBtn" class="ws-refresh-btn" onclick="WorkSchedule.refreshData()" title="Обновить данные графика с сервера: сотрудники, записи, мероприятия, планы отпусков, коды. Локальная копия открывается мгновенно — эта кнопка подгружает свежие данные"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" fill="currentColor"/></svg>Обновить</button>
-                    <span id="wsCacheStamp" class="ws-cache-stamp" title=""></span>
+                         только чтение. Видна всем ролям; возраст
+                         локальной копии «данные от …» — в
+                         информационном окне по наведению (Task 317). -->
+                    <!-- Task 317: подсказка кнопки — в ИНФОРМАЦИОННОМ
+                         ОКНЕ #wsRefreshTip (наведение мыши/фокус), не в
+                         нативном title (двойное окно); штамп «данные
+                         от …» убран из бара — не занимает место в ряду 1 -->
+                    <button type="button" id="wsRefreshBtn" class="ws-refresh-btn" onclick="WorkSchedule.refreshData()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" fill="currentColor"/></svg>Обновить</button>
+                    </div>
                     <!-- Task 311: кнопка «+ Сотрудник» УДАЛЕНА из тулбара
                          (Task 307 приносил её сюда со страницы
                          «Сотрудники»). Её функцию теперь выполняет
@@ -11818,6 +11890,27 @@
                          нормы) — см. WorkSchedule._refreshProdCalendarQuiet
                          в _doGenerateMonth/_doGenerateYear. Нормы и
                          праздники месяца — в окошке #wsCalPanel справа -->
+                    <!-- Task 315/317: ряд 2 — «Сохранить» и «Отменить».
+                         Появляются при вводе изменений в ячейки шахматки
+                         (локальные правки _PENDING, только редакторам):
+                         «Сохранить» — пакетная отправка на сервер
+                         (saveAll, Task 251), «Отменить» — сброс всех
+                         несохранённых правок, ячейки возвращаются к
+                         данным сервера (cancelAll, Task 315). Task 317:
+                         ряд — ВТОРОЙ в колонке кнопок (под рядом 1),
+                         фиксированная высота — как у всех рядов. -->
+                    <div class="ws-actions-row" id="wsActionsRow" hidden>
+                        <button type="button" id="wsSaveBtn" class="ws-save-btn" onclick="WorkSchedule.saveAll()" hidden>Сохранить</button>
+                        <button type="button" id="wsCancelBtn" class="ws-cancel-btn" onclick="WorkSchedule.cancelAll()" title="Отменить ввод изменений: все несохранённые правки шахматки сбрасываются, ячейки возвращаются к данным сервера" hidden>Отменить</button>
+                    </div>
+                    <!-- Task 315/317: ряд 3 — «Сформировать» (генерация
+                         записей на сервере, только редакторам; Task 306:
+                         подтверждённое действие также тихо обновляет
+                         производственный календарь). Task 317: ряд —
+                         ТРЕТИЙ в колонке кнопок, под рядом 2. -->
+                    <div class="ws-generate-row" id="wsGenerateRow" hidden>
+                        <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateYear()" title="Сформировать шахматку на выбранный месяц или весь год (производственный календарь обновится автоматически) — откроется диалог подтверждения" hidden>Сформировать</button>
+                    </div>
                 </div>
                 <!-- Task 315: окно 2 бара — данные ВСЕХ мероприятий
                      открытого месяца (заявка: «второе окно с данными
@@ -11839,25 +11932,18 @@
                      скролл внутри. Заполняет ProdCalendar.renderPanel() -->
                 <div id="wsCalPanel" class="ws-cal-panel" hidden></div>
                 </div>
-                <!-- Task 315: СТРОКА 2 — «Сохранить» и «Отменить».
-                     Появляются при вводе изменений в ячейки шахматки
-                     (локальные правки _PENDING, только редакторам):
-                     «Сохранить» — пакетная отправка на сервер
-                     (saveAll, Task 251), «Отменить» — сброс всех
-                     несохранённых правок, ячейки возвращаются к
-                     данным сервера (cancelAll, Task 315). Расположены
-                     ПОД кнопками выбора месяца и года. -->
-                <div class="ws-actions-row" id="wsActionsRow" hidden>
-                    <button type="button" id="wsSaveBtn" class="ws-save-btn" onclick="WorkSchedule.saveAll()" hidden>Сохранить</button>
-                    <button type="button" id="wsCancelBtn" class="ws-cancel-btn" onclick="WorkSchedule.cancelAll()" title="Отменить ввод изменений: все несохранённые правки шахматки сбрасываются, ячейки возвращаются к данным сервера" hidden>Отменить</button>
-                </div>
-                <!-- Task 315: СТРОКА 3 — «Сформировать» (генерация
-                     записей на сервере, только редакторам; Task 306:
-                     подтверждённое действие также тихо обновляет
-                     производственный календарь). Ещё ниже строки 2,
-                     третьей строкой над шахматкой -->
-                <div class="ws-generate-row" id="wsGenerateRow" hidden>
-                    <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateYear()" title="Сформировать шахматку на выбранный месяц или весь год (производственный календарь обновится автоматически) — откроется диалог подтверждения" hidden>Сформировать</button>
+                <!-- Task 317: ИНФОРМАЦИОННОЕ ОКНО кнопки «Обновить» —
+                     возраст локальной копии «данные от 04.09, 14:22»
+                     (заявка: строка убрана из бара). Появляется при
+                     НАВЕДЕНИИ указателя мыши на кнопку (и по фокусу с
+                     клавиатуры); позицию считает JS относительно кнопки
+                     (над кнопкой; не хватает места сверху — под ней).
+                     Дата — #wsRefreshTipDate (обновляется
+                     _updateCacheStamp живьём), описание — статичная
+                     строка (бывший title кнопки). -->
+                <div id="wsRefreshTip" class="ws-refresh-tip" hidden>
+                    <div class="ws-rt-date" id="wsRefreshTipDate"></div>
+                    <div class="ws-rt-desc">Обновить данные графика с сервера: сотрудники, записи, мероприятия, планы отпусков, коды. Локальная копия открывается мгновенно — эта кнопка подгружает свежие данные.</div>
                 </div>
             </div>
             <!-- Task 308: субнавигация модуля «График работы» УДАЛЕНА
@@ -35714,6 +35800,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var genRow = document.getElementById('wsGenerateRow');
             if (genRow) genRow.hidden = !this._canEdit;
 
+            var self = this;
+            // Task 317: информационное окно «данные от …» кнопки «Обновить»
+            // — слушатели на кнопке (наведение/фокус) и глобальный сброс
+            // при прокрутке (fixed-позиция привязана к кнопке). Клик —
+            // запуск обновления: окно закрывается, итог покажет тост.
+            var rTipBtn = document.getElementById('wsRefreshBtn');
+            if (rTipBtn) {
+                rTipBtn.addEventListener('mouseenter', function() { self._showRefreshTip(); });
+                rTipBtn.addEventListener('mouseleave', function() { self._hideRefreshTip(); });
+                rTipBtn.addEventListener('focus', function() { self._showRefreshTip(); });
+                rTipBtn.addEventListener('blur', function() { self._hideRefreshTip(); });
+                rTipBtn.addEventListener('click', function() {
+                    setTimeout(function() { self._hideRefreshTip(); }, 120);
+                });
+            }
+            document.addEventListener('scroll', function() { self._hideRefreshTip(); }, true);
+
             // Task 312: «+ Отпуск» из тулбара УБРАНА — её функцию
             // выполняет строка «+ Отпуск…» в блоке отпусков карточки
             // сотрудника (клик по полю ФИО): видимость решается в
@@ -35726,7 +35829,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // целочисленных высот строк при изменении окна/показе страницы
             this._attachFitResize();
 
-            var self = this;
             // Task 314: локальная копия данных — МГНОВЕННОЕ открытие
             // без сети (заявка: «открывался моментально без ожидания
             // подгрузки»). _restoreCachedView поднимает из localStorage
@@ -36046,19 +36148,48 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             } catch (e) { /* quota/недоступен — тихо */ }
         },
 
-        // Task 314: штамп «данные от 04.09, 14:22» — возраст локальной
-        // копии рядом с кнопкой «Обновить». Пусто = данных ещё не было
+        // Task 314 → Task 317: строка «данные от 04.09, 14:22» — возраст
+        // локальной копии. Раньше стояла в баре рядом с кнопкой «Обновить»
+        // (занимала место в ряду 1); теперь живёт в ИНФОРМАЦИОННОМ ОКНЕ
+        // кнопки (#wsRefreshTip, показ при НАВЕДЕНИИ мыши) — обновляется
+        // и на месте, если окно сейчас открыто. Данных не было —
+        // подсказка «локальных данных ещё нет».
         _updateCacheStamp: function() {
-            var el = document.getElementById('wsCacheStamp');
-            if (!el) return;
-            if (!this._cacheTs) {
-                el.textContent = '';
-                return;
+            var text = '';
+            if (this._cacheTs) {
+                var d = new Date(this._cacheTs);
+                var two = function(n) { return (n < 10 ? '0' : '') + n; };
+                text = 'данные от ' + two(d.getDate()) + '.' + two(d.getMonth() + 1) +
+                       ', ' + two(d.getHours()) + ':' + two(d.getMinutes());
             }
-            var d = new Date(this._cacheTs);
-            var two = function(n) { return (n < 10 ? '0' : '') + n; };
-            el.textContent = 'данные от ' + two(d.getDate()) + '.' + two(d.getMonth() + 1) +
-                             ', ' + two(d.getHours()) + ':' + two(d.getMinutes());
+            this._cacheStampText = text;
+            var dateEl = document.getElementById('wsRefreshTipDate');
+            if (dateEl) dateEl.textContent = text || 'локальных данных ещё нет';
+        },
+
+        // Task 317: ИНФОРМАЦИОННОЕ ОКНО кнопки «Обновить» — показ при
+        // НАВЕДЕНИИ указателя мыши (mouseenter) и по фокусу с клавиатуры
+        // (focus); скрытие — уходом курсора, потерей фокуса, кликом
+        // (запущено обновление — итог покажет тост) и прокруткой
+        // (fixed-позиция устаревает). Позиция — НАД кнопкой; если сверху
+        // не хватает места (кнопка у верхней кромки вьюпорта) — ПОД ней.
+        // Кликам окно не мешает (pointer-events: none в CSS).
+        _showRefreshTip: function() {
+            var btn = document.getElementById('wsRefreshBtn');
+            var tip = document.getElementById('wsRefreshTip');
+            if (!btn || !tip) return;
+            this._updateCacheStamp();
+            tip.hidden = false;
+            var r = btn.getBoundingClientRect();
+            tip.style.left = Math.max(6, Math.round(r.left)) + 'px';
+            tip.style.top = '0px';
+            var top = r.top - tip.offsetHeight - 8;
+            if (top < 4) top = r.bottom + 6;
+            tip.style.top = Math.round(top) + 'px';
+        },
+        _hideRefreshTip: function() {
+            var tip = document.getElementById('wsRefreshTip');
+            if (tip) tip.hidden = true;
         },
 
         // Task 314: кнопка «Обновить» — перезагрузка данных графика с
