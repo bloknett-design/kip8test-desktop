@@ -4022,12 +4022,14 @@
         flex-direction: column;
         gap: 3px;
     }
-    /* Task 317: ряды колонки кнопок (1/2/3): внутри ряда —
+    /* Task 317 → 324: ряды колонки кнопок: внутри ряда —
        горизонтальный ряд с зазором 8px; на мобильном ряд
-       переносится (wrap), не выпирает */
-    .ws-toolbar-row,
-    .ws-actions-row,
-    .ws-generate-row {
+       переносится (wrap), не выпирает. Task 324: рядов СТАЛО ДВА
+       (ряд 1 — селекты/«Обновить», ряд 2 НИЖНИЙ — Сформировать/
+       Сохранить/Отменить/Итоги учёта/Месяц/Год — одна строка,
+       заявка); отдельные классы строк действий/генерации удалены
+       (кнопки живут в одном нижнем ряду #wsBottomRow) */
+    .ws-toolbar-row {
         display: flex;
         gap: 8px;
         align-items: center;
@@ -4046,7 +4048,9 @@
     }
     .ws-generate-btn {
         /* Task 315: авто-прижатие к правому краю удалено — кнопка
-           теперь в СОБСТВЕННОЙ строке 3 тулбара (.ws-generate-row) */
+           в ряду действий тулбара; Task 324: живёт в НИЖНЕМ ряду
+           #wsBottomRow одной строкой с «Сохранить»/«Отменить»
+           и блоком итогов */
         background: var(--accent-blue, #4a8fc7);
         color: #fff;
         border: none;
@@ -4165,15 +4169,11 @@
         align-items: stretch;
     }
 
-    /* Task 315: строки 2 и 3 тулбара — «Сохранить»/«Отменить» (появляются
-       при несохранённых правках) и «Сформировать» — ряды КОЛОНКИ кнопок
-       (Task 317: внутри .ws-toolbar-main, базовые flex-правила — выше в
-       блоке .ws-toolbar-row). Пустая строка скрыта — [hidden] ставит JS:
-       wsActionsRow — вместе с кнопками в _updateSaveBtn (при наличии
-       правок), wsGenerateRow — в init по праву записи; строка без
-       содержимого не занимает места в колонке. */
-    .ws-actions-row[hidden],
-    .ws-generate-row[hidden] { display: none; }
+    /* Task 315 → 324: строки действий/генерации как ОТДЕЛЬНЫЕ ряды
+       УДАЛЕНЫ — все три кнопки (Сформировать/Сохранить/Отменить)
+       живут в НИЖНЕМ ряду #wsBottomRow вместе с блоком итогов;
+       скрытие отдельных кнопок — по праву записи/наличию правок,
+       ряд остаётся на виду (кнопки итогов видны всем) */
 
     /* Task 315: кнопка «Отменить» — ОТМЕНА ВВОДА ИЗМЕНЕНИЙ: сброс всех
        накопленных несохранённых правок (_PENDING), ячейки возвращаются
@@ -4288,16 +4288,19 @@
        сотрудника (.ws-popup-row.ws-popup-more.ws-emp-addvac,
        см. _renderEmpPopup) */
 
-    /* Task 269: ЕДИНАЯ ВЫСОТА всех элементов ряда кнопок тулбара —
-       селекты месяца/года, «Сформировать» и «Сохранить».
-       Раньше чип «Календарь» (Task 306 удалён) был ниже селектов
-       (шрифт 12px против 14px — высоты отличались на ~5px); теперь
-       все элементы одного роста, ряд выглядит ровным.
+    /* Task 269 → 324: ЕДИНАЯ ВЫСОТА всех элементов рядов кнопок
+       тулбара — селекты месяца/года, «Сформировать», «Сохранить»,
+       «Обновить», «Итоги учёта» и вкладки «Месяц»/«Год» (Task 324 —
+       вкладки итогов переехали в нижний ряд кнопок и подогнаны под
+       общий рост). Раньше чип «Календарь» (Task 306 удалён) был
+       ниже селектов (шрифт 12px против 14px — высоты отличались на
+       ~5px); теперь все элементы одного роста, ряды выглядят ровными.
        (Task 311: «+ Сотрудник» убрана из ряда — добавление сотрудника
        теперь через заголовок «Сотрудник» в шапке сетки.
        Task 312: «+ Отпуск» убрана из ряда — добавление периода
        теперь из карточки сотрудника) */
-    .ws-month-sel, .ws-year-sel, .ws-generate-btn, .ws-save-btn, .ws-refresh-btn {
+    .ws-month-sel, .ws-year-sel, .ws-generate-btn, .ws-save-btn,
+    .ws-refresh-btn, .ws-totals-btn, .ws-tt-tab {
         height: 34px;
         box-sizing: border-box;
     }
@@ -4679,110 +4682,83 @@
         border-bottom: 1px solid #84929e;
     }
     /* ============================================================
-       Task 321→323: ИТОГИ УЧЁТА — боковая сворачиваемая шторка
-       СПРАВА от шахматки (заявка: «бар итоги учёта перенеси в правую
-       часть экрана сбоку, текст названия в баре — по вертикали;
-       при открытии шторка выдвигается справа налево на ПОЛОВИНУ
-       рабочей области, а внизу шахматки появляется ползунок
-       горизонтальной прокрутки — удобно сверять расчёты итога по
-       шахматке; строки итогов стоят ровно по строкам работников,
-       поэтому список сотрудников в панели скрыт»).
-       Шторка #wsTotalsDrawer = вертикальный бар-ручка #wsTotalsBar
-       (writing-mode: vertical-rl) + панель #wsTotalsPanel. Десктоп:
-       ширина 50%, свёрнута — торчит только бар (отрицательный
-       margin-right), класс ws-tt-open на странице анимирует margin
-       до 0; сетка сжимается до левой половины, дни прокручиваются
-       ПОД шторкой (класс ws-tt-gridwide — широкий режим сетки с
-       видимым ползунком). Мобайл: fixed-оверлей ~86vw, тап-зона
-       бара 44px, список сотрудников в таблице остаётся (строки с
-       сеткой не совпадают). Высоты строк итогов копирует
-       _syncTotalsRows — ровно по строкам сотрудников шахматки.
+       Task 321→323→324: ИТОГИ УЧЁТА — боковая сворачиваемая шторка
+       СПРАВА от шахматки (заявка Task 323: шторка выдвигается
+       справа налево на ПОЛОВИНУ рабочей области, внизу шахматки —
+       ползунок горизонтальной прокрутки; строки итогов стоят ровно
+       по строкам работников, поэтому список сотрудников в панели
+       скрыт; заявка Task 324: вертикальный бар-ручка у правого края
+       УДАЛЁН — открытие/закрытие кнопкой «Итоги учёта» в НИЖНЕМ
+       ряду кнопок тулбара и ✕ в шапке шторки).
+       Шторка #wsTotalsDrawer = панель #wsTotalsPanel. Десктоп:
+       ширина 50%, свёрнута — ПОЛНОСТЬЮ за правым краем рабочей
+       области (margin-right: -50%; ручки-бара больше нет), класс
+       ws-tt-open на странице анимирует margin до 0; сетка сжимается
+       до левой половины, дни прокручиваются ПОД шторкой (класс
+       ws-tt-gridwide — широкий режим сетки с видимым ползунком).
+       Мобайл: fixed-оверлей ~86vw, закрытие — ✕ шапки. Высоты строк
+       итогов копирует _syncTotalsRows — ровно по строкам сотрудников
+       шахматки. Task 324: шапка шторки (.ws-tt-head) — только ✕,
+       аварийное ⚠ (сбои года) и «Обновить» (год); пояснительная
+       инфо-строка и вкладки Месяц/Год — УДАЛЕНЫ из шапки (вкладки
+       — в тулбаре справа от кнопки «Итоги учёта»); оглавления
+       таблицы — ОДНОЙ СТРОКОЙ (white-space: nowrap), широкая
+       таблица прокручивается ВИДИМЫМ нижним ползунком шторки.
        ============================================================ */
     .ws-body {
         display: flex;
         flex-direction: column;   /* мобайл: сетка в потоке, шторка fixed */
         position: relative;
     }
-    /* ВЕРТИКАЛЬНЫЙ бар-ручка (бывший горизонтальный бар под сеткой —
-       Task 321/322): узкая полоса у правого края рабочей области,
-       текст названия — ПО ВЕРТИКАЛИ; шеврон сверху показывает
-       сторону раскрытия (◂ — выдвинется влево / ▸ — вернётся) */
-    .ws-totals-vbar {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        width: 28px;
-        flex: none;
-        padding: 10px 0 12px 0;
-        box-sizing: border-box;
-        background: var(--card-bg, #15202f);
-        border: 1px solid var(--card-border, rgba(255,255,255,0.08));
-        border-right: none;
-        border-radius: 8px 0 0 8px;
-        cursor: pointer;
-        user-select: none;
-        -webkit-user-select: none;
-        transition: background 0.15s, border-color 0.15s;
-    }
-    .ws-totals-vbar:hover,
-    .ws-totals-vbar:focus-visible {
-        background: rgba(74, 143, 199, 0.18);
-        border-color: rgba(74, 143, 199, 0.45);
-        outline: none;
-    }
-    .ws-tt-vwrap {
-        flex: 1;
-        min-height: 0;
-        display: flex;
-        flex-direction: row;
-        justify-content: center;
-        gap: 3px;
-        overflow: hidden;
-    }
-    .ws-totals-bar-cap {
-        writing-mode: vertical-rl;
-        text-orientation: mixed;
-        font-size: 13px;
-        font-weight: 700;
+    /* Task 324: кнопка-переключатель «Итоги учёта» — в НИЖНЕМ ряду
+       кнопок тулбара (заменила вертикальную ручку у правого края).
+       Стиль — нейтральный в духе «Обновить»; открытое состояние
+       (aria-pressed="true") — синяя заливка посильнее, как
+       «нажатый» переключатель */
+    .ws-totals-btn {
+        background: var(--bg-tertiary, #0e1621);
         color: var(--text-primary, #e0e0e0);
+        border: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        border-radius: 0;
+        padding: 6px 14px;
+        font-size: 14px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
         white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
-    .ws-totals-bar-sub {
-        writing-mode: vertical-rl;
-        text-orientation: mixed;
-        font-size: 11px;
-        color: var(--text-secondary, rgba(255,255,255,0.55));
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    .ws-totals-btn:active { opacity: 0.85; }
+    .ws-totals-btn[aria-pressed="true"] {
+        background: rgba(74, 143, 199, 0.32);
+        border-color: rgba(74, 143, 199, 0.6);
     }
-    .ws-totals-bar-chev {
-        flex: none;
-        font-style: normal;
-        font-size: 12px;
-        line-height: 1;
-        color: var(--text-secondary, rgba(255,255,255,0.55));
-        transition: transform 0.2s;
+    [data-theme="light"] .ws-totals-btn {
+        background: rgba(240, 240, 240, 0.95);
+        color: #333;
+        border-color: rgba(0, 0, 0, 0.12);
     }
-    [data-theme="light"] .ws-totals-vbar {
-        background: #f4f2ec;
-        border-color: rgba(0, 0, 0, 0.14);
-    }
-    [data-theme="light"] .ws-totals-vbar:hover,
-    [data-theme="light"] .ws-totals-vbar:focus-visible {
-        background: #eceada;
+    [data-theme="light"] .ws-totals-btn[aria-pressed="true"] {
+        background: rgba(74, 143, 199, 0.25);
         border-color: rgba(74, 143, 199, 0.55);
     }
-    [data-theme="light"] .ws-totals-bar-cap { color: #1f2937; }
-    [data-theme="light"] .ws-totals-bar-sub { color: #777777; }
-    /* Панель итогов — содержимое шторки: вкладки + таблица со своим
-       скроллом (#wsTtBody). Геометрией (ширина/сдвиг) владеет шторка;
-       строка вкладок + шапка таблицы = заголовочная зона, по высоте
-       которой растёт шапка СЕТКИ (ws-tt-gridwide, переменная
-       --ws-tt-head-h) — строки итогов стоят ровно по строкам сетки */
+    /* Task 324: разделитель нижнего ряда — тонкая вертикальная черта
+       между действиями шахматки (Сформировать/Сохранить/Отменить) и
+       блоком итогов учёта (Итоги учёта/Месяц/Год) */
+    .ws-tb-sep {
+        flex: none;
+        width: 1px;
+        align-self: stretch;
+        background: var(--card-border, rgba(255,255,255,0.12));
+    }
+    .ws-tb-sep[hidden] { display: none; }
+    [data-theme="light"] .ws-tb-sep { background: rgba(0, 0, 0, 0.14); }
+    /* Панель итогов — содержимое шторки: шапка (.ws-tt-head: ✕ + ⚠ +
+       «Обновить») + таблица со своим скроллом (#wsTtBody).
+       Геометрией (ширина/сдвиг) владеет шторка; шапка шторки +
+       шапка таблицы = заголовочная зона, по высоте которой растёт
+       шапка СЕТКИ (ws-tt-gridwide, переменная --ws-tt-head-h) —
+       строки итогов стоят ровно по строкам сетки. Task 324: вкладки
+       и инфо-строка из шапки УДАЛЕНЫ (вкладки — в тулбаре) */
     .ws-totals-panel {
         flex: 1 1 auto;
         min-width: 0;
@@ -4801,7 +4777,8 @@
     }
     /* ДЕСКТОП: шторка — flex-элемент рабочей области, выдвигается
        справа налево на ПОЛОВИНУ её ширины (анимация margin-right;
-       свёрнута — margin тянет коробку за правый край, торчит бар) */
+       свёрнута — уезжает за ПРАВЫЙ КРАЙ ПОЛНОСТЬЮ: ручки-бара
+       больше нет, Task 324, открывает кнопка тулбара) */
     @media (min-width: 1024px) {
         .ws-body {
             flex: 1 1 auto;
@@ -4814,14 +4791,14 @@
             flex: none;
             display: flex;
             width: 50%;
-            margin-right: calc(-50% + 28px);
+            margin-right: -50%;
             transition: margin-right 0.28s ease;
         }
         #page-work-schedule.ws-tt-open .ws-tt-drawer { margin-right: 0; }
     }
     /* МОБАЙЛ: шторка — fixed-оверлей (у сетки место не отбирает):
-       бар-ручка 44px (тап-зона), панель ~86vw со своим скроллом,
-       список сотрудников в таблице остаётся */
+      панель ~86vw со своим скроллом; закрытие — ✕ шапки (бар-ручки
+       больше нет, Task 324); список сотрудников в таблице остаётся */
     @media (max-width: 1023px) {
         .ws-tt-drawer {
             position: fixed;
@@ -4831,28 +4808,21 @@
             right: 0;
             z-index: 75;
             display: flex;
-            transform: translateX(calc(100% - 44px));
+            transform: translateX(100%);
             transition: transform 0.28s ease;
             border-radius: 10px 0 0 10px;
             box-shadow: -10px 0 26px rgba(0, 0, 0, 0.38);
             overflow: hidden;
         }
         #page-work-schedule.ws-tt-open .ws-tt-drawer { transform: none; }
-        .ws-totals-vbar { width: 44px; gap: 10px; }
-        .ws-totals-vbar:hover,
-        .ws-totals-vbar:focus-visible {
-            background: rgba(74, 143, 199, 0.24);
-        }
-        [data-theme="light"] .ws-totals-vbar:hover,
-        [data-theme="light"] .ws-totals-vbar:focus-visible {
-            background: #e2ddcc;
-        }
     }
-    /* Строка вкладок Месяц/Год + инфо + мини-«Обновить» (год).
-       Task 323: одна строка без переноса (высота зоны стабильна —
-       от неё отсчитывается шапка сетки); полная инфо-строка — в
-       тултипе (title ставит JS) */
-    .ws-tt-tabs {
+    /* Task 324: ШАПКА ШТОРКИ — только ✕ (закрыть), аварийное ⚠
+       (сбои загрузки года — ставит JS) и «Обновить» (год) у правого
+       края. Вкладки Месяц/Год и инфо-строка — УДАЛЕНЫ из шапки
+       (вкладки — в тулбаре, инфо — по заявке). Высота зоны входит в
+       --ws-tt-head-h (по ней растёт шапка сетки — строки итогов
+       стоят ровно по строкам шахматки) */
+    .ws-tt-head {
         display: flex;
         align-items: center;
         gap: 8px;
@@ -4861,16 +4831,74 @@
         min-height: 28px;
         box-sizing: border-box;
     }
+    .ws-tt-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        font-size: 15px;
+        line-height: 1;
+        color: var(--text-secondary, rgba(255,255,255,0.65));
+        background: transparent;
+        border: 1px solid var(--card-border, rgba(255,255,255,0.14));
+        border-radius: 6px;
+        cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    .ws-tt-close:hover,
+    .ws-tt-close:focus-visible {
+        color: var(--text-primary, #e0e0e0);
+        background: rgba(255, 107, 107, 0.16);
+        border-color: rgba(255, 107, 107, 0.45);
+        outline: none;
+    }
+    [data-theme="light"] .ws-tt-close { color: #666; border-color: rgba(0, 0, 0, 0.16); }
+    [data-theme="light"] .ws-tt-close:hover,
+    [data-theme="light"] .ws-tt-close:focus-visible {
+        color: #b02c2c;
+        background: rgba(255, 107, 107, 0.12);
+        border-color: rgba(176, 44, 44, 0.45);
+    }
+    /* Task 324: шапка шторки на МОБИЛЕ — тап-зона ✕ ≥44px (правило
+       ПОСЛЕ базового .ws-tt-close: та же специфичность, побеждает
+       позднее — медиа-условие ограничивает мобильный вид) */
+    @media (max-width: 1023px) {
+        .ws-tt-head { min-height: 44px; }
+        .ws-tt-close { width: 44px; height: 44px; }
+    }
+    /* аварийная строка шапки: сбои загрузки месяцев года (Task 324:
+       пояснительная инфо-строка удалена, но ⚠-предупреждение —
+       исключительное состояние, остаётся в шапке) */
+    .ws-tt-warn {
+        flex: 1;
+        min-width: 0;
+        font-size: 11px;
+        color: #e0a23c;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .ws-tt-warn[hidden] { display: none; }
+    [data-theme="light"] .ws-tt-warn { color: #a06b00; }
+    /* Task 324: вкладки «Месяц»/«Год» итогов — ПЕРЕЕХАЛИ в НИЖНИЙ
+       ряд кнопок тулбара (справа от кнопки «Итоги учёта»); стиль —
+       прежние вкладки-переключатели, подогнаны под рост кнопок
+       тулбара (высота — правилами тулбара, шрифт 12→13px) */
     .ws-tt-tab {
-        padding: 3px 12px;
-        font-size: 12px;
+        padding: 6px 12px;
+        font-size: 13px;
         font-weight: 700;
+        font-family: inherit;
         color: var(--text-secondary, rgba(255,255,255,0.65));
         background: transparent;
         border: 1px solid transparent;
-        border-radius: 6px;
+        border-radius: 0;
         cursor: pointer;
         white-space: nowrap;
+        box-sizing: border-box;
     }
     .ws-tt-tab:hover { color: var(--text-primary, #e0e0e0); }
     .ws-tt-tab.active {
@@ -4878,18 +4906,15 @@
         background: rgba(76, 199, 113, 0.16);
         border-color: rgba(76, 199, 113, 0.4);
     }
-    [data-theme="light"] .ws-tt-tab.active { color: #1d7a37; }
-    .ws-tt-info {
-        flex: 1;
-        min-width: 0;
-        font-size: 11px;
-        color: var(--text-secondary, rgba(255,255,255,0.55));
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    [data-theme="light"] .ws-tt-tab {
+        background: rgba(240, 240, 240, 0.95);
+        color: #666;
+        border-color: rgba(0, 0, 0, 0.1);
     }
-    [data-theme="light"] .ws-tt-info { color: #777777; }
+    [data-theme="light"] .ws-tt-tab:hover { color: #333; }
+    [data-theme="light"] .ws-tt-tab.active { color: #1d7a37; }
     .ws-tt-refresh {
+        margin-left: auto;
         padding: 3px 9px;
         font-size: 11px;
         font-weight: 700;
@@ -4907,28 +4932,56 @@
         border-color: rgba(74, 143, 199, 0.55);
     }
     /* Тело панели — СКРОЛЛ-КОНТЕЙНЕР (X — широкие таблицы, Y —
-       синхронизирован со скроллом сетки). Полосы скрыты: скролл —
-       колесом/свайпом и синхронно с шахматкой; видимый ползунок
-       (заявка) — только горизонтальный ВНИЗУ ШАХМАТКИ (см.
-       ws-tt-gridwide) */
+       синхронизирован со скроллом сетки). Task 324 (заявка): ВНИЗУ
+       ШТОРКИ — ВИДИМАЯ ГОРИЗОНТАЛЬНАЯ ПОЛОСА ПРОКРУТКИ (как ползунок
+       внизу шахматки в ws-tt-gridwide): оглавления — одной строкой,
+       таблица шире панели — прокручивается этим ползунком.
+       Вертикальная полоса скрыта (webkit): скролл Y — колесом/
+       свайпом и синхронно с шахматкой; Firefox — тонкие полосы
+       (scrollbar-width: thin, обе оси — ограничение движка) */
     .ws-tt-body {
         flex: 1 1 auto;
         min-height: 0;
         overflow: auto;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
-        scrollbar-width: none;      /* Firefox */
-        -ms-overflow-style: none;   /* старый Edge / IE */
+        scrollbar-width: thin;     /* Firefox: тонкие, цвет — ниже */
+        scrollbar-color: #4a8fc7 rgba(255, 255, 255, 0.06);
+    }
+    [data-theme="light"] .ws-tt-body {
+        scrollbar-color: #6e8ba4 rgba(0, 0, 0, 0.08);
     }
     .ws-tt-body::-webkit-scrollbar {
-        width: 0;
-        height: 0;
-        display: none;
+        width: 0;      /* вертикальная полоса — скрыта (скролл синхронный) */
+        height: 12px;  /* горизонтальная — ВИДИМАЯ, как у шахматки */
+        display: block;
+    }
+    .ws-tt-body::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 6px;
+    }
+    .ws-tt-body::-webkit-scrollbar-thumb {
+        background: #4a8fc7;
+        border: 3px solid transparent;
+        border-radius: 6px;
+        background-clip: padding-box;
+    }
+    .ws-tt-body::-webkit-scrollbar-thumb:hover {
+        background: #6ea3d3;
+        background-clip: padding-box;
+    }
+    [data-theme="light"] .ws-tt-body::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.08);
+    }
+    [data-theme="light"] .ws-tt-body::-webkit-scrollbar-thumb {
+        background: #6e8ba4;
     }
     /* Таблица итогов: строки — ровно по строкам сетки (высоты
        копирует _syncTotalsRows); шапка — прилипшая к верху (как у
-       сетки), слова в шапке ПЕРЕНОСЯТСЯ (Task 322 — полные слова,
-       узкая боковая панель); итоговая строка — прилипшая к низу */
+       сетки); Task 324 (заявка): оглавления — ОДНОЙ СТРОКОЙ (слова
+       НЕ переносятся — «Больничный (Б)» в одну строку), широкая
+       таблица прокручивается нижним ползунком шторки; итоговая
+       строка — прилипшая к низу */
     .ws-tt-table {
         width: 100%;
         border-collapse: collapse;
@@ -4949,8 +5002,10 @@
         position: sticky;
         top: 0;
         z-index: 1;
-        white-space: normal;          /* слова шапки переносятся */
-        overflow-wrap: break-word;
+        /* Task 324: ОГЛАВЛЕНИЯ — ОДНОЙ СТРОКОЙ (заявка: «текст
+           оглавлений в шапке шторки разместить в одни строки»);
+           было white-space: normal + перенос (Task 322) */
+        white-space: nowrap;
         vertical-align: bottom;
     }
     [data-theme="light"] .ws-tt-table th,
@@ -5743,23 +5798,23 @@
         white-space: normal;   /* в узком столбике переносится строками */
         margin-top: 3px;
     }
-    /* Task 269 → Task 272 → Task 315 → Task 317: ДЕСКТОП — СТРОКА 1
-       бара (.ws-bar-row) делится на ТРИ РАВНЫЕ ЧАСТИ (grid 1fr 1fr
-       1fr): колонка кнопок в ЛЕВОЙ трети, окно мероприятий месяца —
-       в ЦЕНТРЕ, окно времени и праздников — в ПРАВОЙ. Task 317:
-       колонка кнопок — ТРИ РЯДА, межрядные зазоры 3px, суммарная
-       высота — РОВНО высота окон справа: 95px (три ряда ×
-       calc((95px − 6px) / 3) + два зазора 3px, border-box).
-       Скрытый ряд (нет правок / нет права записи) высоты НЕ
-       двигает: габариты кнопок постоянны, освободившийся слот
-       остаётся пустым — сетка под баром не прыгает. Кнопки и
-       селекты — во всю высоту своего ряда (≈29.7px). Рамка бара —
-       5px со всех сторон (базовое правило .ws-toolbar, НЕ меняется
-       ни в одной теме/брейкпоинте — заявка). Оба окна
-       растягиваются на свою 1/3 (width: auto выключает базовый
-       fit-content у календаря), высота 95px (Task 270), текст
-       внутри переносится на строку ниже, при большом объёме —
-       скролл внутри окна. */
+    /* Task 269 → Task 272 → Task 315 → Task 317 → Task 324: ДЕСКТОП —
+       СТРОКА 1 бара (.ws-bar-row) делится на ТРИ РАВНЫЕ ЧАСТИ (grid
+       1fr 1fr 1fr): колонка кнопок в ЛЕВОЙ трети, окно мероприятий
+       месяца — в ЦЕНТРЕ, окно времени и праздников — в ПРАВОЙ.
+       Task 324: колонка кнопок — ДВА РЯДА (заявка: «Сформировать»/
+       «Сохранить (N)»/«Отменить» — ОДНИМ НИЖНИМ рядом вместе с
+       «Итоги учёта»/«Месяц»/«Год»), межрядный зазор 3px, суммарная
+       высота — РОВНО высота окон справа: 95px (два ряда ×
+       calc((95px − 3px) / 2) + зазор 3px, border-box). Нижний ряд
+       всегда на виду (кнопки итогов видны всем ролям) — сетка под
+       баром НЕ прыгает при правках/смене роли. Кнопки и селекты —
+       во всю высоту своего ряда (46px). Рамка бара — 5px со всех
+       сторон (базовое правило .ws-toolbar, НЕ меняется ни в одной
+       теме/брейкпоинте — заявка). Оба окна растягиваются на свою
+       1/3 (width: auto выключает базовый fit-content у календаря),
+       высота 95px (Task 270), текст внутри переносится на строку
+       ниже, при большом объёме — скролл внутри окна. */
     @media (min-width: 1024px) {
         .ws-bar-row {
             display: grid;
@@ -5768,26 +5823,26 @@
             align-items: stretch;
         }
         .ws-toolbar-main {
-            /* ТРИ ряда кнопок — РОВНО высота окон справа */
+            /* ДВА ряда кнопок — РОВНО высота окон справа */
             height: 95px;
             flex-wrap: nowrap;
         }
-        .ws-toolbar-row,
-        .ws-actions-row,
-        .ws-generate-row {
+        .ws-toolbar-row {
             flex: 0 0 auto;
-            /* (95px − два зазора 3px) / три ряда ≈ 29.7px — ровно,
-               без переполнения (border-box у всех элементов) */
-            height: calc((95px - 6px) / 3);
+            /* (95px − зазор 3px) / два ряда = 46px — ровно, без
+               переполнения (border-box у всех элементов) */
+            height: calc((95px - 3px) / 2);
             flex-wrap: nowrap;
             align-items: stretch;
             overflow: hidden;
         }
+        /* нижний ряд: разделитель — во всю высоту ряда */
+        .ws-bottom-row .ws-tb-sep { align-self: stretch; }
         .ws-month-sel, .ws-year-sel, .ws-generate-btn, .ws-save-btn,
-        .ws-cancel-btn, .ws-refresh-btn {
+        .ws-cancel-btn, .ws-refresh-btn, .ws-totals-btn, .ws-tt-tab {
             height: 100%;          /* во всю высоту своего ряда */
             padding: 4px 12px;     /* компактнее базовых 6px — текст
-                                       14px входит в ряд ≈29.7px */
+                                       14px входит в ряд 46px */
             white-space: nowrap;
         }
         .ws-events-panel,
@@ -12545,17 +12600,30 @@
                      ПЕРЕНОСИТСЯ на строку ниже (white-space:
                      normal), при большом объёме — скролл внутри
                      окна (высота 95px, как у календаря). -->
+                <!-- Task 324 (заявка): колонка кнопок — ДВА РЯДА.
+                     Ряд 1 — селекты месяца/года + «Обновить»; ряд 2
+                     (НИЖНИЙ, всегда на виду) — действия шахматки и
+                     итоги учёта В ОДНУ СТРОКУ: «Сформировать» /
+                     «Сохранить (N)» / «Отменить» (права/наличие правок
+                     — как прежде), разделитель, кнопка-переключатель
+                     «Итоги учёта» (боковая шторка) и вкладки итогов
+                     «Месяц»/«Год» — СПРАВА от неё. Вертикальный
+                     бар-ручка у правого края экрана (Task 323)
+                     УДАЛЁН — открывает/закрывает шторку эта кнопка
+                     (или ✕ в шапке шторки). -->
                 <div class="ws-bar-row">
                 <div class="ws-toolbar-main">
-                    <!-- Task 317: колонка кнопок левой трети — ТРИ РЯДА:
-                         ряд 1 — селекты месяца/года и «Обновить»; ряд 2 —
-                         «Сохранить»/«Отменить»; ряд 3 — «Сформировать».
-                         На десктопе три ряда и два зазора по 3px занимают
-                         РОВНО высоту окон справа (95px); рамка бара —
-                         5px со всех сторон (не меняется). Штамп «данные
-                         от …» из бара УБРАН — строка живёт в
-                         информационном окне кнопки «Обновить»
-                         (#wsRefreshTip, появляется при наведении). -->
+                    <!-- Task 317 → 324: колонка кнопок левой трети — ДВА
+                         РЯДА: ряд 1 — селекты месяца/года и «Обновить»;
+                         ряд 2 (НИЖНИЙ) — «Сформировать»/«Сохранить»/
+                         «Отменить» + блок «Итоги учёта»/«Месяц»/«Год»
+                         (заявка Task 324: одна строка). На десктопе два
+                         ряда и зазор 3px занимают РОВНО высоту окон
+                         справа (95px); рамка бара — 5px со всех сторон
+                         (не меняется). Штамп «данные от …» из бара
+                         УБРАН — строка живёт в информационном окне
+                         кнопки «Обновить» (#wsRefreshTip, появляется
+                         при наведении). -->
                     <div class="ws-toolbar-row" id="wsSelectsRow">
                     <select id="wsMonthSel" class="ws-month-sel" onchange="WorkSchedule.onMonthChange()"></select>
                     <select id="wsYearSel" class="ws-year-sel" onchange="WorkSchedule.onMonthChange()"></select>
@@ -12603,26 +12671,27 @@
                          нормы) — см. WorkSchedule._refreshProdCalendarQuiet
                          в _doGenerateMonth/_doGenerateYear. Нормы и
                          праздники месяца — в окошке #wsCalPanel справа -->
-                    <!-- Task 315/317: ряд 2 — «Сохранить» и «Отменить».
-                         Появляются при вводе изменений в ячейки шахматки
-                         (локальные правки _PENDING, только редакторам):
-                         «Сохранить» — пакетная отправка на сервер
-                         (saveAll, Task 251), «Отменить» — сброс всех
-                         несохранённых правок, ячейки возвращаются к
-                         данным сервера (cancelAll, Task 315). Task 317:
-                         ряд — ВТОРОЙ в колонке кнопок (под рядом 1),
-                         фиксированная высота — как у всех рядов. -->
-                    <div class="ws-actions-row" id="wsActionsRow" hidden>
+                    <!-- Task 324: НИЖНИЙ РЯД кнопок — В ОДНУ СТРОКУ
+                         (заявка: «кнопки “Сформировать”, “Сохранить
+                         (N)”, “Отменить” — в нижней части бара в один
+                         ряд»). «Сформировать» — только редакторам
+                         (право записи); «Сохранить (N)»/«Отменить» —
+                         при несохранённых правках (N — счётчик, живой);
+                         затем разделитель и блок ИТОГОВ УЧЁТА:
+                         кнопка-переключатель «Итоги учёта» (была
+                         вертикальной ручкой справа, Task 323) +
+                         вкладки «Месяц»/«Год» СПРАВА от неё (переехали
+                         из шапки шторки). Ряд всегда на виду (кнопки
+                         итогов видны всем ролям) — пустых скачков
+                         высоты бара нет -->
+                    <div class="ws-toolbar-row ws-bottom-row" id="wsBottomRow">
+                        <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateYear()" title="Сформировать шахматку на выбранный месяц или весь год (производственный календарь обновится автоматически) — откроется диалог подтверждения" hidden>Сформировать</button>
                         <button type="button" id="wsSaveBtn" class="ws-save-btn" onclick="WorkSchedule.saveAll()" hidden>Сохранить</button>
                         <button type="button" id="wsCancelBtn" class="ws-cancel-btn" onclick="WorkSchedule.cancelAll()" title="Отменить ввод изменений: все несохранённые правки шахматки сбрасываются, ячейки возвращаются к данным сервера" hidden>Отменить</button>
-                    </div>
-                    <!-- Task 315/317: ряд 3 — «Сформировать» (генерация
-                         записей на сервере, только редакторам; Task 306:
-                         подтверждённое действие также тихо обновляет
-                         производственный календарь). Task 317: ряд —
-                         ТРЕТИЙ в колонке кнопок, под рядом 2. -->
-                    <div class="ws-generate-row" id="wsGenerateRow" hidden>
-                        <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateYear()" title="Сформировать шахматку на выбранный месяц или весь год (производственный календарь обновится автоматически) — откроется диалог подтверждения" hidden>Сформировать</button>
+                        <span class="ws-tb-sep" aria-hidden="true"></span>
+                        <button type="button" id="wsTotalsBtn" class="ws-totals-btn" onclick="WorkSchedule.toggleTotals()" aria-pressed="false" title="Итоги учёта — дни и часы: боковая панель рядом с шахматкой">Итоги учёта</button>
+                        <button type="button" id="wsTtTabMonth" class="ws-tt-tab active" onclick="WorkSchedule.setTotalsTab('month')" title="Итоги учёта — вкладка «Месяц»: дни, часы, смены и неявки открытого месяца">Месяц</button>
+                        <button type="button" id="wsTtTabYear" class="ws-tt-tab" onclick="WorkSchedule.setTotalsTab('year')" title="Итоги учёта — вкладка «Год»: явки и часы по 12 месяцам + суммы">Год</button>
                     </div>
                 </div>
                 <!-- Task 315: окно 2 бара — данные ВСЕХ мероприятий
@@ -12692,36 +12761,34 @@
                      разметку при каждой загрузке месяца -->
                 <div class="flow-loading" id="wsEmpty"><div class="flow-loading-text">Загрузка<span class="flow-loading-dots"><span>.</span><span>.</span><span>.</span></span></div></div>
             </div>
-            <!-- Task 321→323: ИТОГИ УЧЁТА. Бар-переключатель — ВЕРТИКАЛЬНАЯ
-                 полоса у ПРАВОГО края рабочей области (клик/Enter/Пробел —
-                 раскрыть/свернуть шторку); раскрытая панель выдвигается
-                 СПРАВА НАЛЕВО на половину рабочей области, рядом с
-                 шахматкой: итоги МОЖНО сверять с сеткой, не закрывая
-                 её (внизу шахматки появляется горизонтальный ползунок
-                 — прокрутка дней под панелью). Вкладка «Месяц» —
-                 дни/часы/смены/неявки по каждому сотруднику открытого
-                 месяца (данные того же вида, что в сетке: записи +
-                 локальные правки — итоги обновляются вместе с
-                 шахматкой); вкладка «Год» — 12 месяцев × явки/часы +
-                 годовые суммы (12 запросов listEntries, кэш в памяти;
-                 архивный персонал — с пометкой и списком сотрудников,
-                 строки не обязаны совпадать со строками сетки). -->
+            <!-- Task 321→323→324: ИТОГИ УЧЁТА. ОТКРЫТИЕ/ЗАКРЫТИЕ —
+                 кнопка-переключатель «Итоги учёта» в НИЖНЕМ ряду
+                 кнопок тулбара (Task 324: вертикальный бар-ручка у
+                 правого края УДАЛЁН по заявке) и ✕ в шапке шторки.
+                 Раскрытая шторка выдвигается СПРАВА НАЛЕВО на
+                 половину рабочей области, рядом с шахматкой: итоги
+                 МОЖНО сверять с сеткой, не закрывая её (внизу
+                 шахматки — горизонтальный ползунок, прокрутка дней
+                 под панелью; ВНУТРИ шторки — свой нижний ползунок
+                 для широких таблиц). Вкладка «Месяц» — дни/часы/
+                 смены/неявки по каждому сотруднику открытого месяца
+                 (данные того же вида, что в сетке: записи + локальные
+                 правки — итоги обновляются вместе с шахматкой);
+                 вкладка «Год» — 12 месяцев × явки/часы + годовые
+                 суммы (12 запросов listEntries, кэш в памяти;
+                 архивный персонал — с пометкой, строки не обязаны
+                 совпадать со строками сетки). Вкладки «Месяц»/«Год»
+                 (Task 324) — в тулбаре, СПРАВА от кнопки «Итоги
+                 учёта»; пояснительная инфо-строка из шапки шторки
+                 УДАЛЕНА (норма/месяц — в окне календаря тулбара,
+                 счётчик правок — на кнопке «Сохранить (N)»);
+                 в шапке остались только ✕, аварийное ⚠ (сбои
+                 загрузки года) и «Обновить» (год). -->
             <div id="wsTotalsDrawer" class="ws-tt-drawer">
-                <div id="wsTotalsBar" class="ws-totals-vbar" onclick="WorkSchedule.toggleTotals()"
-                     role="button" tabindex="0" aria-expanded="false"
-                     onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); WorkSchedule.toggleTotals(); }"
-                     title="Итоги учёта — дни и часы: раскрыть панель рядом с шахматкой">
-                    <i class="ws-totals-bar-chev" id="wsTotalsChev" aria-hidden="true">◂</i>
-                    <span class="ws-tt-vwrap">
-                        <span class="ws-totals-bar-cap">Итоги учёта</span>
-                        <span class="ws-totals-bar-sub">дни и часы</span>
-                    </span>
-                </div>
                 <div id="wsTotalsPanel" class="ws-totals-panel" hidden>
-                    <div class="ws-tt-tabs">
-                        <button type="button" id="wsTtTabMonth" class="ws-tt-tab active" onclick="WorkSchedule.setTotalsTab('month')">Месяц</button>
-                        <button type="button" id="wsTtTabYear" class="ws-tt-tab" onclick="WorkSchedule.setTotalsTab('year')">Год</button>
-                        <span class="ws-tt-info" id="wsTtInfo"></span>
+                    <div class="ws-tt-head">
+                        <button type="button" id="wsTtClose" class="ws-tt-close" onclick="WorkSchedule.toggleTotals()" aria-label="Закрыть панель итогов" title="Закрыть панель итогов">✕</button>
+                        <span class="ws-tt-warn" id="wsTtWarn" hidden></span>
                         <button type="button" id="wsTtRefresh" class="ws-tt-refresh" onclick="WorkSchedule.reloadTotals()" title="Перезагрузить данные итогов с сервера" hidden>Обновить</button>
                     </div>
                     <div id="wsTtBody" class="ws-tt-body"></div>
@@ -36640,13 +36707,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             var genBtn = document.getElementById('wsGenerateBtn');
             if (genBtn) genBtn.hidden = !this._canEdit;
-            // Task 315: строка 3 тулбара (.ws-generate-row с кнопкой
-            // «Сформировать») скрыта/показана синхронно с кнопкой по
-            // праву записи — пустая строка не занимает места в баре
-            // (скрытие и кнопки, и строки — двойное, на случай
-            // рассинхрона состояний)
-            var genRow = document.getElementById('wsGenerateRow');
-            if (genRow) genRow.hidden = !this._canEdit;
+            // Task 324: ряд генерации (.ws-generate-row) УДАЛЁН — кнопка
+            // «Сформировать» живёт в НИЖНЕМ ряду #wsBottomRow вместе с
+            // «Сохранить»/«Отменить» и блоком итогов (ряд всегда на
+            // виду — кнопки итогов видны всем ролям); скрывается только
+            // сама кнопка — по праву записи
 
             var self = this;
             // Task 317: информационное окно «данные от …» кнопки «Обновить»
@@ -37798,19 +37863,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // ============================================================
-        // Task 321: ИТОГИ УЧЁТА — дни и рабочее время по итогам
-        // месяца и года (заявка). Секция ПОД шахматкой, свёрнута по
-        // умолчанию (бар-переключатель #wsTotalsBar → панель
-        // #wsTotalsPanel с вкладками «Месяц»/«Год») — работе с
-        // месячным графиком не мешает: сетка занимает всю высоту,
-        // пока панель закрыта; при открытии панель ограничена
-        // 46vh со своим скроллом, строки шахматки пересчитывает
-        // _fitGrid (toggleTotals). Месяц считается по тому же
-        // эффективному виду, что и сетка (записи + несохранённые
-        // правки — итоги обновляются живьём при правках ячеек);
-        // год — 12 запросов listEntries + справочник сотрудников с
-        // архивом, кэш в памяти (_YEAR_DATA; сбрасывается любым
-        // принудительным обновлением данных).
+        // Task 321→323→324: ИТОГИ УЧЁТА — дни и рабочее время по
+        // итогам месяца и года (заявка). БОКОВАЯ ШТОРКА справа от
+        // шахматки, свёрнута по умолчанию (открытие/закрытие —
+        // кнопка-переключатель «Итоги учёта» в НИЖНЕМ ряду кнопок
+        // тулбара, Task 324, и ✕ шапки) — работе с месячным
+        // графиком не мешает: сетка занимает всю рабочую область,
+        // пока шторка закрыта; открытие выдвигает панель на
+        // ПОЛОВИНУ области, строки шахматки пересчитывает _fitGrid
+        // (toggleTotals). Вкладки «Месяц»/«Год» (Task 324) — в
+        // тулбаре, справа от кнопки «Итоги учёта». Месяц считается
+        // по тому же эффективному виду, что и сетка (записи +
+        // несохранённые правки — итоги обновляются живьём при
+        // правках ячеек); год — 12 запросов listEntries + справочник
+        // сотрудников с архивом, кэш в памяти (_YEAR_DATA;
+        // сбрасывается любым принудительным обновлением данных).
         // ============================================================
 
         // Часы рабочего времени кода статуса: «Д»/«Н» — 12-час
@@ -37979,34 +38046,31 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return String(n).replace('.', ',');
         },
 
-        // Бар-ручка: развернуть/свернуть БОКОВУЮ ШТОРКУ итогов.
-        // Task 323 (заявка): шторка ПРИ СОБОЙ, справа от шахматки —
-        // бар переносится к ПРАВОМУ краю рабочей области (текст по
-        // вертикали), открытие выдвигает панель СПРАВА НАЛЕВО на
-        // ПОЛОВИНУ рабочей области (CSS: класс ws-tt-open на
-        // странице → margin-right шторки анимируется к 0, сетка
-        // сжимается до левой половины). Сетке включается ШИРОКИЙ
-        // РЕЖИМ (класс ws-tt-gridwide): природная ширина колонок +
-        // горизонтальный ПОЛЗУНОК внизу шахматки — дни
-        // прокручиваются ПОД шторкой. При сворачивании широкий
-        // режим держится до конца анимации (0,28 с — колонки не
-        // «сплющиваются» мгновенно), затем _ttCloseCleanup возвращает
-        // сетку в обычный вид.
+        // Кнопка-переключатель «Итоги учёта» (Task 324: была
+        // вертикальной ручкой у правого края, теперь — в НИЖНЕМ ряду
+        // кнопок тулбара; закрыть можно и ✕ шапки шторки):
+        // развернуть/свернуть БОКОВУЮ ШТОРКУ итогов. Шторка ПРИ
+        // СОБОЙ, справа от шахматки: открытие выдвигает панель
+        // СПРАВА НАЛЕВО на ПОЛОВИНУ рабочей области (CSS: класс
+        // ws-tt-open на странице → margin-right шторки анимируется
+        // к 0, сетка сжимается до левой половины; свёрнута — уезжает
+        // за правый край ПОЛНОСТЬЮ). Сетке включается ШИРОКИЙ РЕЖИМ
+        // (класс ws-tt-gridwide): природная ширина колонок +
+        // горизонтальный ПОЛЗУНОК внизу шахматки — дни прокручиваются
+        // ПОД шторкой. При сворачивании широкий режим держится до
+        // конца анимации (0,28 с — колонки не «сплющиваются»
+        // мгновенно), затем _ttCloseCleanup возвращает сетку в
+        // обычный вид. Кнопка тулбара отражает состояние aria-pressed
+        // («нажатая» с синей заливкой).
         toggleTotals: function() {
             this._totalsOpen = !this._totalsOpen;
-            var bar = document.getElementById('wsTotalsBar');
+            var btn = document.getElementById('wsTotalsBtn');
             var panel = document.getElementById('wsTotalsPanel');
             var page = document.getElementById('page-work-schedule');
-            var chev = document.getElementById('wsTotalsChev');
-            if (bar) {
-                if (bar.setAttribute) bar.setAttribute('aria-expanded',
+            if (btn) {
+                if (btn.setAttribute) btn.setAttribute('aria-pressed',
                     this._totalsOpen ? 'true' : 'false');
-                if (bar.classList && bar.classList.toggle) {
-                    bar.classList.toggle('ws-totals-open', this._totalsOpen);
-                }
             }
-            // шеврон барa: ◂ — шторка выдвинется влево, ▸ — вернётся
-            if (chev) chev.textContent = this._totalsOpen ? '▸' : '◂';
             if (page && page.classList) {
                 if (page.classList.add) {
                     if (this._totalsOpen) {
@@ -38076,9 +38140,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 && window.matchMedia('(min-width: 1024px)').matches;
         },
 
-        // Task 323: шапка сетки = заголовочная зона панели итогов
-        // (строка вкладок + шапка таблицы итогов) — строки итогов
-        // начинаютcя ровно со строк сетки. Высота пишется в
+        // Task 323→324: шапка сетки = заголовочная зона панели итогов
+        // (шапка шторки .ws-tt-head [Task 324: ✕ + ⚠ + «Обновить»] +
+        // шапка таблицы итогов) — строки итогов идут ровно
+        // по строкам сетки. Высота пишется в
         // переменную --ws-tt-head-h (CSS ws-tt-gridwide); если
         // изменилась — строки сетки пересчитываются (_fitGrid)
         _applyTtHeadVar: function() {
@@ -38088,10 +38153,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!page || !panel || !page.style || !panel.getBoundingClientRect) {
                 return false;
             }
-            var tabs = panel.querySelector('.ws-tt-tabs');
+            var head = panel.querySelector('.ws-tt-head');
             var thead = panel.querySelector('.ws-tt-table thead');
-            if (!tabs || !thead || !tabs.getBoundingClientRect) return false;
-            var h = Math.ceil(tabs.getBoundingClientRect().height
+            if (!head || !thead || !head.getBoundingClientRect) return false;
+            var h = Math.ceil(head.getBoundingClientRect().height
                 + thead.getBoundingClientRect().height);
             if (h <= 0) return false;
             var cur = page.style.getPropertyValue('--ws-tt-head-h');
@@ -38175,7 +38240,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
         },
 
-        // Вкладка панели: «month» (по умолчанию) / «year». Кнопка
+        // Вкладка панели (Task 324: кнопки «Месяц»/«Год» — в НИЖНЕМ
+        // ряду кнопок тулбара, СПРАВА от кнопки «Итоги учёта»):
+        // «month» (по умолчанию) / «year». Клик по вкладке ЗАКРЫТОЙ
+        // шторки — открывает её (сразу с нужной вкладкой). Кнопка
         // «Обновить» — только у года (месячные итоги живут данными
         // сетки и обновляются вместе с ней)
         setTotalsTab: function(tab) {
@@ -38190,7 +38258,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 yb.classList.toggle('active', this._totalsTab === 'year');
             }
             if (rBtn) rBtn.hidden = (this._totalsTab !== 'year');
-            this._renderTotals();
+            // закрытая шторка: вкладка открывает её (перерисовку
+            // выполнит toggleTotals уже с выбранной вкладкой)
+            if (!this._totalsOpen) {
+                this.toggleTotals();
+            } else {
+                this._renderTotals();
+            }
         },
 
         // Перезагрузка данных итогов (кнопка в панели): год — кэш
@@ -38205,6 +38279,24 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // _renderGrid — правки ячеек, «Обновить», смена месяца)
         _renderTotalsIfOpen: function() {
             if (this._totalsOpen) this._renderTotals();
+        },
+
+        // Task 324: аварийная строка ⚠ шапки шторки — только
+        // ИСКЛЮЧИТЕЛЬНЫЕ состояния (сбои загрузки месяцев года,
+        // отсутствие справочника). Обычная пояснительная инфо
+        // (месяц/норма/правки/«явки-часы по месяцам») — УДАЛЕНА из
+        // шапки по заявке; пустой текст скрывает строку
+        _setTtWarn: function(text) {
+            var el = document.getElementById('wsTtWarn');
+            if (!el) return;
+            var t = String(text || '');
+            el.textContent = t;
+            if (t) {
+                if (el.setAttribute) el.setAttribute('title', t);
+                el.hidden = false;
+            } else {
+                el.hidden = true;
+            }
         },
 
         _renderTotals: function() {
@@ -38222,39 +38314,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // «Переработка»; прочие коды
         // (И/ОБ/ПЗ/*/·) — отдельная колонка. Task 322: шапка —
         // ПОЛНЫМИ СЛОВАМИ с кодом в скобках («День (Д)», «Отпуск
-        // (ОТ)»…) вместо одиночных букв. Инфо-строка: месяц,
-        // норма производственного календаря (40-час), пометка о
-        // несохранённых правках.
+        // (ОТ)»…) вместо одиночных букв. Task 324: пояснительная
+        // ИНФО-СТРОКА из шапки шторки УДАЛЕНА по заявке («сентябрь
+        // 2026 г. · норма … · включая несохранённые правки (N)»):
+        // месяц/норма — в окошке календаря тулбара, счётчик правок —
+        // на кнопке «Сохранить (N)»; авариных состояний у месяца нет
         _renderTotalsMonth: function() {
             var body = document.getElementById('wsTtBody');
             if (!body) return;
-            var infoEl = document.getElementById('wsTtInfo');
-            var monthsNom = ['январь','февраль','март','апрель','май','июнь',
-                             'июль','август','сентябрь','октябрь','ноябрь','декабрь'];
+            this._setTtWarn('');
             var entries = this._totalsEffectiveEntries();
             // Task 322: типы персонала — переработка д/н (сменный 12,
             // дневной — часы правки ячейки)
             var agg = this._totalsAgg(entries, this._empTypeMap(this._EMPLOYEES));
             var z = this._totalsZero();
-
-            var info = this._esc(monthsNom[this._month - 1]) + ' ' + this._year + ' г.';
-            try {
-                if (typeof ProdCalendar !== 'undefined' && ProdCalendar.monthStats) {
-                    var st = ProdCalendar.monthStats(this._year, this._month);
-                    if (st && st.workDays !== undefined) {
-                        info += ' · норма: ' + st.workDays + ' раб. дн · ' +
-                                this._fmtTotalsNum(st.hours40) + ' ч (40-час)';
-                    }
-                }
-            } catch (e) {}
-            var pendN = Object.keys(this._PENDING || {}).length;
-            if (pendN) info += ' · включая несохранённые правки (' + pendN + ')';
-            // Task 323: строка вкладок — ОДНОстрочная (высота зоны
-            // стабильна), полная инфо — в тултипе
-            if (infoEl) {
-                infoEl.textContent = info;
-                if (infoEl.setAttribute) infoEl.setAttribute('title', info);
-            }
 
             if (!this._EMPLOYEES.length) {
                 body.innerHTML = '<div class="ws-tt-empty">Нет активных сотрудников.</div>';
@@ -38401,10 +38474,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // строкам шахматки), архивный персонал — ПОД ними;
         // таблица с классом ws-tt-year — колонка «Сотрудник» видна и
         // на десктопе (строки архива не совпадают со строками сетки,
-        // имена нужны); итоговая строка — tfoot, прилипшая к низу
+        // имена нужны); итоговая строка — tfoot, прилипшая к низу.
+        // Task 324: пояснительная инфо-строка шапки УДАЛЕНА (заявка);
+        // сбои года (не загружено месяцев / нет справочника) —
+        // аварийной строкой ⚠ #wsTtWarn в шапке (_setTtWarn)
         _renderTotalsYearTable: function() {
             var body = document.getElementById('wsTtBody');
-            var infoEl = document.getElementById('wsTtInfo');
             if (!body) return;
             var md = this._YEAR_DATA;
             if (!md || md.year !== this._year) return;
@@ -38446,18 +38521,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 monthTotals[m] = ag.grand;
             }
 
-            var info = this._year + ' г. · явки/часы по месяцам';
+            // Task 324: аварийное ⚠ шапки — ТОЛЬКО исключительные
+            // состояния (сбои месяцев/справочника); обычная инфо
+            // («N г. · явки/часы по месяцам») удалена из шапки
+            var warn = '';
             if (md.failed) {
-                info += ' · ⚠ не загружено месяцев: ' + md.failed +
+                warn = '⚠ не загружено месяцев: ' + md.failed +
                         ' — нажмите «Обновить»';
             }
             if (!md.employees || !md.employees.length) {
-                info += ' · справочник не загружен — только активные';
+                warn += (warn ? ' · ' : '⚠ ') +
+                        'справочник не загружен — только активные';
             }
-            if (infoEl) {
-                infoEl.textContent = info;
-                if (infoEl.setAttribute) infoEl.setAttribute('title', info);
-            }
+            this._setTtWarn(warn);
 
             if (!employees.length) {
                 body.innerHTML = '<div class="ws-tt-empty">Нет сотрудников.</div>';
@@ -39964,9 +40040,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Кнопка «Сохранить» в тулбаре: видна только редакторам и только
         // при наличии несохранённых правок; текст — со счётчиком.
-        // Task 315: рядом с «Сохранить» появляется «Отменить» (отмена
-        // ввода изменений — cancelAll); вся СТРОКА 2 (.ws-actions-row)
-        // скрыта без правок — не занимает места в баре.
+        // Task 315: рядом с «Сохранить» появилась «Отменить» (отмена
+        // ввода изменений — cancelAll). Task 324: обе кнопки — в
+        // НИЖНЕМ ряду #wsBottomRow В ОДНУ СТРОКУ с «Сформировать» и
+        // блоком итогов (заявка) — СТРОКА больше НЕ скрывается без
+        // правок: в ряду всегда есть кнопки «Итоги учёта»/«Месяц»/
+        // «Год» (видны всем ролям); скрываются только сами кнопки
+        // «Сохранить»/«Отменить»
         _updateSaveBtn: function() {
             var btn = document.getElementById('wsSaveBtn');
             if (!btn) return;
@@ -39976,8 +40056,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             btn.textContent = n > 0 ? 'Сохранить (' + n + ')' : 'Сохранить';
             var cancelBtn = document.getElementById('wsCancelBtn');
             if (cancelBtn) cancelBtn.hidden = !show;
-            var row = document.getElementById('wsActionsRow');
-            if (row) row.hidden = !show;
         },
 
         // Пакетное сохранение: все накопленные правки отправляются на сервер
