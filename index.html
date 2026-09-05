@@ -4436,6 +4436,97 @@
         color: var(--accent-blue, #4a8fc7);
         font-weight: 600;
     }
+    /* Task 322: МАЛАЯ ФОРМА ЧАСОВ в попапе ячейки — выбор «д»/«н»
+       дневным персоналом: строка кода (свотч/код/название — как в
+       списке), поле ввода часов (0,5..24), кнопки «Готово»/
+       «Назад к кодам», подсказка. Стили — в духе попапа */
+    .ws-dn-form {
+        padding: 8px 10px 4px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .ws-dn-code {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+    .ws-dn-code .ws-popup-name {
+        flex: 1;
+        min-width: 0;
+    }
+    .ws-dn-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-primary, #e0e0e0);
+    }
+    .ws-dn-input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        font-size: 14px;
+        color: var(--text-primary, #e0e0e0);
+        background: var(--bg-tertiary, #0e1621);
+        border: 1px solid var(--card-border, rgba(255,255,255,0.14));
+        border-radius: 6px;
+        outline: none;
+    }
+    .ws-dn-input:focus {
+        border-color: var(--accent-blue, #4a8fc7);
+    }
+    [data-theme="light"] .ws-dn-input {
+        background: #f7f5ef;
+        border-color: rgba(0, 0, 0, 0.22);
+        color: #1f2937;
+    }
+    .ws-dn-buttons {
+        display: flex;
+        gap: 8px;
+    }
+    .ws-dn-ok {
+        flex: 1;
+        padding: 7px 12px;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: #ffffff;
+        background: rgba(76, 199, 113, 0.85);
+        border: 1px solid rgba(76, 199, 113, 0.55);
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .ws-dn-ok:hover { background: rgba(76, 199, 113, 1); }
+    .ws-dn-back {
+        flex: 1;
+        padding: 7px 12px;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--text-secondary, rgba(255,255,255,0.65));
+        background: transparent;
+        border: 1px solid var(--card-border, rgba(255,255,255,0.14));
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .ws-dn-back:hover {
+        color: var(--text-primary, #e0e0e0);
+        background: rgba(255, 255, 255, 0.06);
+    }
+    [data-theme="light"] .ws-dn-ok { color: #ffffff; }
+    [data-theme="light"] .ws-dn-back {
+        color: #555555;
+        border-color: rgba(0, 0, 0, 0.18);
+    }
+    [data-theme="light"] .ws-dn-back:hover {
+        color: #1f2937;
+        background: rgba(0, 0, 0, 0.05);
+    }
+    .ws-dn-hint {
+        font-size: 10.5px;
+        line-height: 1.4;
+        color: var(--text-secondary, rgba(255,255,255,0.5));
+        padding-bottom: 4px;
+    }
+    [data-theme="light"] .ws-dn-hint { color: #777777; }
     /* Task 318: строка «Уволить…» в карточке сотрудника — опасное
        действие: КРАСНАЯ (как ✕ удаления мероприятия), а не
        акцент-синяя; наведение — красная подложка, не синяя */
@@ -4590,11 +4681,12 @@
     /* ============================================================
        Task 321: ИТОГИ УЧЁТА — сворачиваемая секция под шахматкой
        (дни/часы по итогам месяца и года). Бар-переключатель —
-       тонкая полоса под сеткой (клик — развернуть/свернуть панель);
-       панель — ограничена по высоте, скролл внутри, НЕ наезжает на
-       шахматку: страница остаётся flex-колонкой, сетка сжимается
-       (_fitGrid пересчитывает строки). Дизайн — в духе бара
-       мероприятий (Task 315): панели-«окна» с рамками карточек.
+       тонкая полоса под сеткой (клик — развернуть/свернуть панель).
+       Task 322 (заявка): раскрытая панель — НА ВСЮ ВЫСОТУ ШАХМАТКИ,
+       до бара с кнопками: вид переключается (сетка скрывается —
+       класс ws-tt-open на странице, панель забирает её место
+       flex: 1, таблица итогов со ЗЕБРОЙ строк занимает всю
+       область; сворачивание возвращает шахматку).
        ============================================================ */
     .ws-totals-bar {
         display: flex;
@@ -4652,8 +4744,12 @@
     }
     [data-theme="light"] .ws-totals-bar-cap { color: #1f2937; }
     [data-theme="light"] .ws-totals-bar-sub { color: #777777; }
-    /* Панель итогов: рамка-карточка, высота не больше половины окна —
-       шахматка сверху остаётся рабочей; внутри — свой скролл */
+    /* Task 322: панель итогов — рамка-карточка. НА ДЕСКТОПЕ —
+       ВСЮ ВЫСОТУ шахматки (flex: 1 + min-height: 0 в flex-колонке
+       страницы; класс ws-tt-open на #page-work-schedule скрывает
+       сетку — панель занимает её место до бара с кнопками),
+       внутри — свой скролл; на мобиле (<1024) — высокий блок
+       ≤70vh со своим скроллом (страница скроллится как обычно) */
     .ws-totals-panel {
         flex-shrink: 0;
         margin: 0 0 6px 0;
@@ -4661,7 +4757,7 @@
         border: 1px solid var(--card-border, rgba(255,255,255,0.08));
         border-radius: 8px;
         padding: 6px 10px 8px 10px;
-        max-height: 46vh;
+        max-height: 70vh;
         overflow-y: auto;
         overscroll-behavior: contain;
     }
@@ -4669,6 +4765,19 @@
     [data-theme="light"] .ws-totals-panel {
         background: #e9e7de;
         border-color: rgba(0, 0, 0, 0.12);
+    }
+    /* Task 322: раскрытая панель на десктопе — вся высота
+       шахматки (страница — flex-колонка: крошки → тулбар → бар
+       итогов → панель до низа окна); сетка скрыта классом ниже */
+    @media (min-width: 1024px) {
+        #page-work-schedule.ws-tt-open .ws-totals-panel {
+            flex: 1 1 auto;
+            min-height: 0;
+            max-height: none;
+        }
+        /* шахматка скрыта — итоги вместо неё (бар итогов
+           поднимается к тулбару, панель — до низа окна) */
+        #page-work-schedule.ws-tt-open .ws-grid-wrap { display: none; }
     }
     /* Строка вкладок Месяц/Год + инфо + мини-«Обновить» (год) */
     .ws-tt-tabs {
@@ -4777,6 +4886,22 @@
     .ws-tt-table .ws-tt-num { font-variant-numeric: tabular-nums; }
     .ws-tt-table td.ws-tt-hours { font-weight: 700; color: #4ac771; }
     [data-theme="light"] .ws-tt-table td.ws-tt-hours { color: #1d7a37; }
+    /* Task 322: колонка «Переработка» — часы кодов д/н, янтарным
+       (как пометка «архив») — отличается от зелёных «Часов» */
+    .ws-tt-table td.ws-tt-over { font-weight: 700; color: #e0a23c; }
+    [data-theme="light"] .ws-tt-table td.ws-tt-over { color: #a06a13; }
+    /* Task 322 (заявка): ЗЕБРА строк таблицы итогов — чётные строки
+       заметно светлее фона панели (визуальное чередование как у
+       табеля Т-12; сила подбиралась по VLM-проверке: деликатный
+       3,5% тинт глазом не читался — 9% виден отчётливо);
+       итоговая строка красится своей заливкой (правило ниже, её
+       td имеют собственный фон — зебра их не трогает) */
+    .ws-tt-table tbody tr:nth-child(even) {
+        background: rgba(255, 255, 255, 0.09);
+    }
+    [data-theme="light"] .ws-tt-table tbody tr:nth-child(even) {
+        background: rgba(0, 0, 0, 0.07);
+    }
     .ws-tt-table tr.ws-tt-total td {
         font-weight: 700;
         border-top: 2px solid rgba(74, 143, 199, 0.5);
@@ -15170,6 +15295,17 @@
         <div class="flow-input-group">
             <label class="flow-input-label" for="wsCellSubstitute">Замещает (таб. №)</label>
             <input type="text" id="wsCellSubstitute" class="flow-input-field-small" placeholder="— (необязательно)" autocomplete="off">
+        </div>
+    </div>
+    <!-- Task 322: ЧАСЫ кода «д»/«н» (работа в вых./праздник) —
+         переработка дневного персонала считается по этим часам
+         (сменному — 12 ч, поле игнорируется). Заполняется при
+         правке существующей д/н-записи; пусто = не указано
+         (фолбэк 8 ч в итогах) -->
+    <div class="flow-input-row">
+        <div class="flow-input-group" style="flex:1 1 100%;">
+            <label class="flow-input-label" for="wsCellHours">Часы (для кодов д/н — переработка)</label>
+            <input type="text" inputmode="decimal" id="wsCellHours" class="flow-input-field-small" placeholder="— (необязательно)" autocomplete="off" enterkeyhint="done">
         </div>
     </div>
     <textarea id="wsCellComment" class="flow-comment-field" rows="2" maxlength="500" placeholder="Комментарий (необязательно)" autocomplete="off"></textarea>
@@ -37463,8 +37599,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // принудительным обновлением данных).
         // ============================================================
 
-        // Часы рабочего времени кода статуса: «Д»/«Н»/«д»/«н» —
-        // 12-час смена, «Д8» — 8, «Д7,2» — 7,2 (сокращённый день).
+        // Часы рабочего времени кода статуса: «Д»/«Н» — 12-час
+        // смена, «Д8» — 8, «Д7,2» — 7,2 (сокращённый день).
+        // Task 322: строчные «д»/«н» (работа в вых./праздник) — НЕ
+        // рабочее время: это ПЕРЕРАБОТКА (учитывается отдельно в
+        // _totalsAgg — сменным 12 ч, дневным по часам из правки
+        // ячейки; в колонки Явки/Часы/Д/Н не попадает).
         // Прочие коды (ОТ/У/ОВ/Б/ПР/И/ОБ/ПЗ/*/. и пустые) — НЕ
         // рабочее время (0). Незнакомый код (справочник пополнили) —
         // часы пробуются из названия «NN-час» («Смена (10-час)» →
@@ -37472,7 +37612,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // неявного.
         _codeHours: function(code, name) {
             code = String(code || '');
-            var map = { 'Д': 12, 'Н': 12, 'Д8': 8, 'Д7,2': 7.2, 'д': 12, 'н': 12 };
+            var map = { 'Д': 12, 'Н': 12, 'Д8': 8, 'Д7,2': 7.2 };
             if (map.hasOwnProperty(code)) return map[code];
             var m = String(name || '').match(/(\d+(?:[.,]\d+)?)[- ]?час/i);
             if (m) return parseFloat(String(m[1]).replace(',', '.'));
@@ -37515,21 +37655,63 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return out;
         },
 
-        // Счётчик строки итогов (нули) — единственный источник формы
+        // Счётчик строки итогов (нули) — единственный источник формы.
+        // Task 322: over (часы переработки) и overDays (дни
+        // переработки) — коды «д»/«н» (работа в вых./праздник)
         _totalsZero: function() {
             return { work: 0, day: 0, night: 0, hours: 0,
                      'ОТ': 0, 'У': 0, 'ОВ': 0, 'Б': 0, 'ПР': 0,
+                     over: 0, overDays: 0,
                      other: 0, total: 0 };
+        },
+
+        // Task 322: карта типов персонала {таб_номер: тип} — от
+        // списка сотрудников (месяц — _EMPLOYEES, год — справочник
+        // с архивом). Определяет часы переработки кодов «д»/«н»:
+        // «сменный» → 12 ч, прочие (дневной/без типа) → часы,
+        // указанные при правке ячейки, иначе фолбэк 8 ч
+        _empTypeMap: function(employees) {
+            var map = {};
+            var list = employees || [];
+            for (var i = 0; i < list.length; i++) {
+                map[String(list[i]['таб_номер'] || '')] =
+                    String(list[i]['тип'] || '').trim();
+            }
+            return map;
+        },
+
+        // Task 322: часы ПЕРЕРАБОТКИ записи «д»/«н»: сменному — 12
+        // (смена), дневному (и без типа) — часы правки ячейки
+        // (поле «часы», колонка K; вводится при добавлении кода);
+        // не указаны (старые записи до Task 322) — фолбэк 8
+        // (обычный рабочий день дневного). Возвращает 0 при
+        // некорректном значении
+        _overHours: function(entry, empTypeMap) {
+            var tip = empTypeMap[String(entry['таб_номер'] || '')];
+            if (tip === 'сменный') return 12;
+            var h = entry['часы'];
+            if (typeof h === 'number' && isFinite(h) && h > 0) return h;
+            if (typeof h === 'string' && h) {
+                var p = parseFloat(h.replace(',', '.'));
+                if (isFinite(p) && p > 0) return p;
+            }
+            return 8;
         },
 
         // Агрегация записей месяца по сотрудникам. Возвращает
         // { byTab: {таб_номер: счётчик}, grand: счётчик-сумма }.
-        // Классификация кода: часы > 0 → явка (work; Н/н — ночная
-        // смена, остальные рабочие коды — дневная); иначе семейства
-        // неявок ОТ/У/ОВ/Б/ПР; мероприятия (И/ОБ/ПЗ/*), плановый
-        // выходной «.» и незнакомые коды без часов → other; total —
-        // все записи (каждая запись = один день табеля).
-        _totalsAgg: function(entries) {
+        // Классификация кода (Task 322): «д»/«н» — ПЕРЕРАБОТКА
+        // (день переработки + часы по типу персонала — см.
+        // _overHours; в явки/часы/Д/Н НЕ попадает, в total входит);
+        // часы > 0 → явка (work; Н — ночная смена, остальные
+        // рабочие коды — дневная); иначе семейства неявок ОТ/У/ОВ/
+        // Б/ПР; мероприятия (И/ОБ/ПЗ/*), плановый выходной «.» и
+        // незнакомые коды без часов → other; total — все записи
+        // (каждая запись = один день табеля). empTypeMap — карта
+        // типов персонала (_empTypeMap), месяц и год собирают её из
+        // своего списка сотрудников
+        _totalsAgg: function(entries, empTypeMap) {
+            var types = empTypeMap || {};
             var byTab = {};
             var list = entries || [];
             for (var i = 0; i < list.length; i++) {
@@ -37540,10 +37722,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (!a) a = byTab[tab] = this._totalsZero();
                 var code = String(e['статус'] || '');
                 var meta = this._statusMeta(code);
+                // Task 322: «д»/«н» — работа в вых./праздник →
+                // ПЕРЕРАБОТКА: день + часы (сменному 12, дневному —
+                // указанные при правке); явкой/часами/Д/Н не считается
+                if (code === 'д' || code === 'н') {
+                    a.overDays++;
+                    a.over += this._overHours(e, types);
+                    a.total++;
+                    continue;
+                }
                 var h = this._codeHours(code, meta ? meta.name : '');
                 if (h > 0) {
                     a.work++; a.hours += h;
-                    if (code === 'Н' || code === 'н') a.night++;
+                    if (code === 'Н') a.night++;
                     else a.day++;
                 } else if (code === 'ОТ' || code === 'У' || code === 'ОВ' ||
                            code === 'Б' || code === 'ПР') {
@@ -37562,6 +37753,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 g.hours += ag.hours;
                 g['ОТ'] += ag['ОТ']; g['У'] += ag['У']; g['ОВ'] += ag['ОВ'];
                 g['Б'] += ag['Б']; g['ПР'] += ag['ПР'];
+                g.over += ag.over; g.overDays += ag.overDays;
                 g.other += ag.other; g.total += ag.total;
             }
             return { byTab: byTab, grand: g };
@@ -37574,13 +37766,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // Бар-переключатель: развернуть/свернуть панель итогов.
-        // Раскрытие меняет раскладку (панель занимает высоту) —
-        // строки шахматки пересчитывает _fitGrid; сворачивание —
-        // тоже (сетка растягивается обратно).
+        // Task 322 (заявка): раскрытая панель занимает ВСЮ ВЫСОТУ
+        // ШАХМАТКИ, до бара с кнопками — вид переключается: сетка
+        // скрывается (класс ws-tt-open на странице → CSS прячет
+        // .ws-grid-wrap), панель растягивается (flex: 1, своё
+        // место в колонке страницы); сворачивание возвращает
+        // шахматку. _fitGrid пересчитывает строки в обоих
+        // направлениях (скрытая сетка → природные высоты).
         toggleTotals: function() {
             this._totalsOpen = !this._totalsOpen;
             var bar = document.getElementById('wsTotalsBar');
             var panel = document.getElementById('wsTotalsPanel');
+            var page = document.getElementById('page-work-schedule');
             if (panel) panel.hidden = !this._totalsOpen;
             if (bar) {
                 if (bar.setAttribute) bar.setAttribute('aria-expanded',
@@ -37588,6 +37785,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (bar.classList && bar.classList.toggle) {
                     bar.classList.toggle('ws-totals-open', this._totalsOpen);
                 }
+            }
+            // Task 322: класс вида на странице — сетка скрыта,
+            // панель занимает её место (CSS #page-work-schedule.ws-tt-open)
+            if (page && page.classList && page.classList.toggle) {
+                page.classList.toggle('ws-tt-open', this._totalsOpen);
             }
             if (this._totalsOpen) this._renderTotals();
             this._fitGrid();
@@ -37633,9 +37835,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Вкладка «Месяц»: дни/часы/смены/неявки по каждому сотруднику
         // открытого месяца + строка «Итого». Часы — по кодам статусов
-        // (Д/Н/д/н = 12, Д8 = 8, Д7,2 = 7,2); явки/ночные/дневные
-        // смены; неявки по семействам (ОТ/У/ОВ/Б/ПР); прочие коды
-        // (И/ОБ/ПЗ/*/·) — отдельная колонка. Инфо-строка: месяц,
+        // (Д/Н = 12, Д8 = 8, Д7,2 = 7,2); явки/ночные/дневные
+        // смены; неявки по семействам (ОТ/У/ОВ/Б/ПР); Task 322:
+        // «д»/«н» — ДНИ ПЕРЕРАБОТКИ (сменным 12 ч, дневным — часы,
+        // указанные при правке ячейки) — отдельная колонка
+        // «Переработка»; прочие коды
+        // (И/ОБ/ПЗ/*/·) — отдельная колонка. Task 322: шапка —
+        // ПОЛНЫМИ СЛОВАМИ с кодом в скобках («День (Д)», «Отпуск
+        // (ОТ)»…) вместо одиночных букв. Инфо-строка: месяц,
         // норма производственного календаря (40-час), пометка о
         // несохранённых правках.
         _renderTotalsMonth: function() {
@@ -37645,7 +37852,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var monthsNom = ['январь','февраль','март','апрель','май','июнь',
                              'июль','август','сентябрь','октябрь','ноябрь','декабрь'];
             var entries = this._totalsEffectiveEntries();
-            var agg = this._totalsAgg(entries);
+            // Task 322: типы персонала — переработка д/н (сменный 12,
+            // дневной — часы правки ячейки)
+            var agg = this._totalsAgg(entries, this._empTypeMap(this._EMPLOYEES));
             var z = this._totalsZero();
 
             var info = this._esc(monthsNom[this._month - 1]) + ' ' + this._year + ' г.';
@@ -37666,11 +37875,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 body.innerHTML = '<div class="ws-tt-empty">Нет активных сотрудников.</div>';
                 return;
             }
+            // Task 322: шапка — слова вместо кодов (код в скобках);
+            // «Переработка» — часы кодов д/н (дни — в тултипе ячейки)
             var html = '<div class="ws-tt-scroll"><table class="ws-tt-table">' +
                 '<thead><tr>' +
                 '<th class="ws-tt-emp">Сотрудник</th>' +
-                '<th>Явки</th><th>Часы</th><th>Д</th><th>Н</th>' +
-                '<th>ОТ</th><th>У</th><th>ОВ</th><th>Б</th><th>ПР</th>' +
+                '<th>Явки</th><th>Часы</th>' +
+                '<th>День (Д)</th><th>Ночь (Н)</th>' +
+                '<th>Отпуск (ОТ)</th><th>Уч. отпуск (У)</th>' +
+                '<th>Отгул (ОВ)</th><th>Больничный (Б)</th><th>Прогул (ПР)</th>' +
+                '<th>Переработка</th>' +
                 '<th title="И/ОБ/ПЗ/* — мероприятия, «·» — плановый выходной, прочие коды">Прочие</th>' +
                 '<th>Всего</th>' +
                 '</tr></thead><tbody>';
@@ -37691,6 +37905,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     '<td class="ws-tt-num">' + a['ОВ'] + '</td>' +
                     '<td class="ws-tt-num">' + a['Б'] + '</td>' +
                     '<td class="ws-tt-num">' + a['ПР'] + '</td>' +
+                    '<td class="ws-tt-num ws-tt-over" title="дней переработки: ' +
+                        a.overDays + ' (коды д/н)">' +
+                        this._fmtTotalsNum(a.over) + '</td>' +
                     '<td class="ws-tt-num">' + a.other + '</td>' +
                     '<td class="ws-tt-num">' + a.total + '</td>' +
                     '</tr>';
@@ -37706,6 +37923,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 '<td class="ws-tt-num">' + g['ОВ'] + '</td>' +
                 '<td class="ws-tt-num">' + g['Б'] + '</td>' +
                 '<td class="ws-tt-num">' + g['ПР'] + '</td>' +
+                '<td class="ws-tt-num ws-tt-over" title="дней переработки: ' +
+                    g.overDays + ' (коды д/н)">' +
+                    this._fmtTotalsNum(g.over) + '</td>' +
                 '<td class="ws-tt-num">' + g.other + '</td>' +
                 '<td class="ws-tt-num">' + g.total + '</td>' +
                 '</tr></tbody></table></div>';
@@ -37777,8 +37997,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Таблица года (данные уже в _YEAR_DATA). Каждая ячейка
         // месяца — «явки/часы» («11/132»), итого сотрудника —
-        // годовые явки и часы; последняя строка — суммы по месяцам
-        // по всему персоналу.
+        // годовые явки и часы; Task 322: + годовая ПЕРЕРАБОТКА
+        // (часы кодов д/н за год — колонка «Перераб.»); последняя
+        // строка — суммы по месяцам по всему персоналу. Типы
+        // персонала — из справочника года (вкл. архив — уволенный
+        // остаётся со своим типом и в переработке)
         _renderTotalsYearTable: function() {
             var body = document.getElementById('wsTtBody');
             var infoEl = document.getElementById('wsTtInfo');
@@ -37792,8 +38015,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             var perMonth = [];
             var monthTotals = [];
+            // Task 322: типы персонала для переработки д/н —
+            // справочник года (архив в комплекте)
+            var types = this._empTypeMap(employees);
             for (var m = 1; m <= 12; m++) {
-                var ag = this._totalsAgg(md.months[m]);
+                var ag = this._totalsAgg(md.months[m], types);
                 perMonth[m] = ag.byTab;
                 monthTotals[m] = ag.grand;
             }
@@ -37815,12 +38041,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var html = '<div class="ws-tt-scroll"><table class="ws-tt-table">' +
                 '<thead><tr><th class="ws-tt-emp">Сотрудник</th>';
             for (var h = 1; h <= 12; h++) html += '<th>' + monthsAbbr[h - 1] + '</th>';
-            html += '<th>Дней</th><th>Часов</th></tr></thead><tbody>';
-            var gWork = 0, gHours = 0;
+            html += '<th>Дней</th><th>Часов</th>' +
+                '<th title="часы переработки за год — коды д/н">Перераб.</th>' +
+                '</tr></thead><tbody>';
+            var gWork = 0, gHours = 0, gOver = 0, gOverDays = 0;
             for (var e = 0; e < employees.length; e++) {
                 var emp = employees[e];
                 var tab = String(emp['таб_номер']);
-                var sumWork = 0, sumHours = 0;
+                var sumWork = 0, sumHours = 0, sumOver = 0, sumOverDays = 0;
                 html += '<tr><td class="ws-tt-emp"><span class="ws-tt-tabno">' +
                     this._esc(emp['таб_номер']) + '</span>' +
                     this._esc(emp['ФИО']) +
@@ -37831,13 +38059,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var w = a ? a.work : 0;
                     var hh = a ? a.hours : 0;
                     sumWork += w; sumHours += hh;
+                    sumOver += a ? a.over : 0;
+                    sumOverDays += a ? a.overDays : 0;
                     html += '<td class="ws-tt-num">' +
                         (w ? w + '/' + this._fmtTotalsNum(hh) : '—') + '</td>';
                 }
                 gWork += sumWork; gHours += sumHours;
+                gOver += sumOver; gOverDays += sumOverDays;
                 html += '<td class="ws-tt-num">' + (sumWork || '—') + '</td>' +
                         '<td class="ws-tt-num ws-tt-hours">' +
-                        (sumHours ? this._fmtTotalsNum(sumHours) : '—') + '</td></tr>';
+                        (sumHours ? this._fmtTotalsNum(sumHours) : '—') + '</td>' +
+                        '<td class="ws-tt-num ws-tt-over" title="дней переработки: ' +
+                            sumOverDays + ' (коды д/н)">' +
+                        (sumOver ? this._fmtTotalsNum(sumOver) : '—') + '</td></tr>';
             }
             html += '<tr class="ws-tt-total"><td class="ws-tt-emp">Итого по подразделению</td>';
             for (var mt = 1; mt <= 12; mt++) {
@@ -37847,7 +38081,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             html += '<td class="ws-tt-num">' + (gWork || '—') + '</td>' +
                     '<td class="ws-tt-num ws-tt-hours">' +
-                    (gHours ? this._fmtTotalsNum(gHours) : '—') + '</td></tr>';
+                    (gHours ? this._fmtTotalsNum(gHours) : '—') + '</td>' +
+                    '<td class="ws-tt-num ws-tt-over" title="дней переработки: ' +
+                        gOverDays + ' (коды д/н)">' +
+                    (gOver ? this._fmtTotalsNum(gOver) : '—') + '</td></tr>';
             html += '</tbody></table></div>';
             body.innerHTML = html;
         },
@@ -38578,13 +38815,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // inline-цвет листа не показываем: свотч предпросмотр
                 // ячейки, а «.»-ячейка = пустая
                 var isDot = (c.code === '.');
+                // Task 322: у кода «д»/«н», стоящего в ячейке, — показ
+                // указанных часов («День в вых./праздник · 8 ч»);
+                // сменному часы не предлагаются (всегда 12)
+                var dnH = (eff['статус'] === c.code &&
+                           (c.code === 'д' || c.code === 'н') &&
+                           typeof eff['часы'] === 'number' && isFinite(eff['часы']) && eff['часы'] > 0)
+                    ? ' · ' + this._fmtTotalsNum(eff['часы']) + ' ч' : '';
                 html += '<div class="ws-popup-row' + (current === c.code ? ' ws-popup-active' : '') + '"' +
                         ' onclick="WorkSchedule.onPopupStatus(\'' + this._esc(c.code) + '\')">' +
                         (isDot
                             ? '<span class="ws-popup-swatch ws-swatch-dot"></span>'
                             : '<span class="ws-popup-swatch" style="background:' + (c.color || '#3a3a3a') + ';"></span>') +
                         '<span class="ws-popup-code">' + this._esc(isDot ? '·' : c.code) + '</span>' +
-                        '<span class="ws-popup-name">' + this._esc(c.name) + '</span></div>';
+                        '<span class="ws-popup-name">' + this._esc(c.name) + this._esc(dnH) + '</span></div>';
             }
             // Task 313: секция «Мероприятия в этот день» УДАЛЕНА из
             // окна кодов — все мероприятия ячейки (цвет/код/название,
@@ -38797,11 +39041,114 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Выбор статуса в попапе: применяется ЛОКАЛЬНО (в _PENDING),
         // мгновенной отправки на сервер нет. Ячейка сразу перекрашивается.
+        // Task 322: коды «д»/«н» (работа в вых./праздник) у ДНЕВНОГО
+        // персонала (и без типа) — сначала МАЛАЯ ФОРМА ЧАСОВ в том же
+        // попапе: переработка дневного считается по часам, которые
+        // указали при добавлении кода (сменному — 12 ч, без вопроса).
         onPopupStatus: function(code) {
             if (!this._popupCell) return;
             var date = this._popupCell.date;
             var tabNo = this._popupCell['таб_номер'];
+            // Task 322: д/н НЕ сменному → форма часов (ввод обязателен
+            // для учёта переработки по фактическим часам)
+            if (code === 'д' || code === 'н') {
+                var emp = null;
+                for (var j = 0; j < this._EMPLOYEES.length; j++) {
+                    if (this._EMPLOYEES[j]['таб_номер'] === tabNo) { emp = this._EMPLOYEES[j]; break; }
+                }
+                var isShift = emp && String(emp['тип'] || '').trim() === 'сменный';
+                if (!isShift) {
+                    this._renderDnHoursForm(code, date, tabNo);
+                    return;
+                }
+            }
             this._applyCellStatus(date, tabNo, code);
+            this.closeCellPopup();
+            this._renderGrid();
+            this._updateSaveBtn();
+        },
+
+        // Task 322: МАЛАЯ ФОРМА ЧАСОВ в попапе ячейки — вместо списка
+        // кодов показывается ввод «Сколько часов?» для выбранного кода
+        // «д»/«н» (дневной персонал: переработка по указанным часам).
+        // Префилл: часы уже стоящие в записи/правке ячейки, иначе 8
+        // (обычный рабочий день дневного). Enter — применить,
+        // «Назад» — к списку кодов. Попап НЕ переизмеряется по месту
+        // (габариты близки к списку кодов) — перерисовка на месте.
+        _renderDnHoursForm: function(code, date, tabNo) {
+            var popup = document.getElementById('wsCellPopup');
+            if (!popup) return;
+            var meta = this._statusMeta(code) || {};
+            var eff = this._effectiveEntry(date, tabNo) || {};
+            var cur = (eff['статус'] === code) ? eff['часы'] : null;
+            var prefill = (typeof cur === 'number' && isFinite(cur) && cur > 0)
+                ? String(cur).replace('.', ',')
+                : '8';
+            var title = this._esc(date) + ' · таб. №' + this._esc(tabNo);
+            var emp = null;
+            for (var j = 0; j < this._EMPLOYEES.length; j++) {
+                if (this._EMPLOYEES[j]['таб_номер'] === tabNo) { emp = this._EMPLOYEES[j]; break; }
+            }
+            if (emp) title = this._esc(date) + ' · ' + this._esc(emp['ФИО']);
+            popup.innerHTML =
+                '<div class="ws-popup-title">' + title + '</div>' +
+                '<div class="ws-dn-form">' +
+                    '<div class="ws-dn-code">' +
+                        (meta.color ? '<span class="ws-popup-swatch" style="background:' +
+                            meta.color + ';"></span>' : '') +
+                        '<span class="ws-popup-code">' + this._esc(code) + '</span>' +
+                        '<span class="ws-popup-name">' + this._esc(meta.name || '') + '</span>' +
+                    '</div>' +
+                    '<label class="ws-dn-label" for="wsDnHours">Часы переработки в этот день</label>' +
+                    '<input type="text" inputmode="decimal" id="wsDnHours" class="ws-dn-input"' +
+                        ' value="' + this._escAttr(prefill) + '" autocomplete="off"' +
+                        ' enterkeyhint="done"' +
+                        ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();WorkSchedule.applyDnHours(\'' +
+                            this._esc(code) + '\')}">' +
+                    '<div class="ws-dn-buttons">' +
+                        '<button type="button" class="ws-dn-ok" onclick="WorkSchedule.applyDnHours(\'' +
+                            this._esc(code) + '\')">Готово</button>' +
+                        '<button type="button" class="ws-dn-back" onclick="WorkSchedule.dnHoursBack(\'' +
+                            this._esc(date) + '\',\'' + this._esc(tabNo) + '\')">Назад к кодам</button>' +
+                    '</div>' +
+                    '<div class="ws-dn-hint">Дневному персоналу переработка считается по этим часам</div>' +
+                '</div>';
+            var input = popup.querySelector('#wsDnHours');
+            if (input && input.focus) {
+                try { input.focus(); if (input.select) input.select(); } catch (e) {}
+            }
+        },
+
+        // Task 322: «Назад к кодам» — вернуть список статусов в тот же
+        // попап БЕЗ перепозиционирования (окно остаётся на месте,
+        // окно мероприятий сверху не трогается)
+        dnHoursBack: function(date, tabNo) {
+            var popup = document.getElementById('wsCellPopup');
+            if (!popup) return;
+            if (!this._popupCell) this._popupCell = { date: date, 'таб_номер': tabNo };
+            popup.innerHTML = this._renderCellPopup(date, tabNo);
+        },
+
+        // Task 322: применить «д»/«н» с часами из мини-формы (клетка
+        // попапа та же): валидация 0,5..24 (запятая/точка), ошибка —
+        // тост и форма остаётся; успех — правка в _PENDING (поле
+        // «часы»), попап закрывается как при обычном выборе кода
+        applyDnHours: function(code) {
+            if (!this._popupCell) return;
+            var input = document.getElementById('wsDnHours');
+            var raw = input ? String(input.value || '') : '';
+            var val = parseFloat(raw.replace(',', '.').replace(' ', ''));
+            if (!isFinite(val) || val < 0.5 || val > 24) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Укажите часы от 0,5 до 24 (например, 8 или 7,2)');
+                }
+                if (input && input.focus) { try { input.focus(); } catch (e) {} }
+                return;
+            }
+            val = Math.round(val * 10) / 10;
+            var date = this._popupCell.date;
+            var tabNo = this._popupCell['таб_номер'];
+            this._applyCellStatus(date, tabNo, code, val);
             this.closeCellPopup();
             this._renderGrid();
             this._updateSaveBtn();
@@ -39108,17 +39455,27 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         //   • была только локальная правка → правка снимается.
         // code !== '' — новая локальная правка (доп. поля сохраняются из
         // эффективного состояния ячейки).
-        _applyCellStatus: function(isoDate, tabNo, code) {
+        // Task 322: hours — часы переработки кода «д»/«н» (дневной
+        // персонал; малая форма попапа или шит «Дополнительно…»):
+        // число 0,5..24 или null (сменный/не д-н — всегда null,
+        // переработка сменного = 12 ч без поля). Отправка на сервер —
+        // saveAll (поле «часы», колонка K «Записи_графика»)
+        _applyCellStatus: function(isoDate, tabNo, code, hours) {
             var key = isoDate + '|' + tabNo;
             var server = this._serverEntry(isoDate, tabNo);
             var pending = this._PENDING[key];
             if (code) {
                 var base = pending || server || {};
+                var dnHours = (code === 'д' || code === 'н')
+                    ? ((typeof hours === 'number' && isFinite(hours) && hours > 0)
+                        ? Math.round(hours * 10) / 10 : null)
+                    : null;
                 this._PENDING[key] = {
                     'статус': code,
                     'переработка': (base.переработка === 1 || base.переработка === '1') ? 1 : 0,
                     'замещает': base.замещает || null,
-                    'комментарий': base.комментарий || ''
+                    'комментарий': base.комментарий || '',
+                    'часы': dnHours
                 };
                 return;
             }
@@ -39191,6 +39548,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         payload['переработка'] = p['переработка'] || 0;
                         payload['замещает'] = p['замещает'] || null;
                         payload['комментарий'] = p['комментарий'] || '';
+                        // Task 322: часы переработки д/н (дневной
+                        // персонал) — колонка K «Записи_графика»
+                        payload['часы'] = (typeof p['часы'] === 'number' &&
+                                           isFinite(p['часы']) && p['часы'] > 0)
+                            ? p['часы'] : null;
                         call = self._api('workSchedule.setManualEntry', payload);
                     }
                     return call.then(function() {
@@ -39295,6 +39657,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             document.getElementById('wsCellOvertime').value = entry && entry.переработка === 1 ? '1' : '0';
             document.getElementById('wsCellSubstitute').value = entry && entry.замещает ? entry.замещает : '';
             document.getElementById('wsCellComment').value = entry ? (entry.комментарий || '') : '';
+            // Task 322: часы д/н — из эффективного состояния ячейки
+            // (запись/правка; формат с запятой — как в итогах)
+            var hoursEl = document.getElementById('wsCellHours');
+            if (hoursEl) {
+                var curH = (entry && (curStatus === 'д' || curStatus === 'н')) ? entry['часы'] : null;
+                hoursEl.value = (typeof curH === 'number' && isFinite(curH) && curH > 0)
+                    ? String(Math.round(curH * 10) / 10).replace('.', ',')
+                    : '';
+            }
 
             var delBtn = document.getElementById('wsCellDelete');
             if (delBtn) delBtn.style.display = (entry && entry.источник === 'руч') ? 'block' : 'none';
@@ -39316,12 +39687,28 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 251: sheet больше НЕ отправляет изменения на сервер — правка
         // накапливается локально (в _PENDING), как и выбор в попапе.
         // Отправка — только кнопкой «Сохранить» (saveAll).
+        // Task 322: поле «Часы» — для кодов д/н (переработка
+        // дневного по указанным часам): пусто/не число → null
+        // (не указано), число 0,5..24 — сохраняется (запятая/точка)
         submitCellForm: function() {
             if (!this._editingCell) return;
             var status = document.getElementById('wsCellStatus').value;
             var overtime = parseInt(document.getElementById('wsCellOvertime').value, 10) === 1 ? 1 : 0;
             var substitute = document.getElementById('wsCellSubstitute').value.trim();
             var comment = document.getElementById('wsCellComment').value.slice(0, 500);
+            var hoursInput = document.getElementById('wsCellHours');
+            var rawH = hoursInput ? String(hoursInput.value || '').trim() : '';
+            var numH = rawH ? parseFloat(rawH.replace(',', '.')) : NaN;
+            var hours = (status === 'д' || status === 'н') &&
+                        isFinite(numH) && numH > 0
+                ? Math.round(numH * 10) / 10 : null;
+            if ((status === 'д' || status === 'н') && rawH &&
+                (!isFinite(numH) || numH < 0.5 || numH > 24)) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Часы: укажите число от 0,5 до 24 (например, 8 или 7,2)');
+                }
+                return;
+            }
             var cell = this._editingCell;
 
             if (!status) {
@@ -39332,7 +39719,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     'статус': status,
                     'переработка': overtime,
                     'замещает': substitute || null,
-                    'комментарий': comment
+                    'комментарий': comment,
+                    'часы': hours
                 });
             }
             this.closeCellForm();
