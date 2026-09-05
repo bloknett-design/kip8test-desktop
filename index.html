@@ -4587,6 +4587,222 @@
         border-top: 1px solid #ffffff;
         border-bottom: 1px solid #84929e;
     }
+    /* ============================================================
+       Task 321: ИТОГИ УЧЁТА — сворачиваемая секция под шахматкой
+       (дни/часы по итогам месяца и года). Бар-переключатель —
+       тонкая полоса под сеткой (клик — развернуть/свернуть панель);
+       панель — ограничена по высоте, скролл внутри, НЕ наезжает на
+       шахматку: страница остаётся flex-колонкой, сетка сжимается
+       (_fitGrid пересчитывает строки). Дизайн — в духе бара
+       мероприятий (Task 315): панели-«окна» с рамками карточек.
+       ============================================================ */
+    .ws-totals-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+        margin: 0 0 4px 0;
+        padding: 7px 14px;
+        background: var(--card-bg, #15202f);
+        border: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        border-radius: 8px;
+        cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
+        transition: background 0.15s, border-color 0.15s;
+    }
+    .ws-totals-bar:hover,
+    .ws-totals-bar:focus-visible {
+        background: rgba(74, 143, 199, 0.18);
+        border-color: rgba(74, 143, 199, 0.45);
+        outline: none;
+    }
+    .ws-totals-bar-cap {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text-primary, #e0e0e0);
+        white-space: nowrap;
+    }
+    .ws-totals-bar-sub {
+        flex: 1;
+        min-width: 0;
+        font-size: 12px;
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .ws-totals-bar-chev {
+        flex: none;
+        font-style: normal;
+        font-size: 12px;
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+        transition: transform 0.2s;
+    }
+    .ws-totals-bar .ws-totals-bar-chev { transform: rotate(0deg); }
+    .ws-totals-bar.ws-totals-open .ws-totals-bar-chev { transform: rotate(180deg); }
+    [data-theme="light"] .ws-totals-bar {
+        background: #f4f2ec;
+        border-color: rgba(0, 0, 0, 0.14);
+    }
+    [data-theme="light"] .ws-totals-bar:hover,
+    [data-theme="light"] .ws-totals-bar:focus-visible {
+        background: #eceada;
+        border-color: rgba(74, 143, 199, 0.55);
+    }
+    [data-theme="light"] .ws-totals-bar-cap { color: #1f2937; }
+    [data-theme="light"] .ws-totals-bar-sub { color: #777777; }
+    /* Панель итогов: рамка-карточка, высота не больше половины окна —
+       шахматка сверху остаётся рабочей; внутри — свой скролл */
+    .ws-totals-panel {
+        flex-shrink: 0;
+        margin: 0 0 6px 0;
+        background: var(--bg-tertiary, #0e1621);
+        border: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        border-radius: 8px;
+        padding: 6px 10px 8px 10px;
+        max-height: 46vh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+    .ws-totals-panel[hidden] { display: none; }
+    [data-theme="light"] .ws-totals-panel {
+        background: #e9e7de;
+        border-color: rgba(0, 0, 0, 0.12);
+    }
+    /* Строка вкладок Месяц/Год + инфо + мини-«Обновить» (год) */
+    .ws-tt-tabs {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 2px 0 6px 0;
+    }
+    .ws-tt-tab {
+        padding: 5px 14px;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--text-secondary, rgba(255,255,255,0.65));
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .ws-tt-tab:hover { color: var(--text-primary, #e0e0e0); }
+    .ws-tt-tab.active {
+        color: #4ac771;
+        background: rgba(76, 199, 113, 0.16);
+        border-color: rgba(76, 199, 113, 0.4);
+    }
+    [data-theme="light"] .ws-tt-tab.active { color: #1d7a37; }
+    .ws-tt-info {
+        flex: 1;
+        min-width: 0;
+        font-size: 11.5px;
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+        white-space: normal;
+        overflow-wrap: break-word;
+    }
+    [data-theme="light"] .ws-tt-info { color: #777777; }
+    .ws-tt-refresh {
+        padding: 4px 10px;
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--text-primary, #e0e0e0);
+        background: rgba(74, 143, 199, 0.2);
+        border: 1px solid rgba(74, 143, 199, 0.45);
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .ws-tt-refresh:hover { background: rgba(74, 143, 199, 0.32); }
+    [data-theme="light"] .ws-tt-refresh {
+        color: #1f2937;
+        background: #e5e0d2;
+        border-color: rgba(74, 143, 199, 0.55);
+    }
+    /* Таблица итогов: компактные строки, числа — моноширинно для
+       колонок; скролл по X на узких экранах (месяц — 11 колонок,
+       год — 15) */
+    .ws-tt-body { min-width: 0; }
+    .ws-tt-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+    }
+    .ws-tt-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .ws-tt-table th,
+    .ws-tt-table td {
+        padding: 4px 8px;
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+        text-align: right;
+        white-space: nowrap;
+    }
+    .ws-tt-table th {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-secondary, rgba(255,255,255,0.6));
+        background: rgba(255,255,255,0.03);
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+    [data-theme="light"] .ws-tt-table th,
+    [data-theme="light"] .ws-tt-table td {
+        border-bottom-color: rgba(0, 0, 0, 0.08);
+    }
+    [data-theme="light"] .ws-tt-table th {
+        background: #efede5;
+    }
+    .ws-tt-table th.ws-tt-emp,
+    .ws-tt-table td.ws-tt-emp {
+        text-align: left;
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .ws-tt-table td.ws-tt-emp .ws-tt-tabno {
+        color: var(--text-secondary, rgba(255,255,255,0.5));
+        font-size: 10.5px;
+        margin-right: 5px;
+    }
+    .ws-tt-table td.ws-tt-emp .ws-tt-arch {
+        color: #e0a23c;
+        font-size: 10.5px;
+    }
+    [data-theme="light"] .ws-tt-table td.ws-tt-emp .ws-tt-tabno { color: #999999; }
+    [data-theme="light"] .ws-tt-table td.ws-tt-emp .ws-tt-arch { color: #a06a13; }
+    .ws-tt-table .ws-tt-num { font-variant-numeric: tabular-nums; }
+    .ws-tt-table td.ws-tt-hours { font-weight: 700; color: #4ac771; }
+    [data-theme="light"] .ws-tt-table td.ws-tt-hours { color: #1d7a37; }
+    .ws-tt-table tr.ws-tt-total td {
+        font-weight: 700;
+        border-top: 2px solid rgba(74, 143, 199, 0.5);
+        border-bottom: none;
+        background: rgba(74, 143, 199, 0.08);
+    }
+    [data-theme="light"] .ws-tt-table tr.ws-tt-total td {
+        border-top-color: rgba(74, 143, 199, 0.6);
+        background: rgba(74, 143, 199, 0.08);
+    }
+    .ws-tt-empty {
+        padding: 10px 4px;
+        font-size: 12.5px;
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+    }
+    [data-theme="light"] .ws-tt-empty { color: #777777; }
+    /* Мобильный: бар-переключатель — тап-зона 44px (минимум для
+       пальца; паддинг + min-height, box-sizing — рамка внутри) */
+    @media (max-width: 1023px) {
+        .ws-totals-bar { padding: 10px 14px; min-height: 44px; box-sizing: border-box; }
+        .ws-totals-bar-cap { font-size: 14px; }
+        .ws-totals-bar-sub { font-size: 12.5px; }
+        .ws-tt-table th, .ws-tt-table td { padding: 5px 8px; }
+        .ws-tt-table td.ws-tt-emp,
+        .ws-tt-table th.ws-tt-emp { max-width: 150px; }
+    }
     /* Task 259: разделитель групп персонала — первой строке группы
        дневных работников (идёт сразу после сменных) задаётся
        усиленная верхняя граница: группа сменного персонала
@@ -11972,7 +12188,7 @@
                      и на десктопе занимала отдельную строку. -->
                 <div class="menu-btn-row">
                     <div id="flowmeterMenuBtn" class="menu-btn" onclick="navigateTo('flowmeter-data')" style="cursor: pointer;"><div class="menu-btn-text"><div class="menu-btn-label">Расходомеры хозрасчётные</div><div class="menu-btn-sublabel">Накопительные расходы и показания</div></div><svg class="menu-btn-arrow" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: rgba(255,255,255,0.12); fill: none; stroke-width: 2; stroke-linecap: round;"><polyline points="9 18 15 12 9 6"/></svg></div>
-                    <div id="workScheduleMenuBtn" class="menu-btn" onclick="navigateTo('work-schedule')" style="cursor: pointer;"><div class="menu-btn-text"><div class="menu-btn-label">График работы</div><div class="menu-btn-sublabel">Шахматка сменного и дневного персонала</div></div><svg class="menu-btn-arrow" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: rgba(255,255,255,0.12); fill: none; stroke-width: 2; stroke-linecap: round;"><polyline points="9 18 15 12 9 6"/></svg></div>
+                    <div id="workScheduleMenuBtn" class="menu-btn" onclick="navigateTo('work-schedule')" style="cursor: pointer;"><div class="menu-btn-text"><div class="menu-btn-label">Табель учёта рабочего времени</div><div class="menu-btn-sublabel">Шахматка сменного и дневного персонала</div></div><svg class="menu-btn-arrow" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: rgba(255,255,255,0.12); fill: none; stroke-width: 2; stroke-linecap: round;"><polyline points="9 18 15 12 9 6"/></svg></div>
                 </div>
             </div>
         </div>
@@ -12006,11 +12222,11 @@
             <div class="flow-detail-bottom-bar" id="flowDetailBottomBar"></div>
         </div>
 
-        <!-- ======================== ГРАФИК РАБОТЫ — шахматка на месяц ======================== -->
+        <!-- ======================== ТАБЕЛЬ УЧЁТА РАБОЧЕГО ВРЕМЕНИ — шахматка на месяц ======================== -->
         <div id="page-work-schedule" class="page-content">
             <div class="page-inline-header">
                 <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
-                <div class="page-inline-header-title">График работы</div>
+                <div class="page-inline-header-title">Табель учёта рабочего времени</div>
             </div>
             <div class="ws-toolbar">
                 <!-- Task 315: СТРОКА 1 — бар из ТРЁХ РАВНЫХ частей.
@@ -12154,6 +12370,34 @@
                      .flow-loading-dots. loadGrid() ставит идентичную
                      разметку при каждой загрузке месяца -->
                 <div class="flow-loading" id="wsEmpty"><div class="flow-loading-text">Загрузка<span class="flow-loading-dots"><span>.</span><span>.</span><span>.</span></span></div></div>
+            </div>
+            <!-- Task 321: ИТОГИ УЧЁТА — сворачиваемая секция ПОД шахматкой
+                 (заявка: «учёт дней и рабочего времени по итогам месяца и
+                 года, так чтобы не мешали работать с месячным графиком»).
+                 По умолчанию СВЕРНУТА — от секции виден только тонкий
+                 бар-переключатель под сеткой; шахматка занимает всю
+                 высоту как прежде. Клик по бару раскрывает панель:
+                 вкладка «Месяц» — дни/часы/смены/неявки по каждому
+                 сотруднику открытого месяца (данные того же вида, что
+                 в сетке: записи + локальные правки — итоги обновляются
+                 вместе с шахматкой); вкладка «Год» — 12 месяцев ×
+                 явки/часы + годовые суммы (12 запросов listEntries,
+                 кэш в памяти; архивный персонал — с пометкой). -->
+            <div id="wsTotalsBar" class="ws-totals-bar" onclick="WorkSchedule.toggleTotals()"
+                 role="button" tabindex="0" aria-expanded="false"
+                 onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); WorkSchedule.toggleTotals(); }">
+                <span class="ws-totals-bar-cap">Итоги учёта — дни и часы</span>
+                <span class="ws-totals-bar-sub">сводка за месяц и год</span>
+                <i class="ws-totals-bar-chev" id="wsTotalsChev" aria-hidden="true">▾</i>
+            </div>
+            <div id="wsTotalsPanel" class="ws-totals-panel" hidden>
+                <div class="ws-tt-tabs">
+                    <button type="button" id="wsTtTabMonth" class="ws-tt-tab active" onclick="WorkSchedule.setTotalsTab('month')">Месяц</button>
+                    <button type="button" id="wsTtTabYear" class="ws-tt-tab" onclick="WorkSchedule.setTotalsTab('year')">Год</button>
+                    <span class="ws-tt-info" id="wsTtInfo"></span>
+                    <button type="button" id="wsTtRefresh" class="ws-tt-refresh" onclick="WorkSchedule.reloadTotals()" title="Перезагрузить данные итогов с сервера" hidden>Обновить</button>
+                </div>
+                <div id="wsTtBody" class="ws-tt-body"></div>
             </div>
         </div>
 
@@ -23743,7 +23987,7 @@
         // Метки совпадают с заголовками страниц (page-inline-header-title).
         // (Task 307/308: подразделы «Сотрудники»/«Инструктажи»/«Отпуска»
         //  удалены — осталась метка самой шахматки)
-        'work-schedule':            'График работы',
+        'work-schedule':            'Табель учёта рабочего времени',
         'admin':            'Админ-панель',
         'admin-users':      'Пользователи',
         'admin-sessions':   'Активные сессии',
@@ -23871,7 +24115,7 @@
         // кнопки на странице «Документация ИОС» (по примеру «Расходомеров
         // хозрасчётные»): wrapSubsectionItems оборачивает кнопку в
         // .subsection-cell, т.к. ключ появился в этом реестре
-        'work-schedule':  { label: 'График работы',              sublabel: 'Шахматка сменного и дневного персонала',          target: 'work-schedule',  category: 'docs' },
+        'work-schedule':  { label: 'Табель учёта рабочего времени', sublabel: 'Шахматка сменного и дневного персонала',          target: 'work-schedule',  category: 'docs' },
         // ===== КИП ИОС — подразделы (страница page-kip-ios) =====
         'devices':       { label: 'Приборы',                  sublabel: 'Перечень КИП ИОС — 1312 приборов',              target: 'devices',       category: 'docs' },
         'lockouts':      { label: 'Блокировки',               sublabel: 'По производствам',                               target: 'lockouts-prod', category: 'docs' },
@@ -35926,6 +36170,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 251: флаг идущего пакетного сохранения (блокирует правки)
         _saving: false,
 
+        // Task 321: ИТОГИ УЧЁТА (панель под шахматкой). _totalsOpen —
+        // панель раскрыта; _totalsTab — вкладка «month»/«year»;
+        // _YEAR_DATA — кэш данных года в памяти {year, ts,
+        // months:{1..12: записи}, employees (с архивом), failed} —
+        // сбрасывается принудительным обновлением (loadGrid(true))
+        // и кнопкой «Обновить» панели (reloadTotals)
+        _totalsOpen: false,
+        _totalsTab: 'month',
+        _YEAR_DATA: null,
+
         // Task 316: столбец дня под КУРСОРОМ (число дня месяца) и
         // ВЫБРАННЫЙ кликом день — подсветка ВСЕГО столбца
         // (шапка+ячейки, как «сегодня» Task 313, но по наведению/
@@ -36021,11 +36275,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 monthSel.innerHTML = html;
             }
             if (yearSel) {
-                // Task 320: три года ДО и ПОСЛЕ текущего (7 пунктов,
-                // было −1…+2) — годовой шахматки хватает на план
-                // отпусков и архив прошлых лет
+                // Task 321 (заявка уточнена): список года — РОВНО ТРИ
+                // пункта: один год ДО текущего, текущий, один год ПОСЛЕ
+                // («в общем количестве из трёх лет»); Task 320 делал ±3
+                // (7 пунктов) — избыточно
                 var yHtml = '';
-                for (var y = this._year - 3; y <= this._year + 3; y++) {
+                for (var y = this._year - 1; y <= this._year + 1; y++) {
                     yHtml += '<option value="' + y + '"' + (y === this._year ? ' selected' : '') + '>' + y + '</option>';
                 }
                 yearSel.innerHTML = yHtml;
@@ -36547,6 +36802,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         loadGrid: function(force) {
             var self = this;
             var wrapEl = document.getElementById('wsGridWrap');
+            // Task 321: принудительное обновление («Обновить»,
+            // увольнение/сотрудник/генерация) — годовой кэш итогов
+            // устарел: сбрасываем, вкладка «Год» перезагрузится при
+            // следующем показе
+            if (force) this._YEAR_DATA = null;
             if (!force && this._restoreCachedView()) {
                 this._renderGrid();
                 // Task 260: чип норм месяца в тулбаре
@@ -36588,6 +36848,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // Task 314: свежие данные — в локальную копию
                 self._cacheWrite();
                 self._updateCacheStamp();
+                // Task 321: свежие записи месяца — и в годовой кэш
+                // итогов (если год уже загружен): вкладка «Год» без
+                // новой сети показывает актуальный месяц
+                if (self._YEAR_DATA && self._YEAR_DATA.year === self._year) {
+                    self._YEAR_DATA.months[self._month] = self._ENTRIES;
+                    if (self._totalsOpen && self._totalsTab === 'year') {
+                        self._renderTotalsYearTable();
+                    }
+                }
                 return true;
             }).catch(function(err) {
                 // Task 314: при обновлении живой сетки — НЕ стираем её
@@ -37067,6 +37336,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // загрузка данных (сеть/локальная копия), «Обновить»,
             // подтверждение шторки мероприятия (перезагрузка сетки)
             this._renderMonthEventsPanel();
+            // Task 321: итоги учёта — если панель открыта, месячная
+            // вкладка обновляется вместе с сеткой (правки ячеек
+            // видны сразу — тот же эффективный вид записей)
+            this._renderTotalsIfOpen();
         },
 
         // Task 315: окно 2 бара — данные ВСЕХ мероприятий открытого
@@ -37172,6 +37445,411 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             el.innerHTML = html;
             el.hidden = false;
+        },
+
+        // ============================================================
+        // Task 321: ИТОГИ УЧЁТА — дни и рабочее время по итогам
+        // месяца и года (заявка). Секция ПОД шахматкой, свёрнута по
+        // умолчанию (бар-переключатель #wsTotalsBar → панель
+        // #wsTotalsPanel с вкладками «Месяц»/«Год») — работе с
+        // месячным графиком не мешает: сетка занимает всю высоту,
+        // пока панель закрыта; при открытии панель ограничена
+        // 46vh со своим скроллом, строки шахматки пересчитывает
+        // _fitGrid (toggleTotals). Месяц считается по тому же
+        // эффективному виду, что и сетка (записи + несохранённые
+        // правки — итоги обновляются живьём при правках ячеек);
+        // год — 12 запросов listEntries + справочник сотрудников с
+        // архивом, кэш в памяти (_YEAR_DATA; сбрасывается любым
+        // принудительным обновлением данных).
+        // ============================================================
+
+        // Часы рабочего времени кода статуса: «Д»/«Н»/«д»/«н» —
+        // 12-час смена, «Д8» — 8, «Д7,2» — 7,2 (сокращённый день).
+        // Прочие коды (ОТ/У/ОВ/Б/ПР/И/ОБ/ПЗ/*/. и пустые) — НЕ
+        // рабочее время (0). Незнакомый код (справочник пополнили) —
+        // часы пробуются из названия «NN-час» («Смена (10-час)» →
+        // 10), иначе 0 — консервативно: в часы не попадает ничего
+        // неявного.
+        _codeHours: function(code, name) {
+            code = String(code || '');
+            var map = { 'Д': 12, 'Н': 12, 'Д8': 8, 'Д7,2': 7.2, 'д': 12, 'н': 12 };
+            if (map.hasOwnProperty(code)) return map[code];
+            var m = String(name || '').match(/(\d+(?:[.,]\d+)?)[- ]?час/i);
+            if (m) return parseFloat(String(m[1]).replace(',', '.'));
+            return 0;
+        },
+
+        // Эффективные записи ОТКРЫТОГО месяца для итогов = серверные
+        // записи + локальные правки _PENDING (как ячейки сетки):
+        // правка сразу видна в итогах, __delete исключает день;
+        // правки дней, которых в записях нет (новые статусы пустых
+        // ячеек), добавляются как записи с источником «руч»
+        _totalsEffectiveEntries: function() {
+            var out = [];
+            var pend = this._PENDING || {};
+            for (var i = 0; i < this._ENTRIES.length; i++) {
+                var e = this._ENTRIES[i];
+                var key = e['дата'] + '|' + e['таб_номер'];
+                var p = pend[key];
+                if (p) {
+                    if (p.__delete) continue;
+                    out.push(Object.assign({}, e, p));
+                } else {
+                    out.push(e);
+                }
+            }
+            var seen = {};
+            for (var j = 0; j < out.length; j++) {
+                seen[out[j]['дата'] + '|' + out[j]['таб_номер']] = 1;
+            }
+            var self = this;
+            Object.keys(pend).forEach(function(k) {
+                if (seen[k] || pend[k].__delete) return;
+                var parts = k.split('|');
+                out.push(Object.assign({
+                    'дата': parts[0],
+                    'таб_номер': parts[1],
+                    'источник': 'руч'
+                }, pend[k]));
+            });
+            return out;
+        },
+
+        // Счётчик строки итогов (нули) — единственный источник формы
+        _totalsZero: function() {
+            return { work: 0, day: 0, night: 0, hours: 0,
+                     'ОТ': 0, 'У': 0, 'ОВ': 0, 'Б': 0, 'ПР': 0,
+                     other: 0, total: 0 };
+        },
+
+        // Агрегация записей месяца по сотрудникам. Возвращает
+        // { byTab: {таб_номер: счётчик}, grand: счётчик-сумма }.
+        // Классификация кода: часы > 0 → явка (work; Н/н — ночная
+        // смена, остальные рабочие коды — дневная); иначе семейства
+        // неявок ОТ/У/ОВ/Б/ПР; мероприятия (И/ОБ/ПЗ/*), плановый
+        // выходной «.» и незнакомые коды без часов → other; total —
+        // все записи (каждая запись = один день табеля).
+        _totalsAgg: function(entries) {
+            var byTab = {};
+            var list = entries || [];
+            for (var i = 0; i < list.length; i++) {
+                var e = list[i];
+                var tab = String(e['таб_номер'] || '');
+                if (!tab) continue;
+                var a = byTab[tab];
+                if (!a) a = byTab[tab] = this._totalsZero();
+                var code = String(e['статус'] || '');
+                var meta = this._statusMeta(code);
+                var h = this._codeHours(code, meta ? meta.name : '');
+                if (h > 0) {
+                    a.work++; a.hours += h;
+                    if (code === 'Н' || code === 'н') a.night++;
+                    else a.day++;
+                } else if (code === 'ОТ' || code === 'У' || code === 'ОВ' ||
+                           code === 'Б' || code === 'ПР') {
+                    a[code]++;
+                } else if (code) {
+                    a.other++;
+                }
+                a.total++;
+            }
+            // общий итог — суммы счётчиков сотрудников
+            var tabs = Object.keys(byTab);
+            var g = this._totalsZero();
+            for (var t = 0; t < tabs.length; t++) {
+                var ag = byTab[tabs[t]];
+                g.work += ag.work; g.day += ag.day; g.night += ag.night;
+                g.hours += ag.hours;
+                g['ОТ'] += ag['ОТ']; g['У'] += ag['У']; g['ОВ'] += ag['ОВ'];
+                g['Б'] += ag['Б']; g['ПР'] += ag['ПР'];
+                g.other += ag.other; g.total += ag.total;
+            }
+            return { byTab: byTab, grand: g };
+        },
+
+        // Число с запятой (7.2 → «7,2»; 132 → «132») — часы/итоги
+        _fmtTotalsNum: function(v) {
+            var n = Math.round((v || 0) * 10) / 10;
+            return String(n).replace('.', ',');
+        },
+
+        // Бар-переключатель: развернуть/свернуть панель итогов.
+        // Раскрытие меняет раскладку (панель занимает высоту) —
+        // строки шахматки пересчитывает _fitGrid; сворачивание —
+        // тоже (сетка растягивается обратно).
+        toggleTotals: function() {
+            this._totalsOpen = !this._totalsOpen;
+            var bar = document.getElementById('wsTotalsBar');
+            var panel = document.getElementById('wsTotalsPanel');
+            if (panel) panel.hidden = !this._totalsOpen;
+            if (bar) {
+                if (bar.setAttribute) bar.setAttribute('aria-expanded',
+                    this._totalsOpen ? 'true' : 'false');
+                if (bar.classList && bar.classList.toggle) {
+                    bar.classList.toggle('ws-totals-open', this._totalsOpen);
+                }
+            }
+            if (this._totalsOpen) this._renderTotals();
+            this._fitGrid();
+        },
+
+        // Вкладка панели: «month» (по умолчанию) / «year». Кнопка
+        // «Обновить» — только у года (месячные итоги живут данными
+        // сетки и обновляются вместе с ней)
+        setTotalsTab: function(tab) {
+            this._totalsTab = (tab === 'year') ? 'year' : 'month';
+            var mb = document.getElementById('wsTtTabMonth');
+            var yb = document.getElementById('wsTtTabYear');
+            var rBtn = document.getElementById('wsTtRefresh');
+            if (mb && mb.classList && mb.classList.toggle) {
+                mb.classList.toggle('active', this._totalsTab === 'month');
+            }
+            if (yb && yb.classList && yb.classList.toggle) {
+                yb.classList.toggle('active', this._totalsTab === 'year');
+            }
+            if (rBtn) rBtn.hidden = (this._totalsTab !== 'year');
+            this._renderTotals();
+        },
+
+        // Перезагрузка данных итогов (кнопка в панели): год — кэш
+        // в памяти сбрасывается и панель перезагружается с сервера;
+        // месяц — тоже сетка обновляется кнопкой «Обновить» бара
+        reloadTotals: function() {
+            this._YEAR_DATA = null;
+            this._renderTotals();
+        },
+
+        // Перерисовка итогов, если панель открыта (вызывается из
+        // _renderGrid — правки ячеек, «Обновить», смена месяца)
+        _renderTotalsIfOpen: function() {
+            if (this._totalsOpen) this._renderTotals();
+        },
+
+        _renderTotals: function() {
+            if (!this._totalsOpen) return;
+            if (this._totalsTab === 'year') this._renderTotalsYear();
+            else this._renderTotalsMonth();
+        },
+
+        // Вкладка «Месяц»: дни/часы/смены/неявки по каждому сотруднику
+        // открытого месяца + строка «Итого». Часы — по кодам статусов
+        // (Д/Н/д/н = 12, Д8 = 8, Д7,2 = 7,2); явки/ночные/дневные
+        // смены; неявки по семействам (ОТ/У/ОВ/Б/ПР); прочие коды
+        // (И/ОБ/ПЗ/*/·) — отдельная колонка. Инфо-строка: месяц,
+        // норма производственного календаря (40-час), пометка о
+        // несохранённых правках.
+        _renderTotalsMonth: function() {
+            var body = document.getElementById('wsTtBody');
+            if (!body) return;
+            var infoEl = document.getElementById('wsTtInfo');
+            var monthsNom = ['январь','февраль','март','апрель','май','июнь',
+                             'июль','август','сентябрь','октябрь','ноябрь','декабрь'];
+            var entries = this._totalsEffectiveEntries();
+            var agg = this._totalsAgg(entries);
+            var z = this._totalsZero();
+
+            var info = this._esc(monthsNom[this._month - 1]) + ' ' + this._year + ' г.';
+            try {
+                if (typeof ProdCalendar !== 'undefined' && ProdCalendar.monthStats) {
+                    var st = ProdCalendar.monthStats(this._year, this._month);
+                    if (st && st.workDays !== undefined) {
+                        info += ' · норма: ' + st.workDays + ' раб. дн · ' +
+                                this._fmtTotalsNum(st.hours40) + ' ч (40-час)';
+                    }
+                }
+            } catch (e) {}
+            var pendN = Object.keys(this._PENDING || {}).length;
+            if (pendN) info += ' · включая несохранённые правки (' + pendN + ')';
+            if (infoEl) infoEl.textContent = info;
+
+            if (!this._EMPLOYEES.length) {
+                body.innerHTML = '<div class="ws-tt-empty">Нет активных сотрудников.</div>';
+                return;
+            }
+            var html = '<div class="ws-tt-scroll"><table class="ws-tt-table">' +
+                '<thead><tr>' +
+                '<th class="ws-tt-emp">Сотрудник</th>' +
+                '<th>Явки</th><th>Часы</th><th>Д</th><th>Н</th>' +
+                '<th>ОТ</th><th>У</th><th>ОВ</th><th>Б</th><th>ПР</th>' +
+                '<th title="И/ОБ/ПЗ/* — мероприятия, «·» — плановый выходной, прочие коды">Прочие</th>' +
+                '<th>Всего</th>' +
+                '</tr></thead><tbody>';
+            var g = agg.grand || z;
+            for (var i = 0; i < this._EMPLOYEES.length; i++) {
+                var emp = this._EMPLOYEES[i];
+                var a = agg.byTab[String(emp['таб_номер'])] || z;
+                html += '<tr>' +
+                    '<td class="ws-tt-emp"><span class="ws-tt-tabno">' +
+                    this._esc(emp['таб_номер']) + '</span>' +
+                    this._esc(emp['ФИО']) + '</td>' +
+                    '<td class="ws-tt-num">' + a.work + '</td>' +
+                    '<td class="ws-tt-num ws-tt-hours">' + this._fmtTotalsNum(a.hours) + '</td>' +
+                    '<td class="ws-tt-num">' + a.day + '</td>' +
+                    '<td class="ws-tt-num">' + a.night + '</td>' +
+                    '<td class="ws-tt-num">' + a['ОТ'] + '</td>' +
+                    '<td class="ws-tt-num">' + a['У'] + '</td>' +
+                    '<td class="ws-tt-num">' + a['ОВ'] + '</td>' +
+                    '<td class="ws-tt-num">' + a['Б'] + '</td>' +
+                    '<td class="ws-tt-num">' + a['ПР'] + '</td>' +
+                    '<td class="ws-tt-num">' + a.other + '</td>' +
+                    '<td class="ws-tt-num">' + a.total + '</td>' +
+                    '</tr>';
+            }
+            html += '<tr class="ws-tt-total">' +
+                '<td class="ws-tt-emp">Итого по подразделению</td>' +
+                '<td class="ws-tt-num">' + g.work + '</td>' +
+                '<td class="ws-tt-num ws-tt-hours">' + this._fmtTotalsNum(g.hours) + '</td>' +
+                '<td class="ws-tt-num">' + g.day + '</td>' +
+                '<td class="ws-tt-num">' + g.night + '</td>' +
+                '<td class="ws-tt-num">' + g['ОТ'] + '</td>' +
+                '<td class="ws-tt-num">' + g['У'] + '</td>' +
+                '<td class="ws-tt-num">' + g['ОВ'] + '</td>' +
+                '<td class="ws-tt-num">' + g['Б'] + '</td>' +
+                '<td class="ws-tt-num">' + g['ПР'] + '</td>' +
+                '<td class="ws-tt-num">' + g.other + '</td>' +
+                '<td class="ws-tt-num">' + g.total + '</td>' +
+                '</tr></tbody></table></div>';
+            body.innerHTML = html;
+        },
+
+        // Вкладка «Год»: 12 колонок-месяцев (формат «дни/часы») +
+        // годовые суммы по каждому сотруднику и по месяцам; строки —
+        // сотрудники года, ВКЛЮЧАЯ архивных (listEmployees
+        // includeArchived=true — уволенный в середине года человек
+        // остаётся в годовых итогах, помечен «архив»). Данные — 12
+        // запросов listEntries, кэш в памяти _YEAR_DATA (сброс —
+        // «Обновить» панели или любое принудительное обновление вида).
+        _renderTotalsYear: function() {
+            var body = document.getElementById('wsTtBody');
+            if (!body) return;
+            var self = this;
+            if (!this._YEAR_DATA || this._YEAR_DATA.year !== this._year) {
+                body.innerHTML = '<div class="ws-tt-empty">Загрузка данных за ' +
+                    this._year + ' год<span class="flow-loading-dots"><span>.</span><span>.</span><span>.</span></span></div>';
+                this._loadYearData(this._year).then(function() {
+                    self._renderTotalsYearTable();
+                }, function(err) {
+                    body.innerHTML = '<div class="ws-tt-empty">Ошибка загрузки данных года: ' +
+                        self._esc(err && err.message ? err.message : err) +
+                        '. Нажмите «Обновить», чтобы повторить.</div>';
+                });
+                return;
+            }
+            this._renderTotalsYearTable();
+        },
+
+        // Загрузка данных года: 12 месяцев listEntries (параллельно;
+        // сбой месяца — пустой список + счётчик failed, панель
+        // продолжает работать с неполными данными) + справочник
+        // сотрудников с архивом (сбой — активные из текущего вида).
+        // Результат кэшируется в _YEAR_DATA (память до смены года/
+        // принудительного обновления).
+        _loadYearData: function(year) {
+            var self = this;
+            var calls = [];
+            for (var m = 1; m <= 12; m++) {
+                (function(mm) {
+                    calls.push(self._api('workSchedule.listEntries', { year: year, month: mm })
+                        .then(function(data) { return (data && data.entries) || []; })
+                        .catch(function() { return null; }));
+                })(m);
+            }
+            var empsPromise = this._api('workSchedule.listEmployees', { includeArchived: true })
+                .then(function(data) { return self._sortEmployees(data.employees || []); })
+                .catch(function() { return null; });
+            return Promise.all([Promise.all(calls), empsPromise]).then(function(res) {
+                var months = {};
+                var failed = 0;
+                for (var i = 0; i < 12; i++) {
+                    months[i + 1] = (res[0][i] === null) ? [] : res[0][i];
+                    if (res[0][i] === null) failed++;
+                }
+                self._YEAR_DATA = {
+                    year: year,
+                    ts: Date.now(),
+                    months: months,
+                    employees: res[1],
+                    failed: failed
+                };
+                return self._YEAR_DATA;
+            });
+        },
+
+        // Таблица года (данные уже в _YEAR_DATA). Каждая ячейка
+        // месяца — «явки/часы» («11/132»), итого сотрудника —
+        // годовые явки и часы; последняя строка — суммы по месяцам
+        // по всему персоналу.
+        _renderTotalsYearTable: function() {
+            var body = document.getElementById('wsTtBody');
+            var infoEl = document.getElementById('wsTtInfo');
+            if (!body) return;
+            var md = this._YEAR_DATA;
+            if (!md || md.year !== this._year) return;
+            var monthsAbbr = ['янв','фев','мар','апр','май','июн',
+                              'июл','авг','сен','окт','ноя','дек'];
+            var employees = (md.employees && md.employees.length)
+                ? md.employees : this._EMPLOYEES;
+
+            var perMonth = [];
+            var monthTotals = [];
+            for (var m = 1; m <= 12; m++) {
+                var ag = this._totalsAgg(md.months[m]);
+                perMonth[m] = ag.byTab;
+                monthTotals[m] = ag.grand;
+            }
+
+            var info = this._year + ' г. · явки/часы по месяцам';
+            if (md.failed) {
+                info += ' · ⚠ не загружено месяцев: ' + md.failed +
+                        ' — нажмите «Обновить»';
+            }
+            if (!md.employees || !md.employees.length) {
+                info += ' · справочник не загружен — только активные';
+            }
+            if (infoEl) infoEl.textContent = info;
+
+            if (!employees.length) {
+                body.innerHTML = '<div class="ws-tt-empty">Нет сотрудников.</div>';
+                return;
+            }
+            var html = '<div class="ws-tt-scroll"><table class="ws-tt-table">' +
+                '<thead><tr><th class="ws-tt-emp">Сотрудник</th>';
+            for (var h = 1; h <= 12; h++) html += '<th>' + monthsAbbr[h - 1] + '</th>';
+            html += '<th>Дней</th><th>Часов</th></tr></thead><tbody>';
+            var gWork = 0, gHours = 0;
+            for (var e = 0; e < employees.length; e++) {
+                var emp = employees[e];
+                var tab = String(emp['таб_номер']);
+                var sumWork = 0, sumHours = 0;
+                html += '<tr><td class="ws-tt-emp"><span class="ws-tt-tabno">' +
+                    this._esc(emp['таб_номер']) + '</span>' +
+                    this._esc(emp['ФИО']) +
+                    (emp['в_архиве'] ? ' <span class="ws-tt-arch">архив</span>' : '') +
+                    '</td>';
+                for (var mm = 1; mm <= 12; mm++) {
+                    var a = perMonth[mm][tab];
+                    var w = a ? a.work : 0;
+                    var hh = a ? a.hours : 0;
+                    sumWork += w; sumHours += hh;
+                    html += '<td class="ws-tt-num">' +
+                        (w ? w + '/' + this._fmtTotalsNum(hh) : '—') + '</td>';
+                }
+                gWork += sumWork; gHours += sumHours;
+                html += '<td class="ws-tt-num">' + (sumWork || '—') + '</td>' +
+                        '<td class="ws-tt-num ws-tt-hours">' +
+                        (sumHours ? this._fmtTotalsNum(sumHours) : '—') + '</td></tr>';
+            }
+            html += '<tr class="ws-tt-total"><td class="ws-tt-emp">Итого по подразделению</td>';
+            for (var mt = 1; mt <= 12; mt++) {
+                var tg = monthTotals[mt] || this._totalsZero();
+                html += '<td class="ws-tt-num">' +
+                    (tg.work ? tg.work + '/' + this._fmtTotalsNum(tg.hours) : '—') + '</td>';
+            }
+            html += '<td class="ws-tt-num">' + (gWork || '—') + '</td>' +
+                    '<td class="ws-tt-num ws-tt-hours">' +
+                    (gHours ? this._fmtTotalsNum(gHours) : '—') + '</td></tr>';
+            html += '</tbody></table></div>';
+            body.innerHTML = html;
         },
 
         // Task 316: НАВЕДЕНИЕ на дату шапки — подсветка ВСЕГО столбца
@@ -41327,7 +42005,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
              style="display:none" — чтобы не мелькал до первого запуска
              _applyRoleToUI (как sidebarAdminBtn). -->
         <div class="sidebar-item sidebar-item-extra" id="sidebarWorkScheduleBtn" onclick="navigateTo('work-schedule'); toggleSidebar();" style="display:none;">
-            <span style="color:rgba(200,112,72,0.9);">График работы</span>
+            <span style="color:rgba(200,112,72,0.9);">Табель учёта рабочего времени</span>
         </div>
         </div>
 
