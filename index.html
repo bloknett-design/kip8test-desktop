@@ -5556,6 +5556,17 @@
         color: #fff;
     }
     [data-theme="light"] .ws-dismiss-submit:hover { background: #c62828; }
+    /* Task 320: подсказка календарного режима в шторке «Новый
+       сотрудник» — видна при типе «дневной»: шахматка строится со
+       старт-даты, пн–пт рабочие по шаблону 5/2, Сб/Вс и праздничные
+       нерабочие дни — пустые выходные */
+    .ws-emp-cal-hint {
+        font-size: 12.5px;
+        line-height: 1.45;
+        color: var(--text-secondary, rgba(255,255,255,0.6));
+        padding: 6px 2px 0;
+    }
+    [data-theme="light"] .ws-emp-cal-hint { color: #777; }
     [data-theme="light"] .ws-vac-form-hint {
         background: rgba(20, 20, 19, 0.04);
         color: rgba(20, 20, 19, 0.6);
@@ -15008,6 +15019,13 @@
             <label class="flow-input-label" for="wsEmpHire">Дата приёма</label>
             <input type="date" id="wsEmpHire" class="flow-input-field-small">
         </div>
+    </div>
+    <!-- Task 320: подсказка календарного режима дневного персонала —
+         показывается при типе «дневной» (onEmpTypeChange): шахматка
+         строится со старт-даты, выходные/праздники — пустые -->
+    <div class="ws-emp-cal-hint" id="wsEmpCalHint" hidden>
+        Дневной персонал: шахматка строится с этой даты — пн–пт рабочие дни
+        по шаблону 5/2, Сб/Вс и праздничные нерабочие дни — пустые выходные.
     </div>
     <div class="flow-input-row">
         <div class="flow-input-group" style="flex:0 0 60%;">
@@ -36003,8 +36021,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 monthSel.innerHTML = html;
             }
             if (yearSel) {
+                // Task 320: три года ДО и ПОСЛЕ текущего (7 пунктов,
+                // было −1…+2) — годовой шахматки хватает на план
+                // отпусков и архив прошлых лет
                 var yHtml = '';
-                for (var y = this._year - 1; y <= this._year + 2; y++) {
+                for (var y = this._year - 3; y <= this._year + 3; y++) {
                     yHtml += '<option value="' + y + '"' + (y === this._year ? ' selected' : '') + '>' + y + '</option>';
                 }
                 yearSel.innerHTML = yHtml;
@@ -36732,6 +36753,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 306: сам расчёт НЕ зависит от типа сотрудника (чистая
         // арифметика цикла, паритет с сервером) — фильтр «только
         // сменный» стоит в _renderCell (vacMain), см. блок выше.
+        // Task 320 (паритет с сервером): до даты старта цикла —
+        // НЕТ плановой смены (шахматка строится с установленной
+        // даты, дни до старта пустые); «дневной» с циклом 7 —
+        // КАЛЕНДАРНЫЙ режим: день цикла = день недели (Пн=1..Вс=7),
+        // шаблон 5/2 ложится на календарную неделю.
         _plannedShiftAt: function(isoDate, emp) {
             if (!emp || !emp.шаблон_ротации || !emp.старт_цикла) return '';
             var pat = null;
@@ -36743,7 +36769,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var st = this._parseIsoLocal(emp.старт_цикла);
             if (!dt || !st) return '';
             var diffDays = Math.floor((dt.getTime() - st.getTime()) / 86400000);
-            var dayOfCycle = ((diffDays % pat.cycle) + pat.cycle) % pat.cycle + 1;
+            // Task 320: до старта цикла плановой смены нет
+            if (diffDays < 0) return '';
+            var dayOfCycle;
+            if (String(emp['тип'] || '').trim() === 'дневной' && pat.cycle === 7) {
+                // Task 320: календарный режим 5/2 — Пн=1..Вс=7
+                var dow = dt.getDay();
+                dayOfCycle = (dow === 0) ? 7 : dow;
+            } else {
+                dayOfCycle = ((diffDays % pat.cycle) + pat.cycle) % pat.cycle + 1;
+            }
             for (var pd = 0; pd < pat.days.length; pd++) {
                 if (pat.days[pd].day === dayOfCycle) return pat.days[pd].status || '';
             }
@@ -37664,12 +37699,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         // потерян ведущий ноль, «871» вместо «0871»). Раньше
                         // — тихая ошибка: бейдж не показывался
                         var genWarns = (data && data.warnings) || [];
+                        // Task 320: авто-смены вне правил (до старта
+                        // цикла / выходные дневного персонала), убранные
+                        // сверкой — отдельная строка тоста
+                        var removedShift = (data && data.removedShift) || 0;
                         KipToast.show(monthName + ' ' + self._year + ': сформировано ' +
                                       ((data && data.generated) || 0) + ' зап., обновлено ' +
                                       ((data && data.updated) || 0) +
                                       ', отпусков отмечено ' + vacDays + ' дн.' +
                                       (((data && data.removed) || 0)
                                           ? ', удалено ' + data.removed + ' устаревших отпусков'
+                                          : '') +
+                                      (removedShift
+                                          ? ', убрано ' + removedShift + ' лишних смен'
                                           : '') +
                                       ((data && data.vacationError)
                                           ? '; отпуска не проверены: ' + data.vacationError
@@ -37706,6 +37748,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var totalRemoved = 0;
             // Task 279: сумма отпускных дней за 12 месяцев — в итоговый тост
             var totalVacDays = 0;
+            // Task 320: сумма убранных авто-смен (до старта/выходные)
+            var totalRemovedShift = 0;
             // Task 304: предупреждения всех месяцев (таб не из справочника)
             var totalWarns = [];
             var monthsDone = 0;
@@ -37721,6 +37765,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                       ', отпусков отмечено ' + totalVacDays + ' дн.' +
                                       (totalRemoved ? ', удалено ' + totalRemoved +
                                        ' устаревших отпусков' : '') +
+                                      (totalRemovedShift ? ', убрано ' + totalRemovedShift +
+                                       ' лишних смен' : '') +
                                       (totalWarns.length
                                           ? '; ⚠ ' + totalWarns.slice(0, 3).join('; ') +
                                             (totalWarns.length > 3
@@ -37740,6 +37786,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         // Task 274: устаревшие авто-«О» (счётчик removed)
                         totalRemoved += (data && data.removed) || 0;
                         totalVacDays += (data && data.vacationDays) || 0;
+                        totalRemovedShift += (data && data.removedShift) || 0;
                         // Task 304: предупреждения месяца (таб не из справочника)
                         if (data && data.warnings && data.warnings.length) {
                             totalWarns = totalWarns.concat(data.warnings);
@@ -38692,6 +38739,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (typeSel.value !== 'сменный') {
                 document.getElementById('wsEmpShift').value = '';
             }
+            // Task 320: подсказка календарного режима — только для
+            // «дневной» (шахматка со старт-даты, Сб/Вс и праздники —
+            // пустые выходные); сменному персоналу цикл идёт по
+            // «Дни_цикла» от старта, выходные не учитываются
+            var calHint = document.getElementById('wsEmpCalHint');
+            if (calHint) calHint.hidden = (typeSel.value !== 'дневной');
         },
 
         // Task 318: «Должность» в шторке нового сотрудника —
