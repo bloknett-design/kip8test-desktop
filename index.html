@@ -4413,12 +4413,43 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
+    /* Task 319 (заявка): окно ВЫБОРА КОДОВ — НАЗВАНИЕ кода чуть
+       МЕЛЬЧЕ и ПЕРЕНОСИТСЯ по строкам (прежде — однострочное
+       многоточие): длинные названия («Отпуск без сохранения …»)
+       видны целиком, ширина окна не меняется (max-width 320px),
+       высота строки растёт. ТОЛЬКО #wsCellPopup: окно «Мероприятия
+       в этот день» и карточка сотрудника — прежний однострочный
+       вид (заявка — только окно выбора кодов). */
+    #wsCellPopup .ws-popup-name {
+        font-size: 12px;
+        line-height: 1.35;
+        white-space: normal;
+        overflow-wrap: break-word;
+        overflow: visible;
+        text-overflow: clip;
+        min-width: 0;
+    }
     .ws-popup-more {
         border-top: 1px solid var(--card-border, rgba(255,255,255,0.08));
         border-radius: 0;
         margin-top: 2px;
         color: var(--accent-blue, #4a8fc7);
         font-weight: 600;
+    }
+    /* Task 318: строка «Уволить…» в карточке сотрудника — опасное
+       действие: КРАСНАЯ (как ✕ удаления мероприятия), а не
+       акцент-синяя; наведение — красная подложка, не синяя */
+    .ws-popup-row.ws-emp-dismiss {
+        color: #ef5350;
+    }
+    .ws-popup-row.ws-emp-dismiss:hover {
+        background: rgba(239, 83, 80, 0.12);
+    }
+    [data-theme="light"] .ws-popup-row.ws-emp-dismiss {
+        color: #c62828;
+    }
+    [data-theme="light"] .ws-popup-row.ws-emp-dismiss:hover {
+        background: rgba(229, 57, 53, 0.10);
     }
     /* Task 303: заголовок секции — события (И/ОБ/ПЗ) из листа
        «Инструктажи». Task 313: класс жив у секций КАРТОЧКИ сотрудника
@@ -4613,10 +4644,16 @@
        правки: плюсик-индикатор акцентом у текста, курсор-палец и
        подсветка при наведении; клик открывает шторку #wsEmpSheet
        (openEmployeeForm — внутри ещё проверка _canEdit). Зрителям —
-       обычный заголовок без клика. */
+       обычный заголовок без клика.
+       Task 318: подсветка — СПЛОШНОЙ цвет, как у ячеек ФИО под
+       шапкой (td.ws-emp-col:hover #15202f/#e2e8ef). Заголовок —
+       sticky: прежний ПОЛУПРОЗРАЧНЫЙ rgba-фон на hover делал поле
+       прозрачным (сквозь него просвечивало прокручиваемое тело
+       таблицы — фон «исчезал»); теперь фон МЕНЯЕТ ЦВЕТ, оставаясь
+       непрозрачным. */
     .ws-grid thead th.ws-emp-col.ws-emp-head-add { cursor: pointer; }
     .ws-grid thead th.ws-emp-col.ws-emp-head-add:hover {
-        background: rgba(74, 143, 199, 0.16);
+        background: #15202f;
         color: var(--text-primary, #e0e0e0);
     }
     .ws-grid thead th.ws-emp-col .ws-emp-head-plus {
@@ -4626,7 +4663,7 @@
         margin-left: 6px;
     }
     [data-theme="light"] .ws-grid thead th.ws-emp-col.ws-emp-head-add:hover {
-        background: rgba(42, 93, 143, 0.16);
+        background: #e2e8ef;
     }
     .ws-grid thead th.ws-day-col {
         min-width: 30px;
@@ -4895,6 +4932,48 @@
         box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.24),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
+    /* Task 319: ПЕРЕКРЕСТЬЕ — СТРОКА ячейки под курсором (класс
+       ws-hover-row на <tr>, ставит _cellHover/_rowHover по
+       делегированию mouseover/mouseout на контейнере сетки).
+       Заливка — тот же приём inset-«шторки» (Task 313/316), мягче
+       столбца; ПЕРЕСЕЧЕНИЕ строки и столбца (правило с .ws-hover) —
+       насыщеннее, как выбранный день. Составные правила с
+       ws-source-manual / ws-today / ws-sel — принцип Task 313/316:
+       рамка и смысловые тинты НЕ затираются заливкой строки. ФИО
+       ячейка строки — «начало» перекрестья (шапка строки). */
+    .ws-grid tbody tr.ws-hover-row td.ws-cell {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.10);
+    }
+    .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.10),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.20);
+    }
+    .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.20),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-hover {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.24);
+    }
+    .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-hover.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.24),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    /* выбранный кликом день в наведённой строке — выбор сильнее
+       строки (как и без строки) */
+    .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-sel {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.24);
+    }
+    .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-sel.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.24),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    .ws-grid tbody tr.ws-hover-row td.ws-emp-col {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.10);
+    }
     .ws-grid tbody td.ws-cell.ws-status-empty {
         color: var(--text-secondary, rgba(255,255,255,0.25));
     }
@@ -4918,6 +4997,41 @@
        Task 250 — страница не просвечивает). */
     .ws-grid tbody td.ws-cell.ws-weekend.ws-status-empty {
         background: #6e4250;   /* тёмная тема: приглушённый пыльно-розовый */
+    }
+    /* Task 319 (заявка): тёмная тема — шахматка ДНЕЙ носит ЦВЕТА
+       СВЕТЛОЙ ТЕМЫ, вся площадь лишь слегка ПРИТЕНЕНА поверхностным
+       фильтром brightness: пустые #eef0f2, пустые выходные #f7d9e3
+       (как в светлой), статусные — inline-цвета справочника кодов
+       (и так одинаковы в обеих темах), текст кодов — тёмный #141413
+       (= --text-primary светлой темы), «·»/пустые — вторичный тёмный.
+       Заявка: «цвет шахматки дней должен оставаться как в светлой
+       теме, только немного притеняться поверхностным фильтром».
+       Шапка сетки и колонка ФИО остаются тёмными (заявка — только
+       «шахматка дней»). Порядок/специфичность: правило стоит ПОСЛЕ
+       .ws-dot-code (равная специфичность — позднее выигрывает),
+       выходные/пустые — отдельными правилами рангом выше. */
+    [data-theme="dark"] .ws-grid tbody td.ws-cell {
+        background: #eef0f2;
+        color: #141413;
+        filter: brightness(0.88);
+    }
+    [data-theme="dark"] .ws-grid tbody td.ws-cell.ws-weekend.ws-status-empty {
+        background: #f7d9e3;
+    }
+    [data-theme="dark"] .ws-grid tbody td.ws-cell.ws-status-empty {
+        color: rgba(20, 20, 19, 0.65);
+    }
+    /* пунктирный бейдж будущего мероприятия — тёмный текст/рамка
+       (базовое правило красит var(--text-primary) светлым — на
+       светлом фоне нечитаемо); значения — как в светлой теме */
+    [data-theme="dark"] .ws-grid tbody td.ws-cell .ws-ev-badge.ws-ev-pending {
+        border-color: rgba(0, 0, 0, 0.55);
+        color: #141413;
+    }
+    /* свотч «.» в попапе — предпросмотр ПУСТОЙ ячейки: в тёмной теме
+       ячейка теперь светлая (#eef0f2), свотч показывает то же самое */
+    [data-theme="dark"] .ws-popup-swatch.ws-swatch-dot {
+        background: #eef0f2;
     }
     /* Task 255 (правка Task 254): красные линии-границы между колонками
        выходных и рабочих дней — ТОНЬШЕ (1px вместо 2px), ПРИГЛУШЁННЕЕ
@@ -5359,6 +5473,41 @@
         box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.15),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
+    /* Task 319: светлая тема — перекрестье СТРОКИ (класс ws-hover-row
+       на <tr>): тон мягче тёмной, пересечение — насыщеннее столбца,
+       выбранный день сильнее строки; принципы составных правил —
+       как в тёмной (блок выше). */
+    [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.06);
+    }
+    [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.06),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.14);
+    }
+    [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.14),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-hover {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.16);
+    }
+    [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-hover.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.16),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-sel {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.15);
+    }
+    [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-sel.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.15),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-emp-col {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.06);
+    }
     /* Task 254: светлая тема — должность под ФИО потемнее */
     [data-theme="light"] .ws-grid tbody td.ws-emp-col .ws-emp-pos {
         color: #666;
@@ -5378,6 +5527,35 @@
        когда новый период выводит сотрудника за 42 дн. (ТК РФ) */
     .ws-vac-form-info.ws-vac-overlimit { color: #ef5350; }
     [data-theme="light"] .ws-vac-form-info.ws-vac-overlimit { color: #c62828; }
+    /* Task 318: шторка «Увольнение сотрудника» — ФИО-строка
+       (только чтение, поле не input), пояснение и красная кнопка
+       «Уволить» (опасное действие — стиль как у «Отменить»
+       Task 315, но сплошнее: погашенная красная подложка) */
+    .ws-dismiss-emp {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-primary, #e0e0e0);
+        padding: 8px 2px 0;
+    }
+    [data-theme="light"] .ws-dismiss-emp { color: #222; }
+    .ws-dismiss-info {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary, rgba(255,255,255,0.6));
+        padding: 2px 2px 8px;
+    }
+    [data-theme="light"] .ws-dismiss-info { color: #777; }
+    .ws-dismiss-submit {
+        background: #e53935;
+        border-color: #e53935;
+    }
+    .ws-dismiss-submit:hover { background: #ef5350; }
+    [data-theme="light"] .ws-dismiss-submit {
+        background: #d32f2f;
+        border-color: #d32f2f;
+        color: #fff;
+    }
+    [data-theme="light"] .ws-dismiss-submit:hover { background: #c62828; }
     [data-theme="light"] .ws-vac-form-hint {
         background: rgba(20, 20, 19, 0.04);
         color: rgba(20, 20, 19, 0.6);
@@ -14833,13 +15011,46 @@
     </div>
     <div class="flow-input-row">
         <div class="flow-input-group" style="flex:0 0 60%;">
+            <!-- Task 318: «Должность» — ВЫПАДАЮЩИЙ список вариантов из
+                 таблицы «Сотрудники» (файл табель_КИП_ИОС): уникальные
+                 должности строк листа (активные + архив), по алфавиту.
+                 Наполняется при открытии шторки — _fillPositionSelect
+                 (listEmployees includeArchived, офлайн/сбой — активные
+                 из _EMPLOYEES); лист — единственный источник истины -->
             <label class="flow-input-label" for="wsEmpPosition">Должность</label>
-            <input type="text" id="wsEmpPosition" class="flow-input-field-small" placeholder="Слесарь по КИПиА" autocomplete="off">
+            <select id="wsEmpPosition" class="flow-input-field-small"></select>
         </div>
     </div>
     <textarea id="wsEmpComment" class="flow-comment-field" rows="2" maxlength="500" placeholder="Комментарий (необязательно)" autocomplete="off"></textarea>
     <button type="button" class="flow-input-submit" onclick="WorkSchedule.submitEmployeeForm()">Добавить</button>
     <button type="button" class="flow-input-cancel" onclick="WorkSchedule.closeEmployeeForm()">Отмена</button>
+</div>
+
+<!-- ===== Task 318: Bottom sheet — увольнение сотрудника (workSchedule) =====
+     Открывается из карточки сотрудника (строка «Уволить…», только
+     редакторам). Записывает дату_увольнения (H) и в_архиве=1 (I) в
+     таблицу «Сотрудники»: сотрудник уходит из шахматки (listEmployees
+     без includeArchived его больше не отдаёт), строка остаётся в
+     листе как АРХИВ. Сервер: workSchedule.dismissEmployee. -->
+<div id="wsDismissOverlay" class="pin-sheet-overlay" onclick="WorkSchedule.closeDismissForm()"></div>
+<div id="wsDismissSheet" class="flow-input-sheet">
+    <div class="flow-input-sheet-handle"></div>
+    <div class="flow-input-sheet-title">Увольнение сотрудника</div>
+    <div class="flow-input-row">
+        <div class="flow-input-group" style="flex:1 1 100%;">
+            <label class="flow-input-label">Сотрудник</label>
+            <div id="wsDismissEmp" class="ws-dismiss-emp">—</div>
+        </div>
+    </div>
+    <div class="flow-input-row">
+        <div class="flow-input-group" style="flex:0 0 60%;">
+            <label class="flow-input-label" for="wsDismissDate">Дата увольнения</label>
+            <input type="date" id="wsDismissDate" class="flow-input-field-small">
+        </div>
+    </div>
+    <div class="ws-dismiss-info">Сотрудник уйдёт из графика — строка останется в архиве справочника «Сотрудники»</div>
+    <button type="button" class="flow-input-submit ws-dismiss-submit" onclick="WorkSchedule.submitDismissForm()">Уволить</button>
+    <button type="button" class="flow-input-cancel" onclick="WorkSchedule.closeDismissForm()">Отмена</button>
 </div>
 
 <!-- ===== Bottom sheet: добавление мероприятия (workSchedule) ===== -->
@@ -35709,6 +35920,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _hoverDay: null,
         _selDay: null,
 
+        // Task 319: строка под КУРСОРОМ (индекс <tr> в tbody — порядок
+        // строк рендера) — ПЕРЕКРЕСТЬЕ шахматки: движение мыши по ячейкам
+        // дней выделяет строку И столбец, пересекающиеся в ячейке под
+        // курсором. Ставится _cellHover (делегирование mouseover/mouseout
+        // на #wsGridWrap), снимается уходом курсора с ячеек (шапка/ФИО/
+        // вне сетки) и сменой месяца. Штампуется классом ws-hover-row на
+        // <tr> в _renderGrid — переживает перерисовку (как _hoverDay).
+        _hoverRow: null,
+
+        // Task 318: таб. № сотрудника шторки увольнения (null — закрыта).
+        // Ставится openDismissForm из карточки, сбрасывается
+        // closeDismissForm; submitDismissForm отправляет пару
+        // {таб_номер, дата_увольнения} → dismissEmployee
+        _dismissTabNo: null,
+
         // Task 314: локальная копия данных графика (localStorage) —
         // график открывается МГНОВЕННО без сети; обновление — кнопкой
         // «Обновить» (refreshData) и авто-сохранением после каждой
@@ -35805,6 +36031,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // — слушатели на кнопке (наведение/фокус) и глобальный сброс
             // при прокрутке (fixed-позиция привязана к кнопке). Клик —
             // запуск обновления: окно закрывается, итог покажет тост.
+            // Task 319: окно ПЕРЕНЕСЕНО в <body> — из-под stacking-контекста
+            // .page-content (position:relative; z-index:2), который опускал
+            // его (z 9450) ПОД верхний бар (z 70) — окно «пряталось» под
+            // баром при показе над кнопкой; в корне документа z 9450 выше
+            // любых баров/окон страницы.
+            var rTip = document.getElementById('wsRefreshTip');
+            if (rTip && rTip.parentNode && rTip.parentNode !== document.body) {
+                document.body.appendChild(rTip);
+            }
             var rTipBtn = document.getElementById('wsRefreshBtn');
             if (rTipBtn) {
                 rTipBtn.addEventListener('mouseenter', function() { self._showRefreshTip(); });
@@ -35816,6 +36051,44 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 });
             }
             document.addEventListener('scroll', function() { self._hideRefreshTip(); }, true);
+
+            // Task 319: ПЕРЕКРЕСТЬЕ шахматки — движение мыши по ячейкам
+            // дней выделяет СТРОКУ и СТОЛБЕЦ, пересекающиеся в ячейке
+            // под курсором (заявка). Делегирование на контейнере сетки
+            // (два слушателя вместо сотен inline): mouseover находит
+            // td.ws-cell (data-day + строка по sectionRowIndex) и зовёт
+            // _cellHover; mouseout при уходе на НЕ-ячейку (шапка/ФИО/
+            // вне сетки) снимает подсветку, при переходе на соседнюю
+            // ячейку — НЕ трогает (обновит её mouseover — без мигания).
+            var gridWrapEl = document.getElementById('wsGridWrap');
+            if (gridWrapEl && gridWrapEl.addEventListener) {
+                gridWrapEl.addEventListener('mouseover', function(e) {
+                    var td = null;
+                    try {
+                        if (e.target && e.target.closest) {
+                            td = e.target.closest('td.ws-cell');
+                        }
+                    } catch (err) {}
+                    if (!td) return;
+                    var day = parseInt(td.getAttribute('data-day'), 10);
+                    var tr = (td.closest ? td.closest('tr') : null);
+                    var ri = tr ? tr.sectionRowIndex : -1;
+                    if (isNaN(day) || ri < 0) return;
+                    self._cellHover(ri, day);
+                });
+                gridWrapEl.addEventListener('mouseout', function(e) {
+                    var td = null;
+                    try {
+                        if (e.target && e.target.closest) {
+                            td = e.target.closest('td.ws-cell');
+                        }
+                    } catch (err) {}
+                    if (!td) return;
+                    var to = e.relatedTarget;
+                    if (to && to.closest && to.closest('td.ws-cell')) return;
+                    self._cellHover(null);
+                });
+            }
 
             // Task 312: «+ Отпуск» из тулбара УБРАНА — её функцию
             // выполняет строка «+ Отпуск…» в блоке отпусков карточки
@@ -35880,6 +36153,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // уже не над датой прежнего месяца)
             this._hoverDay = null;
             this._selDay = null;
+            // Task 319: перекрестье — строка тоже сбрасывается
+            // (строки нового месяца другие; курсор над сеткой —
+            // mouseover поставит подсветку заново)
+            this._hoverRow = null;
             // Task 260: мог смениться год — гарантируем данные календаря
             this._ensureCal();
             this.loadGrid();
@@ -36174,6 +36451,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // (fixed-позиция устаревает). Позиция — НАД кнопкой; если сверху
         // не хватает места (кнопка у верхней кромки вьюпорта) — ПОД ней.
         // Кликам окно не мешает (pointer-events: none в CSS).
+        // Task 319: «сверху не хватает места» теперь считается С УЧЁТОМ
+        // верхнего бара (desktop ≥1024px: sticky .desktop-top-bar) —
+        // прежде окно показывалось над кнопкой и частично ПРОЯВАЛОСЬ
+        // ПОД баром (физически за ним); теперь при нехватке места
+        // ниже бара окно показывается ПОД кнопкой (заявка). Мобайл —
+        // бара нет, прежнее поведение. Мок-DOM в тестах без
+        // querySelector — тихо пропускает (бара нет).
         _showRefreshTip: function() {
             var btn = document.getElementById('wsRefreshBtn');
             var tip = document.getElementById('wsRefreshTip');
@@ -36183,8 +36467,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var r = btn.getBoundingClientRect();
             tip.style.left = Math.max(6, Math.round(r.left)) + 'px';
             tip.style.top = '0px';
+            var barBottom = 0;
+            try {
+                if (document.querySelector) {
+                    var bar = document.querySelector('.desktop-top-bar');
+                    if (bar) {
+                        var br = bar.getBoundingClientRect();
+                        if (br && br.height > 0) barBottom = br.bottom;
+                    }
+                }
+            } catch (e) {}
             var top = r.top - tip.offsetHeight - 8;
-            if (top < 4) top = r.bottom + 6;
+            if (top < barBottom + 4) top = r.bottom + 6;
             tip.style.top = Math.round(top) + 'px';
         },
         _hideRefreshTip: function() {
@@ -36667,10 +36961,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var empTip = String(emp['тип'] || '').trim();
                 var empTier = (empTip === 'сменный') ? 0
                             : (empTip === 'дневной') ? 1 : 2;
-                var trCls = (empTier === 1 && prevTier === 0)
-                    ? ' class="ws-group-first"' : '';
+                var trClsParts = [];
+                if (empTier === 1 && prevTier === 0) trClsParts.push('ws-group-first');
+                // Task 319: перекрестье — строка под курсором (класс
+                // штампуется из состояния _hoverRow, переживает
+                // перерисовку — как ws-hover-col у столбца, Task 316)
+                if (ei === this._hoverRow) trClsParts.push('ws-hover-row');
                 prevTier = empTier;
-                html += '<tr' + trCls + '>';
+                html += '<tr' +
+                        (trClsParts.length ? ' class="' + trClsParts.join(' ') + '"' : '') + '>';
                 // Task 254 + Task 255: под ФИО — строка с должностью и
                 // режимом занятости из справочника сотрудников (таблица
                 // «Сотрудники» файла табель_КИП_ИОС: столбец C — тип,
@@ -36888,6 +37187,52 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var el = cells[i];
                 if (!el.classList || !el.classList.toggle) continue;
                 el.classList.toggle(el.tagName === 'TH' ? thCls : cellCls, on);
+            }
+        },
+
+        // Task 319: ПЕРЕКРЕСТЬЕ — ячейка под курсором выделяет СТРОКУ
+        // и СТОЛБЕЦ, пересекающиеся в ней. Вызывается делегированием
+        // mouseover/mouseout на контейнере сетки (init): строка —
+        // индекс <tr> в tbody (sectionRowIndex), столбец — data-day
+        // ячейки. null — снять оба (уход с ячеек: шапка/ФИО/вне
+        // сетки). Переходы МЕЖДУ ячейками не мигают: mouseout при
+        // relatedTarget-ячейке игнорируется, mouseover соседа просто
+        // обновляет строку/столбец (каждый по своему «if не менялся»).
+        _cellHover: function(ri, day) {
+            if (ri === null || ri === undefined) {
+                this._rowHover(null);
+                this._dayHover(null);
+                return;
+            }
+            this._rowHover(ri);
+            this._dayHover(day);
+        },
+
+        // Task 319: строка наведения — класс ws-hover-row на <tr>
+        // (CSS красит ВСЕ td строки, вкл. ФИО — «начало» перекрестья).
+        // Классы ставятся ПРЯМО в DOM (без перерисовки — приём
+        // Task 316); _renderGrid штампует ws-hover-row из состояния —
+        // наведение переживает перерисовку (правка/«Обновить»).
+        _rowHover: function(ri) {
+            if (this._hoverRow === ri) return;
+            var prev = this._hoverRow;
+            this._hoverRow = ri;
+            this._rowClass(prev, false);
+            this._rowClass(ri, true);
+        },
+
+        // Task 319: (пере)установка класса ws-hover-row на строке
+        // индекса ri (индексы — порядок <tr> в tbody = порядок
+        // рендера сотрудников). Мягко относится к мок-DOM в тестах.
+        _rowClass: function(ri, on) {
+            if (ri === null || ri === undefined || ri < 0) return;
+            var wrap = document.getElementById('wsGridWrap');
+            if (!wrap || !wrap.querySelectorAll) return;
+            var rows = wrap.querySelectorAll('tbody tr');
+            if (ri >= rows.length) return;
+            var tr = rows[ri];
+            if (tr && tr.classList && tr.classList.toggle) {
+                tr.classList.toggle('ws-hover-row', on);
             }
         },
 
@@ -37431,12 +37776,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // статусного попапа карточка сотрудника закрывается
             // (обратное делает onEmpCellClick)
             this.closeEmpPopup();
-            if (!this._canEdit) {
-                if (typeof KipToast !== 'undefined' && KipToast.show) {
-                    KipToast.show('У вас нет прав на правку графика');
-                }
-                return;
-            }
             if (this._saving) return; // идёт пакетное сохранение — не мешаем
             var td = null;
             try {
@@ -37444,6 +37783,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     td = ev.target.closest('td.ws-cell');
                 }
             } catch (e) {}
+            // Task 319 (заявка): ЗРИТЕЛЯМ («График работы — просмотр»)
+            // клик по ячейке открывает ТОЛЬКО окно «Мероприятия в этот
+            // день» — справка без правки (кнопки ✎/✕ в нём и так
+            // скрыты _canEdit в _renderEventsPopup, строка не клика-
+            // бельна). Окно выбора кодов — только ролям с правом
+            // записи; прежний тост «нет прав» зрителю больше не
+            // показывается — вместо него информативное окно.
+            if (!this._canEdit) {
+                this._openEventsOnlyPopup(td, isoDate, tabNo);
+                return;
+            }
             this._openCellPopup(td, isoDate, tabNo);
         },
 
@@ -37676,6 +38026,50 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._popupCell = null;
         },
 
+        // Task 319: окно «Мероприятия в этот день» для ЗРИТЕЛЕЙ
+        // («График работы — просмотр»): клик по ячейке открывает
+        // ТОЛЬКО его (окно выбора кодов — правка, зрителю не
+        // показывается). Позиционирование — рядом с ячейкой по
+        // правилам _openCellPopup (правее, не влезает — левее,
+        // клампы по краям); закрывается кловером/Esc как обычно
+        // (closeCellPopup чистит ОБА окна). Содержимое — тот же
+        // _renderEventsPopup: строки-справка без ✎/✕ (кнопки и
+        // так _canEdit-gated), пустой день — «нет мероприятий».
+        _openEventsOnlyPopup: function(cellEl, isoDate, tabNo) {
+            var evp = document.getElementById('wsEventsPopup');
+            var closer = document.getElementById('wsPopupCloser');
+            if (!evp) return;
+            this._popupCell = { date: isoDate, 'таб_номер': tabNo };
+            evp.innerHTML = this._renderEventsPopup(isoDate, tabNo);
+            if (closer) closer.classList.add('active');
+            evp.classList.add('active');
+            // Сначала скрыто в левом верхнем углу — измерить габариты,
+            // затем позиционировать и показать
+            evp.style.left = '0px';
+            evp.style.top = '0px';
+            evp.style.visibility = 'hidden';
+            var ew = evp.offsetWidth;
+            var eh = evp.offsetHeight;
+            var vw = window.innerWidth;
+            var vh = window.innerHeight;
+            var left, top;
+            var rect = cellEl ? cellEl.getBoundingClientRect() : null;
+            if (rect) {
+                left = rect.right + 6;
+                if (left + ew > vw - 8) left = rect.left - ew - 6;
+                if (left < 8) left = Math.max(8, Math.min(rect.left, vw - ew - 8));
+                if (left + ew > vw - 8) left = Math.max(8, vw - ew - 8);
+                top = rect.top;
+                if (top + eh > vh - 8) top = Math.max(8, vh - eh - 8);
+            } else {
+                left = Math.max(8, (vw - ew) / 2);
+                top = Math.max(8, (vh - eh) / 2);
+            }
+            evp.style.left = Math.round(left) + 'px';
+            evp.style.top = Math.round(top) + 'px';
+            evp.style.visibility = '';
+        },
+
         // Выбор статуса в попапе: применяется ЛОКАЛЬНО (в _PENDING),
         // мгновенной отправки на сервер нет. Ячейка сразу перекрашивается.
         onPopupStatus: function(code) {
@@ -37833,7 +38227,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // не показываются); Task 311 также снят заголовок-строка
             // «Сотрудник» — профиль идёт сразу после шапки ФИО
             var fields = [
-                ['Тип', tipVal],
+                ['Режим работы', tipVal],
                 ['Должность', String(emp['должность'] || '').trim() || '—'],
                 ['Дата приёма', emp['дата_приёма'] ? this._fmtDateRu(emp['дата_приёма']) : '—'],
                 ['Комментарий', String(emp['комментарий'] || '').trim()]
@@ -37846,6 +38240,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 html += '<div class="ws-emp-field"><span class="ws-emp-k">' +
                         this._esc(fields[fi][0]) + '</span><span class="ws-emp-v">' +
                         this._esc(fields[fi][1]) + '</span></div>';
+            }
+
+            // Task 318: «Уволить…» — форма увольнения (дата → таблица
+            // «Сотрудники», строка сотрудника уходит из шахматки,
+            // остаётся в архиве справочника). Только ролям с правом
+            // записи — как «+ Отпуск…» (двойная защита в
+            // openDismissForm); красная строка — опасное действие
+            if (this._canEdit) {
+                html += '<div class="ws-popup-row ws-popup-more ws-emp-dismiss"' +
+                        ' title="Увольнение: записать дату, убрать из графика"' +
+                        ' onclick="WorkSchedule.openDismissForm(\'' +
+                        this._esc(String(emp['таб_номер'] || '')) + '\')">Уволить…</div>';
             }
 
             // --- Секция 2: отпуска года шахматки (бывшая вкладка
@@ -38258,7 +38664,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             document.getElementById('wsEmpFio').value = '';
             document.getElementById('wsEmpType').value = 'сменный';
             document.getElementById('wsEmpShift').value = '';
-            document.getElementById('wsEmpPosition').value = '';
+            // Task 318: «Должность» — выпадающий список из таблицы
+            // «Сотрудники» (наполняется асинхронно: шторка открывается
+            // сразу, опции появляются по ответу листа)
+            this._fillPositionSelect();
             document.getElementById('wsEmpComment').value = '';
             this.onEmpTypeChange();
 
@@ -38283,6 +38692,141 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (typeSel.value !== 'сменный') {
                 document.getElementById('wsEmpShift').value = '';
             }
+        },
+
+        // Task 318: «Должность» в шторке нового сотрудника —
+        // ВЫПАДАЮЩИЙ список вариантов из таблицы «Сотрудники» (файл
+        // табель_КИП_ИОС): уникальные должности ВСЕХ строк листа
+        // (активные + архив — listEmployees includeArchived), по
+        // алфавиту. Сеть/офлайн — fallback на активных _EMPLOYEES
+        // (данные уже загружены листом); выбранное значение при
+        // обновлении опций сохраняется.
+        _fillPositionSelect: function() {
+            var self = this;
+            var sel = document.getElementById('wsEmpPosition');
+            if (!sel) return;
+            this._api('workSchedule.listEmployees', { includeArchived: true })
+                .then(function(data) {
+                    self._fillPositionOptions(sel, data.employees || []);
+                })
+                .catch(function() {
+                    self._fillPositionOptions(sel, self._EMPLOYEES || []);
+                });
+        },
+
+        _fillPositionOptions: function(sel, employees) {
+            var seen = {};
+            var list = [];
+            for (var i = 0; i < (employees || []).length; i++) {
+                var p = String(employees[i]['должность'] || '').trim();
+                if (p && !seen[p]) { seen[p] = true; list.push(p); }
+            }
+            list.sort(function(a, b) { return a.localeCompare(b, 'ru'); });
+            var html = '<option value="">— выберите —</option>';
+            for (var j = 0; j < list.length; j++) {
+                html += '<option value="' + this._escAttr(list[j]) + '">' +
+                        this._esc(list[j]) + '</option>';
+            }
+            var keep = sel.value;
+            sel.innerHTML = html;
+            if (keep) sel.value = keep;
+        },
+
+        // Task 318: увольнение сотрудника — шторка из карточки (строка
+        // «Уволить…»): дата_увольнения записывается в таблицу
+        // «Сотрудники» (+в_архиве=1), сотрудник уходит из шахматки,
+        // строка остаётся в листе как АРХИВ (listEmployees без
+        // includeArchived его больше не отдаёт)
+        openDismissForm: function(tabNo) {
+            if (!this._canEdit) return;
+            var emp = null;
+            for (var i = 0; i < (this._EMPLOYEES || []).length; i++) {
+                if (this._EMPLOYEES[i]['таб_номер'] === tabNo) {
+                    emp = this._EMPLOYEES[i];
+                    break;
+                }
+            }
+            if (!emp) {
+                if (typeof KipToast !== 'undefined') KipToast.show('Сотрудник не найден');
+                return;
+            }
+            this._dismissTabNo = String(emp['таб_номер']);
+            var empDiv = document.getElementById('wsDismissEmp');
+            if (empDiv) {
+                empDiv.textContent = emp['ФИО'] + ' · таб. №' + emp['таб_номер'];
+            }
+            var dateInput = document.getElementById('wsDismissDate');
+            if (dateInput) dateInput.value = this._isoDate(new Date());
+            // карточка закрывается ДО шторки (как «+ Отпуск…»):
+            // z-уровень попапа (9401) ВЫШЕ sheet (201) — открытая
+            // карточка перекрывала бы шторку увольнения
+            this.closeEmpPopup();
+            document.getElementById('wsDismissOverlay').classList.add('active');
+            document.getElementById('wsDismissSheet').classList.add('active');
+            setTimeout(function() {
+                var f = document.getElementById('wsDismissDate');
+                if (f) f.focus();
+            }, 350);
+        },
+
+        closeDismissForm: function() {
+            document.getElementById('wsDismissOverlay').classList.remove('active');
+            document.getElementById('wsDismissSheet').classList.remove('active');
+            this._dismissTabNo = null;
+        },
+
+        submitDismissForm: function() {
+            var tabNo = this._dismissTabNo;
+            var date = document.getElementById('wsDismissDate').value;
+            var self = this;
+            if (!tabNo) { this.closeDismissForm(); return; }
+            if (!date) {
+                if (typeof KipToast !== 'undefined') KipToast.show('Укажите дату увольнения');
+                return;
+            }
+            var fio = '';
+            for (var i = 0; i < (this._EMPLOYEES || []).length; i++) {
+                if (this._EMPLOYEES[i]['таб_номер'] === tabNo) {
+                    fio = this._EMPLOYEES[i]['ФИО'];
+                    break;
+                }
+            }
+            // подтверждение опасного действия (как удаление отпуска):
+            // дата уходит в таблицу «Сотрудники», строка — в архив
+            if (typeof kipConfirm === 'function') {
+                kipConfirm('Уволить ' + fio + '? Дата увольнения ' +
+                           this._fmtDateRu(date) + '. Сотрудник уйдёт из ' +
+                           'графика, строка останется в архиве справочника ' +
+                           '«Сотрудники».', { danger: true })
+                    .then(function(ok) { if (ok) self._doDismiss(tabNo, date); });
+            } else {
+                if (confirm('Уволить ' + fio + ' (' +
+                            this._fmtDateRu(date) + ')?')) {
+                    self._doDismiss(tabNo, date);
+                }
+            }
+        },
+
+        _doDismiss: function(tabNo, date) {
+            var self = this;
+            this._api('workSchedule.dismissEmployee', {
+                'таб_номер': tabNo,
+                'дата_увольнения': date
+            }).then(function() {
+                self.closeDismissForm();
+                // карточка увольняемого закрывается вместе с шторкой
+                self.closeEmpPopup();
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Сотрудник уволен и убран из графика');
+                }
+                // как при добавлении: перезагружаем шахматку — строка
+                // сотрудника уходит (listEmployees без архива)
+                self.loadGrid(true);
+            }).catch(function(err) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Ошибка: ' + self._apiErrText(err));
+                }
+            });
         },
 
         submitEmployeeForm: function() {
