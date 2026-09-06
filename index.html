@@ -4376,6 +4376,19 @@
         background: rgba(74, 143, 199, 0.22);
         border-color: rgba(74, 143, 199, 0.5);
     }
+    /* Task 332 (заявка): кнопка ПЕРЕКЛЮЧЕНИЯ ВИДА ТАБЕЛЯ #wsViewBtn —
+       тот же размер/вид, что значок подсветки (.ws-cross-btn), САМАЯ
+       ЛЕВАЯ в ряду 3. aria-pressed НЕТ (три состояния, а не вкл/выкл) —
+       вид всегда нейтральный; ЗАПЕРТЫЙ вид (роль «КИП ИОС дежурный» —
+       доступен только сменный) — класс ws-view-locked: приглушена,
+       курсор обычный; клики всё равно игнорирует cycleView.
+       Текущий вид показывает ИКОНКА (группа «чужих» строк гаснет) +
+       информационное окно #wsViewTip */
+    .ws-view-btn.ws-view-locked {
+        opacity: 0.6;
+        cursor: default;
+    }
+    .ws-view-btn.ws-view-locked:active { opacity: 0.6; }
 
     /* Task 251: попап выбора статуса рядом с ячейкой шахматки.
        Табличка «код — название» столбиком; фиксированное позиционирование —
@@ -5170,24 +5183,11 @@
     }
     [data-theme="light"] .ws-tt-tab:hover { color: #333; }
     [data-theme="light"] .ws-tt-tab.active { color: #1d7a37; }
-    .ws-tt-refresh {
-        margin-left: auto;
-        padding: 3px 9px;
-        font-size: 11px;
-        font-weight: 700;
-        color: var(--text-primary, #e0e0e0);
-        background: rgba(74, 143, 199, 0.2);
-        border: 1px solid rgba(74, 143, 199, 0.45);
-        border-radius: 6px;
-        cursor: pointer;
-        white-space: nowrap;
-    }
-    .ws-tt-refresh:hover { background: rgba(74, 143, 199, 0.32); }
-    [data-theme="light"] .ws-tt-refresh {
-        color: #1f2937;
-        background: #e5e0d2;
-        border-color: rgba(74, 143, 199, 0.55);
-    }
+    /* Task 332 (заявка): кнопка «Обновить» шапки шторки (.ws-tt-refresh,
+       была только у вкладки «Год») УДАЛЕНА — годовые данные обновляет
+       кнопка «Обновить» тулбара (loadGrid(true) сбрасывает _YEAR_DATA,
+       Task 321; открытая вкладка «Год» перезагружается вместе с сеткой).
+       В шапке осталось только аварийное ⚠ (.ws-tt-warn) */
     /* Тело панели — СКРОЛЛ-КОНТЕЙНЕР (X — широкие таблицы, Y —
        синхронизирован со скроллом сетки). Task 331 (заявка: «не
        должно быть полосок вертикальной прокрутки в шторке и в
@@ -5330,12 +5330,17 @@
     [data-theme="light"] .ws-tt-table th {
         background: #efede5;
     }
-    /* Task 323 → 325 → 327: колонка «Сотрудник» — ТОЛЬКО мобайл и
-       вкладка «Год» (строки не совпадают со строками сетки); на
-       десктопе во вкладке «Месяц» скрыта — строки идут ровно
-       по строкам шахматки, имена видны слева в сетке. Task 327:
-       месячная таблица — fixed-раскладка, колонке задана ДОЛЯ
-       (мобайл), прочие столбцы делят остаток поровну */
+    /* Task 323 → 325 → 327 → 332: колонка «Сотрудник» — ТОЛЬКО
+       МОБАЙЛ и только месячная таблица (шторка-оверлей закрывает
+       сетку — имена нужны внутри панели); на десктопе во вкладке
+       «Месяц» скрыта — строки идут ровно по строкам шахматки, имена
+       видны слева в сетке. Task 332 (заявка): во вкладке «Год»
+       колонка УДАЛЕНА вместе с ячейками (строки года = строки
+       сетки, без архива) — селекторы :not(.ws-tt-year) остаются
+       для месяцев. Task 327: месячная таблица — fixed-раскладка,
+       колонке задана ДОЛЯ (мобайл), прочие столбцы делят остаток
+       поровну. Task 332: бейдж «архив» (год, Task 323) удалён
+       вместе с архивными строками — правила .ws-tt-arch убраны */
     .ws-tt-table th.ws-tt-emp,
     .ws-tt-table td.ws-tt-emp {
         text-align: left;
@@ -5364,12 +5369,7 @@
         font-size: 10.5px;
         margin-right: 5px;
     }
-    .ws-tt-table td.ws-tt-emp .ws-tt-arch {
-        color: #e0a23c;
-        font-size: 10.5px;
-    }
     [data-theme="light"] .ws-tt-table td.ws-tt-emp .ws-tt-tabno { color: #999999; }
-    [data-theme="light"] .ws-tt-table td.ws-tt-emp .ws-tt-arch { color: #a06a13; }
     .ws-tt-table .ws-tt-num { font-variant-numeric: tabular-nums; }
     .ws-tt-table td.ws-tt-hours { font-weight: 700; color: #4ac771; }
     [data-theme="light"] .ws-tt-table td.ws-tt-hours { color: #1d7a37; }
@@ -5467,6 +5467,26 @@
     }
     [data-theme="light"] .ws-grid tbody tr.ws-group-first td {
         border-top: 2px solid #6e8ba4;
+    }
+    /* Task 332 (заявка): РАЗДЕЛИТЕЛЬНАЯ ПОЛОСА между столбцом
+       сотрудников и ячейками шахматки — та же полоса, что левый край
+       шторки итогов (.ws-tt-edge, Task 331) и разделитель сменных/
+       дневных (ws-group-first): 2px сплошная, тёмная #4a8fc7 /
+       светлая #6e8ba4. Полоса — border-right СТИК-колонки ФИО:
+       проходит по ВСЕЙ высоте сетки (шапка «Сотрудник +» и тело),
+       при горизонтальной прокрутке остаётся на границе (граница
+       принадлежит sticky-ячейкам, ячейки дней уезжают ПОД полосу).
+       Специфичность (0,2,3)/(0,3,3) выше базовых .ws-grid tbody td
+       (0,1,2) и светлой [data-theme="light"] .ws-grid tbody td
+       (0,2,2) — цвет не перекрашивается; в border-collapse стык
+       2px побеждает 1px границу первого дня — линия непрерывна */
+    .ws-grid thead th.ws-emp-col,
+    .ws-grid tbody td.ws-emp-col {
+        border-right: 2px solid #4a8fc7;
+    }
+    [data-theme="light"] .ws-grid thead th.ws-emp-col,
+    [data-theme="light"] .ws-grid tbody td.ws-emp-col {
+        border-right: 2px solid #6e8ba4;
     }
     .ws-grid {
         border-collapse: collapse;
@@ -13072,6 +13092,29 @@
                          .ws-tb-sep (Task 324) УДАЛЁН вместе с общим
                          рядом -->
                     <div class="ws-toolbar-row ws-actions-row" id="wsActionsRow">
+                        <!-- Task 332 (заявка): кнопка-иконка ПЕРЕКЛЮЧЕНИЯ
+                             ВИДА ТАБЕЛЯ — САМАЯ ЛЕВАЯ в ряду 3 (левее
+                             значка подсветки). Три вида по кругу
+                             (cycleView): 1 «полный» — все элементы
+                             (сменные + дневные, шторка итогов доступна);
+                             2 «сменный» — НЕдоступны шахматка дневных
+                             сотрудников и шторка; 3 «дневной» — НЕдоступны
+                             шахматка сменных и шторка. Иконка — 4 полосы
+                             двумя группами (верх — сменные, низ — дневные):
+                             полосы ЧУЖОЙ группы гаснут (opacity 0.25);
+                             иконки #wsViewIconFull/Shift/Day переключает
+                             _updateViewBtn. Состояние — localStorage
+                             (kip8_ws_view_v1). Роли «КИП ИОС дежурный»
+                             доступен ТОЛЬКО вид 2 «сменный» — вид
+                             заперт (_viewLocked, клики игнорируются,
+                             кнопка приглушена). Подсказка — информационное
+                             окно #wsViewTip (как у «Обновить»/«Сформировать»,
+                             Task 317/328), НЕ нативный title -->
+                        <button type="button" id="wsViewBtn" class="ws-cross-btn ws-view-btn" onclick="WorkSchedule.cycleView()" aria-label="Переключение вида табеля: полный">
+                            <svg id="wsViewIconFull" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16M4 9h16M4 15h16M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            <svg id="wsViewIconShift" viewBox="0 0 24 24" aria-hidden="true" focusable="false" hidden><path d="M4 5h16M4 9h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 15h16M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.25"/></svg>
+                            <svg id="wsViewIconDay" viewBox="0 0 24 24" aria-hidden="true" focusable="false" hidden><path d="M4 5h16M4 9h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.25"/><path d="M4 15h16M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        </button>
                         <!-- Task 328 (заявка): кнопка-иконка ПЕРЕКРЁСТНОЙ
                              ПОДСВЕТКИ строк и столбцов шахматки (вкл/выкл)
                              — СЛЕВА от «Сформировать». Переключает
@@ -13080,8 +13123,11 @@
                              aria-pressed, сохраняется в localStorage
                              (kip8_ws_cross_v1), по умолчанию ВКЛЮЧЕНА.
                              Подпись для скринридеров — aria-label
-                             (иконка без текста; видимой подсказки НЕТ —
-                             заявка убрала всплывающие окна с кнопок) -->
+                             (иконка без текста). Task 332 (заявка):
+                             видимой подсказкой стало ИНФОРМАЦИОННОЕ
+                             ОКНО #wsCrossTip (формат «Обновить»/
+                             «Сформировать», Task 317/328) — не нативный
+                             title -->
                         <button type="button" id="wsCrossBtn" class="ws-cross-btn" onclick="WorkSchedule.toggleCross()" aria-pressed="true" aria-label="Перекрёстная подсветка строк и столбцов"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 3h18v18H3z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18" fill="none" stroke="currentColor" stroke-width="1" opacity="0.45"/><path d="M3 9h18v6H3z M9 3h6v18H9z" fill="currentColor" opacity="0.34"/></svg></button>
                         <!-- Task 328: нативный title УБРАН — пояснение
                              кнопки живёт в информационном окне
@@ -13135,6 +13181,28 @@
                 <div id="wsGenerateTip" class="ws-refresh-tip" hidden>
                     <div class="ws-rt-date">Сформировать шахматку</div>
                     <div class="ws-rt-desc">Генерация записей на выбранный месяц или весь год. Производственный календарь обновится автоматически — откроется диалог подтверждения.</div>
+                </div>
+                <!-- Task 332 (заявка): информационное окно ЗНАЧКА
+                     ПЕРЕКРЁСТНОЙ ПОДСВЕТКИ — тот же формат, что у
+                     «Обновить»/«Сформировать» (#wsRefreshTip, Task 317):
+                     заголовок + описание + ЖИВОЕ состояние (включена/
+                     выключена — #wsCrossTipState обновляется перед каждым
+                     показом и сразу после переключения). Показ при
+                     НАВЕДЕНИИ/фокусе, позицию считает JS (над кнопкой;
+                     не хватает места — под ней), клики сквозные
+                     (pointer-events: none) -->
+                <div id="wsCrossTip" class="ws-refresh-tip" hidden>
+                    <div class="ws-rt-date">Перекрёстная подсветка строк и столбцов</div>
+                    <div class="ws-rt-desc">Наведение на ячейку шахматки выделяет её строку и столбец. Кнопка включает и выключает подсветку. Сейчас подсветка <span id="wsCrossTipState">включена</span>.</div>
+                </div>
+                <!-- Task 332 (заявка): информационное окно кнопки ВИДА
+                     ТАБЕЛЯ — тот же формат; заголовок/описание
+                     обновляются перед каждым показом (_showViewTip:
+                     текущий вид + доступность шторки; для запертой
+                     роли — пояснение про «только сменный») -->
+                <div id="wsViewTip" class="ws-refresh-tip" hidden>
+                    <div class="ws-rt-date" id="wsViewTipTitle">Вид табеля: полный</div>
+                    <div class="ws-rt-desc" id="wsViewTipDesc">Переключение вида табеля: полный — все сотрудники, доступна шторка «Итоги учёта»; сменный — только сменные сотрудники; дневной — только дневные. Клик по кнопке переключает вид по кругу.</div>
                 </div>
             </div>
             <!-- Task 308: субнавигация модуля «График работы» УДАЛЕНА
@@ -13241,7 +13309,13 @@
                          основные Явки/Часы/Переработка -->
                     <div class="ws-tt-head">
                         <span class="ws-tt-warn" id="wsTtWarn" hidden></span>
-                        <button type="button" id="wsTtRefresh" class="ws-tt-refresh" onclick="WorkSchedule.reloadTotals()" title="Перезагрузить данные итогов с сервера" hidden>Обновить</button>
+                        <!-- Task 332 (заявка): кнопка «Обновить» из шапки
+                             шторки УДАЛЕНА (была только у вкладки «Год»).
+                             Годовые данные обновляет кнопка «Обновить»
+                             тулбара: loadGrid(true) сбрасывает годовой кэш
+                             _YEAR_DATA (Task 321), открытая вкладка «Год»
+                             перезагружается автоматически вместе с сеткой.
+                             Осталось только аварийное ⚠ -->
                     </div>
                     <div id="wsTtBody" class="ws-tt-body"></div>
                     <!-- Task 327 (заявка): БОРДЮРЧИК внизу шторки — как
@@ -31242,6 +31316,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (typeof FlowmeterData !== 'undefined') {
                 FlowmeterData._canInputReadings = FlowmeterData._computeCanInputReadings();
             }
+
+            // ============================================================
+            // Task 332: модуль «График работы» — уведомить о РОЛИ
+            // (роль могла прийти ПОЗЖЕ init модуля: медленный путь
+            // bootstrap без кэша, фоновая проверка сессии). Хук
+            // WorkSchedule._onRoleUpdate актуализирует _canEdit/
+            // «Сформировать» и ЗАМОК ВИДА ТАБЕЛЯ: роли «КИП ИОС
+            // дежурный» доступен только «сменный» вид. Идемпотентно,
+            // безопасно до init (модуль сам прочитает роль в init)
+            // ============================================================
+            try {
+                if (typeof WorkSchedule !== 'undefined' &&
+                    WorkSchedule._onRoleUpdate) {
+                    WorkSchedule._onRoleUpdate(this._cachedRole);
+                }
+            } catch (e) {}
         },
 
         // ============================================================
@@ -37112,6 +37202,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // переключает toggleCross.
         _crossOn: true,
 
+        // Task 332 (заявка): ВИД ТАБЕЛЯ — «full» (полный: все элементы,
+        // сменные + дневные, шторка итогов доступна) / «shift» (сменный:
+        // НЕдоступны шахматка дневных и шторка) / «day» (дневной:
+        // НЕдоступны шахматка сменных и шторка). Переключает кнопкой
+        // #wsViewBtn (cycleView, по кругу), сохраняется в localStorage
+        // (kip8_ws_view_v1), применяется _applyView (фильтр строк в
+        // _renderGrid — _viewEmployees). _viewLocked: роль «КИП ИОС
+        // дежурный» — только вид «shift», клики игнорируются,
+        // кнопка приглушена (ws-view-locked)
+        _view: 'full',
+        _viewLocked: false,
+
         // Task 318: таб. № сотрудника шторки увольнения (null — закрыта).
         // Ставится openDismissForm из карточки, сбрасывается
         // closeDismissForm; submitDismissForm отправляет пару
@@ -37227,6 +37329,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     this._crossOn ? 'true' : 'false');
             }
 
+            // Task 332 (заявка): ВИД ТАБЕЛЯ — восстановление из
+            // localStorage (kip8_ws_view_v1) + запирание для роли
+            // «КИП ИОС дежурный» (только «сменный»). Применяет
+            // _applyView: прячет кнопку «Итоги учёта» в сменном/
+            // дневном видах, ставит иконку/aria-label кнопки #wsViewBtn
+            this._initView(role);
+
             var self = this;
             // Task 317: информационное окно «данные от …» кнопки «Обновить»
             // — слушатели на кнопке (наведение/фокус) и глобальный сброс
@@ -37269,9 +37378,49 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 gTipBtn.addEventListener('focus', function() { self._showGenerateTip(); });
                 gTipBtn.addEventListener('blur', function() { self._hideGenerateTip(); });
             }
+            // Task 332 (заявка): информационные окна ДВУХ кнопок-иконок
+            // ряда 3 — ПЕРЕКРЁСТНОЙ ПОДСВЕТКИ (#wsCrossBtn → #wsCrossTip)
+            // и ПЕРЕКЛЮЧЕНИЯ ВИДА (#wsViewBtn → #wsViewTip): тот же
+            // формат/поведение, что у «Обновить»/«Сформировать» (показ
+            // при НАВЕДЕНИИ/фокусе, скрытие — уходом/фокусом/кликом
+            // (иконки переключают состояние — окно закрывается на 120 мс,
+            // чтобы не висело над изменившимся состоянием)/прокруткой;
+            // перенос в <body> тем же приёмом Task 319). Тексты
+            // (состояние подсветки, текущий вид) обновляются перед
+            // каждым показом — _showCrossTip/_showViewTip
+            var cTip = document.getElementById('wsCrossTip');
+            if (cTip && cTip.parentNode && cTip.parentNode !== document.body) {
+                document.body.appendChild(cTip);
+            }
+            var cTipBtn = document.getElementById('wsCrossBtn');
+            if (cTipBtn) {
+                cTipBtn.addEventListener('mouseenter', function() { self._showCrossTip(); });
+                cTipBtn.addEventListener('mouseleave', function() { self._hideCrossTip(); });
+                cTipBtn.addEventListener('focus', function() { self._showCrossTip(); });
+                cTipBtn.addEventListener('blur', function() { self._hideCrossTip(); });
+                cTipBtn.addEventListener('click', function() {
+                    setTimeout(function() { self._hideCrossTip(); }, 120);
+                });
+            }
+            var vTip = document.getElementById('wsViewTip');
+            if (vTip && vTip.parentNode && vTip.parentNode !== document.body) {
+                document.body.appendChild(vTip);
+            }
+            var vTipBtn = document.getElementById('wsViewBtn');
+            if (vTipBtn) {
+                vTipBtn.addEventListener('mouseenter', function() { self._showViewTip(); });
+                vTipBtn.addEventListener('mouseleave', function() { self._hideViewTip(); });
+                vTipBtn.addEventListener('focus', function() { self._showViewTip(); });
+                vTipBtn.addEventListener('blur', function() { self._hideViewTip(); });
+                vTipBtn.addEventListener('click', function() {
+                    setTimeout(function() { self._hideViewTip(); }, 120);
+                });
+            }
             document.addEventListener('scroll', function() {
                 self._hideRefreshTip();
                 self._hideGenerateTip();
+                self._hideCrossTip();
+                self._hideViewTip();
             }, true);
 
             // Task 319: ПЕРЕКРЕСТЬЕ шахматки — движение мыши по ячейкам
@@ -37784,11 +37933,246 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     this._crossOn ? 'true' : 'false');
             }
             if (!this._crossOn) this._cellHover(null);
+            // Task 332: живое состояние в окне-подсказке (если открыто)
+            var st = document.getElementById('wsCrossTipState');
+            if (st) st.textContent = this._crossOn ? 'включена' : 'выключена';
             if (typeof KipToast !== 'undefined' && KipToast.show) {
                 KipToast.show(this._crossOn
                     ? 'Подсветка строк и столбцов включена'
                     : 'Подсветка строк и столбцов выключена');
             }
+        },
+
+        // ============================================================
+        // Task 332 (заявка): ВИД ТАБЕЛЯ — 1 «полный» (все элементы:
+        // сменные + дневные, шторка итогов доступна), 2 «сменный»
+        // (НЕдоступны шахматка дневных сотрудников и шторка),
+        // 3 «дневной» (НЕдоступны шахматка сменных и шторка).
+        // Кнопка-иконка #wsViewBtn (самая левая ряда 3) переключает
+        // по кругу (cycleView). Роли «КИП ИОС дежурный» доступен
+        // ТОЛЬКО вид 2 — вид заперт. Фильтр строк — _viewEmployees
+        // (в _renderGrid), гейт шторки — _applyView/toggleTotals.
+        // ============================================================
+
+        // Восстановление вида при init: роль «КИП ИОС дежурный» —
+        // «сменный» насильно (замок), прочие роли — сохранённый
+        // kip8_ws_view_v1 (полный по умолчанию). Применяет _applyView
+        // (перерисовки НЕ зовёт — сетки ещё нет, отрисует loadGrid)
+        _initView: function(role) {
+            var saved = null;
+            try { saved = localStorage.getItem('kip8_ws_view_v1'); } catch (e) {}
+            this._viewLocked = (role === 'КИП ИОС дежурный');
+            if (this._viewLocked) {
+                this._view = 'shift';
+            } else {
+                this._view = (saved === 'shift' || saved === 'day') ? saved : 'full';
+            }
+            this._applyView({ rerender: false });
+        },
+
+        // Применение вида: полный — кнопка «Итоги учёта» (и шторка/
+        // вкладки) доступна; сменный/дневной — кнопка спрятана,
+        // ОТКРЫТАЯ шторка закрывается (toggleTotals: закрытие гейтом
+        // не блокируется), вкладки прячутся (_updateTtTabsVisible);
+        // иконка/aria кнопки вида актуализирует _updateViewBtn.
+        // rerender — перерисовать сетку (смены вида; при init сетки
+        // ещё нет — false)
+        _applyView: function(opts) {
+            opts = opts || {};
+            var v = this._view || 'full';
+            var full = (v === 'full');
+            var totalsBtn = document.getElementById('wsTotalsBtn');
+            if (totalsBtn) totalsBtn.hidden = !full;
+            // шторка недоступна в сменном/дневном видах: открытую —
+            // закрыть (анимация/уборка как обычно); закрытую — просто
+            // спрятать вкладки (кнопка «Итоги учёта» уже скрыта)
+            if (!full && this._totalsOpen) {
+                this.toggleTotals();
+            } else {
+                this._updateTtTabsVisible();
+            }
+            this._updateViewBtn();
+            if (opts.rerender && this._EMPLOYEES.length) {
+                this._renderGrid();
+            }
+        },
+
+        // Кнопка вида #wsViewBtn: иконка текущего вида (полосы «чужой»
+        // группы гаснут), aria-label с названием вида, класс замка
+        // (роль «КИП ИОС дежурный» — приглушена)
+        _updateViewBtn: function() {
+            var btn = document.getElementById('wsViewBtn');
+            if (!btn) return;
+            var icons = {
+                full: document.getElementById('wsViewIconFull'),
+                shift: document.getElementById('wsViewIconShift'),
+                day: document.getElementById('wsViewIconDay')
+            };
+            for (var k in icons) {
+                if (icons[k]) icons[k].hidden = (k !== this._view);
+            }
+            var names = { full: 'полный', shift: 'сменный', day: 'дневной' };
+            if (btn.setAttribute) {
+                btn.setAttribute('aria-label', 'Переключение вида табеля: сейчас ' +
+                    names[this._view] +
+                    (this._viewLocked ? ' (доступен только сменный)' : ''));
+            }
+            if (btn.classList && btn.classList.toggle) {
+                btn.classList.toggle('ws-view-locked', !!this._viewLocked);
+            }
+        },
+
+        // Клик по кнопке вида: полный → сменный → дневной → полный.
+        // Запертый вид (роль «КИП ИОС дежурный») — тост-пояснение,
+        // состояние не меняется. Итог переключения — тост с описанием
+        // вида (иконка без текста — нужен понятный отклик)
+        cycleView: function() {
+            if (this._viewLocked) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Роли «КИП ИОС дежурный» доступен только сменный вид табеля');
+                }
+                return;
+            }
+            var order = ['full', 'shift', 'day'];
+            var next = order[(order.indexOf(this._view) + 1) % order.length];
+            this._view = next;
+            try { localStorage.setItem('kip8_ws_view_v1', next); } catch (e) {}
+            this._applyView({ rerender: true });
+            var titles = {
+                full: 'Полный вид — все сотрудники, итоги учёта доступны',
+                shift: 'Сменный вид — только сменные сотрудники',
+                day: 'Дневной вид — только дневные сотрудники'
+            };
+            if (typeof KipToast !== 'undefined' && KipToast.show) {
+                KipToast.show(titles[next]);
+            }
+        },
+
+        // Строки сетки текущего вида: полный — весь список (как
+        // прежде); сменный — только «тип» = сменный; дневной — только
+        // «тип» = дневной. Список уже отсортирован _sortEmployees
+        // (сменные по сменам, затем дневные) — порядок внутри вида
+        // сохраняется. _EMPLOYEES НЕ трогаем — фильтр только для
+        // отрисовки (итоги/карточки/справочник работают по полному
+        // списку; шторка в сменном/дневном видах закрыта)
+        _viewEmployees: function() {
+            var all = this._EMPLOYEES;
+            var v = this._view || 'full';
+            if (v !== 'shift' && v !== 'day') return all;
+            var want = (v === 'shift') ? 'сменный' : 'дневной';
+            var out = [];
+            for (var i = 0; i < all.length; i++) {
+                if (String(all[i]['тип'] || '').trim() === want) out.push(all[i]);
+            }
+            return out;
+        },
+
+        // Хук роли из KipAuth._applyRoleToUI (роль могла прийти ПОЗЖЕ
+        // init — медленный путь bootstrap/фоновая проверка сессии):
+        // актуализируем _canEdit/«Сформировать» и ЗАМОК вида (роль
+        // «КИП ИОС дежурный» — только сменный). Смена замка меняет вид
+        // (заперт → «сменный»; снят — сохранённый kip8_ws_view_v1) и
+        // перерисовывает сетку. Вызывается многократно — идемпотентно
+        _onRoleUpdate: function(role) {
+            if (!this._initialized) return;
+            this._canEdit = (role === 'Админ') ||
+                (role && this._WRITE_ROLES.indexOf(role) !== -1);
+            var genBtn = document.getElementById('wsGenerateBtn');
+            if (genBtn) genBtn.hidden = !this._canEdit;
+            var locked = (role === 'КИП ИОС дежурный');
+            if (locked === !!this._viewLocked) return;
+            this._viewLocked = locked;
+            if (locked) {
+                this._view = 'shift';
+            } else {
+                var saved = null;
+                try { saved = localStorage.getItem('kip8_ws_view_v1'); } catch (e) {}
+                this._view = (saved === 'shift' || saved === 'day') ? saved : 'full';
+            }
+            this._applyView({ rerender: true });
+        },
+
+        // Task 332 (заявка): ИНФОРМАЦИОННОЕ ОКНО значка ПЕРЕКРЁСТНОЙ
+        // ПОДСВЕТКИ — тот же формат/приём, что у «Сформировать»
+        // (_showGenerateTip, Task 328): позиция НАД кнопкой (не хватает
+        // места с учётом верхнего бара — ПОД ней), кликам не мешает.
+        // Перед показом — живое состояние (включена/выключена)
+        _showCrossTip: function() {
+            var btn = document.getElementById('wsCrossBtn');
+            var tip = document.getElementById('wsCrossTip');
+            if (!btn || !tip) return;
+            var st = document.getElementById('wsCrossTipState');
+            if (st) st.textContent = this._crossOn ? 'включена' : 'выключена';
+            tip.hidden = false;
+            var r = btn.getBoundingClientRect();
+            tip.style.left = Math.max(6, Math.round(r.left)) + 'px';
+            tip.style.top = '0px';
+            var barBottom = 0;
+            try {
+                if (document.querySelector) {
+                    var bar = document.querySelector('.desktop-top-bar');
+                    if (bar) {
+                        var br = bar.getBoundingClientRect();
+                        if (br && br.height > 0) barBottom = br.bottom;
+                    }
+                }
+            } catch (e) {}
+            var top = r.top - tip.offsetHeight - 8;
+            if (top < barBottom + 4) top = r.bottom + 6;
+            tip.style.top = Math.round(top) + 'px';
+        },
+        _hideCrossTip: function() {
+            var tip = document.getElementById('wsCrossTip');
+            if (tip) tip.hidden = true;
+        },
+
+        // Task 332 (заявка): ИНФОРМАЦИОННОЕ ОКНО кнопки ВИДА ТАБЕЛЯ —
+        // тот же формат; заголовок/описание обновляются перед каждым
+        // показом (текущий вид + доступность шторки; для запертой
+        // роли — пояснение «доступен только сменный»)
+        _showViewTip: function() {
+            var btn = document.getElementById('wsViewBtn');
+            var tip = document.getElementById('wsViewTip');
+            if (!btn || !tip) return;
+            var names = { full: 'полный', shift: 'сменный', day: 'дневной' };
+            var titleEl = document.getElementById('wsViewTipTitle');
+            var descEl = document.getElementById('wsViewTipDesc');
+            if (titleEl) {
+                titleEl.textContent = 'Вид табеля: ' + names[this._view];
+            }
+            if (descEl) {
+                if (this._viewLocked) {
+                    descEl.textContent = 'Роли «КИП ИОС дежурный» доступен ' +
+                        'только сменный вид: шахматка сменных сотрудников, ' +
+                        'шторка итогов и шахматка дневных недоступны.';
+                } else {
+                    descEl.textContent = 'Переключение вида табеля: полный — ' +
+                        'все сотрудники и шторка «Итоги учёта»; сменный — ' +
+                        'только сменные сотрудники; дневной — только дневные. ' +
+                        'Клик по кнопке переключает вид по кругу.';
+                }
+            }
+            tip.hidden = false;
+            var r = btn.getBoundingClientRect();
+            tip.style.left = Math.max(6, Math.round(r.left)) + 'px';
+            tip.style.top = '0px';
+            var barBottom = 0;
+            try {
+                if (document.querySelector) {
+                    var bar = document.querySelector('.desktop-top-bar');
+                    if (bar) {
+                        var br = bar.getBoundingClientRect();
+                        if (br && br.height > 0) barBottom = br.bottom;
+                    }
+                }
+            } catch (e) {}
+            var top = r.top - tip.offsetHeight - 8;
+            if (top < barBottom + 4) top = r.bottom + 6;
+            tip.style.top = Math.round(top) + 'px';
+        },
+        _hideViewTip: function() {
+            var tip = document.getElementById('wsViewTip');
+            if (tip) tip.hidden = true;
         },
 
         // Task 314: кнопка «Обновить» — перезагрузка данных графика с
@@ -38206,6 +38590,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 wrap.innerHTML = '<div class="admin-empty">Нет активных сотрудников. Добавьте их на странице «Сотрудники».</div>';
                 return;
             }
+            // Task 332 (заявка): строки текущего ВИДА — сменный вид
+            // прячет дневных, дневной — сменных (кнопка #wsViewBtn;
+            // полный — весь список, как прежде). Полный список в
+            // _EMPLOYEES не трогаем — фильтр только отрисовки
+            var viewEmps = this._viewEmployees();
+            if (!viewEmps.length) {
+                wrap.innerHTML = '<div class="admin-empty">Сотрудники вида «' +
+                    (this._view === 'shift' ? 'сменные' : 'дневные') +
+                    '» отсутствуют.</div>';
+                return;
+            }
 
             var entryIdx = this._buildEntryIndex();
             var daysInMonth = new Date(this._year, this._month, 0).getDate();
@@ -38288,9 +38683,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // ws-group-first (усиленная верхняя граница = зрительный
             // разделитель групп). Список уже отсортирован _sortEmployees:
             // сменные по сменам 1..5, затем дневные по алфавиту.
+            // Task 332: строк — по ВИДУ (viewEmps): в сменном/дневном
+            // видах группа одна — разделителя нет (естественно)
             var prevTier = -1;
-            for (var ei = 0; ei < this._EMPLOYEES.length; ei++) {
-                var emp = this._EMPLOYEES[ei];
+            for (var ei = 0; ei < viewEmps.length; ei++) {
+                var emp = viewEmps[ei];
                 var empTip = String(emp['тип'] || '').trim();
                 var empTier = (empTip === 'сменный') ? 0
                             : (empTip === 'дневной') ? 1 : 2;
@@ -38745,7 +39142,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // снимаются по таймеру _ttCloseCleanup (320 мс).
         // Кнопка тулбара отражает состояние aria-pressed
         // («нажатая» с синей заливкой).
+        // Task 332 (заявка): шторка доступна ТОЛЬКО в полном виде —
+        // открытие из сменного/дневного вида заблокировано (кнопка
+        // спрятана _applyView; гейт — защита от программных вызовов
+        // и гонки «вид сменился в момент открытия»). ЗАКРЫТИЕ всегда
+        // разрешено (смена вида из полного с открытой шторкой)
         toggleTotals: function() {
+            // толерантный гейт: моки/старые состояния без _view = полный
+            var vGate = this._view || 'full';
+            if (vGate !== 'full' && !this._totalsOpen) return;
             this._totalsOpen = !this._totalsOpen;
             var btn = document.getElementById('wsTotalsBtn');
             var panel = document.getElementById('wsTotalsPanel');
@@ -38975,16 +39380,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // сетки (thead th height: 37px) — заголовочные полосы
         // совпадают, строки итогов идут ровно по строкам сетки.
         // Вызывается из _applyTtHeadVar — ДО замера высоты зоны, т.е.
-        // покрывает все пути: открытие шторки, смену вкладки (виден
-        // «Обновить»), рендеры месяца/года (⚠ по сбоям)
+        // покрывает все пути: открытие шторки, смену вкладки,
+        // рендеры месяца/года (⚠ по сбоям)
         _updateTtHead: function() {
             var panel = document.getElementById('wsTotalsPanel');
             if (!panel || !panel.querySelector) return;
             var head = panel.querySelector('.ws-tt-head');
             if (!head) return;
+            // Task 332 (заявка): кнопки «Обновить» в шапке БОЛЬШЕ НЕТ —
+            // шапка живёт одним аварийным ⚠ (сбои загрузки года);
+            // ⚠ скрыт → шапка спрятана целиком (Task 331)
             var warn = document.getElementById('wsTtWarn');
-            var ref = document.getElementById('wsTtRefresh');
-            var empty = (!warn || warn.hidden) && (!ref || ref.hidden);
+            var empty = (!warn || warn.hidden);
             head.hidden = empty;
         },
 
@@ -39086,21 +39493,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Вкладка панели (Task 324: кнопки «Месяц»/«Год» — в НИЖНЕМ
         // ряду кнопок тулбара, СПРАВА от кнопки «Итоги учёта»):
         // «month» (по умолчанию) / «year». Клик по вкладке ЗАКРЫТОЙ
-        // шторки — открывает её (сразу с нужной вкладкой). Кнопка
-        // «Обновить» — только у года (месячные итоги живут данными
-        // сетки и обновляются вместе с ней)
+        // шторки — открывает её (сразу с нужной вкладкой).
+        // Task 332 (заявка): кнопка «Обновить» года из шапки шторки
+        // УДАЛЕНА — годовые данные обновляет кнопка «Обновить»
+        // тулбара (loadGrid(true) сбрасывает _YEAR_DATA, Task 321);
+        // гейт вида — шторка только в полном (кнопка «Итоги учёта»
+        // спрятана, вкладок не видно; защита от программных вызовов)
         setTotalsTab: function(tab) {
+            // толерантный гейт: моки/старые состояния без _view = полный
+            var vGate = this._view || 'full';
+            if (!this._totalsOpen && vGate !== 'full') return;
             this._totalsTab = (tab === 'year') ? 'year' : 'month';
             var mb = document.getElementById('wsTtTabMonth');
             var yb = document.getElementById('wsTtTabYear');
-            var rBtn = document.getElementById('wsTtRefresh');
             if (mb && mb.classList && mb.classList.toggle) {
                 mb.classList.toggle('active', this._totalsTab === 'month');
             }
             if (yb && yb.classList && yb.classList.toggle) {
                 yb.classList.toggle('active', this._totalsTab === 'year');
             }
-            if (rBtn) rBtn.hidden = (this._totalsTab !== 'year');
             // Task 327 → 329: шеврон доп. столбцов — только у месяца
             this._updateTtChv();
             // закрытая шторка: вкладка открывает её (перерисовку
@@ -39311,12 +39722,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // Вкладка «Год»: 12 колонок-месяцев (формат «дни/часы») +
-        // годовые суммы по каждому сотруднику и по месяцам; строки —
-        // сотрудники года, ВКЛЮЧАЯ архивных (listEmployees
-        // includeArchived=true — уволенный в середине года человек
-        // остаётся в годовых итогах, помечен «архив»). Данные — 12
-        // запросов listEntries, кэш в памяти _YEAR_DATA (сброс —
-        // «Обновить» панели или любое принудительное обновление вида).
+        // годовые суммы по каждому сотруднику и по месяцам. Данные —
+        // 12 запросов listEntries, кэш в памяти _YEAR_DATA (сброс —
+        // кнопкой «Обновить» тулбара или любым принудительным
+        // обновлением вида; Task 332: своя кнопка «Обновить» шапки
+        // шторки УДАЛЕНА по заявке).
+        // Task 332 (заявка: «убери столбец сотрудников»): строки —
+        // только АКТИВНЫЕ сотрудники ровно по строкам сетки (как
+        // вкладка «Месяц»), БЕЗ колонки «Сотрудник» и БЕЗ архивных
+        // строк (имена — в стик-колонке сетки слева; архив без имён
+        // бессмыслен)
         _renderTotalsYear: function() {
             var body = document.getElementById('wsTtBody');
             if (!body) return;
@@ -39332,7 +39747,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }, function(err) {
                     body.innerHTML = '<div class="ws-tt-empty">Ошибка загрузки данных года: ' +
                         self._esc(err && err.message ? err.message : err) +
-                        '. Нажмите «Обновить», чтобы повторить.</div>';
+                        '. Нажмите «Обновить» в панели кнопок, чтобы повторить.</div>';
                     self._fitTtDrawer();
                 });
                 return;
@@ -39380,15 +39795,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Таблица года (данные уже в _YEAR_DATA). Каждая ячейка
         // месяца — «явки/часы» («11/132»), итого сотрудника —
         // годовые явки и часы; Task 322: + годовая ПЕРЕРАБОТКА
-        // (часы кодов д/н за год — колонка «Перераб.»); последняя
-        // строка — суммы по месяцам по всему персоналу. Типы
-        // персонала — из справочника года (вкл. архив — уволенный
-        // остаётся со своим типом и в переработке).
-        // Task 323: строки — АКТИВНЫЕ В ПОРЯДКЕ СЕТКИ (ровно по
-        // строкам шахматки), архивный персонал — ПОД ними;
-        // таблица с классом ws-tt-year — колонка «Сотрудник» видна и
-        // на десктопе (строки архива не совпадают со строками сетки,
-        // имена нужны); итоговая строка — tfoot, прилипшая к низу.
+        // (часы кодов д/н за год — колонка «Перераб.»).
+        // Task 323 (прежняя модель): строки — активные В ПОРЯДКЕ
+        // СЕТКИ, архивный персонал — под ними с пометкой, колонка
+        // «Сотрудник» видна и на десктопе.
+        // Task 332 (заявка: «в шторке на год убери столбец
+        // сотрудников»): колонка «Сотрудник» и архивные строки
+        // УДАЛЕНЫ — строки года = строки сетки (имена — в стик-
+        // колонке ФИО шахматки, как у вкладки «Месяц»), таблица —
+        // 12 месяцев + Дней + Часов + Перераб. (дни).
         // Task 324: пояснительная инфо-строка шапки УДАЛЕНА (заявка);
         // сбои года (не загружено месяцев / нет справочника) —
         // аварийной строкой ⚠ #wsTtWarn в шапке (_setTtWarn)
@@ -39399,36 +39814,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!md || md.year !== this._year) return;
             var monthsAbbr = ['янв','фев','мар','апр','май','июн',
                               'июл','авг','сен','окт','ноя','дек'];
-            // Task 323: порядок строк — как в сетке (активные сверху,
-            // ровно по строкам шахматки), затем остальной персонал
-            // года (архив) — своим порядком (_sortEmployees)
-            var yearEmps = (md.employees && md.employees.length)
-                ? md.employees : this._EMPLOYEES;
-            var byTab = {};
-            for (var y0 = 0; y0 < yearEmps.length; y0++) {
-                byTab[String(yearEmps[y0]['таб_номер'])] = yearEmps[y0];
-            }
-            var used = {};
-            var employees = [];
-            for (var y1 = 0; y1 < this._EMPLOYEES.length; y1++) {
-                var k = String(this._EMPLOYEES[y1]['таб_номер']);
-                if (byTab[k] && !used[k]) {
-                    employees.push(byTab[k]);
-                    used[k] = true;
-                }
-            }
-            var rest = this._sortEmployees(yearEmps.filter(function(em) {
-                return !used[String(em['таб_номер'])];
-            }));
-            for (var y2 = 0; y2 < rest.length; y2++) {
-                employees.push(rest[y2]);
-            }
+            // Task 332: строки — АКТИВНЫЕ сотрудники справочника вида
+            // (ровно по строкам сетки, как у месяца); годовой
+            // справочник (md.employees, вкл. архив) остаётся для ТИПОВ
+            // персонала переработки д/н
+            var employees = this._EMPLOYEES;
 
             var perMonth = [];
             var monthTotals = [];
-            // Task 322: типы персонала для переработки д/н —
-            // справочник года (архив в комплекте)
-            var types = this._empTypeMap(employees);
+            // Task 322: типы персонала для переработки д/н — годовой
+            // справочник (если загружен), иначе активные вида
+            var types = this._empTypeMap(
+                (md.employees && md.employees.length) ? md.employees : employees);
             for (var m = 1; m <= 12; m++) {
                 var ag = this._totalsAgg(md.months[m], types);
                 perMonth[m] = ag.byTab;
@@ -39437,11 +39834,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             // Task 324: аварийное ⚠ шапки — ТОЛЬКО исключительные
             // состояния (сбои месяцев/справочника); обычная инфо
-            // («N г. · явки/часы по месяцам») удалена из шапки
+            // («N г. · явки/часы по месяцам») удалена из шапки.
+            // Task 332: кнопки «Обновить» шапки больше нет — текст
+            // указывает на кнопку «Обновить» тулбара (loadGrid(true)
+            // сбрасывает годовой кэш, Task 321)
             var warn = '';
             if (md.failed) {
                 warn = '⚠ не загружено месяцев: ' + md.failed +
-                        ' — нажмите «Обновить»';
+                        ' — обновите данные (кнопка «Обновить»)';
             }
             if (!md.employees || !md.employees.length) {
                 warn += (warn ? ' · ' : '⚠ ') +
@@ -39455,14 +39855,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (this._applyTtHeadVar()) this._fitGrid();
                 return;
             }
-            // Task 323: класс ws-tt-year — колонка «Сотрудник» видна
-            // и на десктопе; без обёртки .ws-tt-scroll (скролл — сам
+            // Task 323: класс ws-tt-year (своя раскладка ширины —
+            // max-content); без обёртки .ws-tt-scroll (скролл — сам
             // #wsTtBody); Task 327 (заявка: «убери строку общего
             // количества»): итоговая строка tfoot «Итого по
             // подразделению» НЕ рендерится — таблицу снизу закрывает
-            // бордюрчик .ws-tt-foot
+            // бордюрчик .ws-tt-foot. Task 332: колонки «Сотрудник»
+            // больше НЕТ — шапка начинается с месяцев
             var html = '<table class="ws-tt-table ws-tt-year">' +
-                '<thead><tr><th class="ws-tt-emp">Сотрудник</th>';
+                '<thead><tr>';
             for (var h = 1; h <= 12; h++) html += '<th>' + monthsAbbr[h - 1] + '</th>';
             html += '<th>Дней</th><th>Часов</th>' +
                 '<th title="дни переработки за год — коды д/н">Перераб. (дни)</th>' +
@@ -39471,11 +39872,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var emp = employees[e];
                 var tab = String(emp['таб_номер']);
                 var sumWork = 0, sumHours = 0, sumOver = 0, sumOverDays = 0;
-                html += '<tr><td class="ws-tt-emp"><span class="ws-tt-tabno">' +
-                    this._esc(emp['таб_номер']) + '</span>' +
-                    this._esc(emp['ФИО']) +
-                    (emp['в_архиве'] ? ' <span class="ws-tt-arch">архив</span>' : '') +
-                    '</td>';
+                html += '<tr>';
                 for (var mm = 1; mm <= 12; mm++) {
                     var a = perMonth[mm][tab];
                     var w = a ? a.work : 0;
@@ -39501,8 +39898,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // max-content; длиннее капа 60% — прокрутка ползунком)
             if (this._fitTtDrawer) this._fitTtDrawer();
             // Task 323: шапка сетки — под заголовочную зону панели,
-            // строки итогов — по строкам сетки (активные сверху);
-            // архивные строки — ниже, своей высоты;
+            // строки итогов — по строкам сетки (Task 332: строки года
+            // теперь ровно по строкам сетки — без хвоста архива);
             // Task 331: ползунок шторки — под новую ширину таблицы года
             if (this._applyTtHeadVar()) this._fitGrid();
             this._syncTotalsRows();
