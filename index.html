@@ -4857,10 +4857,66 @@
     }
     .ws-tt-warn[hidden] { display: none; }
     [data-theme="light"] .ws-tt-warn { color: #a06b00; }
-    /* Task 324: вкладки «Месяц»/«Год» итогов — ПЕРЕЕХАЛИ в НИЖНИЙ
-       ряд кнопок тулбара (справа от кнопки «Итоги учёта»); стиль —
-       прежние вкладки-переключатели, подогнаны под рост кнопок
-       тулбара (высота — правилами тулбара, шрифт 12→13px) */
+    /* Task 327 (заявка: «дополнительные скрытые столбцы»): кнопка
+       «Ещё»/«Меньше» в шапке шторки — показать/скрыть дополнительные
+       столбцы месячной таблицы (Отгул…Прочие). Основные (Явки, Часы,
+       Переработка) видны всегда. Видна только на вкладке «Месяц»
+       (у года другая структура — 12 колонок месяцев) */
+    .ws-tt-more {
+        flex: none;
+        padding: 2px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        font-family: inherit;
+        color: var(--text-secondary, rgba(255,255,255,0.65));
+        background: transparent;
+        border: 1px solid var(--card-border, rgba(255,255,255,0.12));
+        border-radius: 4px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .ws-tt-more:hover { color: var(--text-primary, #e0e0e0); }
+    .ws-tt-more.on {
+        color: #9ec9e8;
+        background: rgba(74, 143, 199, 0.16);
+        border-color: rgba(74, 143, 199, 0.4);
+    }
+    .ws-tt-more[hidden] { display: none; }
+    [data-theme="light"] .ws-tt-more {
+        color: #666;
+        border-color: rgba(0,0,0,0.14);
+    }
+    [data-theme="light"] .ws-tt-more:hover { color: #333; }
+    [data-theme="light"] .ws-tt-more.on {
+        color: #1d5f96;
+        background: rgba(74, 143, 199, 0.14);
+        border-color: rgba(74, 143, 199, 0.4);
+    }
+    /* Task 327 (заявка: «внизу шторки сделай такой же бордюрчик,
+       как в шахматке табеля»): завершающая полоса панели итогов —
+       ТОТ ЖЕ стальной bevel, что .ws-grid-foot (Task 258/259:
+       5px, блик сверху + тень снизу), обе темы; закрывает шторку
+       снизу после последней строки сотрудника (строки Итого
+       больше нет — убрана по заявке) */
+    .ws-tt-foot {
+        flex: none;
+        height: 5px;
+        box-sizing: border-box;
+        background: #35648f;
+        border-top: 1px solid #85b7dc;
+        border-bottom: none;
+    }
+    [data-theme="light"] .ws-tt-foot {
+        background: #b3c2ce;
+        border-top-color: #ffffff;
+    }
+    /* Task 324 → 325: вкладки «Месяц»/«Год» итогов — ПЕРЕЕХАЛИ в
+       НИЖНИЙ ряд кнопок тулбара (справа от кнопки «Итоги учёта»);
+       стиль — прежние вкладки-переключатели, подогнаны под рост
+       кнопок тулбара (высота — правилами тулбара, шрифт 12→13px).
+       Task 327 (заявка): вкладки СКРЫТЫ до открытия шторки —
+       ПОЯВЛЯЮТСЯ при открытии (toggleTotals), убираются при
+       закрытии; [hidden] гасит кнопку в любом ряду */
     .ws-tt-tab {
         padding: 6px 12px;
         font-size: 13px;
@@ -4874,6 +4930,7 @@
         white-space: nowrap;
         box-sizing: border-box;
     }
+    .ws-tt-tab[hidden] { display: none; }
     .ws-tt-tab:hover { color: var(--text-primary, #e0e0e0); }
     .ws-tt-tab.active {
         color: #4ac771;
@@ -4963,7 +5020,13 @@
         width: 100%;
         border-collapse: collapse;
         font-size: 12px;
+        /* Task 327 (заявка: «столбцы в шторке выравни по ширине»):
+           раскладка МЕСЯЧНОЙ таблицы — fixed: столбцы без явной
+           ширины делят остаток ПОРОВНУ (равная ширина). Годовая
+           таблица (12 колонок месяцев «11/132») — прежняя
+           авто-раскладка: ширины по содержимому */
     }
+    .ws-tt-table:not(.ws-tt-year) { table-layout: fixed; }
     .ws-tt-table th,
     .ws-tt-table td {
         padding: 4px 8px;
@@ -4985,11 +5048,26 @@
         position: sticky;
         top: 0;
         z-index: 1;
-        /* Task 324: ОГЛАВЛЕНИЯ — ОДНОЙ СТРОКОЙ (заявка: «текст
-           оглавлений в шапке шторки разместить в одни строки»);
-           было white-space: normal + перенос (Task 322) */
-        white-space: nowrap;
+        /* Task 327 (заявка: «текст заголовков сделай в две строки
+           для компактности, при необходимости»): перенос обратно
+           (Task 324 делал одной строкой — узкие равные столбцы
+           «Ещё»-режима требуют 2 строки; короткие заголовки
+           остаются одной строкой) */
+        white-space: normal;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        hyphens: auto;
         vertical-align: bottom;
+        text-align: center;   /* по центру равного столбца */
+    }
+    /* годовая таблица — прежний вид: заголовки-месяцы одной строкой,
+      выравнивание как у данных (числа справа) */
+    .ws-tt-table.ws-tt-year th {
+        white-space: nowrap;
+        overflow-wrap: normal;
+        word-break: normal;
+        hyphens: manual;
+        text-align: right;
     }
     [data-theme="light"] .ws-tt-table th,
     [data-theme="light"] .ws-tt-table td {
@@ -4999,14 +5077,12 @@
     [data-theme="light"] .ws-tt-table th {
         background: #efede5;
     }
-    /* Task 323 → 325: колонка «Сотрудник» — ТОЛЬКО мобайл и вкладка
-       «Год» (строки не совпадают со строками сетки); на десктопе во
-       вкладке «Месяц» скрыта — строки идут ровно по строкам
-       шахматки, имена видны слева в сетке. Task 325 (заявка):
-       ШИРИНА — ПО САМОМУ ШИРОКОМУ ТЕКСТУ (кап 220px/150px
-       и эллипсис УДАЛЕНЫ): таблица — авто-раскладка, колонка
-       растягивается под самое длинное ФИО (№ + имя + «архив»),
-       широкая таблица прокручивается ползунком шторки */
+    /* Task 323 → 325 → 327: колонка «Сотрудник» — ТОЛЬКО мобайл и
+       вкладка «Год» (строки не совпадают со строками сетки); на
+       десктопе во вкладке «Месяц» скрыта — строки идут ровно
+       по строкам шахматки, имена видны слева в сетке. Task 327:
+       месячная таблица — fixed-раскладка, колонке задана ДОЛЯ
+       (мобайл), прочие столбцы делят остаток поровну */
     .ws-tt-table th.ws-tt-emp,
     .ws-tt-table td.ws-tt-emp {
         text-align: left;
@@ -5014,6 +5090,13 @@
         left: 0;
         background: #0e1621;
         z-index: 2;
+    }
+    .ws-tt-table:not(.ws-tt-year) th.ws-tt-emp,
+    .ws-tt-table:not(.ws-tt-year) td.ws-tt-emp {
+        width: 42%;          /* мобайл: ФИО + равные столбцы данных */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     [data-theme="light"] .ws-tt-table th.ws-tt-emp,
     [data-theme="light"] .ws-tt-table td.ws-tt-emp {
@@ -5052,24 +5135,11 @@
     [data-theme="light"] .ws-tt-table tbody tr:nth-child(even) {
         background: rgba(0, 0, 0, 0.07);
     }
-    .ws-tt-table tr.ws-tt-total td {
-        font-weight: 700;
-        border-top: 2px solid rgba(74, 143, 199, 0.5);
-        border-bottom: none;
-    }
-    /* Task 323: итоговая строка — прилипшая к НИЗУ скролл-зоны
-       (tfoot), НЕпрозрачная: зебра не просвечивает; сетка при
-       открытой шторке резервирует ей высоту (_fitGrid) */
-    .ws-tt-table tfoot tr.ws-tt-total td {
-        position: sticky;
-        bottom: 0;
-        z-index: 2;
-        background: #13202e;
-    }
-    [data-theme="light"] .ws-tt-table tfoot tr.ws-tt-total td {
-        border-top-color: rgba(74, 143, 199, 0.6);
-        background: #dce1e0;
-    }
+    /* Task 327 (заявка: «убери строку общего количества»): итоговая
+       строка tfoot «Итого» УДАЛЕНА из таблиц месяца и года —
+       правила .ws-tt-total/tfoot удалены вместе с ней; зебра
+       таблицы заканчивается последней строкой сотрудника,
+       снизу шторку закрывает бордюрчик .ws-tt-foot */
     .ws-tt-empty {
         padding: 10px 4px;
         font-size: 12.5px;
@@ -12663,19 +12733,26 @@
                          нормы) — см. WorkSchedule._refreshProdCalendarQuiet
                          в _doGenerateMonth/_doGenerateYear. Нормы и
                          праздники месяца — в окошке #wsCalPanel справа -->
-                    <!-- Task 324 → 325: РЯД 2 — БЛОК ИТОГОВ УЧЁТА
-                         (заявка Task 325: «Итоги учёта»/«Месяц»/«Год» —
-                         ВТОРОЙ строкой, действия шахматки — ПОД
-                         ними, третьей): кнопка-переключатель «Итоги
-                         учёта» (открывает/закрывает боковую шторку;
-                         ✕ из шапки шторки удалён по заявке Task 325)
-                         + вкладки «Месяц»/«Год» СПРАВА от неё.
-                         Ряд всегда на виду (кнопки итогов видны всем
-                         ролям) — пустых скачков высоты бара нет -->
+                    <!-- Task 324 → 325 → 327: РЯД 2 — БЛОК ИТОГОВ
+                         УЧЁТА (заявка Task 325: «Итоги
+                         учёта»/«Месяц»/«Год» — ВТОРОЙ строкой,
+                         действия шахматки — ПОД ними, третьей):
+                         кнопка-переключатель «Итоги учёта»
+                         (открывает/закрывает боковую шторку; ✕ из
+                         шапки шторки удалён по заявке Task 325) +
+                         вкладки «Месяц»/«Год» СПРАВА от неё.
+                         Task 327 (заявка): вкладки СКРЫТЫ до
+                         открытия шторки — ПОЯВЛЯЮТСЯ при открытии
+                         (toggleTotals показывает/прячет их вместе
+                         со шторкой), убираются при закрытии.
+                         Ряд всегда на виду (кнопка итогов видна
+                         всем ролям) — пустых скачков высоты бара
+                         нет; скрытые вкладки габаритов ряда не
+                         меняют (слот ряда фиксирован) -->
                     <div class="ws-toolbar-row ws-totals-row" id="wsTotalsRow">
                         <button type="button" id="wsTotalsBtn" class="ws-totals-btn" onclick="WorkSchedule.toggleTotals()" aria-pressed="false" title="Итоги учёта — дни и часы: боковая панель рядом с шахматкой">Итоги учёта</button>
-                        <button type="button" id="wsTtTabMonth" class="ws-tt-tab active" onclick="WorkSchedule.setTotalsTab('month')" title="Итоги учёта — вкладка «Месяц»: дни, часы, смены и неявки открытого месяца">Месяц</button>
-                        <button type="button" id="wsTtTabYear" class="ws-tt-tab" onclick="WorkSchedule.setTotalsTab('year')" title="Итоги учёта — вкладка «Год»: явки и часы по 12 месяцам + суммы">Год</button>
+                        <button type="button" id="wsTtTabMonth" class="ws-tt-tab active" onclick="WorkSchedule.setTotalsTab('month')" title="Итоги учёта — вкладка «Месяц»: дни, часы, смены и неявки открытого месяца" hidden>Месяц</button>
+                        <button type="button" id="wsTtTabYear" class="ws-tt-tab" onclick="WorkSchedule.setTotalsTab('year')" title="Итоги учёта — вкладка «Год»: явки и часы по 12 месяцам + суммы" hidden>Год</button>
                     </div>
                     <!-- Task 325: РЯД 3 (НИЖНИЙ) — ДЕЙСТВИЯ ШАХМАТКИ
                          (заявка: «Сформировать», «Сохранить (N)»,
@@ -12791,12 +12868,26 @@
                          остались аварийное ⚠ (сбои года) и «Обновить»
                          (год); когда оба скрыты (обычный месяц) — шапка
                          ПРЯЧЕТСЯ целиком (_updateTtHead), строки итогов
-                         начинаются сразу от верха панели -->
+                         начинаются сразу от верха панели.
+                         Task 327 (заявка: «дополнительные скрытые
+                         столбцы»): кнопка «Ещё»/«Меньше» — показать/
+                         скрыть дополнительные столбцы месячной таблицы
+                         (Отгул, Больничный, Отпуск, Уч. отпуск,
+                         Прогул, День, Ночь, Прочие); видна только на
+                         вкладке «Месяц»; в свёрнутом («Ещё») виде
+                         таблица — основные Явки/Часы/Переработка -->
                     <div class="ws-tt-head">
                         <span class="ws-tt-warn" id="wsTtWarn" hidden></span>
+                        <button type="button" id="wsTtMore" class="ws-tt-more" onclick="WorkSchedule.toggleTotalsExtra()" title="Показать/скрыть дополнительные столбцы: Отгул, Больничный, Отпуск, Уч. отпуск, Прогул, День, Ночь, Прочие" hidden>Ещё</button>
                         <button type="button" id="wsTtRefresh" class="ws-tt-refresh" onclick="WorkSchedule.reloadTotals()" title="Перезагрузить данные итогов с сервера" hidden>Обновить</button>
                     </div>
                     <div id="wsTtBody" class="ws-tt-body"></div>
+                    <!-- Task 327 (заявка): БОРДЮРЧИК внизу шторки — как
+                         у шахматки табеля (.ws-grid-foot, Task 258/259:
+                         5px стальной bevel, обе темы); строки общего
+                         количества (tfoot «Итого») больше нет — полоса
+                         закрывает таблицу снизу -->
+                    <div class="ws-tt-foot" aria-hidden="true"></div>
                 </div>
             </div>
             </div>
@@ -36608,6 +36699,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // глушение эхо-событий скролла при синхронизации сетка ⇄ панель
         _totalsOpen: false,
         _totalsTab: 'month',
+        // Task 327 (заявка: «дополнительные скрытые столбцы»):
+        // _totalsExtra — показаны дополнительные столбцы месячной
+        // таблицы (Отгул, Больничный, Отпуск, Уч. отпуск, Прогул,
+        // День, Ночь, Прочие); false — только основные (Явки, Часы,
+        // Переработка). Кнопка «Ещё»/«Меньше» в шапке шторки
+        _totalsExtra: false,
         _YEAR_DATA: null,
         _ttWideTimer: null,
         _ttEchoG: false,
@@ -38164,6 +38261,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (btn.setAttribute) btn.setAttribute('aria-pressed',
                     this._totalsOpen ? 'true' : 'false');
             }
+            // Task 327 (заявка): вкладки «Месяц»/«Год» ПОЯВЛЯЮТСЯ при
+            // открытии шторки и убираются при закрытии
+            this._updateTtTabsVisible();
+            this._updateTtMoreBtn();
             if (page && page.classList) {
                 if (page.classList.add) {
                     if (this._totalsOpen) {
@@ -38199,6 +38300,42 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }, 320);
                 this._fitGrid();
             }
+        },
+
+        // Task 327 (заявка: «кнопки "Месяц" и "Год" должны
+        // появляться при открытии шторки итогов учёта»):
+        // видимость вкладок в ряду 2 тулбара — синхронно со шторкой
+        _updateTtTabsVisible: function() {
+            var mb = document.getElementById('wsTtTabMonth');
+            var yb = document.getElementById('wsTtTabYear');
+            if (mb) mb.hidden = !this._totalsOpen;
+            if (yb) yb.hidden = !this._totalsOpen;
+        },
+
+        // Task 327 (заявка: «дополнительные скрытые столбцы»):
+        // кнопка «Ещё»/«Меньше» в шапке шторки — видна только на
+        // вкладке «Месяц» (у года другая структура — 12 колонок
+        // месяцев); текст/активное состояние — по _totalsExtra
+        _updateTtMoreBtn: function() {
+            var b = document.getElementById('wsTtMore');
+            if (!b) return;
+            var isMonth = (this._totalsTab === 'month');
+            b.hidden = !(this._totalsOpen && isMonth);
+            b.textContent = this._totalsExtra ? 'Меньше' : 'Ещё';
+            if (b.classList && b.classList.toggle) {
+                b.classList.toggle('on', this._totalsExtra);
+            }
+        },
+
+        // Task 327 (заявка): показать/скрыть дополнительные столбцы
+        // месячной таблицы (Отгул, Больничный, Отпуск, Уч. отпуск,
+        // Прогул, День, Ночь, Прочие). Основные — Явки, Часы,
+        // Переработка — видны всегда. Состояние переживает смену
+        // месяца/перерисовки; у вкладки «Год» своих действий нет
+        toggleTotalsExtra: function() {
+            this._totalsExtra = !this._totalsExtra;
+            this._updateTtMoreBtn();
+            this._renderTotalsMonth();
         },
 
         // Task 323: отложенная уборка при СВЁРТЫВАНИИ шторки (после
@@ -38281,7 +38418,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!head) return;
             var warn = document.getElementById('wsTtWarn');
             var ref = document.getElementById('wsTtRefresh');
-            var empty = (!warn || warn.hidden) && (!ref || ref.hidden);
+            // Task 327: кнопка «Ещё» (месяц) — тоже содержимое шапки:
+            // пока она видна, шапка НЕ сжимается (обычный месяц —
+            // «Ещё» единственная видная, обычная высота)
+            var more = document.getElementById('wsTtMore');
+            var empty = (!warn || warn.hidden) && (!ref || ref.hidden) &&
+                        (!more || more.hidden);
             if (head.classList && head.classList.toggle) {
                 head.classList.toggle('ws-tt-head-empty', empty);
             }
@@ -38400,6 +38542,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 yb.classList.toggle('active', this._totalsTab === 'year');
             }
             if (rBtn) rBtn.hidden = (this._totalsTab !== 'year');
+            // Task 327: кнопка «Ещё» — только у месяца
+            this._updateTtMoreBtn();
             // закрытая шторка: вкладка открывает её (перерисовку
             // выполнит toggleTotals уже с выбранной вкладкой)
             if (!this._totalsOpen) {
@@ -38447,20 +38591,24 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             else this._renderTotalsMonth();
         },
 
-        // Вкладка «Месяц»: дни/часы/смены/неявки по каждому сотруднику
-        // открытого месяца + строка «Итого». Часы — по кодам статусов
-        // (Д/Н = 12, Д8 = 8, Д7,2 = 7,2); явки/ночные/дневные
-        // смены; неявки по семействам (ОТ/У/ОВ/Б/ПР); Task 322:
-        // «д»/«н» — ДНИ ПЕРЕРАБОТКИ (сменным 12 ч, дневным — часы,
-        // указанные при правке ячейки) — отдельная колонка
-        // «Переработка»; прочие коды
-        // (И/ОБ/ПЗ/*/·) — отдельная колонка. Task 322: шапка —
-        // ПОЛНЫМИ СЛОВАМИ с кодом в скобках («День (Д)», «Отпуск
-        // (ОТ)»…) вместо одиночных букв. Task 324: пояснительная
-        // ИНФО-СТРОКА из шапки шторки УДАЛЕНА по заявке («сентябрь
-        // 2026 г. · норма … · включая несохранённые правки (N)»):
-        // месяц/норма — в окошке календаря тулбара, счётчик правок —
-        // на кнопке «Сохранить (N)»; авариных состояний у месяца нет
+        // Вкладка «Месяц»: итоги по каждому сотруднику открытого
+        // месяца. Часы — по кодам статусов (Д/Н = 12, Д8 = 8,
+        // Д7,2 = 7,2); явки/ночные/дневные смены; неявки по
+        // семействам (ОТ/У/ОВ/Б/ПР); Task 322: «д»/«н» — ДНИ
+        // ПЕРЕРАБОТКИ (сменным 12 ч, дневным — часы, указанные
+        // при правке ячейки) — отдельная колонка «Переработка»;
+        // прочие коды (И/ОБ/ПЗ/*/·) — отдельная колонка. Шапка —
+        // ПОЛНЫМИ СЛОВАМИ с кодом в скобках.
+        // Task 327 (заявка): ОСНОВНЫЕ столбцы — Явки, Часы,
+        // Переработка (порядок задан); ДОПОЛНИТЕЛЬНЫЕ (Отгул (ОВ),
+        // Больничный (Б), Отпуск (ОТ), Уч. отпуск (У), Прогул (ПР),
+        // День (Д), Ночь (Н), Прочие) — СКРЫТЫ, включаются кнопкой
+        // «Ещё» в шапке шторки (toggleTotalsExtra; в развёрнутом
+        // виде таблица шире панели — горизонтальный ползунок шторки);
+        // столбец «Всего» и строка общего количества (tfoot «Итого»)
+        // УДАЛЕНЫ по заявке; столбцы РАВНОЙ ширины (table-layout:
+        // fixed — см. CSS), заголовки переносятся на 2 строки при
+        // нехватке; зебра строк сохранена
         _renderTotalsMonth: function() {
             var body = document.getElementById('wsTtBody');
             if (!body) return;
@@ -38476,65 +38624,74 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (this._applyTtHeadVar()) this._fitGrid();
                 return;
             }
-            // Task 322: шапка — слова вместо кодов (код в скобках);
-            // «Переработка» — часы кодов д/н (дни — в тултипе ячейки).
+            // Task 327: основные столбцы (порядок — заявка) +
+            // дополнительные — только при включённой «Ещё» (порядок
+            // заявки: Отгул, Больничный, Отпуск, Уч. отпуск, Прогул,
+            // День, Ночь, Прочие)
+            var cols = [
+                { key: 'work',  name: 'Явки',        cls: '' },
+                { key: 'hours', name: 'Часы',        cls: 'ws-tt-hours' },
+                { key: 'over',  name: 'Переработка', cls: 'ws-tt-over' }
+            ];
+            if (this._totalsExtra) {
+                cols = cols.concat([
+                    { key: 'ОВ',    name: 'Отгул (ОВ)' },
+                    { key: 'Б',     name: 'Больничный (Б)' },
+                    { key: 'ОТ',    name: 'Отпуск (ОТ)' },
+                    { key: 'У',     name: 'Уч. отпуск (У)' },
+                    { key: 'ПР',    name: 'Прогул (ПР)' },
+                    { key: 'day',   name: 'День (Д)' },
+                    { key: 'night', name: 'Ночь (Н)' },
+                    { key: 'other', name: 'Прочие',
+                      title: 'И/ОБ/ПЗ/* — мероприятия, «·» — плановый выходной, прочие коды' }
+                ]);
+            }
             // Task 323: БЕЗ обёртки .ws-tt-scroll — скролл-контейнер сам
             // #wsTtBody; колонка «Сотрудник» рендерится (мобайл), на
             // десктопе скрыта CSS (.ws-tt-table:not(.ws-tt-year));
-            // итоговая строка — tfoot, ПРИЛИПШАЯ К НИЗУ панели
+            // Task 327: tfoot «Итого» НЕ рендерится (заявка) — таблицу
+            // снизу закрывает бордюрчик .ws-tt-foot
             var html = '<table class="ws-tt-table">' +
                 '<thead><tr>' +
-                '<th class="ws-tt-emp">Сотрудник</th>' +
-                '<th>Явки</th><th>Часы</th>' +
-                '<th>День (Д)</th><th>Ночь (Н)</th>' +
-                '<th>Отпуск (ОТ)</th><th>Уч. отпуск (У)</th>' +
-                '<th>Отгул (ОВ)</th><th>Больничный (Б)</th><th>Прогул (ПР)</th>' +
-                '<th>Переработка</th>' +
-                '<th title="И/ОБ/ПЗ/* — мероприятия, «·» — плановый выходной, прочие коды">Прочие</th>' +
-                '<th>Всего</th>' +
-                '</tr></thead><tbody>';
-            var g = agg.grand || z;
+                '<th class="ws-tt-emp">Сотрудник</th>';
+            for (var c = 0; c < cols.length; c++) {
+                html += '<th' + (cols[c].title
+                            ? ' title="' + this._esc(cols[c].title) + '"'
+                            : '') + '>' + this._esc(cols[c].name) + '</th>';
+            }
+            html += '</tr></thead><tbody>';
             for (var i = 0; i < this._EMPLOYEES.length; i++) {
                 var emp = this._EMPLOYEES[i];
                 var a = agg.byTab[String(emp['таб_номер'])] || z;
                 html += '<tr>' +
                     '<td class="ws-tt-emp"><span class="ws-tt-tabno">' +
                     this._esc(emp['таб_номер']) + '</span>' +
-                    this._esc(emp['ФИО']) + '</td>' +
-                    '<td class="ws-tt-num">' + a.work + '</td>' +
-                    '<td class="ws-tt-num ws-tt-hours">' + this._fmtTotalsNum(a.hours) + '</td>' +
-                    '<td class="ws-tt-num">' + a.day + '</td>' +
-                    '<td class="ws-tt-num">' + a.night + '</td>' +
-                    '<td class="ws-tt-num">' + a['ОТ'] + '</td>' +
-                    '<td class="ws-tt-num">' + a['У'] + '</td>' +
-                    '<td class="ws-tt-num">' + a['ОВ'] + '</td>' +
-                    '<td class="ws-tt-num">' + a['Б'] + '</td>' +
-                    '<td class="ws-tt-num">' + a['ПР'] + '</td>' +
-                    '<td class="ws-tt-num ws-tt-over" title="дней переработки: ' +
-                        a.overDays + ' (коды д/н)">' +
-                        this._fmtTotalsNum(a.over) + '</td>' +
-                    '<td class="ws-tt-num">' + a.other + '</td>' +
-                    '<td class="ws-tt-num">' + a.total + '</td>' +
-                    '</tr>';
+                    this._esc(emp['ФИО']) + '</td>';
+                for (var j = 0; j < cols.length; j++) {
+                    var col = cols[j];
+                    var v = a[col.key];
+                    var txt = (col.key === 'hours' || col.key === 'over')
+                        ? this._fmtTotalsNum(v)
+                        : String(v);
+                    html += '<td class="ws-tt-num' +
+                            (col.cls ? ' ' + col.cls : '') + '"' +
+                            (col.key === 'over'
+                                ? ' title="дней переработки: ' + a.overDays +
+                                  ' (коды д/н)"' : '') + '>' +
+                            txt + '</td>';
+                }
+                html += '</tr>';
             }
-            html += '</tbody><tfoot><tr class="ws-tt-total">' +
-                '<td class="ws-tt-emp">Итого по подразделению</td>' +
-                '<td class="ws-tt-num">' + g.work + '</td>' +
-                '<td class="ws-tt-num ws-tt-hours">' + this._fmtTotalsNum(g.hours) + '</td>' +
-                '<td class="ws-tt-num">' + g.day + '</td>' +
-                '<td class="ws-tt-num">' + g.night + '</td>' +
-                '<td class="ws-tt-num">' + g['ОТ'] + '</td>' +
-                '<td class="ws-tt-num">' + g['У'] + '</td>' +
-                '<td class="ws-tt-num">' + g['ОВ'] + '</td>' +
-                '<td class="ws-tt-num">' + g['Б'] + '</td>' +
-                '<td class="ws-tt-num">' + g['ПР'] + '</td>' +
-                '<td class="ws-tt-num ws-tt-over" title="дней переработки: ' +
-                    g.overDays + ' (коды д/н)">' +
-                    this._fmtTotalsNum(g.over) + '</td>' +
-                '<td class="ws-tt-num">' + g.other + '</td>' +
-                '<td class="ws-tt-num">' + g.total + '</td>' +
-                '</tr></tfoot></table>';
+            html += '</tbody></table>';
             body.innerHTML = html;
+            // Task 327: развёрнутые доп. столбцы — таблица шире панели
+            // (равным столбцам ≥64px): горизонтальная прокрутка
+            // ползунком шторки; свёрнутый вид — ровно по ширине
+            var table = body.querySelector('.ws-tt-table');
+            if (table) {
+                table.style.minWidth = this._totalsExtra
+                    ? (cols.length * 64) + 'px' : '';
+            }
             // Task 323: шапка сетки — под заголовочную зону панели,
             // строки итогов — по строкам сетки (правки ячеек сразу
             // видны и в сетке, и в итогах — без сдвигов)
@@ -38684,14 +38841,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             // Task 323: класс ws-tt-year — колонка «Сотрудник» видна
             // и на десктопе; без обёртки .ws-tt-scroll (скролл — сам
-            // #wsTtBody); итоговая строка — tfoot (прилипшая к низу)
+            // #wsTtBody); Task 327 (заявка: «убери строку общего
+            // количества»): итоговая строка tfoot «Итого по
+            // подразделению» НЕ рендерится — таблицу снизу закрывает
+            // бордюрчик .ws-tt-foot
             var html = '<table class="ws-tt-table ws-tt-year">' +
                 '<thead><tr><th class="ws-tt-emp">Сотрудник</th>';
             for (var h = 1; h <= 12; h++) html += '<th>' + monthsAbbr[h - 1] + '</th>';
             html += '<th>Дней</th><th>Часов</th>' +
                 '<th title="часы переработки за год — коды д/н">Перераб.</th>' +
                 '</tr></thead><tbody>';
-            var gWork = 0, gHours = 0, gOver = 0, gOverDays = 0;
             for (var e = 0; e < employees.length; e++) {
                 var emp = employees[e];
                 var tab = String(emp['таб_номер']);
@@ -38711,8 +38870,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     html += '<td class="ws-tt-num">' +
                         (w ? w + '/' + this._fmtTotalsNum(hh) : '—') + '</td>';
                 }
-                gWork += sumWork; gHours += sumHours;
-                gOver += sumOver; gOverDays += sumOverDays;
                 html += '<td class="ws-tt-num">' + (sumWork || '—') + '</td>' +
                         '<td class="ws-tt-num ws-tt-hours">' +
                         (sumHours ? this._fmtTotalsNum(sumHours) : '—') + '</td>' +
@@ -38720,20 +38877,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             sumOverDays + ' (коды д/н)">' +
                         (sumOver ? this._fmtTotalsNum(sumOver) : '—') + '</td></tr>';
             }
-            html += '</tbody><tfoot><tr class="ws-tt-total">' +
-                '<td class="ws-tt-emp">Итого по подразделению</td>';
-            for (var mt = 1; mt <= 12; mt++) {
-                var tg = monthTotals[mt] || this._totalsZero();
-                html += '<td class="ws-tt-num">' +
-                    (tg.work ? tg.work + '/' + this._fmtTotalsNum(tg.hours) : '—') + '</td>';
-            }
-            html += '<td class="ws-tt-num">' + (gWork || '—') + '</td>' +
-                    '<td class="ws-tt-num ws-tt-hours">' +
-                    (gHours ? this._fmtTotalsNum(gHours) : '—') + '</td>' +
-                    '<td class="ws-tt-num ws-tt-over" title="дней переработки: ' +
-                        gOverDays + ' (коды д/н)">' +
-                    (gOver ? this._fmtTotalsNum(gOver) : '—') + '</td></tr>';
-            html += '</tr></tfoot></table>';
+            // Task 327: tfoot «Итого» УДАЛЁН (заявка) — годовые суммы
+            // по каждому сотруднику остаются в строках, общих — нет
+            html += '</tbody></table>';
             body.innerHTML = html;
             // Task 323: шапка сетки — под заголовочную зону панели,
             // строки итогов — по строкам сетки (активные сверху);
@@ -38906,16 +39052,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // до низа
             var foot = wrap.querySelector('.ws-grid-foot');
             var footH = foot ? Math.round(foot.getBoundingClientRect().height) : 0;
-            // Task 323: широкого режима — в бюджете резервируется
-            // итоговая строка панели (tfoot, прилипшая к низу):
-            // последняя строка сотрудника не уходит под неё
+            // Task 327 (заявка: строка общего количества УДАЛЕНА):
+            // резерв итоговой строки панели (tfoot .ws-tt-total,
+            // Task 323) больше не нужен — таблицы месяца/года
+            // заканчиваются последней строкой сотрудника, снизу
+            // панель закрывает бордюрчик .ws-tt-foot (5px, вне
+            // скролл-зоны)
             var ttFootH = 0;
-            if (this._ttIsWide()) {
-                var ttFoot = document.querySelector('#wsTtBody .ws-tt-total');
-                if (ttFoot && ttFoot.getBoundingClientRect) {
-                    ttFootH = Math.ceil(ttFoot.getBoundingClientRect().height);
-                }
-            }
             var n = rows.length;
             var budget = avail - headH - footH - ttFootH;
             var h = Math.floor(budget / n);
