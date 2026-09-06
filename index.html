@@ -4389,6 +4389,22 @@
         cursor: default;
     }
     .ws-view-btn.ws-view-locked:active { opacity: 0.6; }
+    /* Task 333 (заявка: «кнопку переключения вида подпиши „Вид“»):
+       кнопка — уже НЕ квадрат-иконка: иконка + ПОДПИСЬ «Вид»
+       (как у текстовых кнопок бара, 13px/600); ширина — по
+       содержимому (auto + паддинги 9px), иконка не сжимается.
+       Подсказка #wsViewTip и aria-label сохраняются */
+    .ws-view-btn {
+        width: auto;
+        padding: 0 9px;
+        gap: 5px;
+    }
+    .ws-view-btn svg { flex: 0 0 auto; }
+    .ws-view-btn .ws-view-label {
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
 
     /* Task 251: попап выбора статуса рядом с ячейкой шахматки.
        Табличка «код — название» столбиком; фиксированное позиционирование —
@@ -5291,7 +5307,11 @@
         font-size: 11px;
         font-weight: 700;
         color: var(--text-secondary, rgba(255,255,255,0.6));
-        background: #131c28;   /* НЕпрозрачная: строки не просвечивают */
+        /* Task 333 (заявка): фон шапки таблицы итогов — КАК ШАПКА
+           ШАХМАТКИ (Task 330: стальной сине-серый #1e293b, светлая
+           #bfcad5) — заголовочные полосы сетки и шторки совпадают
+           цвет в цвет; НЕпрозрачный: строки не просвечивают */
+        background: #1e293b;
         position: sticky;
         top: 0;
         z-index: 1;
@@ -5328,7 +5348,8 @@
         border-right-color: rgba(0, 0, 0, 0.08);
     }
     [data-theme="light"] .ws-tt-table th {
-        background: #efede5;
+        /* Task 333: шапка шторки = шапка шахматки (Task 330: #bfcad5) */
+        background: #bfcad5;
     }
     /* Task 323 → 325 → 327 → 332: колонка «Сотрудник» — ТОЛЬКО
        МОБАЙЛ и только месячная таблица (шторка-оверлей закрывает
@@ -5349,6 +5370,17 @@
         background: #0e1621;
         z-index: 2;
     }
+    /* Task 333 (заявка: шапка шторки = шапка шахматки): ЯЧЕЙКА
+       «Сотрудник» В ШАПКЕ (thead th.ws-tt-emp — годовая таблица на
+       мобайле и таблица архива) — фон шапки сетки #1e293b/#bfcad5,
+       НЕ фон тела #0e1621/#e9e7de; специфичность (0,3,1) выше
+       базовой th.ws-tt-emp (0,2,1) */
+    .ws-tt-table thead th.ws-tt-emp {
+        background: #1e293b;
+    }
+    [data-theme="light"] .ws-tt-table thead th.ws-tt-emp {
+        background: #bfcad5;
+    }
     .ws-tt-table:not(.ws-tt-year) th.ws-tt-emp,
     .ws-tt-table:not(.ws-tt-year) td.ws-tt-emp {
         width: 42%;          /* мобайл: ФИО + равные столбцы данных */
@@ -5363,7 +5395,23 @@
     @media (min-width: 1024px) {
         .ws-tt-table:not(.ws-tt-year) th.ws-tt-emp,
         .ws-tt-table:not(.ws-tt-year) td.ws-tt-emp { display: none; }
+        /* Task 333: ГЛАВНАЯ годовая таблица — колонка «Сотрудник»
+           ТОЛЬКО МОБАЙЛ (десктоп: имена — в стик-колонке ФИО сетки,
+           строки года = строки сетки); ТАБЛИЦА АРХИВА (.ws-tt-arch)
+           — исключение: её «Сотрудник» виден и на десктопе (в сетке
+           архивных строк НЕТ, имена негде взять) */
+        .ws-tt-table.ws-tt-year:not(.ws-tt-arch) th.ws-tt-emp,
+        .ws-tt-table.ws-tt-year:not(.ws-tt-arch) td.ws-tt-emp { display: none; }
     }
+    /* Task 333 (заявка: «Архив в годовой таблице всё же нужен»):
+       ПОДПИСЬ-заголовок блока архива — под основной таблицей года */
+    .ws-tt-arch-cap {
+        padding: 10px 8px 5px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+    }
+    [data-theme="light"] .ws-tt-arch-cap { color: #777777; }
     .ws-tt-table td.ws-tt-emp .ws-tt-tabno {
         color: var(--text-secondary, rgba(255,255,255,0.5));
         font-size: 10.5px;
@@ -5387,6 +5435,32 @@
     }
     [data-theme="light"] .ws-tt-table tbody tr:nth-child(even) {
         background: rgba(0, 0, 0, 0.07);
+    }
+    /* Task 333 (заявка): РАЗДЕЛИТЕЛЬ ГРУПП в таблице итогов —
+       ГОРИЗОНТАЛЬНАЯ полоса между ячейками учёта сменных и дневных
+       сотрудников, КАК В ШАХМАТКЕ (tr.ws-group-first td сетки,
+       Task 259): 2px сплошная, тёмная #4a8fc7 / светлая #6e8ba4.
+       Класс на <tr> ставит _renderTotalsMonth/_renderTotalsYearTable
+       (та же логика «первый дневной после сменных»); в
+       border-collapse стык 2px побеждает 1px границу строки выше —
+       линия непрерывна по всей ширине строки */
+    .ws-tt-table tbody tr.ws-group-first td {
+        border-top: 2px solid #4a8fc7;
+    }
+    [data-theme="light"] .ws-tt-table tbody tr.ws-group-first td {
+        border-top: 2px solid #6e8ba4;
+    }
+    /* Task 333 (заявка): ПЕРЕКРЁСТНАЯ ПОДСВЕТКА распространяется и на
+       СТРОКИ ШТОРКИ — класс ws-hover-row на <tr> таблицы итогов
+       ставит _rowClass (вместе со строкой сетки, тот же индекс).
+       Заливка — тот же приём inset-«шторки», что у сетки (Task 319):
+       мягкий тинт поверх зебры и фона sticky-колонки «Сотрудник»;
+       тёмная 0.10 / светлая 0.06 — как строка сетки */
+    .ws-tt-table tbody tr.ws-hover-row td {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.10);
+    }
+    [data-theme="light"] .ws-tt-table tbody tr.ws-hover-row td {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.06);
     }
     /* Task 327 (заявка: «убери строку общего количества»): итоговая
        строка tfoot «Итого» УДАЛЕНА из таблиц месяца и года —
@@ -5468,25 +5542,39 @@
     [data-theme="light"] .ws-grid tbody tr.ws-group-first td {
         border-top: 2px solid #6e8ba4;
     }
-    /* Task 332 (заявка): РАЗДЕЛИТЕЛЬНАЯ ПОЛОСА между столбцом
-       сотрудников и ячейками шахматки — та же полоса, что левый край
-       шторки итогов (.ws-tt-edge, Task 331) и разделитель сменных/
-       дневных (ws-group-first): 2px сплошная, тёмная #4a8fc7 /
-       светлая #6e8ba4. Полоса — border-right СТИК-колонки ФИО:
-       проходит по ВСЕЙ высоте сетки (шапка «Сотрудник +» и тело),
-       при горизонтальной прокрутке остаётся на границе (граница
-       принадлежит sticky-ячейкам, ячейки дней уезжают ПОД полосу).
-       Специфичность (0,2,3)/(0,3,3) выше базовых .ws-grid tbody td
-       (0,1,2) и светлой [data-theme="light"] .ws-grid tbody td
-       (0,2,2) — цвет не перекрашивается; в border-collapse стык
-       2px побеждает 1px границу первого дня — линия непрерывна */
-    .ws-grid thead th.ws-emp-col,
-    .ws-grid tbody td.ws-emp-col {
-        border-right: 2px solid #4a8fc7;
+    /* Task 332 → 333 (заявка): РАЗДЕЛИТЕЛЬНАЯ ПОЛОСА между столбцом
+       ФИО и ячейками шахматки — та же полоса, что левый край шторки
+       итогов (.ws-tt-edge, Task 331) и разделитель сменных/дневных
+       (ws-group-first): 2px сплошная, тёмная #4a8fc7 / светлая
+       #6e8ba4. Task 333 (заявка: «должна быть со стороны ячеек
+       сотрудников, чтобы при прокрутке она не уходила»): БОРДЮР
+       (border-right) заменён ПСЕВДОЭЛЕМЕНТОМ ::after СТИК-ячеек ФИО
+       — ПОЛОСА ПРИНАДЛЕЖИТ ЯЧЕЙКАМ СОТРУДНИКОВ (right: 0 = последние
+       2px ПРАВОГО КРАЯ sticky-ячейки). Причина: в border-collapse:
+       collapse границы sticky-ячеек рисуются ТАБЛИЦЕЙ на исходной
+       позиции ячейки и при прокрутке УЕЗЖАЮТ вместе с контентом
+       (воспроизведено пробой в Chromium И Firefox: до прокрутки
+       полоса на границе, после scrollLeft=300 — полосы нет), а
+       ::after рисуется САМИМ sticky-элементом и двигается вместе с
+       ним — полоса ВЕЧНО на границе, ячейки дней уезжают ПОД неё;
+       кликам не мешает (pointer-events: none), НЕ обрезается
+       overflow: hidden ФИО-эллипсиса (полоса ВНУТРИ padding-box,
+       проверено: right: 0 видна, right: -2 уже clipped); top/bottom
+       -1px — непрерывность на стыках строк (замер 98/100) */
+    .ws-grid thead th.ws-emp-col::after,
+    .ws-grid tbody td.ws-emp-col::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: -1px;
+        bottom: -1px;
+        width: 2px;
+        background: #4a8fc7;
+        pointer-events: none;
     }
-    [data-theme="light"] .ws-grid thead th.ws-emp-col,
-    [data-theme="light"] .ws-grid tbody td.ws-emp-col {
-        border-right: 2px solid #6e8ba4;
+    [data-theme="light"] .ws-grid thead th.ws-emp-col::after,
+    [data-theme="light"] .ws-grid tbody td.ws-emp-col::after {
+        background: #6e8ba4;
     }
     .ws-grid {
         border-collapse: collapse;
@@ -6204,6 +6292,12 @@
             height: 100%;
             width: 34px;
             padding: 0;
+        }
+        /* Task 333: кнопка вида — с подписью «Вид», ширина по
+           содержимому (перебивает 34px иконки выше), высота ряда */
+        .ws-view-btn {
+            width: auto;
+            padding: 0 9px;
         }
         .ws-events-panel,
         .ws-cal-panel {
@@ -13114,6 +13208,10 @@
                             <svg id="wsViewIconFull" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16M4 9h16M4 15h16M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                             <svg id="wsViewIconShift" viewBox="0 0 24 24" aria-hidden="true" focusable="false" hidden><path d="M4 5h16M4 9h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 15h16M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.25"/></svg>
                             <svg id="wsViewIconDay" viewBox="0 0 24 24" aria-hidden="true" focusable="false" hidden><path d="M4 5h16M4 9h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.25"/><path d="M4 15h16M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            <!-- Task 333 (заявка): ПОДПИСЬ «Вид» — кнопка
+                                 переключения вида подпиши (иконка остаётся
+                                 слева, показывает текущий вид) -->
+                            <span class="ws-view-label">Вид</span>
                         </button>
                         <!-- Task 328 (заявка): кнопка-иконка ПЕРЕКРЁСТНОЙ
                              ПОДСВЕТКИ строк и столбцов шахматки (вкл/выкл)
@@ -39454,16 +39552,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     if (!gridWrap) return;
                     self._ttEchoG = true;
                     try {
+                        // сетка едет вместе с панелью, ПОКА её хватает
+                        // (браузер сам клампит gridWrap.scrollTop к её
+                        // максимуму — дальше сетка прижата к своему низу)
                         gridWrap.scrollTop = body.scrollTop;
-                        // Task 323: диапазоны скролла чуть разные (у сетки
-                        // ползунок/полоса, у панели — tfoot): панель не
-                        // уезжает ДАЛЬШЕ сетки — прижимаем к её позиции,
-                        // строки остаются ровно по строкам
-                        if (gridWrap.scrollTop < body.scrollTop) {
-                            self._ttEchoP = true;
-                            body.scrollTop = gridWrap.scrollTop;
-                            setTimeout(function() { self._ttEchoP = false; }, 120);
-                        }
+                        // Task 333 (заявка: «Архив в годовой таблице всё
+                        // же нужен»): тело шторки может быть ВЫШЕ сетки —
+                        // годовой блок «Архив» ниже строк сетки. Прежняя
+                        // прижимка «панель не уезжает дальше сетки»
+                        // (Task 323) делала хвост НЕДОСТУПНЫМ: любой
+                        // скролл панели прыгал обратно. Теперь доскролл
+                        // разрешён: пока scrollTop в диапазоне сетки —
+                        // строки идут ровно по строкам; ниже — сетка
+                        // прижата к низу, едет только блок архива
+                        // (строки сетки и итогов в этой зоне уже ушли
+                        // вверх — рассинхрона не видно)
                     } catch (e) {}
                     setTimeout(function() { self._ttEchoG = false; }, 120);
                 }, { passive: true });
@@ -39644,10 +39747,27 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             : '') + '>' + this._esc(cols[c].name) + '</th>';
             }
             html += '</tr></thead><tbody>';
+            // Task 333 (заявка): РАЗДЕЛИТЕЛЬ ГРУПП в шторке — КАК В
+            // ШАХМАТКЕ (Task 259): первой строке дневных (после
+            // сменных) — класс ws-group-first (2px полоса td,
+            // CSS выше). Список _EMPLOYEES уже отсортирован
+            // _sortEmployees: сменные по сменам, затем дневные
+            var prevTier = -1;
             for (var i = 0; i < this._EMPLOYEES.length; i++) {
                 var emp = this._EMPLOYEES[i];
                 var a = agg.byTab[String(emp['таб_номер'])] || z;
-                html += '<tr>' +
+                var empTip = String(emp['тип'] || '').trim();
+                var empTier = (empTip === 'сменный') ? 0
+                            : (empTip === 'дневной') ? 1 : 2;
+                var trCls = [];
+                if (empTier === 1 && prevTier === 0) trCls.push('ws-group-first');
+                // Task 333: подсветка строки шторки — штампуется из
+                // состояния _hoverRow (как в сетке) — переживает
+                // перерисовку шторки при наведённой строке сетки
+                if (i === this._hoverRow) trCls.push('ws-hover-row');
+                prevTier = empTier;
+                html += '<tr' +
+                        (trCls.length ? ' class="' + trCls.join(' ') + '"' : '') + '>' +
                     '<td class="ws-tt-emp"><span class="ws-tt-tabno">' +
                     this._esc(emp['таб_номер']) + '</span>' +
                     this._esc(emp['ФИО']) + '</td>';
@@ -39796,17 +39916,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // месяца — «явки/часы» («11/132»), итого сотрудника —
         // годовые явки и часы; Task 322: + годовая ПЕРЕРАБОТКА
         // (часы кодов д/н за год — колонка «Перераб.»).
-        // Task 323 (прежняя модель): строки — активные В ПОРЯДКЕ
-        // СЕТКИ, архивный персонал — под ними с пометкой, колонка
-        // «Сотрудник» видна и на десктопе.
-        // Task 332 (заявка: «в шторке на год убери столбец
-        // сотрудников»): колонка «Сотрудник» и архивные строки
-        // УДАЛЕНЫ — строки года = строки сетки (имена — в стик-
-        // колонке ФИО шахматки, как у вкладки «Месяц»), таблица —
-        // 12 месяцев + Дней + Часов + Перераб. (дни).
-        // Task 324: пояснительная инфо-строка шапки УДАЛЕНА (заявка);
-        // сбои года (не загружено месяцев / нет справочника) —
-        // аварийной строкой ⚠ #wsTtWarn в шапке (_setTtWarn)
+        // Task 332 (заявка): колонка «Сотрудник» и своя кнопка
+        // «Обновить» шапки УДАЛЕНЫ — строки года = строки сетки
+        // (только активные), обновление — кнопкой «Обновить» тулбара
+        // (loadGrid(true) сбрасывает _YEAR_DATA, Task 321).
+        // Task 333 (заявка: «Архив в годовой таблице всё же нужен»):
+        // АРХИВ ВОЗВРАЩЁН — ОТДЕЛЬНЫМ БЛОКОМ «Архив» ПОД основной
+        // таблицей: уволенные за год (годовой справочник md.employees
+        // минус активные, listEmployees includeArchived) со СВОЕЙ
+        // колонкой «Сотрудник» на ЛЮБОМ экране — в сетке их строк
+        // нет, имена больше негде взять. Активные — по-прежнему
+        // строками сетки, их колонка «Сотрудник» — только на МОБАЙЛЕ
+        // (десктоп: имена в стик-колонке ФИО шахматки, CSS
+        // .ws-tt-year:not(.ws-tt-arch) — иначе как вкладка «Месяц»).
+        // Task 333: разделитель сменных/дневных (ws-group-first) —
+        // как в сетке; подсветка строки (ws-hover-row) — вместе со
+        // строкой сетки. Task 324: сбои года — ⚠ #wsTtWarn в шапке
         _renderTotalsYearTable: function() {
             var body = document.getElementById('wsTtBody');
             if (!body) return;
@@ -39815,10 +39940,24 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var monthsAbbr = ['янв','фев','мар','апр','май','июн',
                               'июл','авг','сен','окт','ноя','дек'];
             // Task 332: строки — АКТИВНЫЕ сотрудники справочника вида
-            // (ровно по строкам сетки, как у месяца); годовой
-            // справочник (md.employees, вкл. архив) остаётся для ТИПОВ
-            // персонала переработки д/н
+            // (ровно по строкам сетки, как у месяца); Task 333: годовой
+            // справочник (md.employees, вкл. архив) — ещё и для АРХИВА
             var employees = this._EMPLOYEES;
+            // Task 333: АРХИВ — годовой справочник БЕЗ активных,
+            // своим порядком (_sortEmployees)
+            var yearEmps = (md.employees && md.employees.length)
+                ? md.employees : [];
+            var activeTabs = {};
+            for (var a0 = 0; a0 < employees.length; a0++) {
+                activeTabs[String(employees[a0]['таб_номер'])] = true;
+            }
+            var archived = [];
+            for (var r0 = 0; r0 < yearEmps.length; r0++) {
+                if (!activeTabs[String(yearEmps[r0]['таб_номер'])]) {
+                    archived.push(yearEmps[r0]);
+                }
+            }
+            archived = this._sortEmployees(archived);
 
             var perMonth = [];
             var monthTotals = [];
@@ -39849,30 +39988,27 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             this._setTtWarn(warn);
 
-            if (!employees.length) {
+            if (!employees.length && !archived.length) {
                 body.innerHTML = '<div class="ws-tt-empty">Нет сотрудников.</div>';
                 if (this._fitTtDrawer) this._fitTtDrawer();
                 if (this._applyTtHeadVar()) this._fitGrid();
                 return;
             }
-            // Task 323: класс ws-tt-year (своя раскладка ширины —
-            // max-content); без обёртки .ws-tt-scroll (скролл — сам
-            // #wsTtBody); Task 327 (заявка: «убери строку общего
-            // количества»): итоговая строка tfoot «Итого по
-            // подразделению» НЕ рендерится — таблицу снизу закрывает
-            // бордюрчик .ws-tt-foot. Task 332: колонки «Сотрудник»
-            // больше НЕТ — шапка начинается с месяцев
-            var html = '<table class="ws-tt-table ws-tt-year">' +
-                '<thead><tr>';
-            for (var h = 1; h <= 12; h++) html += '<th>' + monthsAbbr[h - 1] + '</th>';
-            html += '<th>Дней</th><th>Часов</th>' +
-                '<th title="дни переработки за год — коды д/н">Перераб. (дни)</th>' +
-                '</tr></thead><tbody>';
-            for (var e = 0; e < employees.length; e++) {
-                var emp = employees[e];
+            // Task 333: ОДНА строка таблицы года — классы строки
+            // (разделитель ws-group-first + подсветка ws-hover-row) +
+            // ячейка «Сотрудник» (мобайл и архив) + 12 месяцев +
+            // Дней/Часов/Перераб.; функция — общая для активных и
+            // архива (итоги сотрудника суммируются внутри)
+            var self = this;
+            function yearRow(emp, trCls) {
                 var tab = String(emp['таб_номер']);
                 var sumWork = 0, sumHours = 0, sumOver = 0, sumOverDays = 0;
-                html += '<tr>';
+                var out = '<tr' +
+                    (trCls && trCls.length
+                        ? ' class="' + trCls.join(' ') + '"' : '') + '>' +
+                    '<td class="ws-tt-emp"><span class="ws-tt-tabno">' +
+                    self._esc(emp['таб_номер']) + '</span>' +
+                    self._esc(emp['ФИО']) + '</td>';
                 for (var mm = 1; mm <= 12; mm++) {
                     var a = perMonth[mm][tab];
                     var w = a ? a.work : 0;
@@ -39880,26 +40016,94 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     sumWork += w; sumHours += hh;
                     sumOver += a ? a.over : 0;
                     sumOverDays += a ? a.overDays : 0;
-                    html += '<td class="ws-tt-num">' +
-                        (w ? w + '/' + this._fmtTotalsNum(hh) : '—') + '</td>';
+                    out += '<td class="ws-tt-num">' +
+                        (w ? w + '/' + self._fmtTotalsNum(hh) : '—') + '</td>';
                 }
-                html += '<td class="ws-tt-num">' + (sumWork || '—') + '</td>' +
+                out += '<td class="ws-tt-num">' + (sumWork || '—') + '</td>' +
                         '<td class="ws-tt-num ws-tt-hours">' +
-                        (sumHours ? this._fmtTotalsNum(sumHours) : '—') + '</td>' +
+                        (sumHours ? self._fmtTotalsNum(sumHours) : '—') + '</td>' +
                         '<td class="ws-tt-num ws-tt-over" title="часов переработки: ' +
-                            this._fmtTotalsNum(sumOver) + ' (коды д/н)">' +
+                            self._fmtTotalsNum(sumOver) + ' (коды д/н)">' +
                         (sumOverDays || '—') + '</td></tr>';
+                return out;
             }
-            // Task 327: tfoot «Итого» УДАЛЁН (заявка) — годовые суммы
-            // по каждому сотруднику остаются в строках, общих — нет
-            html += '</tbody></table>';
+            // Task 323: класс ws-tt-year (своя раскладка ширины —
+            // max-content); Task 327 (заявка: «убери строку общего
+            // количества»): итоговая строка tfoot «Итого по
+            // подразделению» НЕ рендерится — таблицу снизу закрывает
+            // бордюрчик .ws-tt-foot. Task 333: шапка снова с
+            // «Сотрудником» — десктоп CSS прячет колонку у ГЛАВНОЙ
+            // таблицы (.ws-tt-year:not(.ws-tt-arch)), мобайл видит
+            var html = '';
+            if (employees.length) {
+                html = '<table class="ws-tt-table ws-tt-year">' +
+                    '<thead><tr><th class="ws-tt-emp">Сотрудник</th>';
+                for (var h = 1; h <= 12; h++) {
+                    html += '<th>' + monthsAbbr[h - 1] + '</th>';
+                }
+                html += '<th>Дней</th><th>Часов</th>' +
+                    '<th title="дни переработки за год — коды д/н">Перераб. (дни)</th>' +
+                    '</tr></thead><tbody>';
+                // Task 333: разделитель сменных/дневных — как в сетке
+                // (первая дневная после сменных) + штамп подсветки из
+                // _hoverRow (строка шторки = строка сетки)
+                var prevTier = -1;
+                for (var e = 0; e < employees.length; e++) {
+                    var emp = employees[e];
+                    var empTip = String(emp['тип'] || '').trim();
+                    var empTier = (empTip === 'сменный') ? 0
+                                : (empTip === 'дневной') ? 1 : 2;
+                    var trCls = [];
+                    if (empTier === 1 && prevTier === 0) {
+                        trCls.push('ws-group-first');
+                    }
+                    if (e === self._hoverRow) trCls.push('ws-hover-row');
+                    prevTier = empTier;
+                    html += yearRow(emp, trCls);
+                }
+                html += '</tbody></table>';
+            }
+            // Task 333 (заявка: «Архив в годовой таблице всё же нужен»):
+            // БЛОК «Архив» — ПОД основной таблицей, отдельная таблица
+            // (класс ws-tt-arch — колонка «Сотрудник» видна и на
+            // десктопе: в сетке архивных строк нет); те же 12 месяцев
+            // + итоги; ПОДПИСЬ-заголовок .ws-tt-arch-cap; обновление —
+            // кнопкой «Обновить» тулбара (собственной кнопки нет)
+            if (archived.length) {
+                html += '<div class="ws-tt-arch-cap">Архив</div>' +
+                    '<table class="ws-tt-table ws-tt-year ws-tt-arch">' +
+                    '<thead><tr><th class="ws-tt-emp">Сотрудник</th>';
+                for (var h2 = 1; h2 <= 12; h2++) {
+                    html += '<th>' + monthsAbbr[h2 - 1] + '</th>';
+                }
+                html += '<th>Дней</th><th>Часов</th>' +
+                    '<th title="дни переработки за год — коды д/н">Перераб. (дни)</th>' +
+                    '</tr></thead><tbody>';
+                var prevTierA = -1;
+                for (var ar = 0; ar < archived.length; ar++) {
+                    var aemp = archived[ar];
+                    var aTip = String(aemp['тип'] || '').trim();
+                    var aTier = (aTip === 'сменный') ? 0
+                              : (aTip === 'дневной') ? 1 : 2;
+                    var aCls = [];
+                    if (aTier === 1 && prevTierA === 0) {
+                        aCls.push('ws-group-first');
+                    }
+                    prevTierA = aTier;
+                    html += yearRow(aemp, aCls);
+                }
+                html += '</tbody></table>';
+            }
             body.innerHTML = html;
             // Task 329: ширина шторки — по столбцам таблицы (год —
-            // max-content; длиннее капа 60% — прокрутка ползунком)
+            // max-content; длиннее капа 60% — прокрутка ползунком;
+            // ширина — по ПЕРВОЙ таблице: архивная шире за счёт имён —
+            // прокручивается ползунком, имена-стик не мешают)
             if (this._fitTtDrawer) this._fitTtDrawer();
             // Task 323: шапка сетки — под заголовочную зону панели,
-            // строки итогов — по строкам сетки (Task 332: строки года
-            // теперь ровно по строкам сетки — без хвоста архива);
+            // строки итогов — по строкам сетки (Task 333: ГЛАВНАЯ
+            // таблица года — первая в DOM, _syncTotalsRows берёт её;
+            // строки архива — природной высоты, ниже строк сетки);
             // Task 331: ползунок шторки — под новую ширину таблицы года
             if (this._applyTtHeadVar()) this._fitGrid();
             this._syncTotalsRows();
@@ -39991,15 +40195,33 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 319: (пере)установка класса ws-hover-row на строке
         // индекса ri (индексы — порядок <tr> в tbody = порядок
         // рендера сотрудников). Мягко относится к мок-DOM в тестах.
+        // Task 333 (заявка: подсветка «должна распространяться на
+        // строки с ячейками в шторке итогов»): ТОТ ЖЕ класс ставится
+        // на строку ТАБЛИЦЫ ИТОГОВ с тем же индексом — строки шторки
+        // идут ровно по строкам сетки (Task 323; год: главная таблица
+        // первая в DOM, архив ниже — индексы совпадают с активными);
+        // граница по числу строк сетки — хвост архива не трогаем
         _rowClass: function(ri, on) {
             if (ri === null || ri === undefined || ri < 0) return;
             var wrap = document.getElementById('wsGridWrap');
-            if (!wrap || !wrap.querySelectorAll) return;
-            var rows = wrap.querySelectorAll('tbody tr');
-            if (ri >= rows.length) return;
-            var tr = rows[ri];
-            if (tr && tr.classList && tr.classList.toggle) {
-                tr.classList.toggle('ws-hover-row', on);
+            if (wrap && wrap.querySelectorAll) {
+                var rows = wrap.querySelectorAll('tbody tr');
+                if (ri < rows.length) {
+                    var tr = rows[ri];
+                    if (tr && tr.classList && tr.classList.toggle) {
+                        tr.classList.toggle('ws-hover-row', on);
+                    }
+                }
+            }
+            var ttBody = document.getElementById('wsTtBody');
+            if (ttBody && ttBody.querySelectorAll) {
+                var tRows = ttBody.querySelectorAll('.ws-tt-table tbody tr');
+                if (ri < tRows.length) {
+                    var ttr = tRows[ri];
+                    if (ttr && ttr.classList && ttr.classList.toggle) {
+                        ttr.classList.toggle('ws-hover-row', on);
+                    }
+                }
             }
         },
 
