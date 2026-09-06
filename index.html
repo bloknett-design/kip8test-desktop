@@ -4710,18 +4710,25 @@
         outline-offset: -2px;
     }
 
-    /* Контейнер шахматки — горизонтальный скролл */
+    /* Контейнер шахматки — горизонтальный скролл. Task 331: полоса
+       .ws-grid-foot и зона ползунка .ws-grid-hbar ПЕРЕЕХАЛИ из
+       контейнера в обёртку .ws-grid-col (полоса-бордюрчик теперь
+       СТАТИЧНАЯ — не пересоздаётся при рендерах и не уезжает при
+       вертикальной прокрутке; уровень — ВСЕГДА на уровне бордюра
+       шторки итогов); паддинг-снизу убран — 12px-зона ползунка
+       (Task 323/331: .ws-grid-hbar) заняла её место ВНЕ контейнера.
+       Task 257: полосы нативной прокрутки шахматки СКРЫТЫ (вертикальная
+       полоска не появляется ни в одном движке — заявка Task 331;
+       горизонтальный ползунок при открытой шторке — КАСТОМНЫЙ,
+       .ws-grid-hbar под бордюром, как у шторки). Прокрутка остаётся
+       (колесо мыши / свайп / перетаскивание ползунка). Причина
+       скрытия: при дробном масштабе окна (Windows 125%/150%)
+       высота области бывает дробной, clientHeight округляется и
+       таблица могла переливаться на долю пикселя — справа вылезала
+       тонкая полоса прокрутки. */
     .ws-grid-wrap {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        padding: 0 0 12px 0;
-        /* Task 257: полосы прокрутки шахматки СКРЫТЫ. Прокрутка
-           остаётся (колесо мыши / свайп), но визуальной полосы
-           справа от таблицы больше нет. Причина: при дробном
-           масштабе окна (Windows 125%/150%) высота области бывает
-           дробной, clientHeight округляется и таблица могла
-           переливаться на долю пикселя — справа вылезала тонкая
-           полоса прокрутки. */
         scrollbar-width: none;      /* Firefox */
         -ms-overflow-style: none;   /* старый Edge / IE */
     }
@@ -4744,6 +4751,11 @@
        (1px блик + 3px фон + 1px тень), _fitGrid читает реальную
        геометрию, подгонка строк не меняется. */
     .ws-grid-foot {
+        /* Task 331: полоса СТАТИЧНА — живёт в .ws-grid-col ПОД
+           скролл-контейнером .ws-grid-wrap (не внутри: при длинной
+           сетке не уезжает вертикальной прокруткой, уровень — всегда
+           на уровне бордюра .ws-tt-foot шторки итогов) */
+        flex: none;
         height: 5px;
         box-sizing: border-box;
         background: #35648f;
@@ -4754,6 +4766,75 @@
         background: #b3c2ce;
         border-top: 1px solid #ffffff;
         border-bottom: 1px solid #84929e;
+    }
+    /* Task 331: КОЛОНКА ШАХМАТКИ — обёртка .ws-grid-col (скролл-контейнер
+       + статичная полоса .ws-grid-foot + зона ползунка .ws-grid-hbar).
+       Обе колонки рабочей области (сетка и шторка итогов) собраны
+       ОДИНАКОВО: [скролл-зона][бордюрчик 5px][зона ползунка 12px] —
+       нижние бордюры ВСЕГДА на одном уровне (заявка: «уровень нижнего
+       бордюра шторки всегда выравнивается по бордюру шахматки»),
+       ползунки — под бордюрами, на одном уровне. Зона ползунка
+       зарезервирована ВСЕГДА (12px): без горизонтального переполнения
+       она пустая (фон колонки — «полоски прокрутки нет», заявка),
+       с переполнением в ней появляется ползунок. Прежний вид закрытой
+       шахматки сохранён: 12px-зона = прежний паддинг-снизу контейнера */
+    .ws-grid-col {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+    /* Task 331: КАСТОМНЫЙ горизонтальный ползунок (.ws-grid-hbar —
+       у шахматки, .ws-tt-hbar — у шторки итогов). Нативные полосы
+       прокрутки в обоих контейнерах СКРЫТЫ во всех движках (Firefox
+       scrollbar-width: thin показывал ТОНКУЮ ВЕРТИКАЛЬНУЮ полоску
+       в обоих местах и, съедая ширину, вызывал ещё и горизонтальную
+       — заявка: «не должно быть полосок вертикальной прокрутки ни в
+       шторке, ни в шахматке»). Ползунок — div-дорожка + бегунок
+       .ws-hbar-thumb (JS _hbarSync/_attachHbars): виден только при
+       горизонтальном переполнении (класс .on — дорожка закрашивается),
+       перетаскивается мышью/пальцем (pointer capture), клик по дорожке —
+       страница влево/вправо; стиль — прежний нативный ползунок
+       (синий бегунок со скруглением, дорожка 5–8% фона) */
+    .ws-grid-hbar,
+    .ws-tt-hbar {
+        flex: none;
+        height: 12px;
+        box-sizing: border-box;
+        position: relative;
+    }
+    .ws-grid-hbar .ws-hbar-thumb,
+    .ws-tt-hbar .ws-hbar-thumb {
+        display: none;
+    }
+    .ws-grid-hbar.on,
+    .ws-tt-hbar.on {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 6px;
+    }
+    .ws-grid-hbar.on .ws-hbar-thumb,
+    .ws-tt-hbar.on .ws-hbar-thumb {
+        display: block;
+        position: absolute;
+        top: 2px;
+        bottom: 2px;
+        left: 0;
+        min-width: 24px;
+        border-radius: 6px;
+        background: #4a8fc7;
+        cursor: pointer;
+        touch-action: none;
+    }
+    .ws-grid-hbar.on .ws-hbar-thumb:hover,
+    .ws-tt-hbar.on .ws-hbar-thumb:hover {
+        background: #6ea3d3;
+    }
+    [data-theme="light"] .ws-grid-hbar.on,
+    [data-theme="light"] .ws-tt-hbar.on {
+        background: rgba(0, 0, 0, 0.08);
+    }
+    [data-theme="light"] .ws-grid-hbar.on .ws-hbar-thumb,
+    [data-theme="light"] .ws-tt-hbar.on .ws-hbar-thumb {
+        background: #6e8ba4;
     }
     /* ============================================================
        Task 321→323→324: ИТОГИ УЧЁТА — боковая сворачиваемая шторка
@@ -4841,14 +4922,16 @@
         display: flex;
         flex-direction: column;
         background: var(--bg-tertiary, #0e1621);
-        border: 1px solid var(--card-border, rgba(255,255,255,0.08));
-        border-left: none;
-        border-right: none;
+        /* Task 331: рамки УБРАНЫ (были 1px сверху/снизу) — геометрия
+           панели СТЫКУЕТСЯ 1:1 с колонкой шахматки .ws-grid-col
+           ([скролл-зона][бордюрчик 5px][зона ползунка 12px]):
+           нижний бордюр .ws-tt-foot ВСЕГДА на уровне .ws-grid-foot
+           (заявка), без перекоса на 2px рамки */
+        border: none;
     }
     .ws-totals-panel[hidden] { display: none; }
     [data-theme="light"] .ws-totals-panel {
         background: #e9e7de;
-        border-color: rgba(0, 0, 0, 0.12);
     }
     /* ДЕСКТОП: шторка — flex-элемент рабочей области, выдвигается
        справа налево. Task 329 (заявка): ширина — РОВНО ПО СТОЛБЦАМ
@@ -4868,7 +4951,19 @@
             flex-direction: row;
             overflow: hidden;   /* хвост свёрнутой шторки обрезается краем */
         }
-        #page-work-schedule .ws-grid-wrap { min-width: 0; }
+        /* Task 331: колонка шахматки — flex-элемент строки (сетка +
+           статичный бордюрчик + зона ползунка), РАСТЁТ на всё место
+           левее шторки (grow 1 — прежде эту роль играл сам контейнер);
+           контейнер РАСТЁГАИВАЕТСЯ на всю колонку над бордюром */
+        .ws-grid-col {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+        #page-work-schedule .ws-grid-wrap {
+            min-width: 0;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
         .ws-tt-drawer {
             flex: none;
             display: flex;
@@ -4900,20 +4995,22 @@
         }
         #page-work-schedule.ws-tt-open .ws-tt-drawer { transform: none; }
     }
-    /* Task 324 → 325: ШАПКА ШТОРКИ — только аварийное ⚠ (сбои
+    /* Task 324 → 325 → 331: ШАПКА ШТОРКИ — только аварийное ⚠ (сбои
        загрузки года — ставит JS) и «Обновить» (год) у правого края
        (✕ УДАЛЁН по заявке Task 325: закрытие — кнопка «Итоги учёта»
        тулбара, на мобиле — тап мимо шторки). Вкладки Месяц/Год
-       и инфо-строка — УДАЛЕНЫ из шапки (вкладки — в тулбаре). Когда
-       ⚠ и «Обновить» оба скрыты (обычный месяц) — шапка помечается
-       классом ws-tt-head-empty (_updateTtHead) и сжимается до 16px:
-       ЭТО ВЫРАВНИВАТЕЛЬ — шапка СЕТКИ (2 строки: дата + д.н.) не
-       может быть ниже природных ~37px, а шапка таблицы итогов —
-       одна строка ~22,5px; пустая полоса 16px доводит заголовочную
-       зону панели до высоты шапки сетки — строки итогов идут РОВНО
-       по строкам шахматки (заявка Task 323), var = зона ≥ природной
-       высоты — сетка растёт к зоне, а не наоборот */
+       и инфо-строка — УДАЛЕНЫ из шапки (вкладки — в тулбаре).
+       Task 331 (заявка: «высота шапки названий столбцов таблицы
+       шторки — по высоте шапки шахматки»): когда ⚠ и «Обновить»
+       оба скрыты (обычный месяц) — шапка ПРЯЧЕТСЯ ЦЕЛИКОМ
+       ([hidden] → display: none, прежний 16px-филлер-выравниватель
+       УДАЛЁН): шапка таблицы итогов начинается от САМОГО верха
+       панели и имеет высоту шапки сетки (thead th height: 37px —
+       природная высота 2-строчной шапки сетки, Task 256) — шапки
+       СОВПАДАЮТ по высоте и полосе, строки итогов идут ровно по
+       строкам шахматки; var --ws-tt-head-h = голова (0) + thead 37 */
     .ws-tt-head {
+        flex: none;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -4922,11 +5019,7 @@
         min-height: 28px;
         box-sizing: border-box;
     }
-    .ws-tt-head.ws-tt-head-empty {
-        min-height: 16px;   /* компактный выравниватель (см. выше) */
-        padding-top: 2px;
-        padding-bottom: 0;
-    }
+    .ws-tt-head[hidden] { display: none; }
     /* аварийная строка шапки: сбои загрузки месяцев года (Task 324:
        пояснительная инфо-строка удалена, но ⚠-предупреждение —
        исключительное состояние, остаётся в шапке) */
@@ -4941,26 +5034,24 @@
     }
     .ws-tt-warn[hidden] { display: none; }
     [data-theme="light"] .ws-tt-warn { color: #a06b00; }
-    /* Task 329 (заявка): декоративный БОРТИК левого края шторки —
-       тонкая вертикальная полоса во всю высоту края; ВЕРТИКАЛЬНЫЙ
-       «родственник» нижней полосы .ws-tt-foot (Task 327/258/259:
-       стальной bevel 5px, блик по внешней грани), обе темы; поверх
-       таблицы (z 5), мышь не перехватывает */
+    /* Task 331 (заявка): левый бордюрчик шторки — ПОЛОСА, как
+       разделитель сменных/дневных сотрудников в шахматке
+       (.ws-grid tbody tr.ws-group-first td: 2px сплошная,
+       тёмная #4a8fc7 / светлая #6e8ba4); прежний стальной bevel 5px
+       заменён; поверх таблицы (z 5), мышь не перехватывает */
     .ws-tt-edge {
         position: absolute;
         left: 0;
         top: 0;
         bottom: 0;
-        width: 5px;
+        width: 2px;
         box-sizing: border-box;
-        background: #35648f;
-        border-left: 1px solid #85b7dc;
+        background: #4a8fc7;
         z-index: 5;
         pointer-events: none;
     }
     [data-theme="light"] .ws-tt-edge {
-        background: #b3c2ce;
-        border-left-color: #ffffff;
+        background: #6e8ba4;
     }
     /* Task 329 (заявка): кнопка-значок на ВНУТРЕННЕЙ стороне левого
        края шторки, по середине (top 50%): стрелка-ШЕВРОН; функционал
@@ -4981,12 +5072,15 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 22px;
+        /* Task 331 (заявка): в ДВА РАЗА УЖЕ по ширине (22→11px) и
+           ПРОЗРАЧНЕЕ (0.92→0.55) — сквозь кнопку просвечивает
+           накрытая ячейка данных; svg-шеврон — компактный 7×12 */
+        width: 11px;
         height: 48px;
         padding: 0;
         box-sizing: border-box;
         color: var(--text-secondary, rgba(255,255,255,0.65));
-        background: rgba(21, 32, 47, 0.92);
+        background: rgba(21, 32, 47, 0.55);
         border: 1px solid var(--card-border, rgba(255,255,255,0.12));
         border-left: none;        /* примыкает к бортику края */
         border-radius: 0 6px 6px 0;
@@ -4994,11 +5088,11 @@
     }
     .ws-tt-chv:hover {
         color: var(--text-primary, #e0e0e0);
-        background: #15202f;
+        background: rgba(21, 32, 47, 0.85);
     }
     .ws-tt-chv.on {
         color: #9ec9e8;
-        background: rgba(74, 143, 199, 0.28);
+        background: rgba(74, 143, 199, 0.35);
         border-color: rgba(74, 143, 199, 0.5);
     }
     .ws-tt-chv:active { opacity: 0.85; }
@@ -5010,16 +5104,16 @@
     .ws-tt-chv.on svg { transform: rotate(180deg); }
     [data-theme="light"] .ws-tt-chv {
         color: #666;
-        background: rgba(226, 232, 239, 0.94);
+        background: rgba(226, 232, 239, 0.6);
         border-color: rgba(0, 0, 0, 0.14);
     }
     [data-theme="light"] .ws-tt-chv:hover {
         color: #333;
-        background: #e2e8ef;
+        background: rgba(226, 232, 239, 0.92);
     }
     [data-theme="light"] .ws-tt-chv.on {
         color: #1d5f96;
-        background: rgba(74, 143, 199, 0.22);
+        background: rgba(74, 143, 199, 0.28);
         border-color: rgba(74, 143, 199, 0.45);
     }
     /* Task 327 (заявка: «внизу шторки сделай такой же бордюрчик,
@@ -5095,49 +5189,28 @@
         border-color: rgba(74, 143, 199, 0.55);
     }
     /* Тело панели — СКРОЛЛ-КОНТЕЙНЕР (X — широкие таблицы, Y —
-       синхронизирован со скроллом сетки). Task 324 (заявка): ВНИЗУ
-       ШТОРКИ — ВИДИМАЯ ГОРИЗОНТАЛЬНАЯ ПОЛОСА ПРОКРУТКИ (как ползунок
-       внизу шахматки в ws-tt-gridwide): оглавления — одной строкой,
-       таблица шире панели — прокручивается этим ползунком.
-       Вертикальная полоса скрыта (webkit): скролл Y — колесом/
-       свайпом и синхронно с шахматкой; Firefox — тонкие полосы
-       (scrollbar-width: thin, обе оси — ограничение движка) */
+       синхронизирован со скроллом сетки). Task 331 (заявка: «не
+       должно быть полосок вертикальной прокрутки в шторке и в
+       шахматке»): ВСЕ нативные полосы СКРЫТЫ в обоих движках —
+       Firefox scrollbar-width: thin показывал тонкую ВЕРТИКАЛЬНУЮ
+       полоску, а съедая ширину тела — ещё и горизонтальную даже при
+       свёрнутых столбцах; скролл ОСТАЁТСЯ (колесо/свайп + синхрон с
+       сеткой), ГОРИЗОНТАЛЬНАЯ прокрутка широких таблиц — КАСТОМНЫМ
+       ползунком .ws-tt-hbar ПОД нижним бордюром .ws-tt-foot
+       (заявка: «как под шахматкой табеля»), JS _attachHbars */
     .ws-tt-body {
         flex: 1 1 auto;
         min-height: 0;
         overflow: auto;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
-        scrollbar-width: thin;     /* Firefox: тонкие, цвет — ниже */
-        scrollbar-color: #4a8fc7 rgba(255, 255, 255, 0.06);
-    }
-    [data-theme="light"] .ws-tt-body {
-        scrollbar-color: #6e8ba4 rgba(0, 0, 0, 0.08);
+        scrollbar-width: none;      /* Firefox: все нативные полосы скрыты */
+        -ms-overflow-style: none;
     }
     .ws-tt-body::-webkit-scrollbar {
-        width: 0;      /* вертикальная полоса — скрыта (скролл синхронный) */
-        height: 12px;  /* горизонтальная — ВИДИМАЯ, как у шахматки */
-        display: block;
-    }
-    .ws-tt-body::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 6px;
-    }
-    .ws-tt-body::-webkit-scrollbar-thumb {
-        background: #4a8fc7;
-        border: 3px solid transparent;
-        border-radius: 6px;
-        background-clip: padding-box;
-    }
-    .ws-tt-body::-webkit-scrollbar-thumb:hover {
-        background: #6ea3d3;
-        background-clip: padding-box;
-    }
-    [data-theme="light"] .ws-tt-body::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.08);
-    }
-    [data-theme="light"] .ws-tt-body::-webkit-scrollbar-thumb {
-        background: #6e8ba4;
+        width: 0;
+        height: 0;
+        display: none;
     }
     /* Таблица итогов: строки — ровно по строкам сетки (высоты
        копирует _syncTotalsRows); шапка — прилипшая к верху (как у
@@ -5180,9 +5253,15 @@
            JS задаёт ещё и явную ширину таблицы = сумме) */
         .ws-tt-table thead th,
         .ws-tt-table tbody td { padding-left: 4px; padding-right: 4px; }
-        .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-work  { width: 36px; }
-        .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-hours { width: 38px; }
-        .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-over  { width: 56px; }
+        /* Task 331 (заявка: «в скобках подпиши, что количества в
+           днях» + «шторка достаточно широкая, вся информация видна,
+           без полоски прокрутки»): Явки/Часы/Переработка — чуть ШИРЕ
+           под заголовки «Явки (дни)»/«Переработка (дни)» в 2 строки
+           («Переработка» одним словом ~71px + «(дни)» — вторая
+           строка); дубль в JS _renderTotalsMonth — TT_COL_W */
+        .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-work  { width: 44px; }
+        .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-hours { width: 42px; }
+        .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-over  { width: 80px; }
         .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-ov    { width: 42px; }
         .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-b     { width: 64px; }
         .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-ot    { width: 50px; }
@@ -5198,7 +5277,10 @@
         border-bottom: 1px solid rgba(255,255,255,0.07);
         /* Task 325: тонкая вертикальная линия между ячейками */
         border-right: 1px solid rgba(255,255,255,0.07);
-        text-align: right;
+        /* Task 331 (заявка: «текст в ячейках значений — по центру»):
+           прежде числа прижимались вправо; колонка «Сотрудник» —
+           своими правилами слева */
+        text-align: center;
         white-space: nowrap;
     }
     .ws-tt-table th:last-child,
@@ -5222,17 +5304,23 @@
         overflow-wrap: break-word;
         word-break: break-word;
         hyphens: auto;
-        vertical-align: bottom;
+        /* Task 331 (заявка: «высота шапки названий столбцов таблицы
+           шторки — по высоте шапки шахматки табеля»): шапка таблицы
+           итогов = 38px — шапка сетки (Task 256: 14+11+12 ≈ 37,5 —
+           ячейка сетки растёт до 38 и совпадает ТОЧНО); текст —
+           ПО ЦЕНТРУ полосы (заявка) */
+        height: 38px;
+        vertical-align: middle;
         text-align: center;   /* по центру равного столбца */
     }
-    /* годовая таблица — прежний вид: заголовки-месяцы одной строкой,
-      выравнивание как у данных (числа справа) */
+    /* годовая таблица — прежний вид: заголовки-месяцы одной строкой;
+       Task 331 (заявка): текст — по центру (как ячейки значений) */
     .ws-tt-table.ws-tt-year th {
         white-space: nowrap;
         overflow-wrap: normal;
         word-break: normal;
         hyphens: manual;
-        text-align: right;
+        text-align: center;
     }
     [data-theme="light"] .ws-tt-table th,
     [data-theme="light"] .ws-tt-table td {
@@ -5319,42 +5407,16 @@
        шторкой); колонка ФИО — прилипшая к левому краю; шапка
        растёт до высоты заголовочной зоны панели итогов (переменная
        --ws-tt-head-h — ставит _applyTtHeadVar), чтобы строки итогов
-       стояли ровно по строкам сотрудников */
+       стояли ровно по строкам сотрудников.
+       Task 331 (заявка: «не должно быть полосок вертикальной
+       прокрутки… в шахматке»): нативные полосы контейнера сетки
+       ОСТАЮТСЯ скрытыми и в широком режиме (прежде Firefox
+       scrollbar-width: thin рисовал тонкую ВЕРТИКАЛЬНУЮ полоску);
+       горизонтальный ползунок внизу шахматки — КАСТОМНЫЙ
+       .ws-grid-hbar ПОД бордюром .ws-grid-foot, на уровне ползунка
+       шторки (JS _attachHbars/_hbarSync) */
     @media (min-width: 1024px) {
 
-    #page-work-schedule.ws-tt-gridwide .ws-grid-wrap {
-        overflow-x: auto;
-        scrollbar-width: thin;
-        scrollbar-color: #4a8fc7 rgba(255, 255, 255, 0.06);
-    }
-    #page-work-schedule.ws-tt-gridwide .ws-grid-wrap::-webkit-scrollbar {
-        width: 0;
-        height: 12px;
-        display: block;
-    }
-    #page-work-schedule.ws-tt-gridwide .ws-grid-wrap::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 6px;
-    }
-    #page-work-schedule.ws-tt-gridwide .ws-grid-wrap::-webkit-scrollbar-thumb {
-        background: #4a8fc7;
-        border: 3px solid transparent;
-        border-radius: 6px;
-        background-clip: padding-box;
-    }
-    #page-work-schedule.ws-tt-gridwide .ws-grid-wrap::-webkit-scrollbar-thumb:hover {
-        background: #6ea3d3;
-        background-clip: padding-box;
-    }
-    [data-theme="light"] #page-work-schedule.ws-tt-gridwide .ws-grid-wrap {
-        scrollbar-color: #6e8ba4 rgba(0, 0, 0, 0.08);
-    }
-    [data-theme="light"] #page-work-schedule.ws-tt-gridwide .ws-grid-wrap::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.08);
-    }
-    [data-theme="light"] #page-work-schedule.ws-tt-gridwide .ws-grid-wrap::-webkit-scrollbar-thumb {
-        background: #6e8ba4;
-    }
     #page-work-schedule.ws-tt-gridwide .ws-grid {
         width: max-content;
         min-width: 100%;
@@ -5365,7 +5427,11 @@
         max-width: 36px;
     }
     #page-work-schedule.ws-tt-gridwide .ws-grid thead th {
-        height: var(--ws-tt-head-h, 56px);
+        /* Task 331: фолбэк — высота шапки сетки 38px (природная
+           37,5): var ставит _applyTtHeadVar = голова шторки (0 в
+           месяце) + шапка таблицы итогов (38) = 38 — совпадает
+           с шапкой столбцов шторки ТОЧНО */
+        height: var(--ws-tt-head-h, 38px);
         vertical-align: middle;
     }
     /* ФИО в широком режиме — прилипшая колонка (видна при любой
@@ -13095,6 +13161,14 @@
                  _syncTotalsRows, скролл синхронизирован), поэтому
                  колонка сотрудников в панели на десктопе скрыта. -->
             <div id="wsWsBody" class="ws-body">
+            <!-- Task 331: КОЛОНКА ШАХМАТКИ .ws-grid-col — скролл-контейнер
+                 + СТАТИЧНЫЙ бордюрчик .ws-grid-foot (прежде рендерился
+                 JS ВНУТРИ контейнера и уезжал при длинной сетке) + зона
+                 КАСТОМНОГО ползунка .ws-grid-hbar (12px, под бордюром —
+                 как у шторки итогов; без переполнения зона пустая).
+                 Обе колонки рабочей области собраны одинаково — нижние
+                 бордюры ВСЕГДА на одном уровне (заявка) -->
+            <div class="ws-grid-col" id="wsGridCol">
             <div id="wsGridWrap" class="ws-grid-wrap">
                 <!-- Task 267/269: «Загрузка…» с анимированными точками и
                      ШРИФТОМ КАК У РАСХОДОМЕРОВ — та же связка классов
@@ -13103,6 +13177,9 @@
                      .flow-loading-dots. loadGrid() ставит идентичную
                      разметку при каждой загрузке месяца -->
                 <div class="flow-loading" id="wsEmpty"><div class="flow-loading-text">Загрузка<span class="flow-loading-dots"><span>.</span><span>.</span><span>.</span></span></div></div>
+            </div>
+            <div class="ws-grid-foot" id="wsGridFoot" aria-hidden="true"></div>
+            <div class="ws-grid-hbar" id="wsGridHbar" aria-hidden="true"><div class="ws-hbar-thumb"></div></div>
             </div>
             <!-- Task 321→323→324→325: ИТОГИ УЧЁТА. ОТКРЫТИЕ/ЗАКРЫТИЕ —
                  ТОЛЬКО кнопка-переключатель «Итоги учёта» в ряду 2
@@ -13145,7 +13222,7 @@
                      aria-label (как у значка подсветки, Task 328) -->
                 <div class="ws-tt-edge" aria-hidden="true"></div>
                 <button type="button" id="wsTtChv" class="ws-tt-chv" onclick="WorkSchedule.toggleTotalsExtra()" hidden aria-pressed="false" aria-label="Показать дополнительные столбцы: Отгул, Больничный, Отпуск, Уч. отпуск, Прогул, День, Ночь, Прочие">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M8.5 2.5 L4 7 L8.5 11.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <svg width="7" height="12" viewBox="0 0 7 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M5.5 1 L1 6 L5.5 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
                 <div id="wsTotalsPanel" class="ws-totals-panel" hidden>
                     <!-- Task 325 (заявка): ✕ из шапки шторки УДАЛЁН —
@@ -13171,8 +13248,18 @@
                          у шахматки табеля (.ws-grid-foot, Task 258/259:
                          5px стальной bevel, обе темы); строки общего
                          количества (tfoot «Итого») больше нет — полоса
-                         закрывает таблицу снизу -->
+                         закрывает таблицу снизу.
+                         Task 331 (заявка): полоса СТАТИЧНА ПОД скролл-зоной
+                         (внутри колонки панели, как .ws-grid-foot в
+                         .ws-grid-col) — уровень ВСЕГДА совпадает с
+                         бордюром шахматки; ПОД ней — зона КАСТОМНОГО
+                         горизонтального ползунка .ws-tt-hbar (12px:
+                         без переполнения пустая, с переполнением —
+                         ползунок; прежде нативная полоса сидела ВНУТРИ
+                         тела НАД бордюром — заявка: «под нижним
+                         бордюром, как под шахматкой табеля») -->
                     <div class="ws-tt-foot" aria-hidden="true"></div>
+                    <div class="ws-tt-hbar" id="wsTtHbar" aria-hidden="true"><div class="ws-hbar-thumb"></div></div>
                 </div>
             </div>
             </div>
@@ -37246,6 +37333,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // панель итогов (шторка открыта) — слушатели вешаются
             // один раз вместе с resize-наблюдателем
             this._attachTotalsSync();
+            // Task 331: кастомные горизонтальные ползунки (шахматка в
+            // широком режиме + шторка итогов) — под нижними бордюрами
+            this._attachHbars();
             // Task 325: поздняя загрузка веб-шрифта меняет ширину текста —
             // повторный замер ширины колонки сотрудников (сетка уже
             // отрисована с фолбэк-шрифтом; CSS-переменная обновится —
@@ -38260,11 +38350,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 html += '</tr>';
             }
             html += '</tbody></table>';
-            // Task 257: завершающая полоса — небольшой бордюрчик под
-            // последней строкой, зрительно закрывает таблицу снизу
-            // (метка конца таблицы). Высоту резервирует _fitGrid —
-            // полоса всегда прижата к нижнему краю области.
-            html += '<div class="ws-grid-foot" aria-hidden="true"></div>';
+            // Task 331: завершающая полоса .ws-grid-foot БОЛЬШЕ НЕ
+            // рендерится внутри контейнера — она СТАТИЧНАЯ (#wsGridFoot
+            // в .ws-grid-col ПОД .ws-grid-wrap): не пересоздаётся при
+            // рендерах, не уезжает вертикальной прокруткой при длинной
+            // сетке, уровень — всегда на уровне бордюра шторки итогов;
+            // ползунок под ней — зона #wsGridHbar (кастомный, JS
+            // _attachHbars). Бюджет строк в _fitGrid полосу больше не
+            // вычитает — она ВНЕ контейнера
             wrap.innerHTML = html;
             // Task 256: целочисленная подгонка высоты строк под размер
             // области — без полос прокрутки и с чёткими границами строк
@@ -38700,6 +38793,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 this._applyTtHeadVar();
                 this._fitGrid();
                 this._syncTotalsRows();
+                if (this._hbarSyncAll) this._hbarSyncAll();
             } else {
                 // уезжает за край АНИМАЦИЕЙ (маржа = −ширина), панель
                 // прячется ПОСЛЕ (по таймеру, _ttCloseCleanup) —
@@ -38871,20 +38965,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // Task 325 (заявка: ✕ шапки удалён): шапка шторки остаётся
-        // только с аварийным ⚠ и/или кнопкой «Обновить» (год). Когда
-        // ОБА скрыты (обычный месяц: предупреждений нет, «Обновить» —
-        // только у года) — шапка СЖИМАЕТСЯ до 16px (класс
-        // ws-tt-head-empty): пустой полосы не видно, но высота
-        // заголовочной зоны сохраняется достаточной для выравнивания
-        // строк итогов по строкам сетки (шапка сетки — 2 строки,
-        // ≥ природных ~37px; зона = 16 + 22,5 ≈ 38,5 ≥ 37 — сетка
-        // растёт к зоне, строки совпадают).
+        // только с аварийным ⚠ и/или кнопкой «Обновить» (год).
+        // Task 331 (заявка: «высота шапки названий столбцов таблицы
+        // шторки — по высоте шапки шахматки»): когда ОБА скрыты
+        // (обычный месяц: предупреждений нет, «Обновить» — только у
+        // года) — шапка ПРЯЧЕТСЯ ЦЕЛИКОМ ([hidden] → display: none,
+        // 16px-филлер ws-tt-head-empty УДАЛЁН): шапка таблицы итогов
+        // начинается от самого верха панели и РАВНА по высоте шапке
+        // сетки (thead th height: 37px) — заголовочные полосы
+        // совпадают, строки итогов идут ровно по строкам сетки.
         // Вызывается из _applyTtHeadVar — ДО замера высоты зоны, т.е.
         // покрывает все пути: открытие шторки, смену вкладки (виден
-        // «Обновить»), рендеры месяца/года (⚠ по сбоям).
-        // Task 329: кнопка «Ещё» из шапки УДАЛЕНА (значок-шеврон на
-        // левом краю, вне шапки) — логика пустоты вернулась к
-        // Task 325: только ⌠ и «Обновить»
+        // «Обновить»), рендеры месяца/года (⚠ по сбоям)
         _updateTtHead: function() {
             var panel = document.getElementById('wsTotalsPanel');
             if (!panel || !panel.querySelector) return;
@@ -38893,9 +38985,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var warn = document.getElementById('wsTtWarn');
             var ref = document.getElementById('wsTtRefresh');
             var empty = (!warn || warn.hidden) && (!ref || ref.hidden);
-            if (head.classList && head.classList.toggle) {
-                head.classList.toggle('ws-tt-head-empty', empty);
-            }
+            head.hidden = empty;
         },
 
         // Task 323: СТРОКИ ИТОГОВ — ровно ПО СТРОКАМ СОТРУДНИКОВ
@@ -39105,9 +39195,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // в 2 строки (сумма ширин = ширина таблицы = ширина
             // шторки, _fitTtDrawer); на мобайле классы не действуют
             var cols = [
-                { key: 'work',  name: 'Явки',        cls: '',            wcls: 'ws-tt-c-work' },
+                // Task 331 (заявка): Явки и Переработка — ПОДПИСЬ В
+                // СКОБКАХ, что количества — в ДНЯХ («Явки (дни)»,
+                // «Переработка (дни)»; часы — отдельный столбец,
+                // без подписи); столбцы расширены под 2-строчные
+                // заголовки без прокрутки (заявка: «вся информация
+                // просматривалась, без нижней полоски прокрутки»)
+                { key: 'work',  name: 'Явки (дни)',        cls: '',            wcls: 'ws-tt-c-work' },
                 { key: 'hours', name: 'Часы',        cls: 'ws-tt-hours', wcls: 'ws-tt-c-hours' },
-                { key: 'over',  name: 'Переработка', cls: 'ws-tt-over',  wcls: 'ws-tt-c-over' }
+                { key: 'over',  name: 'Переработка (дни)', cls: 'ws-tt-over',  wcls: 'ws-tt-c-over' }
             ];
             if (this._totalsExtra) {
                 cols = cols.concat([
@@ -39188,7 +39284,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // px детерминирован: таблица = ширина шторки
                 // (_fitTtDrawer). Инлайновые ширины th — дубль CSS
                 // (работают даже без таблиц стилей)
-                var TT_COL_W = { work: 36, hours: 38, over: 56,
+                var TT_COL_W = { work: 44, hours: 42, over: 80,
                                  'ОВ': 42, 'Б': 64, 'ОТ': 50, 'У': 52,
                                  'ПР': 50, day: 38, night: 38, other: 50 };
                 var tw = 0;
@@ -39207,9 +39303,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (this._fitTtDrawer) this._fitTtDrawer();
             // Task 323: шапка сетки — под заголовочную зону панели,
             // строки итогов — по строкам сетки (правки ячеек сразу
-            // видны и в сетке, и в итогах — без сдвигов)
+            // видны и в сетке, и в итогах — без сдвигов);
+            // Task 331: ползунок шторки — под новую ширину таблицы
             if (this._applyTtHeadVar()) this._fitGrid();
             this._syncTotalsRows();
+            if (this._hbarSyncAll) this._hbarSyncAll();
         },
 
         // Вкладка «Год»: 12 колонок-месяцев (формат «дни/часы») +
@@ -39367,7 +39465,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 '<thead><tr><th class="ws-tt-emp">Сотрудник</th>';
             for (var h = 1; h <= 12; h++) html += '<th>' + monthsAbbr[h - 1] + '</th>';
             html += '<th>Дней</th><th>Часов</th>' +
-                '<th title="дни переработки за год — коды д/н">Перераб.</th>' +
+                '<th title="дни переработки за год — коды д/н">Перераб. (дни)</th>' +
                 '</tr></thead><tbody>';
             for (var e = 0; e < employees.length; e++) {
                 var emp = employees[e];
@@ -39404,9 +39502,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (this._fitTtDrawer) this._fitTtDrawer();
             // Task 323: шапка сетки — под заголовочную зону панели,
             // строки итогов — по строкам сетки (активные сверху);
-            // архивные строки — ниже, своей высоты
+            // архивные строки — ниже, своей высоты;
+            // Task 331: ползунок шторки — под новую ширину таблицы года
             if (this._applyTtHeadVar()) this._fitGrid();
             this._syncTotalsRows();
+            if (this._hbarSyncAll) this._hbarSyncAll();
         },
 
         // Task 316: НАВЕДЕНИЕ на дату шапки — подсветка ВСЕГО столбца
@@ -39533,10 +39633,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 && window.matchMedia('(min-width: 1024px)').matches;
             // Task 323: в широком режиме (шторка итогов открыта)
             // строки итогов держатся ровно по строкам сетки — после
-            // каждой подгонки высоты копируются в панель
+            // каждой подгонки высоты копируются в панель.
+            // Task 331: заодно — актуализация КАСТОМНЫХ ползунков
+            // (.on-состояние и позиция бегунка; дёшево — 2 полосы)
             var self = this;
             var syncTT = function() {
                 if (self._ttIsWide()) self._syncTotalsRows();
+                if (self._hbarSyncAll) self._hbarSyncAll();
             };
             var clearFit = function() {
                 wrap.classList.remove('ws-compact', 'ws-tight');
@@ -39559,29 +39662,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // остаётся 540), переливание исключено. Взамен возможна
             // щель до ~1px под завершающей полосой — глазу не видна.
             var avail = Math.floor(wrap.getBoundingClientRect().height + 0.25);
-            // Task 323: при открытой шторке внизу шахматки лежит
-            // ВИДИМЫЙ ползунок (12px) — он съедает высоту контента
-            // (clientHeight меньше габарита коробки); бюджет берём по
-            // МЕНЬШЕМУ из двух — таблица не прячется под ползунок
-            try {
-                var chH = wrap.clientHeight;
-                if (chH && chH < avail) avail = chH;
-            } catch (e) {}
             var headH = Math.round(thead.getBoundingClientRect().height);
-            // Task 257: завершающая полоса (Task 258: 5px) входит в
-            // бюджет — таблица + полоса всегда вписываются в область
-            // до низа
-            var foot = wrap.querySelector('.ws-grid-foot');
-            var footH = foot ? Math.round(foot.getBoundingClientRect().height) : 0;
-            // Task 327 (заявка: строка общего количества УДАЛЕНА):
-            // резерв итоговой строки панели (tfoot .ws-tt-total,
-            // Task 323) больше не нужен — таблицы месяца/года
-            // заканчиваются последней строкой сотрудника, снизу
-            // панель закрывает бордюрчик .ws-tt-foot (5px, вне
-            // скролл-зоны)
-            var ttFootH = 0;
+            // Task 331: БОРДЮРЧИК и ЗОНА ПОЛЗУНКА — ВНЕ контейнера
+            // (статичные #wsGridFoot/#wsGridHbar в .ws-grid-col ПОД
+            // .ws-grid-wrap) — из бюджета НЕ вычитаются: высота
+            // контейнера уже чистая (колонка − 5 − 12). Нативные
+            // полосы прокрутки скрыты во всех движках (Task 331) —
+            // clientHeight = padding-коробка, поправки не нужны.
+            // Task 327: резерв итоговой строки панели тоже не нужен
+            // (tfoot УДАЛЁН) — таблицы заканчиваются последней строкой
+            // сотрудника, снизу панели — статичный бордюрчик .ws-tt-foot
             var n = rows.length;
-            var budget = avail - headH - footH - ttFootH;
+            var budget = avail - headH;
             var h = Math.floor(budget / n);
             if (budget <= 0 || h < 24) {
                 // страница скрыта / места совсем мало — природные высоты
@@ -39677,9 +39769,162 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         drawer.style.width = '';
                         drawer.style.marginRight = '';
                     }
+                    self._hbarSyncAll();
                 };
                 if (mq.addEventListener) mq.addEventListener('change', onMqTT);
                 else if (mq.addListener) mq.addListener(onMqTT);
+            }
+        },
+
+        // ============================================================
+        // Task 331: КАСТОМНЫЕ ГОРИЗОНТАЛЬНЫЕ ПОЛЗУНКИ. Нативные полосы
+        // прокрутки контейнеров СКРЫТЫ во всех движках (Firefox
+        // scrollbar-width: thin показывал ТОНКУЮ ВЕРТИКАЛЬНУЮ полоску
+        // в шторке И в шахматке, а съедая ширину — вызывал ещё и
+        // горизонтальную даже при свёрнутых столбцах; заявка: «не
+        // должно быть полосок вертикальной прокрутки ни в шторке, ни
+        // в шахматке»). Горизонтальная прокрутка широких таблиц —
+        // ползунками-дивами ПОД нижними бордюрами (заявка: «как под
+        // шахматкой табеля», на одном уровне у обеих колонок):
+        //   • #wsGridHbar — у шахматки (виден только в широком режиме
+        //     ws-tt-gridwide, десктоп — прежде нативный ползунок
+        //     контейнера);
+        //   • #wsTtHbar — у шторки итогов (панель видима).
+        // Ползунок: дорожка (.on — закрашивается) + бегунок
+        // .ws-hbar-thumb; перетаскивание — pointer capture; клик по
+        // дорожке — страница влево/вправо; скролл контейнера (колесо/
+        // свайп/синхронизация) двигает бегунок. Без переполнения зона
+        // ПУСТАЯ (заявка: при неполном открытии шторки нижней полоски
+        // прокрутки нет), но 12px зарезервированы ВСЕГДА — нижние
+        // бордюры колонок всегда на одном уровне
+        // ============================================================
+        _HBARS: null,
+        _attachHbars: function() {
+            if (this._hbarsAttached) return;
+            this._hbarsAttached = true;
+            var self = this;
+            var pairs = [
+                {   // шахматка: ползунок — только в широком режиме (десктоп)
+                    bar: document.getElementById('wsGridHbar'),
+                    el: document.getElementById('wsGridWrap'),
+                    gate: function() {
+                        var page = document.getElementById('page-work-schedule');
+                        return !!(page && page.classList
+                            && page.classList.contains('ws-tt-gridwide')
+                            && window.matchMedia
+                            && window.matchMedia('(min-width: 1024px)').matches);
+                    }
+                },
+                {   // шторка итогов: ползунок, когда панель видима
+                    bar: document.getElementById('wsTtHbar'),
+                    el: document.getElementById('wsTtBody'),
+                    gate: function() {
+                        var panel = document.getElementById('wsTotalsPanel');
+                        return !!(panel && !panel.hidden);
+                    }
+                }
+            ];
+            for (var i = 0; i < pairs.length; i++) {
+                (function(pair) {
+                    if (!pair.bar || !pair.el || !pair.bar.querySelector) return;
+                    pair.thumb = pair.bar.querySelector('.ws-hbar-thumb');
+                    if (!pair.thumb) return;
+                    // прокрутка контейнера (колесо/свайп/синхронизация)
+                    // двигает бегунок
+                    pair.el.addEventListener('scroll', function() {
+                        self._hbarSync(pair);
+                    }, { passive: true });
+                    // перетаскивание бегунка: pointer capture ведёт
+                    // события за пределы дорожки
+                    var drag = null;
+                    pair.thumb.addEventListener('pointerdown', function(ev) {
+                        if (pair.el.scrollWidth <= pair.el.clientWidth) return;
+                        ev.preventDefault();
+                        try { ev.stopPropagation(); } catch (e) {}
+                        drag = {
+                            x: ev.clientX,
+                            left: pair.el.scrollLeft,
+                            scale: pair.el.scrollWidth
+                                / Math.max(1, pair.bar.clientWidth)
+                        };
+                        try { pair.thumb.setPointerCapture(ev.pointerId); }
+                        catch (e) {}
+                    });
+                    pair.thumb.addEventListener('pointermove', function(ev) {
+                        if (!drag) return;
+                        pair.el.scrollLeft = drag.left
+                            + (ev.clientX - drag.x) * drag.scale;
+                        self._hbarSync(pair);
+                    });
+                    var endDrag = function(ev) {
+                        if (!drag) return;
+                        drag = null;
+                        try { pair.thumb.releasePointerCapture(ev.pointerId); }
+                        catch (e) {}
+                    };
+                    pair.thumb.addEventListener('pointerup', endDrag);
+                    pair.thumb.addEventListener('pointercancel', endDrag);
+                    // клик по дорожке (не по бегунку) — страница
+                    // влево/вправо, как у нативного ползунка
+                    pair.bar.addEventListener('pointerdown', function(ev) {
+                        if (ev.target === pair.thumb) return;
+                        if (pair.el.scrollWidth <= pair.el.clientWidth) return;
+                        var r = pair.bar.getBoundingClientRect();
+                        var frac = (ev.clientX - r.left) / Math.max(1, r.width);
+                        var maxX = pair.el.scrollWidth - pair.el.clientWidth;
+                        var cur = maxX > 0 ? pair.el.scrollLeft / maxX : 0;
+                        var page = pair.el.clientWidth * 0.9;
+                        pair.el.scrollLeft = pair.el.scrollLeft
+                            + (frac > cur ? page : -page);
+                        self._hbarSync(pair);
+                    });
+                    self._HBARS = self._HBARS || [];
+                    self._HBARS.push(pair);
+                })(pairs[i]);
+            }
+            // изменение окна — актуализация обеих полос (высота/ширина
+            // контейнеров меняются; ResizeObserver контейнера уже гонит
+            // _fitGrid → _hbarSyncAll, здесь — страховка для шторки)
+            window.addEventListener('resize', function() {
+                self._hbarSyncAll();
+            });
+        },
+
+        // Task 331: актуализация ОДНОГО ползунка: включение (.on —
+        // дорожка+бегунок) только при горизонтальном переполнении
+        // контейнера (и активности режима — pair.gate); бегунок —
+        // ширина clientWidth/scrollWidth дорожки (мин 24px), позиция —
+        // доля прокрутки. Без переполнения — выкл (зона пустая)
+        _hbarSync: function(pair) {
+            if (!pair || !pair.bar || !pair.el || !pair.thumb) return;
+            var el = pair.el;
+            var on = false;
+            try { on = pair.gate() && el.scrollWidth > el.clientWidth + 1; }
+            catch (e) { on = false; }
+            if (pair.bar.classList && pair.bar.classList.toggle) {
+                pair.bar.classList.toggle('on', on);
+            }
+            if (!on) {
+                pair.thumb.style.width = '0px';
+                pair.thumb.style.left = '0px';
+                return;
+            }
+            var trackW = pair.bar.clientWidth;
+            var ratio = el.clientWidth / el.scrollWidth;
+            var thumbW = Math.max(24, Math.round(trackW * ratio));
+            var maxX = el.scrollWidth - el.clientWidth;
+            var frac = maxX > 0 ? el.scrollLeft / maxX : 0;
+            var trackMax = Math.max(0, trackW - thumbW);
+            pair.thumb.style.width = thumbW + 'px';
+            pair.thumb.style.left = Math.round(trackMax * frac) + 'px';
+        },
+
+        // Task 331: актуализация всех ползунков (вызывается после
+        // каждого рендера/подгонки/открытия-закрытия шторки)
+        _hbarSyncAll: function() {
+            if (!this._HBARS) return;
+            for (var i = 0; i < this._HBARS.length; i++) {
+                this._hbarSync(this._HBARS[i]);
             }
         },
 
