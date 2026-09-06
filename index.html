@@ -4246,7 +4246,10 @@
     }
     [data-theme="light"] .ws-ep-cap {
         background: rgba(76, 199, 113, 0.16);
-        color: #1d7a37;
+        /* Task 330 (заявка): ВЕСЬ текст окон бара — ЧЁРНЫЙ в светлой
+           теме (прежде — приглушённые цветные/серые: зелёный/синий/
+           красный/серый — на светлом фоне читались слабо) */
+        color: #000;
     }
     .ws-ep-item {
         display: flex;
@@ -4282,9 +4285,11 @@
         background: #e9e7de;
         border-color: rgba(0, 0, 0, 0.12);
     }
-    [data-theme="light"] .ws-ep-item { color: #666; }
+    [data-theme="light"] .ws-ep-item { color: #000; }
     [data-theme="light"] .ws-ep-text,
-    [data-theme="light"] .ws-ep-date { color: #333; }
+    [data-theme="light"] .ws-ep-date { color: #000; }
+    /* Task 330: подстрока «нет мероприятий…» окна мероприятий */
+    [data-theme="light"] #wsEventsPanel .ws-cp-empty { color: #000; }
 
     /* Task 308: «+ Отпуск» — кнопка в тулбаре (перенесена со
        страницы «Отпуска»). Нейтральный стиль в духе селектов
@@ -4491,8 +4496,10 @@
        в этот день» и карточка сотрудника — прежний однострочный
        вид (заявка — только окно выбора кодов). */
     #wsCellPopup .ws-popup-name {
-        font-size: 12px;
-        line-height: 1.35;
+        /* Task 330 (заявка): шрифт ОПИСАНИЯ кодов — МАЛЕНЬКИЙ
+           (прежде 12px) */
+        font-size: 10px;
+        line-height: 1.3;
         white-space: normal;
         overflow-wrap: break-word;
         overflow: visible;
@@ -5403,7 +5410,12 @@
         min-width: 100%;
     }
     .ws-grid thead th {
-        background: var(--bg-tertiary, #0e1621);
+        /* Task 330 (заявка): фон шапки — ТЁМНЫЙ СИНЕ-СЕРЫЙ (сталь/
+           сланец #1e293b) вместо почти чёрной «морской» синевы
+           (--bg-tertiary #0e1621): шапка читается как плотная
+           сине-серая «крыша» над шахматкой (заявка: «темнее, ближе
+           к сине-серому»); светлая тема — отдельное правило ниже */
+        background: #1e293b;
         color: var(--text-secondary, rgba(255,255,255,0.55));
         padding: 6px 4px;
         text-align: center;
@@ -5450,7 +5462,9 @@
        непрозрачным. */
     .ws-grid thead th.ws-emp-col.ws-emp-head-add { cursor: pointer; }
     .ws-grid thead th.ws-emp-col.ws-emp-head-add:hover {
-        background: #15202f;
+        /* Task 330: hover светлее новой сине-серой шапки #1e293b
+           (прежде #15202f — был светлее старого фона #0e1621) */
+        background: #2a3a4c;
         color: var(--text-primary, #e0e0e0);
     }
     .ws-grid thead th.ws-emp-col .ws-emp-head-plus {
@@ -6146,6 +6160,8 @@
     }
     [data-theme="light"] .ws-cal-prelim {
         background: rgba(255,160,0,0.12);
+        /* Task 330: прежний цвет #a06b00 — цвет текста теперь ЧЁРНЫЙ,
+           правило-переопределение ниже (после группы норм) */
         color: #a06b00;
         border-color: rgba(255,160,0,0.4);
     }
@@ -6158,22 +6174,34 @@
         background: #e9e7de;
         border-color: rgba(0, 0, 0, 0.12);
     }
-    [data-theme="light"] .ws-cp-col { color: #666; }
-    [data-theme="light"] .ws-cp-item b { color: #333; }
+    [data-theme="light"] .ws-cp-col { color: #000; }
+    [data-theme="light"] .ws-cp-item b { color: #000; }
     [data-theme="light"] .ws-cp-empty,
-    [data-theme="light"] .ws-cp-legend { color: #999; }
+    [data-theme="light"] .ws-cp-legend { color: #000; }
     /* Task 270: светлая тема — плашки заголовков столбцов: те же
        синий/красный смысловые цвета, фон прозрачнее (на светлом
        окне), текст — ярче прежнего серого (#999): насыщенный
        синий / насыщенный красный. */
+    /* Task 330 (заявка): текст плашек-заголовков и ВСЕГО текста
+       окна норм/праздников — ЧЁРНЫЙ (цветной остаётся только фон
+       плашек и чипов — смысловая «подложка») */
     [data-theme="light"] .ws-cp-norms > .ws-cp-cap {
         background: rgba(74, 143, 199, 0.16);
-        color: #1d5f96;
+        color: #000;
     }
     [data-theme="light"] .ws-cp-days > .ws-cp-cap {
         background: rgba(255, 107, 107, 0.15);
-        color: #b02c2c;
+        color: #000;
     }
+    /* Task 330: бейдж «предварительно» и чипы дней — чёрный текст
+       (правило ПОСЛЕ .ws-cp-day.k-* — та же специфичность (0,2,0),
+       побеждает позднее в исходнике) */
+    [data-theme="light"] .ws-cal-prelim {
+        background: rgba(255,160,0,0.12);
+        color: #000;
+        border-color: rgba(255,160,0,0.4);
+    }
+    [data-theme="light"] .ws-cp-day { color: #000; }
     [data-theme="light"] .ws-grid thead th.ws-day-col .ws-short-star { color: #1d7a37; }
 
     /* Task 252: легенда кодов под шахматкой УБРАНА — коды статусов снова
@@ -6223,9 +6251,17 @@
     /* Светлая тема: график */
     [data-theme="light"] .ws-month-sel,
     [data-theme="light"] .ws-year-sel,
-    [data-theme="light"] .ws-grid thead th,
     [data-theme="light"] .ws-grid tbody td.ws-emp-col {
         background: rgba(240, 240, 240, 0.95);
+        color: #333;
+    }
+    /* Task 330 (заявка): светлая тема — фон шапки ТЕМНЕЕ, СИНЕ-СЕРЫЙ
+       (#bfcad5): прежде шапка была почти белой (240,240,240 — как
+       колонка ФИО и пустые ячейки) и сливалась с телом шахматки;
+       теперь это отчётливая серо-синяя «крыша» (парная к тёмной
+       #1e293b), текст шапки #333 читается на ней контрастно */
+    [data-theme="light"] .ws-grid thead th {
+        background: #bfcad5;
         color: #333;
     }
     [data-theme="light"] .ws-grid {
