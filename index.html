@@ -4844,9 +4844,16 @@
         border-color: rgba(0, 0, 0, 0.12);
     }
     /* ДЕСКТОП: шторка — flex-элемент рабочей области, выдвигается
-       справа налево на ПОЛОВИНУ её ширины (анимация margin-right;
-       свёрнута — уезжает за ПРАВЫЙ КРАЙ ПОЛНОСТЬЮ: ручки-бара
-       больше нет, Task 324, открывает кнопка тулбара) */
+       справа налево. Task 329 (заявка): ширина — РОВНО ПО СТОЛБЦАМ
+       ТАБЛИЦЫ (JS _fitTtDrawer ставит px после каждого рендера:
+       месяц — сумма явных ширин fixed-раскладки, год — max-content;
+       кап max-width 60% — шире не расползается, длинная таблица
+       (год, развёрнутые «Ещё») прокручивается ползунком шторки).
+       Свёрнута — паркуется ПОЛНОСТЬЮ за правым краем: JS ставит
+       margin-right = -ширина (в ПИКСЕЛЯХ — проценты не умеют «минус
+       собственная ширина», прежнее -50% при узкой шторке оставляло
+       бы след и растягивало сетку); открытие анимирует маржу к 0
+       (transition), сетка сжимается плавно — как при прежних 50% */
     @media (min-width: 1024px) {
         .ws-body {
             flex: 1 1 auto;
@@ -4858,11 +4865,12 @@
         .ws-tt-drawer {
             flex: none;
             display: flex;
-            width: 50%;
-            margin-right: -50%;
+            position: relative;   /* якорь бортика/кнопки левого края */
+            width: 0;             /* до первого открытия (панель скрыта) */
+            max-width: 60%;       /* кап: длинные таблицы — прокруткой */
+            overflow: hidden;     /* клип мгновенных пререндеров ширины */
             transition: margin-right 0.28s ease;
         }
-        #page-work-schedule.ws-tt-open .ws-tt-drawer { margin-right: 0; }
     }
     /* МОБАЙЛ: шторка — fixed-оверлей (у сетки место не отбирает):
       панель ~86vw со своим скроллом; закрытие — кнопкой «Итоги
@@ -4926,40 +4934,86 @@
     }
     .ws-tt-warn[hidden] { display: none; }
     [data-theme="light"] .ws-tt-warn { color: #a06b00; }
-    /* Task 327 (заявка: «дополнительные скрытые столбцы»): кнопка
-       «Ещё»/«Меньше» в шапке шторки — показать/скрыть дополнительные
-       столбцы месячной таблицы (Отгул…Прочие). Основные (Явки, Часы,
-       Переработка) видны всегда. Видна только на вкладке «Месяц»
-       (у года другая структура — 12 колонок месяцев) */
-    .ws-tt-more {
-        flex: none;
-        padding: 2px 10px;
-        font-size: 11px;
-        font-weight: 700;
-        font-family: inherit;
+    /* Task 329 (заявка): декоративный БОРТИК левого края шторки —
+       тонкая вертикальная полоса во всю высоту края; ВЕРТИКАЛЬНЫЙ
+       «родственник» нижней полосы .ws-tt-foot (Task 327/258/259:
+       стальной bevel 5px, блик по внешней грани), обе темы; поверх
+       таблицы (z 5), мышь не перехватывает */
+    .ws-tt-edge {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 5px;
+        box-sizing: border-box;
+        background: #35648f;
+        border-left: 1px solid #85b7dc;
+        z-index: 5;
+        pointer-events: none;
+    }
+    [data-theme="light"] .ws-tt-edge {
+        background: #b3c2ce;
+        border-left-color: #ffffff;
+    }
+    /* Task 329 (заявка): кнопка-значок на ВНУТРЕННЕЙ стороне левого
+       края шторки, по середине (top 50%): стрелка-ШЕВРОН; функционал
+       прежней кнопки «Ещё»/«Меньше» из шапки (Task 327 → 329):
+       показать/скрыть дополнительные столбцы месячной таблицы.
+       Шеврон смотрит ВЛЕВО (‹ — «раскрыть столбцы влево», шторка
+       у правого края и растёт влево); в развёрнутом состоянии
+       доворачивается на 180° (› — «свернуть»). Полупрозрачная
+       заливка: слегка просвечивает накрытая ячейка данных;
+       видна только при открытой шторке на вкладке «Месяц»
+       (_updateTtChv: [hidden]) */
+    .ws-tt-chv {
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 48px;
+        padding: 0;
+        box-sizing: border-box;
         color: var(--text-secondary, rgba(255,255,255,0.65));
-        background: transparent;
+        background: rgba(21, 32, 47, 0.92);
         border: 1px solid var(--card-border, rgba(255,255,255,0.12));
-        border-radius: 4px;
+        border-left: none;        /* примыкает к бортику края */
+        border-radius: 0 6px 6px 0;
         cursor: pointer;
-        white-space: nowrap;
     }
-    .ws-tt-more:hover { color: var(--text-primary, #e0e0e0); }
-    .ws-tt-more.on {
+    .ws-tt-chv:hover {
+        color: var(--text-primary, #e0e0e0);
+        background: #15202f;
+    }
+    .ws-tt-chv.on {
         color: #9ec9e8;
-        background: rgba(74, 143, 199, 0.16);
-        border-color: rgba(74, 143, 199, 0.4);
+        background: rgba(74, 143, 199, 0.28);
+        border-color: rgba(74, 143, 199, 0.5);
     }
-    .ws-tt-more[hidden] { display: none; }
-    [data-theme="light"] .ws-tt-more {
+    .ws-tt-chv:active { opacity: 0.85; }
+    .ws-tt-chv[hidden] { display: none; }
+    .ws-tt-chv svg {
+        display: block;
+        transition: transform 0.18s ease;
+    }
+    .ws-tt-chv.on svg { transform: rotate(180deg); }
+    [data-theme="light"] .ws-tt-chv {
         color: #666;
-        border-color: rgba(0,0,0,0.14);
+        background: rgba(226, 232, 239, 0.94);
+        border-color: rgba(0, 0, 0, 0.14);
     }
-    [data-theme="light"] .ws-tt-more:hover { color: #333; }
-    [data-theme="light"] .ws-tt-more.on {
+    [data-theme="light"] .ws-tt-chv:hover {
+        color: #333;
+        background: #e2e8ef;
+    }
+    [data-theme="light"] .ws-tt-chv.on {
         color: #1d5f96;
-        background: rgba(74, 143, 199, 0.14);
-        border-color: rgba(74, 143, 199, 0.4);
+        background: rgba(74, 143, 199, 0.22);
+        border-color: rgba(74, 143, 199, 0.45);
     }
     /* Task 327 (заявка: «внизу шторки сделай такой же бордюрчик,
        как в шахматке табеля»): завершающая полоса панели итогов —
@@ -5098,6 +5152,39 @@
            авто-раскладка: ширины по содержимому */
     }
     .ws-tt-table:not(.ws-tt-year) { table-layout: fixed; }
+    /* Task 329 (заявка: «шторка должна выдвигаться ровно по размеру
+       столбцов таблицы, столбцы — УЖЕ, по заглавиям в две строки»):
+       ДЕСКТОП — месячная таблица width: auto = СУММА ЯВНЫХ ширин
+       столбцов (fixed-раскладка; JS дублирует значения и задаёт
+       ЯВНУЮ ширину таблицы — см. _renderTotalsMonth), у каждого
+       столбца УЗКАЯ ширина по заголовку в 2 строки (длинные слова
+       переносятся: hyphens/auto + break-word). Годовая — max-content
+       (природные ширины «11/132»; длиннее капа 60% — прокрутка
+       ползунком шторки). МОБАЙЛ (<1024) — прежняя модель: таблица
+       100% оверлея, ФИО 42%, данные — равные доли (правила ниже) */
+    @media (min-width: 1024px) {
+        .ws-tt-table:not(.ws-tt-year) { width: auto; }
+        .ws-tt-table.ws-tt-year { width: max-content; }
+        /* специфичность (0,2,2) выше базового .ws-tt-table th/td
+           (0,1,1): узкие столбцы — компактный горизонтальный паддинг.
+           Значения — ПО ЗАГОЛОВКАМ В 2 СТРОКИ (замер 11px bold:
+           Переработка 71px→56, Больничный 66→64, Уч. отпуск — 52,
+           короткие — 36–50; дубль в JS _renderTotalsMonth — TT_COL_W,
+           JS задаёт ещё и явную ширину таблицы = сумме) */
+        .ws-tt-table thead th,
+        .ws-tt-table tbody td { padding-left: 4px; padding-right: 4px; }
+        .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-work  { width: 36px; }
+        .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-hours { width: 38px; }
+        .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-over  { width: 56px; }
+        .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-ov    { width: 42px; }
+        .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-b     { width: 64px; }
+        .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-ot    { width: 50px; }
+        .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-u     { width: 52px; }
+        .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-pr    { width: 50px; }
+        .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-day   { width: 38px; }
+        .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-night { width: 38px; }
+        .ws-tt-table:not(.ws-tt-year) th.ws-tt-c-other { width: 50px; }
+    }
     .ws-tt-table th,
     .ws-tt-table td {
         padding: 4px 8px;
@@ -5451,6 +5538,39 @@
         font-weight: 600;
         white-space: nowrap;
         cursor: default;
+    }
+    /* Task 329 (заявка): ФОН-ЗЕБРА колонки сотрудников — как зебра
+       строк шторки итогов (Task 322: чётные строки чуть светлее,
+       тёмная 9% / светлая 7%): зебра ДОКАТЫВАЕТСЯ от шторки до
+       шахматки — строки выровнены, колонка ФИО «продолжает» полосы
+       итогов. Колонка sticky — фон обязан оставаться НЕПРОЗРАЧНЫМ:
+       полоса — градиент ПОВЕРХ непрозрачного background-color (тот
+       же приём, что у подсветки «сегодня», Task 313); в широком
+       режиме (шторка открыта) — поверх усиленного фона (правило
+       gridwide ниже перебивает шорткатом background, поэтому
+       продублировано с выше конкретностью). Hover ФИО (клик-карточка)
+       ставит сплошной background — зебра на время наведения гаснет */
+    .ws-grid tbody tr:nth-child(even) td.ws-emp-col {
+        background-image: linear-gradient(rgba(255, 255, 255, 0.09),
+                                          rgba(255, 255, 255, 0.09));
+    }
+    [data-theme="light"] .ws-grid tbody tr:nth-child(even) td.ws-emp-col {
+        background-image: linear-gradient(rgba(0, 0, 0, 0.07),
+                                          rgba(0, 0, 0, 0.07));
+    }
+    #page-work-schedule.ws-tt-gridwide .ws-grid tbody tr:nth-child(even) td.ws-emp-col {
+        background-image: linear-gradient(rgba(255, 255, 255, 0.09),
+                                          rgba(255, 255, 255, 0.09));
+    }
+    [data-theme="light"] #page-work-schedule.ws-tt-gridwide .ws-grid
+    tbody tr:nth-child(even) td.ws-emp-col {
+        background-image: linear-gradient(rgba(0, 0, 0, 0.07),
+                                          rgba(0, 0, 0, 0.07));
+    }
+    /* hover ФИО (карточка сотрудника) — сплошная подсветка БЕЗ зебры:
+       одинаково на чётных/нечётных строках (перебивает градиент) */
+    .ws-grid tbody tr:nth-child(even) td.ws-emp-col:hover {
+        background-image: none;
     }
     .ws-grid tbody td.ws-emp-col .ws-tab-no {
         font-family: Consolas, monospace;
@@ -12973,6 +13093,24 @@
                  аварийное ⚠ (сбои загрузки года) и «Обновить»
                  (год). -->
             <div id="wsTotalsDrawer" class="ws-tt-drawer">
+                <!-- Task 329 (заявка): ЛЕВЫЙ КРАЙ шторки. 1) Декоративный
+                     БОРТИК .ws-tt-edge — тонкая вертикальная полоса во
+                     всю высоту края (стальной bevel, вертикальный
+                     «родственник» нижней полосы .ws-tt-foot, Task 327).
+                     2) Кнопка-значок #wsTtChv со стрелкой-ШЕВРОНОМ — по
+                     середине внутренней стороны левого края; несёт
+                     функционал кнопки «Ещё» (Task 327, из шапки
+                     УДАЛЕНА по этой же заявке): показать/скрыть
+                     дополнительные столбцы месячной таблицы. Шеврон
+                     смотрит ВЛЕВО (‹) — «раскрыть столбцы влево»,
+                     развёрнутое состояние доворачивает его на 180° (›).
+                     Видна только при открытой шторке на вкладке
+                     «Месяц» (_updateTtChv); видимой подсказки нет —
+                     aria-label (как у значка подсветки, Task 328) -->
+                <div class="ws-tt-edge" aria-hidden="true"></div>
+                <button type="button" id="wsTtChv" class="ws-tt-chv" onclick="WorkSchedule.toggleTotalsExtra()" hidden aria-pressed="false" aria-label="Показать дополнительные столбцы: Отгул, Больничный, Отпуск, Уч. отпуск, Прогул, День, Ночь, Прочие">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M8.5 2.5 L4 7 L8.5 11.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
                 <div id="wsTotalsPanel" class="ws-totals-panel" hidden>
                     <!-- Task 325 (заявка): ✕ из шапки шторки УДАЛЁН —
                          закрытие ТОЛЬКО кнопкой-переключателем «Итоги
@@ -12981,16 +13119,15 @@
                          (год); когда оба скрыты (обычный месяц) — шапка
                          ПРЯЧЕТСЯ целиком (_updateTtHead), строки итогов
                          начинаются сразу от верха панели.
-                         Task 327 (заявка: «дополнительные скрытые
-                         столбцы»): кнопка «Ещё»/«Меньше» — показать/
-                         скрыть дополнительные столбцы месячной таблицы
-                         (Отгул, Больничный, Отпуск, Уч. отпуск,
-                         Прогул, День, Ночь, Прочие); видна только на
-                         вкладке «Месяц»; в свёрнутом («Ещё») виде
-                         таблица — основные Явки/Часы/Переработка -->
+                         Task 327 → 329: кнопка «Ещё»/«Меньше» из шапки
+                         ПЕРЕЕХАЛА на левый край шторки (значок-шеврон
+                         #wsTtChv, см. выше): показать/скрыть
+                         дополнительные столбцы месячной таблицы (Отгул,
+                         Больничный, Отпуск, Уч. отпуск, Прогул, День,
+                         Ночь, Прочие); в свёрнутом виде таблица —
+                         основные Явки/Часы/Переработка -->
                     <div class="ws-tt-head">
                         <span class="ws-tt-warn" id="wsTtWarn" hidden></span>
-                        <button type="button" id="wsTtMore" class="ws-tt-more" onclick="WorkSchedule.toggleTotalsExtra()" title="Показать/скрыть дополнительные столбцы: Отгул, Больничный, Отпуск, Уч. отпуск, Прогул, День, Ночь, Прочие" hidden>Ещё</button>
                         <button type="button" id="wsTtRefresh" class="ws-tt-refresh" onclick="WorkSchedule.reloadTotals()" title="Перезагрузить данные итогов с сервера" hidden>Обновить</button>
                     </div>
                     <div id="wsTtBody" class="ws-tt-body"></div>
@@ -38463,23 +38600,28 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // кнопок тулбара; Task 325: ✕ шапки шторки удалён — эта
         // кнопка ЕДИНСТВЕННЫЙ способ открыть/закрыть шторку):
         // развернуть/свернуть БОКОВУЮ ШТОРКУ итогов. Шторка ПРИ
-        // СОБОЙ, справа от шахматки: открытие выдвигает панель
-        // СПРАВА НАЛЕВО на ПОЛОВИНУ рабочей области (CSS: класс
-        // ws-tt-open на странице → margin-right шторки анимируется
-        // к 0, сетка сжимается до левой половины; свёрнута — уезжает
-        // за правый край ПОЛНОСТЬЮ). Сетке включается ШИРОКИЙ РЕЖИМ
-        // (класс ws-tt-gridwide): природная ширина колонок +
-        // горизонтальный ПОЛЗУНОК внизу шахматки — дни прокручиваются
-        // ПОД шторкой. При сворачивании широкий режим держится до
-        // конца анимации (0,28 с — колонки не «сплющиваются»
-        // мгновенно), затем _ttCloseCleanup возвращает сетку в
-        // обычный вид. Кнопка тулбара отражает состояние aria-pressed
+        // СОБОЙ, справа от шахматки: Task 329 — выдвигается на
+        // ШИРИНУ СТОЛБЦОВ ТАБЛИЦЫ (_fitTtDrawer, не половину
+        // области): открытие строит панель, паркует шторку за
+        // правым краем (margin-right = −ширина, JS в px — см.
+        // _fitTtDrawer), фиксирует стартовую позицию синхронным
+        // замером (void offsetWidth) и анимирует маржу к 0 —
+        // сетка сжимается плавно, колонки не «сплющиваются»
+        // (размер коробки не меняется, едет позиция). Сетке
+        // включается ШИРОКИЙ РЕЖИМ (класс ws-tt-gridwide):
+        // природная ширина колонок + горизонтальный ПОЛЗУНОК
+        // внизу шахматки — дни прокручиваются ПОД шторкой. При
+        // сворачивании: та же анимация в обратную сторону —
+        // шторка уезжает С КОНТЕНТОМ, широкий режим и панель
+        // снимаются по таймеру _ttCloseCleanup (320 мс).
+        // Кнопка тулбара отражает состояние aria-pressed
         // («нажатая» с синей заливкой).
         toggleTotals: function() {
             this._totalsOpen = !this._totalsOpen;
             var btn = document.getElementById('wsTotalsBtn');
             var panel = document.getElementById('wsTotalsPanel');
             var page = document.getElementById('page-work-schedule');
+            var drawer = document.getElementById('wsTotalsDrawer');
             if (btn) {
                 if (btn.setAttribute) btn.setAttribute('aria-pressed',
                     this._totalsOpen ? 'true' : 'false');
@@ -38487,7 +38629,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Task 327 (заявка): вкладки «Месяц»/«Год» ПОЯВЛЯЮТСЯ при
             // открытии шторки и убираются при закрытии
             this._updateTtTabsVisible();
-            this._updateTtMoreBtn();
+            this._updateTtChv();
             if (page && page.classList) {
                 if (page.classList.add) {
                     if (this._totalsOpen) {
@@ -38501,17 +38643,40 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (panel) panel.hidden = false;
                 // панель строится ДО подгонки: шапка сетки растёт до
                 // высоты заголовочной зоны панели (--ws-tt-head-h),
-                // строки итогов копируют высоты строк сетки
+                // строки итогов копируют высоты строк сетки;
+                // _renderTotals → _fitTtDrawer ставит ширину по таблице
                 this._renderTotals();
+                // Task 329: СТАРТ — полностью за правым краем
+                // (маржа = −фактическая ширина; замер ширины СРАЗУ
+                // перед стартом — после рендера таблицы), фиксация
+                // стартовой позиции синхронным reflow — затем
+                // анимация к 0 (transition CSS)
+                if (drawer && typeof window !== 'undefined' && window.matchMedia
+                        && window.matchMedia('(min-width: 1024px)').matches) {
+                    var w0 = Math.ceil(drawer.getBoundingClientRect().width);
+                    drawer.style.marginRight = (-w0) + 'px';
+                    void drawer.offsetWidth;
+                    drawer.style.marginRight = '0px';
+                } else if (drawer) {
+                    // мобайл: transform-оверлей, инлайновой маржи нет
+                    drawer.style.marginRight = '';
+                }
                 this._applyTtHeadVar();
                 this._fitGrid();
                 this._syncTotalsRows();
             } else {
-                // панель скрывается сразу (шторка «уезжает» пустой,
-                // с одной ручкой-баром); широкий режим сетки снимается
-                // по таймеру — колонки дней не сжимаются в момент
-                // закрытия, сетка возвращается к full-width плавно
-                if (panel) panel.hidden = true;
+                // уезжает за край АНИМАЦИЕЙ (маржа = −ширина), панель
+                // прячется ПОСЛЕ (по таймеру, _ttCloseCleanup) —
+                // шторка сворачивается С КОНТЕНТОМ; широкий режим
+                // сетки снимается тем же таймером — колонки дней не
+                // сжимаются в момент закрытия
+                if (drawer && typeof window !== 'undefined' && window.matchMedia
+                        && window.matchMedia('(min-width: 1024px)').matches) {
+                    var w1 = Math.ceil(drawer.getBoundingClientRect().width);
+                    drawer.style.marginRight = (-w1) + 'px';
+                } else if (drawer) {
+                    drawer.style.marginRight = '';
+                }
                 if (this._ttWideTimer) {
                     clearTimeout(this._ttWideTimer);
                     this._ttWideTimer = null;
@@ -38535,18 +38700,28 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (yb) yb.hidden = !this._totalsOpen;
         },
 
-        // Task 327 (заявка: «дополнительные скрытые столбцы»):
-        // кнопка «Ещё»/«Меньше» в шапке шторки — видна только на
-        // вкладке «Месяц» (у года другая структура — 12 колонок
-        // месяцев); текст/активное состояние — по _totalsExtra
-        _updateTtMoreBtn: function() {
-            var b = document.getElementById('wsTtMore');
+        // Task 327 → 329 (заявка: «на внутренней стороне левого края
+        // шторки — кнопка-значок со стрелкой-ШЕВРОНОМ, функционал
+        // кнопки "Ещё"; из шапки удалена»): значок #wsTtChv на левом
+        // краю — виден только при открытой шторке на вкладке «Месяц»
+        // (у года другая структура — 12 колонок месяцев); активное
+        // состояние — разворот шеврона на 180° (‹ ‹‹ ‹‹‹ ‹‹‹ ›);
+        // aria-pressed/aria-label — без видимой подсказки (как у
+        // значка подсветки, Task 328)
+        _updateTtChv: function() {
+            var b = document.getElementById('wsTtChv');
             if (!b) return;
             var isMonth = (this._totalsTab === 'month');
             b.hidden = !(this._totalsOpen && isMonth);
-            b.textContent = this._totalsExtra ? 'Меньше' : 'Ещё';
             if (b.classList && b.classList.toggle) {
                 b.classList.toggle('on', this._totalsExtra);
+            }
+            if (b.setAttribute) {
+                b.setAttribute('aria-pressed',
+                    this._totalsExtra ? 'true' : 'false');
+                b.setAttribute('aria-label', this._totalsExtra
+                    ? 'Скрыть дополнительные столбцы'
+                    : 'Показать дополнительные столбцы: Отгул, Больничный, Отпуск, Уч. отпуск, Прогул, День, Ночь, Прочие');
             }
         },
 
@@ -38554,18 +38729,53 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // месячной таблицы (Отгул, Больничный, Отпуск, Уч. отпуск,
         // Прогул, День, Ночь, Прочие). Основные — Явки, Часы,
         // Переработка — видны всегда. Состояние переживает смену
-        // месяца/перерисовки; у вкладки «Год» своих действий нет
+        // месяца/перерисовки; у вкладки «Год» своих действий нет.
+        // Task 329: шторка сразу ПЕРЕШИРИВАЕТСЯ (ширина = столбцы,
+        // _fitTtDrawer внутри _renderTotalsMonth) — разворот виден
+        // без прокрутки, кап 60% длинный стол держит ползунком
         toggleTotalsExtra: function() {
             this._totalsExtra = !this._totalsExtra;
-            this._updateTtMoreBtn();
+            this._updateTtChv();
             this._renderTotalsMonth();
+        },
+
+        // Task 329: ГЕОМЕТРИЯ ШТОРКИ — ширина РОВНО ПО СТОЛБЦАМ
+        // ТАБЛИЦЫ. Десктоп: после каждого рендера ширину шторки
+        // задаёт JS = фактическая ширина таблицы (месяц — сумма явных
+        // ширин fixed-раскладки; год — max-content; пустое состояние —
+        // минимум 240px), с учётом капа max-width 60% (шире — таблица
+        // прокручивается ползунком шторки). МАРЖУ владеет toggleTotals
+        // (парковка за правым краем = −ширина, анимация к 0); здесь
+        // только ширина — рендеры при открытой шторке переширотятся
+        // без дёргания маржи. Мобайл: fixed-оверлей CSS — инлайновые
+        // размеры сбрасываются (иначе десктопные px перебили бы 86vw)
+        _fitTtDrawer: function() {
+            var drawer = document.getElementById('wsTotalsDrawer');
+            var panel = document.getElementById('wsTotalsPanel');
+            if (!drawer || !panel || panel.hidden) return;
+            var isDesktop = typeof window !== 'undefined'
+                && window.matchMedia
+                && window.matchMedia('(min-width: 1024px)').matches;
+            if (!isDesktop) {
+                drawer.style.width = '';
+                drawer.style.marginRight = '';
+                return;
+            }
+            var body = document.getElementById('wsTtBody');
+            var table = body ? body.querySelector('.ws-tt-table') : null;
+            var w = table ? Math.ceil(table.getBoundingClientRect().width) : 0;
+            if (!w) w = 240;   // пустое/загрузочное состояние — минимум
+            drawer.style.width = w + 'px';
         },
 
         // Task 323: отложенная уборка при СВЁРТЫВАНИИ шторки (после
         // анимации): широкий режим сетки выключен, шапка сетки —
         // природной высоты, бюджет строк — полный (без резерва
-        // итоговой строки). Вызывается таймером toggleTotals; тесты
-        // зовут напрямую (не ждут 320 мс)
+        // итоговой строки). Task 329: панель прячется тоже ПОСЛЕ
+        // анимации — шторка УЕЗЖАЕТ С КОНТЕНТОМ (прежде — пустой);
+        // паркуется margin-right = −ширина (JS: проценты не умеют
+        // «минус собственная ширина»). Вызывается таймером
+        // toggleTotals; тесты зовут напрямую (не ждут 320 мс)
         _ttCloseCleanup: function() {
             if (this._totalsOpen) return;
             this._ttWideTimer = null;
@@ -38576,6 +38786,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (page && page.style && page.style.removeProperty) {
                 page.style.removeProperty('--ws-tt-head-h');
             }
+            var panel = document.getElementById('wsTotalsPanel');
+            if (panel) panel.hidden = true;
             this._fitGrid();
         },
 
@@ -38633,7 +38845,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // растёт к зоне, строки совпадают).
         // Вызывается из _applyTtHeadVar — ДО замера высоты зоны, т.е.
         // покрывает все пути: открытие шторки, смену вкладки (виден
-        // «Обновить»), рендеры месяца/года (⚠ по сбоям)
+        // «Обновить»), рендеры месяца/года (⚠ по сбоям).
+        // Task 329: кнопка «Ещё» из шапки УДАЛЕНА (значок-шеврон на
+        // левом краю, вне шапки) — логика пустоты вернулась к
+        // Task 325: только ⌠ и «Обновить»
         _updateTtHead: function() {
             var panel = document.getElementById('wsTotalsPanel');
             if (!panel || !panel.querySelector) return;
@@ -38641,12 +38856,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!head) return;
             var warn = document.getElementById('wsTtWarn');
             var ref = document.getElementById('wsTtRefresh');
-            // Task 327: кнопка «Ещё» (месяц) — тоже содержимое шапки:
-            // пока она видна, шапка НЕ сжимается (обычный месяц —
-            // «Ещё» единственная видная, обычная высота)
-            var more = document.getElementById('wsTtMore');
-            var empty = (!warn || warn.hidden) && (!ref || ref.hidden) &&
-                        (!more || more.hidden);
+            var empty = (!warn || warn.hidden) && (!ref || ref.hidden);
             if (head.classList && head.classList.toggle) {
                 head.classList.toggle('ws-tt-head-empty', empty);
             }
@@ -38765,8 +38975,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 yb.classList.toggle('active', this._totalsTab === 'year');
             }
             if (rBtn) rBtn.hidden = (this._totalsTab !== 'year');
-            // Task 327: кнопка «Ещё» — только у месяца
-            this._updateTtMoreBtn();
+            // Task 327 → 329: шеврон доп. столбцов — только у месяца
+            this._updateTtChv();
             // закрытая шторка: вкладка открывает её (перерисовку
             // выполнит toggleTotals уже с выбранной вкладкой)
             if (!this._totalsOpen) {
@@ -38844,28 +39054,35 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             if (!this._EMPLOYEES.length) {
                 body.innerHTML = '<div class="ws-tt-empty">Нет активных сотрудников.</div>';
+                // Task 329: ширина шторки — и для пустого состояния
+                // (_fitTtDrawer: нет таблицы → минимум 240px)
+                if (this._fitTtDrawer) this._fitTtDrawer();
                 if (this._applyTtHeadVar()) this._fitGrid();
                 return;
             }
             // Task 327: основные столбцы (порядок — заявка) +
-            // дополнительные — только при включённой «Ещё» (порядок
-            // заявки: Отгул, Больничный, Отпуск, Уч. отпуск, Прогул,
-            // День, Ночь, Прочие)
+            // дополнительные — только при развёрнутом шевроне левого
+            // края (порядок заявки: Отгул, Больничный, Отпуск,
+            // Уч. отпуск, Прогул, День, Ночь, Прочие).
+            // Task 329: у каждого столбца класс ШИРИНЫ ws-tt-c-* —
+            // на десктопе CSS задаёт явную УЗКУЮ ширину по заголовку
+            // в 2 строки (сумма ширин = ширина таблицы = ширина
+            // шторки, _fitTtDrawer); на мобайле классы не действуют
             var cols = [
-                { key: 'work',  name: 'Явки',        cls: '' },
-                { key: 'hours', name: 'Часы',        cls: 'ws-tt-hours' },
-                { key: 'over',  name: 'Переработка', cls: 'ws-tt-over' }
+                { key: 'work',  name: 'Явки',        cls: '',            wcls: 'ws-tt-c-work' },
+                { key: 'hours', name: 'Часы',        cls: 'ws-tt-hours', wcls: 'ws-tt-c-hours' },
+                { key: 'over',  name: 'Переработка', cls: 'ws-tt-over',  wcls: 'ws-tt-c-over' }
             ];
             if (this._totalsExtra) {
                 cols = cols.concat([
-                    { key: 'ОВ',    name: 'Отгул (ОВ)' },
-                    { key: 'Б',     name: 'Больничный (Б)' },
-                    { key: 'ОТ',    name: 'Отпуск (ОТ)' },
-                    { key: 'У',     name: 'Уч. отпуск (У)' },
-                    { key: 'ПР',    name: 'Прогул (ПР)' },
-                    { key: 'day',   name: 'День (Д)' },
-                    { key: 'night', name: 'Ночь (Н)' },
-                    { key: 'other', name: 'Прочие',
+                    { key: 'ОВ',    name: 'Отгул (ОВ)',        wcls: 'ws-tt-c-ov' },
+                    { key: 'Б',     name: 'Больничный (Б)',     wcls: 'ws-tt-c-b' },
+                    { key: 'ОТ',    name: 'Отпуск (ОТ)',        wcls: 'ws-tt-c-ot' },
+                    { key: 'У',     name: 'Уч. отпуск (У)',     wcls: 'ws-tt-c-u' },
+                    { key: 'ПР',    name: 'Прогул (ПР)',        wcls: 'ws-tt-c-pr' },
+                    { key: 'day',   name: 'День (Д)',           wcls: 'ws-tt-c-day' },
+                    { key: 'night', name: 'Ночь (Н)',           wcls: 'ws-tt-c-night' },
+                    { key: 'other', name: 'Прочие',             wcls: 'ws-tt-c-other',
                       title: 'И/ОБ/ПЗ/* — мероприятия, «·» — плановый выходной, прочие коды' }
                 ]);
             }
@@ -38878,7 +39095,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 '<thead><tr>' +
                 '<th class="ws-tt-emp">Сотрудник</th>';
             for (var c = 0; c < cols.length; c++) {
-                html += '<th' + (cols[c].title
+                html += '<th' + (cols[c].wcls ? ' class="' + cols[c].wcls + '"' : '')
+                            + (cols[c].title
                             ? ' title="' + this._esc(cols[c].title) + '"'
                             : '') + '>' + this._esc(cols[c].name) + '</th>';
             }
@@ -38892,29 +39110,65 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     this._esc(emp['ФИО']) + '</td>';
                 for (var j = 0; j < cols.length; j++) {
                     var col = cols[j];
-                    var v = a[col.key];
-                    var txt = (col.key === 'hours' || col.key === 'over')
+                    // Task 329 (заявка: «данные столбца переработки —
+                    // не в часах, а в ДНЯХ»): значение — overDays
+                    // (количество записей д/н = отработанных дней
+                    // вых./праздн.), целое; ЧАСЫ — в подсказке ячейки
+                    var v = (col.key === 'over') ? a.overDays : a[col.key];
+                    var txt = (col.key === 'hours')
                         ? this._fmtTotalsNum(v)
                         : String(v);
                     html += '<td class="ws-tt-num' +
                             (col.cls ? ' ' + col.cls : '') + '"' +
                             (col.key === 'over'
-                                ? ' title="дней переработки: ' + a.overDays +
-                                  ' (коды д/н)"' : '') + '>' +
+                                ? ' title="часов переработки: ' +
+                                  this._fmtTotalsNum(a.over) + ' (коды д/н)"' : '') + '>' +
                             txt + '</td>';
                 }
                 html += '</tr>';
             }
             html += '</tbody></table>';
             body.innerHTML = html;
-            // Task 327: развёрнутые доп. столбцы — таблица шире панели
-            // (равным столбцам ≥64px): горизонтальная прокрутка
-            // ползунком шторки; свёрнутый вид — ровно по ширине
+            // Task 327 → 329: развёрнутые доп. столбцы на МОБАЙЛЕ —
+            // таблица шире оверлея (равным столбцам ≥64px), ползунок
+            // шторки; на ДЕСКТОПЕ таблица — сумма явных узких ширин
+            // (min-width НЕ ставится: шторка переширотится сама)
             var table = body.querySelector('.ws-tt-table');
-            if (table) {
+            // typeof-оговорка: VM-тесты без window — считаем мобайлом
+            var isDesktop = typeof window !== 'undefined'
+                && window.matchMedia
+                && window.matchMedia('(min-width: 1024px)').matches;
+            if (table && !isDesktop) {
                 table.style.minWidth = this._totalsExtra
                     ? (cols.length * 64) + 'px' : '';
+                table.style.width = '';
+            } else if (table) {
+                // Task 329: ДЕСКТОП — ширину таблицы задаём ЯВНО:
+                // сумма узких ширин столбцов (те же значения, что в
+                // CSS ws-tt-c-*). Fixed-раскладка с width:auto внутри
+                // контейнера нулевой/устаревшей ширины даёт КРУГОВУЮ
+                // зависимость (ширина таблицы ← контейнер ← шторка ←
+                // таблица) — столбцы сжимались в мин-контент; явный
+                // px детерминирован: таблица = ширина шторки
+                // (_fitTtDrawer). Инлайновые ширины th — дубль CSS
+                // (работают даже без таблиц стилей)
+                var TT_COL_W = { work: 36, hours: 38, over: 56,
+                                 'ОВ': 42, 'Б': 64, 'ОТ': 50, 'У': 52,
+                                 'ПР': 50, day: 38, night: 38, other: 50 };
+                var tw = 0;
+                var ths = table.querySelectorAll('thead th');
+                for (var wc = 0; wc < cols.length; wc++) {
+                    var wv = TT_COL_W[cols[wc].key] || 0;
+                    tw += wv;
+                    if (ths[wc + 1] && ths[wc + 1].style) {
+                        ths[wc + 1].style.width = wv + 'px';
+                    }
+                }
+                table.style.width = tw + 'px';
+                table.style.minWidth = '';
             }
+            // Task 329: ширина шторки — по столбцам таблицы
+            if (this._fitTtDrawer) this._fitTtDrawer();
             // Task 323: шапка сетки — под заголовочную зону панели,
             // строки итогов — по строкам сетки (правки ячеек сразу
             // видны и в сетке, и в итогах — без сдвигов)
@@ -38936,12 +39190,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!this._YEAR_DATA || this._YEAR_DATA.year !== this._year) {
                 body.innerHTML = '<div class="ws-tt-empty">Загрузка данных за ' +
                     this._year + ' год<span class="flow-loading-dots"><span>.</span><span>.</span><span>.</span></span></div>';
+                // Task 329: и в загрузочном состоянии шторка — по
+                // столбцам (таблицы нет → минимум _fitTtDrawer)
+                if (this._fitTtDrawer) this._fitTtDrawer();
                 this._loadYearData(this._year).then(function() {
                     self._renderTotalsYearTable();
                 }, function(err) {
                     body.innerHTML = '<div class="ws-tt-empty">Ошибка загрузки данных года: ' +
                         self._esc(err && err.message ? err.message : err) +
                         '. Нажмите «Обновить», чтобы повторить.</div>';
+                    self._fitTtDrawer();
                 });
                 return;
             }
@@ -39059,6 +39317,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             if (!employees.length) {
                 body.innerHTML = '<div class="ws-tt-empty">Нет сотрудников.</div>';
+                if (this._fitTtDrawer) this._fitTtDrawer();
                 if (this._applyTtHeadVar()) this._fitGrid();
                 return;
             }
@@ -39072,7 +39331,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 '<thead><tr><th class="ws-tt-emp">Сотрудник</th>';
             for (var h = 1; h <= 12; h++) html += '<th>' + monthsAbbr[h - 1] + '</th>';
             html += '<th>Дней</th><th>Часов</th>' +
-                '<th title="часы переработки за год — коды д/н">Перераб.</th>' +
+                '<th title="дни переработки за год — коды д/н">Перераб.</th>' +
                 '</tr></thead><tbody>';
             for (var e = 0; e < employees.length; e++) {
                 var emp = employees[e];
@@ -39096,14 +39355,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 html += '<td class="ws-tt-num">' + (sumWork || '—') + '</td>' +
                         '<td class="ws-tt-num ws-tt-hours">' +
                         (sumHours ? this._fmtTotalsNum(sumHours) : '—') + '</td>' +
-                        '<td class="ws-tt-num ws-tt-over" title="дней переработки: ' +
-                            sumOverDays + ' (коды д/н)">' +
-                        (sumOver ? this._fmtTotalsNum(sumOver) : '—') + '</td></tr>';
+                        '<td class="ws-tt-num ws-tt-over" title="часов переработки: ' +
+                            this._fmtTotalsNum(sumOver) + ' (коды д/н)">' +
+                        (sumOverDays || '—') + '</td></tr>';
             }
             // Task 327: tfoot «Итого» УДАЛЁН (заявка) — годовые суммы
             // по каждому сотруднику остаются в строках, общих — нет
             html += '</tbody></table>';
             body.innerHTML = html;
+            // Task 329: ширина шторки — по столбцам таблицы (год —
+            // max-content; длиннее капа 60% — прокрутка ползунком)
+            if (this._fitTtDrawer) this._fitTtDrawer();
             // Task 323: шапка сетки — под заголовочную зону панели,
             // строки итогов — по строкам сетки (активные сверху);
             // архивные строки — ниже, своей высоты
@@ -39357,6 +39619,31 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var onMq = function() { self._fitGrid(); };
                 if (mq.addEventListener) mq.addEventListener('change', onMq);
                 else if (mq.addListener) mq.addListener(onMq);
+                // Task 329: пересечение брейкпоинта — геометрией шторки
+                // владеют РАЗНЫЕ модели: десктоп — JS (px width/margin),
+                // мобайл — CSS fixed-оверлей. Уходим в мобайл — инлайновые
+                // десктопные размеры СБРАСЫВАЮТСЯ (иначе px перебили бы
+                // 86vw оверлея); приходим в десктоп с ОТКРЫТОЙ шторкой —
+                // полный ПЕРЕРЕНДЕР (ширины таблицы/шторки пересчитаются,
+                // в т.ч. явные px-ширины столбцов), маржа 0 (на месте)
+                var onMqTT = function() {
+                    var drawer = document.getElementById('wsTotalsDrawer');
+                    if (!drawer) return;
+                    if (mq.matches) {
+                        if (self._totalsOpen) {
+                            self._renderTotals();
+                            drawer.style.marginRight = '0px';
+                        } else {
+                            drawer.style.width = '';
+                            drawer.style.marginRight = '';
+                        }
+                    } else {
+                        drawer.style.width = '';
+                        drawer.style.marginRight = '';
+                    }
+                };
+                if (mq.addEventListener) mq.addEventListener('change', onMqTT);
+                else if (mq.addListener) mq.addListener(onMqTT);
             }
         },
 
