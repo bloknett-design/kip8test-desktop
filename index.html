@@ -4043,8 +4043,12 @@
         /* Task 255: селекты месяца/года — прямые углы, как у кнопок
            тулбара (Task 254 убрал скругления у кнопок) */
         border-radius: 0;
-        padding: 6px 10px;
-        font-size: 14px;
+        /* Task 328 (заявка: «размер всех кнопок в баре немного
+           меньше») — селекты уменьшены ВМЕСТЕ с кнопками (ряд
+           остаётся ровным): паддинг 6px 10px → 5px 8px, шрифт
+           14px → 13px */
+        padding: 5px 8px;
+        font-size: 13px;
         font-family: inherit;
     }
     .ws-generate-btn {
@@ -4056,22 +4060,25 @@
         border: none;
         /* Task 254: кнопки без скруглений углов (было 6px) */
         border-radius: 0;
-        padding: 6px 14px;
-        font-size: 14px;
+        /* Task 328 (заявка): немного МЕНЬШЕ — паддинг 6px 14px →
+           5px 11px, шрифт 14px → 13px */
+        padding: 5px 11px;
+        font-size: 13px;
         font-weight: 600;
         cursor: pointer;
     }
     .ws-generate-btn:active { opacity: 0.85; }
     /* Task 251: кнопка пакетного сохранения накопленных правок шахматки.
-       Появляется (JS) только при наличии несохранённых изменений. */
+       Появляется (JS) только при наличии несохранённых изменений.
+       Task 328 (заявка): немного МЕНЬШЕ — как «Сформировать» */
     .ws-save-btn {
         background: var(--accent-green, #4ac771);
         color: #fff;
         border: none;
         /* Task 254: кнопки без скруглений углов (было 6px) */
         border-radius: 0;
-        padding: 6px 14px;
-        font-size: 14px;
+        padding: 5px 11px;
+        font-size: 13px;
         font-weight: 600;
         cursor: pointer;
     }
@@ -4091,8 +4098,10 @@
         color: var(--text-primary, #e0e0e0);
         border: 1px solid var(--card-border, rgba(255,255,255,0.08));
         border-radius: 0;
-        padding: 6px 12px;
-        font-size: 14px;
+        /* Task 328 (заявка): немного МЕНЬШЕ — паддинг 6px 12px →
+           5px 10px, шрифт 14px → 13px (иконка 14px → 13px ниже) */
+        padding: 5px 10px;
+        font-size: 13px;
         font-weight: 600;
         cursor: pointer;
         display: inline-flex;
@@ -4102,8 +4111,8 @@
     .ws-refresh-btn:active { opacity: 0.85; }
     .ws-refresh-btn:disabled { opacity: 0.6; cursor: default; }
     .ws-refresh-btn svg {
-        width: 14px;
-        height: 14px;
+        width: 13px;
+        height: 13px;
         flex: none;
         display: block;
     }
@@ -4185,12 +4194,14 @@
         color: #ff8a8a;
         border: 1px solid rgba(255, 107, 107, 0.38);
         border-radius: 0;
-        padding: 6px 14px;
-        font-size: 14px;
+        /* Task 328 (заявка): немного МЕНЬШЕ — паддинг/шрифт как у
+           остальных кнопок ряда, высота 34px → 32px */
+        padding: 5px 11px;
+        font-size: 13px;
         font-weight: 600;
         font-family: inherit;
         cursor: pointer;
-        height: 34px;
+        height: 32px;
         box-sizing: border-box;
     }
     .ws-cancel-btn:active { opacity: 0.85; }
@@ -4298,11 +4309,67 @@
        (Task 311: «+ Сотрудник» убрана из ряда — добавление сотрудника
        теперь через заголовок «Сотрудник» в шапке сетки.
        Task 312: «+ Отпуск» убрана из ряда — добавление периода
-       теперь из карточки сотрудника) */
+       теперь из карточки сотрудника.
+       Task 328 (заявка): высота 34px → 32px — кнопки бара немного
+       МЕНЬШЕ) */
     .ws-month-sel, .ws-year-sel, .ws-generate-btn, .ws-save-btn,
     .ws-refresh-btn, .ws-totals-btn, .ws-tt-tab {
-        height: 34px;
+        height: 32px;
         box-sizing: border-box;
+    }
+
+    /* Task 328 (заявка): кнопка-иконка ПЕРЕКРЁСТНОЙ ПОДСВЕТКИ строк
+       и столбцов шахматки — ВКЛ/ВЫКЛ перекрестья Task 319 (наведение
+       на ячейку выделяет строку и столбец). Стоит в ряду 3 тулбара
+       СЛЕВА от «Сформировать»; квадрат 32×32 (высота ряда кнопок
+       после уменьшения Task 328), иконка — сетка 3×3 с ВЫДЕЛЕННЫМ
+       перекрестьем (строка+столбец). Состояние — aria-pressed:
+       ВКЛЮЧЕНА (true) — лёгкий синий тинт, как «нажатый» переключатель
+       «Итоги учёта»; ВЫКЛЮЧЕНА (false) — нейтральная, иконка
+       приглушена. Текста нет — подпись для скринридеров в aria-label
+       (видимой всплывающей подсказки нет — заявка Task 328) */
+    .ws-cross-btn {
+        background: var(--bg-tertiary, #0e1621);
+        color: var(--text-primary, #e0e0e0);
+        border: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        border-radius: 0;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-sizing: border-box;
+        font-family: inherit;
+    }
+    .ws-cross-btn:active { opacity: 0.85; }
+    .ws-cross-btn svg {
+        width: 16px;
+        height: 16px;
+        flex: none;
+        display: block;
+    }
+    /* ВЫКЛЮЧЕНА — перекрестье не работает, иконка приглушена */
+    .ws-cross-btn[aria-pressed="false"] {
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+    }
+    .ws-cross-btn[aria-pressed="false"] svg { opacity: 0.55; }
+    /* ВКЛЮЧЕНА — «нажатый» переключатель: синий тинт */
+    .ws-cross-btn[aria-pressed="true"] {
+        background: rgba(74, 143, 199, 0.18);
+        border-color: rgba(74, 143, 199, 0.5);
+    }
+    [data-theme="light"] .ws-cross-btn {
+        background: rgba(240, 240, 240, 0.95);
+        color: #333;
+        border-color: rgba(0, 0, 0, 0.12);
+    }
+    [data-theme="light"] .ws-cross-btn[aria-pressed="false"] { color: #777; }
+    [data-theme="light"] .ws-cross-btn[aria-pressed="true"] {
+        background: rgba(74, 143, 199, 0.22);
+        border-color: rgba(74, 143, 199, 0.5);
     }
 
     /* Task 251: попап выбора статуса рядом с ячейкой шахматки.
@@ -4724,8 +4791,10 @@
         color: var(--text-primary, #e0e0e0);
         border: 1px solid var(--card-border, rgba(255,255,255,0.08));
         border-radius: 0;
-        padding: 6px 14px;
-        font-size: 14px;
+        /* Task 328 (заявка): немного МЕНЬШЕ — как остальные кнопки
+           бара: паддинг 6px 14px → 5px 11px, шрифт 14px → 13px */
+        padding: 5px 11px;
+        font-size: 13px;
         font-weight: 600;
         font-family: inherit;
         cursor: pointer;
@@ -4918,8 +4987,10 @@
        ПОЯВЛЯЮТСЯ при открытии (toggleTotals), убираются при
        закрытии; [hidden] гасит кнопку в любом ряду */
     .ws-tt-tab {
-        padding: 6px 12px;
-        font-size: 13px;
+        /* Task 328 (заявка): вкладки тоже немного МЕНЬШЕ — паддинг
+           6px 12px → 5px 10px, шрифт 13px → 12px */
+        padding: 5px 10px;
+        font-size: 12px;
         font-weight: 700;
         font-family: inherit;
         color: var(--text-secondary, rgba(255,255,255,0.65));
@@ -5901,9 +5972,18 @@
         .ws-month-sel, .ws-year-sel, .ws-generate-btn, .ws-save-btn,
         .ws-cancel-btn, .ws-refresh-btn, .ws-totals-btn, .ws-tt-tab {
             height: 100%;          /* во всю высоту своего ряда */
-            padding: 4px 12px;     /* компактнее базовых 6px — текст
-                                       14px входит в ряд 29,7px */
+            padding: 4px 9px;      /* Task 328 (заявка): компактнее
+                                       прежних 4px 12px — кнопки бара
+                                       немного МЕНЬШЕ; текст 13px
+                                       входит в ряд 29,7px */
             white-space: nowrap;
+        }
+        /* Task 328: иконка перекрестья — квадрат во всю высоту ряда
+           (паддинга нет: иконка центрируется сама) */
+        .ws-cross-btn {
+            height: 100%;
+            width: 34px;
+            padding: 0;
         }
         .ws-events-panel,
         .ws-cal-panel {
@@ -12749,10 +12829,16 @@
                          всем ролям) — пустых скачков высоты бара
                          нет; скрытые вкладки габаритов ряда не
                          меняют (слот ряда фиксирован) -->
+                    <!-- Task 328 (заявка): всплывающие подсказки
+                         (нативные title) с кнопок тулбара УБРАНЫ — у
+                         «Итоги учёта», «Месяц», «Год», «Отменить» их
+                         больше нет; пояснение остаётся только у кнопок
+                         «Обновить» и «Сформировать» — в информационных
+                         окнах формата #wsRefreshTip (Task 317) -->
                     <div class="ws-toolbar-row ws-totals-row" id="wsTotalsRow">
-                        <button type="button" id="wsTotalsBtn" class="ws-totals-btn" onclick="WorkSchedule.toggleTotals()" aria-pressed="false" title="Итоги учёта — дни и часы: боковая панель рядом с шахматкой">Итоги учёта</button>
-                        <button type="button" id="wsTtTabMonth" class="ws-tt-tab active" onclick="WorkSchedule.setTotalsTab('month')" title="Итоги учёта — вкладка «Месяц»: дни, часы, смены и неявки открытого месяца" hidden>Месяц</button>
-                        <button type="button" id="wsTtTabYear" class="ws-tt-tab" onclick="WorkSchedule.setTotalsTab('year')" title="Итоги учёта — вкладка «Год»: явки и часы по 12 месяцам + суммы" hidden>Год</button>
+                        <button type="button" id="wsTotalsBtn" class="ws-totals-btn" onclick="WorkSchedule.toggleTotals()" aria-pressed="false">Итоги учёта</button>
+                        <button type="button" id="wsTtTabMonth" class="ws-tt-tab active" onclick="WorkSchedule.setTotalsTab('month')" hidden>Месяц</button>
+                        <button type="button" id="wsTtTabYear" class="ws-tt-tab" onclick="WorkSchedule.setTotalsTab('year')" hidden>Год</button>
                     </div>
                     <!-- Task 325: РЯД 3 (НИЖНИЙ) — ДЕЙСТВИЯ ШАХМАТКИ
                          (заявка: «Сформировать», «Сохранить (N)»,
@@ -12764,9 +12850,24 @@
                          .ws-tb-sep (Task 324) УДАЛЁН вместе с общим
                          рядом -->
                     <div class="ws-toolbar-row ws-actions-row" id="wsActionsRow">
-                        <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateYear()" title="Сформировать шахматку на выбранный месяц или весь год (производственный календарь обновится автоматически) — откроется диалог подтверждения" hidden>Сформировать</button>
+                        <!-- Task 328 (заявка): кнопка-иконка ПЕРЕКРЁСТНОЙ
+                             ПОДСВЕТКИ строк и столбцов шахматки (вкл/выкл)
+                             — СЛЕВА от «Сформировать». Переключает
+                             перекрестье Task 319 (наведение на ячейку
+                             выделяет строку И столбец); состояние —
+                             aria-pressed, сохраняется в localStorage
+                             (kip8_ws_cross_v1), по умолчанию ВКЛЮЧЕНА.
+                             Подпись для скринридеров — aria-label
+                             (иконка без текста; видимой подсказки НЕТ —
+                             заявка убрала всплывающие окна с кнопок) -->
+                        <button type="button" id="wsCrossBtn" class="ws-cross-btn" onclick="WorkSchedule.toggleCross()" aria-pressed="true" aria-label="Перекрёстная подсветка строк и столбцов"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 3h18v18H3z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18" fill="none" stroke="currentColor" stroke-width="1" opacity="0.45"/><path d="M3 9h18v6H3z M9 3h6v18H9z" fill="currentColor" opacity="0.34"/></svg></button>
+                        <!-- Task 328: нативный title УБРАН — пояснение
+                             кнопки живёт в информационном окне
+                             #wsGenerateTip (формат кнопки «Обновить»,
+                             Task 317: заголовок + описание) -->
+                        <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateYear()" hidden>Сформировать</button>
                         <button type="button" id="wsSaveBtn" class="ws-save-btn" onclick="WorkSchedule.saveAll()" hidden>Сохранить</button>
-                        <button type="button" id="wsCancelBtn" class="ws-cancel-btn" onclick="WorkSchedule.cancelAll()" title="Отменить ввод изменений: все несохранённые правки шахматки сбрасываются, ячейки возвращаются к данным сервера" hidden>Отменить</button>
+                        <button type="button" id="wsCancelBtn" class="ws-cancel-btn" onclick="WorkSchedule.cancelAll()" hidden>Отменить</button>
                     </div>
                 </div>
                 <!-- Task 315: окно 2 бара — данные ВСЕХ мероприятий
@@ -12801,6 +12902,17 @@
                 <div id="wsRefreshTip" class="ws-refresh-tip" hidden>
                     <div class="ws-rt-date" id="wsRefreshTipDate"></div>
                     <div class="ws-rt-desc">Обновить данные графика с сервера: сотрудники, записи, мероприятия, планы отпусков, коды. Локальная копия открывается мгновенно — эта кнопка подгружает свежие данные.</div>
+                </div>
+                <!-- Task 328 (заявка): информационное окно кнопки
+                     «Сформировать» — ТОТ ЖЕ ФОРМАТ, что у «Обновить»
+                     (#wsRefreshTip, Task 317): жирная строка-заголовок
+                     + мелкое описание, показ при НАВЕДЕНИИ мыши/фокусе,
+                     позицию считает JS (над кнопкой; не хватает места —
+                     под ней), клики сквозь окно проходят. Заменило
+                     нативный title кнопки (двойного окна нет) -->
+                <div id="wsGenerateTip" class="ws-refresh-tip" hidden>
+                    <div class="ws-rt-date">Сформировать шахматку</div>
+                    <div class="ws-rt-desc">Генерация записей на выбранный месяц или весь год. Производственный календарь обновится автоматически — откроется диалог подтверждения.</div>
                 </div>
             </div>
             <!-- Task 308: субнавигация модуля «График работы» УДАЛЕНА
@@ -36731,6 +36843,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // <tr> в _renderGrid — переживает перерисовку (как _hoverDay).
         _hoverRow: null,
 
+        // Task 328 (заявка): перекрёстная подсветка строк и столбцов
+        // ВКЛ/ВЫКЛ — кнопка-иконка #wsCrossBtn в ряду 3 тулбара (СЛЕВА
+        // от «Сформировать»). true — наведение на ячейку выделяет
+        // перекрестье (Task 319, поведение по умолчанию); false —
+        // подсветки нет. Выбор сохраняется в localStorage
+        // (kip8_ws_cross_v1) и восстанавливается при открытии;
+        // переключает toggleCross.
+        _crossOn: true,
+
         // Task 318: таб. № сотрудника шторки увольнения (null — закрыта).
         // Ставится openDismissForm из карточки, сбрасывается
         // closeDismissForm; submitDismissForm отправляет пару
@@ -36831,6 +36952,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // сама кнопка «Сформировать» — по праву записи (ряды
             // существуют всегда — сетка под баром не прыгает)
 
+            // Task 328 (заявка): сохранённое состояние ПЕРЕКРЁСТНОЙ
+            // подсветки (kip8_ws_cross_v1) — кнопка-иконка #wsCrossBtn
+            // в ряду 3 тулбара; по умолчанию ВКЛЮЧЕНА. Роль не важна —
+            // подсветка доступна всем (фича просмотра)
+            try {
+                if (localStorage.getItem('kip8_ws_cross_v1') === '0') {
+                    this._crossOn = false;
+                }
+            } catch (e) { /* приватный режим — состояние по умолчанию */ }
+            var crossBtn = document.getElementById('wsCrossBtn');
+            if (crossBtn) {
+                crossBtn.setAttribute('aria-pressed',
+                    this._crossOn ? 'true' : 'false');
+            }
+
             var self = this;
             // Task 317: информационное окно «данные от …» кнопки «Обновить»
             // — слушатели на кнопке (наведение/фокус) и глобальный сброс
@@ -36855,7 +36991,28 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     setTimeout(function() { self._hideRefreshTip(); }, 120);
                 });
             }
-            document.addEventListener('scroll', function() { self._hideRefreshTip(); }, true);
+            // Task 328 (заявка): информационное окно кнопки «Сформировать»
+            // — ТОТ ЖЕ ФОРМАТ, что у «Обновить» (Task 317): показ при
+            // наведении/фокусе, скрытие — уходом курсора/потерей фокуса
+            // и прокруткой; окно перенесено в <body> тем же приёмом
+            // (Task 319 — из-под stacking-контекста страницы). Клик по
+            // кнопке открывает диалог подтверждения — окно не мешает
+            // (pointer-events: none), тост/диалог скажут сами
+            var gTip = document.getElementById('wsGenerateTip');
+            if (gTip && gTip.parentNode && gTip.parentNode !== document.body) {
+                document.body.appendChild(gTip);
+            }
+            var gTipBtn = document.getElementById('wsGenerateBtn');
+            if (gTipBtn) {
+                gTipBtn.addEventListener('mouseenter', function() { self._showGenerateTip(); });
+                gTipBtn.addEventListener('mouseleave', function() { self._hideGenerateTip(); });
+                gTipBtn.addEventListener('focus', function() { self._showGenerateTip(); });
+                gTipBtn.addEventListener('blur', function() { self._hideGenerateTip(); });
+            }
+            document.addEventListener('scroll', function() {
+                self._hideRefreshTip();
+                self._hideGenerateTip();
+            }, true);
 
             // Task 319: ПЕРЕКРЕСТЬЕ шахматки — движение мыши по ячейкам
             // дней выделяет СТРОКУ и СТОЛБЕЦ, пересекающиеся в ячейке
@@ -36865,6 +37022,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // _cellHover; mouseout при уходе на НЕ-ячейку (шапка/ФИО/
             // вне сетки) снимает подсветку, при переходе на соседнюю
             // ячейку — НЕ трогает (обновит её mouseover — без мигания).
+            // Task 328 (заявка): перекрестье можно ВЫКЛЮЧИТЬ кнопкой-
+            // иконкой #wsCrossBtn — гейт _crossOn здесь (не в
+            // _cellHover): выключено — наведение НЕ подсвечивает;
+            // снятие (mouseout) НЕ гейтится — гасит возможный остаток
+            // от выключения прямо под курсором
             var gridWrapEl = document.getElementById('wsGridWrap');
             if (gridWrapEl && gridWrapEl.addEventListener) {
                 gridWrapEl.addEventListener('mouseover', function(e) {
@@ -36875,6 +37037,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         }
                     } catch (err) {}
                     if (!td) return;
+                    if (self._crossOn === false) return;   // Task 328
                     var day = parseInt(td.getAttribute('data-day'), 10);
                     var tr = (td.closest ? td.closest('tr') : null);
                     var ri = tr ? tr.sectionRowIndex : -1;
@@ -37302,6 +37465,67 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _hideRefreshTip: function() {
             var tip = document.getElementById('wsRefreshTip');
             if (tip) tip.hidden = true;
+        },
+
+        // Task 328 (заявка): информационное окно кнопки «Сформировать»
+        // — ТОТ ЖЕ ФОРМАТ, что у «Обновить» (#wsRefreshTip, Task 317):
+        // заголовок + описание, показ при НАВЕДЕНИИ/фокусе. Позиция —
+        // НАД кнопкой; не хватает места (с учётом верхнего бара
+        // ≥1024px, приём Task 319) — ПОД ней. Кликам не мешает
+        // (pointer-events: none в CSS). Заголовок/описание — статичные
+        // (даты у «Сформировать» нет), обновлять перед показом нечего.
+        _showGenerateTip: function() {
+            var btn = document.getElementById('wsGenerateBtn');
+            var tip = document.getElementById('wsGenerateTip');
+            if (!btn || !tip) return;
+            tip.hidden = false;
+            var r = btn.getBoundingClientRect();
+            tip.style.left = Math.max(6, Math.round(r.left)) + 'px';
+            tip.style.top = '0px';
+            var barBottom = 0;
+            try {
+                if (document.querySelector) {
+                    var bar = document.querySelector('.desktop-top-bar');
+                    if (bar) {
+                        var br = bar.getBoundingClientRect();
+                        if (br && br.height > 0) barBottom = br.bottom;
+                    }
+                }
+            } catch (e) {}
+            var top = r.top - tip.offsetHeight - 8;
+            if (top < barBottom + 4) top = r.bottom + 6;
+            tip.style.top = Math.round(top) + 'px';
+        },
+        _hideGenerateTip: function() {
+            var tip = document.getElementById('wsGenerateTip');
+            if (tip) tip.hidden = true;
+        },
+
+        // Task 328 (заявка): перекрёстная подсветка строк и столбцов —
+        // ВКЛ/ВЫКЛ кнопкой-иконкой #wsCrossBtn (ряд 3 тулбара, слева
+        // от «Сформировать»). Переключает _crossOn (гейт
+        // mouseover-делегирования Task 319), сохраняет выбор в
+        // localStorage (kip8_ws_cross_v1), синхронизирует aria-pressed
+        // кнопки. Выключение СРАЗУ гасит подсветку под курсором
+        // (_cellHover(null) — снимает строку и столбец). Итог —
+        // короткий тост (иконка без текста — нужен понятный отклик).
+        toggleCross: function() {
+            this._crossOn = !this._crossOn;
+            try {
+                localStorage.setItem('kip8_ws_cross_v1',
+                    this._crossOn ? '1' : '0');
+            } catch (e) { /* приватный режим — не сохраняем */ }
+            var btn = document.getElementById('wsCrossBtn');
+            if (btn) {
+                btn.setAttribute('aria-pressed',
+                    this._crossOn ? 'true' : 'false');
+            }
+            if (!this._crossOn) this._cellHover(null);
+            if (typeof KipToast !== 'undefined' && KipToast.show) {
+                KipToast.show(this._crossOn
+                    ? 'Подсветка строк и столбцов включена'
+                    : 'Подсветка строк и столбцов выключена');
+            }
         },
 
         // Task 314: кнопка «Обновить» — перезагрузка данных графика с
@@ -38037,12 +38261,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var range = fmtRange(tr['дата_начала'], tr['дата_окончания']);
                 var text = (code ? code + ' · ' : '') +
                            (tr['тема'] || meta.name || '—') + ' · ' + fio;
-                var tip = range + ' · ' + (meta.name || tr['тип'] || '') +
-                          (tr['тема'] ? ' — ' + tr['тема'] : '') + ' · ' + fio +
-                          ((tr['длительность_дней'] > 1)
-                              ? ' (' + tr['длительность_дней'] + ' дн.)' : '') +
-                          (tr['комментарий'] ? ' — ' + tr['комментарий'] : '');
-                html += '<span class="ws-ep-item" title="' + this._escAttr(tip) + '">' +
+                // Task 328 (заявка): всплывающая подсказка строки
+                // (нативный title) УБРАНА — при наведении на окно
+                // мероприятий ничего не всплывает; вся информация
+                // строки и так видна текстом (переносится)
+                html += '<span class="ws-ep-item">' +
                         '<i class="ws-ep-dot" style="background:' + (meta.color || '#3a3a3a') + ';"></i>' +
                         '<b class="ws-ep-date">' + this._esc(range) + '</b>' +
                         '<span class="ws-ep-text">' + this._esc(text) + '</span></span>';
@@ -42167,24 +42390,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var mi = (m - 1 + 12) % 12;
             var monthsNom = ['Январь','Февраль','Март','Апрель','Май','Июнь',
                              'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-            var monthsGen = ['января','февраля','марта','апреля','мая','июня',
-                             'июля','августа','сентября','октября','ноября','декабря'];
+            // Task 328: monthsGen (родительный падеж) удалён из
+            // renderPanel — использовался только в тултипах чипов
             var monthsAbbr = ['янв','фев','мар','апр','мая','июн',
                               'июл','авг','сен','окт','ноя','дек'];
             var html = '';
 
             // Группа норм (Task 269): заголовок сверху, под ним ДВА
             // столбика — счётчики дней слева, нормы часов СПРАВА от
-            // них. legalic — официальные (тултип), иначе — локальный
-            // расчёт
-            html += '<div class="ws-cp-group ws-cp-norms" title="Норма времени по производственному календарю' +
-                    (st.normsOfficial ? ' — официальные данные' : '') +
-                    (st.preliminary ? ' — предварительные данные (проект переноса)' : '') +
-                    '">' +
+            // них. legalic — официальные, иначе — локальный расчёт.
+            // Task 328 (заявка): всплывающая подсказка (нативный
+            // title группы) УБРАНА — при наведении на окно времени
+            // и праздников ничего не всплывает
+            html += '<div class="ws-cp-group ws-cp-norms">' +
                     '<span class="ws-cp-cap">Норма, ' +
                         this._esc(monthsNom[mi].toLowerCase()) + ' ' + y +
                         (st.preliminary
-                            ? ' <span class="ws-cal-prelim" title="Год основан на проекте постановления Минтруда России — окончательные переносы ещё не утверждены">предварительно</span>'
+                            ? ' <span class="ws-cal-prelim">предварительно</span>'
                             : '') +
                     '</span>' +
                     '<div class="ws-cp-cols">' +
@@ -42207,8 +42429,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     '</div>';
 
             // Столбик 2 (правый): праздники и переносы месяца — цветные
-            // чипы с тултипами (Task 264: у сокращённых дней —
-            // звёздочка у даты; Task 266: столбиком, внизу — легенда)
+            // чипы (Task 264: у сокращённых дней — звёздочка у даты;
+            // Task 266: столбиком, внизу — легенда).
+            // Task 328 (заявка): всплывающие подсказки чипов (нативные
+            // title с датой/видом/названием) УБРАНЫ — при наведении на
+            // окно ничего не всплывает; название праздника уже видно
+            // текстом чипа («07.03 · Восьмое марта»)
             var kindCls = {
                 'праздник': 'k-hol',
                 'региональный праздник': 'k-reg',
@@ -42223,12 +42449,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var sd = st.specialDays[k];
                     var chip = sd.d + ' ' + monthsAbbr[mi] +
                                (sd.kind === 'сокращённый' ? '*' : '');
-                    var tip = sd.d + ' ' + monthsGen[mi] + ' — ' + sd.kind +
-                              (sd.title ? ' — ' + sd.title : '') +
-                              (sd.project ? ' (прогноз)'
-                                  : (st.preliminary ? ' (предварительно)' : ''));
-                    html += '<span class="ws-cp-day ' + (kindCls[sd.kind] || 'k-tr') +
-                            '" title="' + this._escAttr(tip) + '">' +
+                    html += '<span class="ws-cp-day ' + (kindCls[sd.kind] || 'k-tr') + '">' +
                             this._esc(chip) +
                             (sd.title ? ' · ' + this._esc(sd.title) : '') +
                             '</span>';
