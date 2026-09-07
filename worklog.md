@@ -1423,3 +1423,28 @@ Stage Summary:
   из kip8@5edaeac через auto-sync. Тестовый десктоп kip8test-desktop уже
   имел модуль WorkSchedule (из kip8test@96039d0) ранее.
 - Локальная дата: 2026-08-29 18:08:46 UTC+07:00 (Asia/Novosibirsk).
+
+---
+
+# Догоняющая запись (2026-09-08, подготовка к новой сессии)
+
+Worklog этого репо с 2026-08-29 не велся (зеркало — вся история в
+коммитах и worklog kip8test). Состояние на 2026-09-08:
+
+- КОНТЕНТ — АВТОСИНК из kip8test (sync при пуше index.html):
+  176bfca (Task 336 @b702ae0) → 6ce8f0d (Task 337 @19d5aeb) →
+  588382c (Task 338 @2209607) — kipia-test-v577, паритет тестов
+  2170/0. Задачи 335–338: карточка прибора вплотную к бару,
+  плавное сужение фамилий, ФИКС мобильного скролла, полоса шапки,
+  ПРАВА «КИП ИОС дежурный» по матрице KIP8_Access (зритель без
+  «Сформировать»/«Вида»/«Итогов учёта»/дневных/карточек).
+- TASK 339 (отдельная Win32-сборка, паритет kip8-desktop@34cbc1d):
+  package.json — win.target.arch [x64, ia32] + artifactName
+  KIPiA-Test-Setup-${version}-${arch}.${ext}, version 2.1.7→2.1.8;
+  build-desktop.yml — build-win «NSIS, x64 + ia32/Win32», текст
+  релиза; README — «Как выбрать установщик Windows». Коммиты
+  888fcae → 0a5323b → 7cf0d8d. Тег НЕ ставился (релизы боевые —
+  в kip8-desktop: v2.1.8 с KIPiA-Setup-2.1.8-ia32.exe 82.4 МБ).
+  CI Build Desktop App — success (ТРИ установщика + blockmap-ы).
+- electron/main.js НЕ тронут (нативных модулей нет; контент живой
+  с Pages kip8test).
