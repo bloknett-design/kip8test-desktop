@@ -31381,7 +31381,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // docs-ios уже добавлен через _KIP_IOS_PAGES.
                 if (!kipios) _add(['docs-ios']);
             }
-            if (perm('workschedule.view')) _add(this._WORK_SCHEDULE_PAGES);
+            // Task 340: раздел «График работы» дают ЛЮБОЕ из трёх прав
+            // (workschedule.view / workschedule.view.min / workschedule.
+            // edit — edit подразумевает полный доступ); уровень внутри
+            // раздела решает WorkSchedule._computeViewLevel
+            if (perm('workschedule.view') || perm('workschedule.view.min') ||
+                    perm('workschedule.edit')) {
+                _add(this._WORK_SCHEDULE_PAGES);
+            }
             this.ROLE_ACCESS[role] = list;
         },
 
@@ -37636,6 +37643,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _year: null,
         _month: null,
         _canEdit: false,
+        // Task 340: УРОВЕНЬ доступа к табелю из матрицы KIP8_Access
+        // (три колонки «График работы»): 'edit' — workschedule.edit
+        // (полный доступ: просмотр + внесение), 'view' — workschedule.view
+        // (просмотр: карточки БЕЗ правки, «Итоги учёта» и «Вид» доступны,
+        // «Сформировать» скрыт), 'min' — workschedule.view.min
+        // (ограниченный просмотр: карточек нет, «Итоги учёта» и
+        // «Сформировать» скрыты, в шахматке скрыты работники
+        // «Мастер КИПиА»), null — прав нет. Считает _computeViewLevel;
+        // _canEdit — производное (level === 'edit')
+        _viewLevel: null,
         _initialized: false,
 
         _editingCell: null,
@@ -37816,25 +37833,27 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             try {
                 if (typeof KipAuth !== 'undefined' && KipAuth._cachedRole) role = KipAuth._cachedRole;
             } catch (e) {}
-            this._canEdit = this._computeCanEdit(role);
+            // Task 340: уровень доступа из матрицы (edit/view/min/null);
+            // _canEdit — производное. _initView ниже применяет вид
+            this._viewLevel = this._computeViewLevel(role);
+            this._canEdit = (this._viewLevel === 'edit');
 
             var genBtn = document.getElementById('wsGenerateBtn');
             if (genBtn) genBtn.hidden = !this._canEdit;
-            // Task 337 (заявка): кнопка ВИДА ТАБЕЛЯ #wsViewBtn — редакторская:
-            // зритель («График работы — просмотр») видит только полную
-            // шахматку, переключение видов — элемент управления, ему не
-            // нужнее «Сформировать» (замок роли был ПАЛЛИАТИВОМ Task 332
-            // — теперь правь через KIP8_Access, как описано в описании
-            // права workschedule.view: «кнопки и диалоги скрыты»)
+            // Task 337→340: кнопка ВИДА ТАБЕЛЯ #wsViewBtn — инструмент
+            // ПРОСМОТРА (заявка: «Все кнопки доступны, кроме
+            // "Сформировать"»): видна уровням edit/view/min, скрыта
+            // только при полном отсутствии прав (раздел и так скрыт —
+            // защита программных вызовов/состояний до прихода матрицы)
             var viewBtn = document.getElementById('wsViewBtn');
-            if (viewBtn) viewBtn.hidden = !this._canEdit;
-            // Task 338 (заявка: «не должны быть видны … карточки
-            // сотрудников»): режим зрителя на странице — класс
-            // ws-readonly (CSS выключает подсветку наведения ФИО;
-            // клик-обработчик карточки в сетке не рендерится)
+            if (viewBtn) viewBtn.hidden = (this._viewLevel === null);
+            // Task 338→340: класс ws-readonly (CSS выключает подсветку
+            // наведения ФИО; клик карточки в сетке не рендерится) —
+            // только уровню «min» (карточек нет); уровню «view»
+            // карточка открывается — подсветка уместна
             var wsPageEl = document.getElementById('page-work-schedule');
             if (wsPageEl && wsPageEl.classList && wsPageEl.classList.toggle) {
-                wsPageEl.classList.toggle('ws-readonly', !this._canEdit);
+                wsPageEl.classList.toggle('ws-readonly', this._viewLevel === 'min');
             }
             // Task 324 → 325: ряды действий/генерации тулбара — общий
             // НИЖНИЙ ряд Task 324 разделён по заявке Task 325 на ДВА:
@@ -38486,56 +38505,85 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // (в _renderGrid), гейт шторки — _applyView/toggleTotals.
         // ============================================================
 
-        // Task 337 (заявка: «у роли КИП ИОС дежурный — только просмотр,
-        // а показывает кнопки и пускает в правку»): право записи — из
-        // серверной МАТРИЦЫ KIP8_Access (как у расходомеров,
-        // FlowmeterData._computeCanInputReadings, Task 296):
-        //   · getMyAccess получен (found=true) → строго по чекбоксу
-        //     workschedule.edit (зритель — false, НЕЗАВИСИМО от роли);
-        //   · матрица недоступна (null — старый сервер/сеть) →
-        //     ЛЕГАСИ-список _WRITE_ROLES (Админ тоже легаси-запас:
-        //     сервер матрицы админу даёт все права — при живой
-        //     матрице галочка админа не нужна).
-        // Сервер шлюзит КАЖДЫЙ запрос по той же матрице
-        // (rmRequirePerm 'workschedule.edit', Task 295) — клиентская
-        // видимость прав не даёт: это только UX (кнопки «Сформировать»
-        // /«Вид», попапы правки). Пересчёт — при init и позднем
-        // приходе роли (_onRoleUpdate); правка галочки доезжает
-        // ≤ ~10 мин (heartbeat) или перезаходом
-        _computeCanEdit: function(role) {
-            if (!role) return false;
+        // Task 340 (заявка: трёхуровневый доступ к «Графику работы» по
+        // трём столбцам матрицы — workschedule.view / workschedule.view.min
+        // / workschedule.edit): УРОВЕНЬ ДОСТУПА из МАТРИЦЫ KIP8_Access:
+        //   'edit' — workschedule.edit=✓: полный доступ (просмотр +
+        //     внесение данных; правка по-прежнему гейтится сервером);
+        //   'view' — workschedule.view=✓: просмотр — карточки
+        //     сотрудников открываются БЕЗ элементов правки (гейтятся
+        //     _canEdit), все кнопки доступны, кроме «Сформировать»;
+        //   'min' — workschedule.view.min=✓: ограниченный просмотр —
+        //     карточек нет, «Сформировать» и «Итоги учёта» скрыты, в
+        //     шахматке скрыты работники «Мастер КИПиА» (_viewEmployees);
+        //   null — прав нет (раздел скрыт _applyServerAccess).
+        // ПРИОРИТЕТ: edit сильнее всех; БЕЗ edit флаг min СИЛЬНЕЕ view —
+        // «ограничение»: отмечены ОБЕ галочки (view+min) → действует
+        // ограниченный уровень (проще не снять лишнюю галочку, чем
+        // удивиться открытым карточкам); только min → тоже «min»
+        // (право самодостаточно, сервер пускает чтение по нему).
+        // Матрица недоступна (все права null — старый сервер/сеть) →
+        // ЛЕГАСИ-запас: _WRITE_ROLES → 'edit', прочие → 'view'
+        // (Task 337/338 запирали зрителя в «сменном» виде — отменено
+        // трёхуровневой схемой: зритель сам переключает виды).
+        // Пересчёт — при init и позднем приходе роли/матрицы
+        // (_onRoleUpdate); правка галочки доезжает ≤ ~10 мин
+        // (heartbeat) или перезаходом
+        _computeViewLevel: function(role) {
             try {
                 if (typeof KipAuth !== 'undefined' &&
                     typeof KipAuth._serverPerm === 'function') {
-                    var sp = KipAuth._serverPerm('workschedule.edit');
-                    if (sp !== null) return sp;
+                    var pe = KipAuth._serverPerm('workschedule.edit');
+                    var pv = KipAuth._serverPerm('workschedule.view');
+                    var pm = KipAuth._serverPerm('workschedule.view.min');
+                    if (pe !== null || pv !== null || pm !== null) {
+                        if (pe === true) return 'edit';
+                        if (pm === true) return 'min';
+                        if (pv === true) return 'view';
+                        return null;
+                    }
+                    // все три null — матрица не получена: легаси ниже
                 }
             } catch (e) { /* ignore */ }
-            return (role === 'Админ') ||
-                (this._WRITE_ROLES.indexOf(role) !== -1);
+            if (role === 'Админ' ||
+                (this._WRITE_ROLES.indexOf(role) !== -1)) return 'edit';
+            return 'view';
         },
 
-        // Восстановление вида при init: роль «КИП ИОС дежурный» —
-        // «сменный» насильно (замок), прочие роли — сохранённый
-        // kip8_ws_view_v1 (полный по умолчанию). Применяет _applyView
-        // (перерисовки НЕ зовёт — сетки ещё нет, отрисует loadGrid)
-        // Вид для зрителя — СМЕННЫЙ (Task 338, уточнение Task 337):
-        // «у роли "КИП ИОС дежурный" не должны быть видны … шахматка
-        // дневного персонала» — зритель («График работы — просмотр»)
-        // видит только сменных; сохранённый kip8_ws_view_v1 НЕ
-        // применяется. Сменный вид автоматически прячет и «Итоги
-        // учёта» (_applyView: кнопка скрыта, шторка/страница итогов
-        // гейчатся видом) — итоги тоже «не должны быть видны»
+        // Task 337 (право записи из матрицы) → Task 340: производная от
+        // уровня: редактор — только 'edit'. Совместимость вызовов
+        // (_canEdit по-прежнему проверяют попапы/кнопки/сетка)
+        _computeCanEdit: function(role) {
+            return this._computeViewLevel(role) === 'edit';
+        },
+
+        // Task 340: карточка сотрудника (клик по ФИО) доступна уровням
+        // 'edit' и 'view' (у 'view' — БЕЗ элементов правки: «Уволить…»/
+        // «+ Отпуск…»/✎/✕ гейтятся _canEdit в _renderEmpPopup);
+        // 'min' и null (нет прав) — карточка не открывается
+        _empCardAllowed: function() {
+            return this._viewLevel === 'edit' || this._viewLevel === 'view';
+        },
+
+        // Восстановление вида при init: роль «КИП ИОС дежурный» (замок,
+        // только если она ЕЩЁ и редактор матрицы) — «сменный» насильно;
+        // прочие уровни (edit/view/min — Task 340) — сохранённый
+        // kip8_ws_view_v1 (полный по умолчанию): зритель сам переключает
+        // виды кнопкой «Вид» (Task 338 запирал зрителя в «сменном» —
+        // ОТМЕНЕНО трёхуровневой схемой: «Все кнопки доступны, кроме
+        // «Сформировать» [и «Итогов учёта» у min]»). Применяет
+        // _applyView (перерисовки НЕ зовёт — сетки ещё нет, отрисует
+        // loadGrid); уровень 'min' скрывает «Итоги учёта» в _applyView
+        // по ПРАВУ (не только по виду)
         _initView: function(role) {
             var saved = null;
             try { saved = localStorage.getItem('kip8_ws_view_v1'); } catch (e) {}
-            var canEdit = this._computeCanEdit(role);
+            var level = this._computeViewLevel(role);
+            var canEdit = (level === 'edit');
             // Task 337: замок дежурного — только если роль ещё и редактор
-            // матрицы; зритель — сменный вид без замка (кнопки «Вид» нет)
+            // матрицы (Task 340: зритель/min — без замка)
             this._viewLocked = (role === 'КИП ИОС дежурный') && canEdit;
             if (this._viewLocked) {
-                this._view = 'shift';
-            } else if (!canEdit) {
                 this._view = 'shift';
             } else {
                 this._view = (saved === 'shift' || saved === 'day') ? saved : 'full';
@@ -38548,14 +38596,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // ОТКРЫТАЯ шторка закрывается (toggleTotals: закрытие гейтом
         // не блокируется), вкладки прячутся (_updateTtTabsVisible);
         // иконка/aria кнопки вида актуализирует _updateViewBtn.
+        // Task 340: итоги недоступны и уровню «min» (право
+        // workschedule.view.min) — кнопка скрыта и в полном виде,
+        // ОТКРЫТАЯ шторка закрывается (та же ветка, что у сменного/
+        // дневного видов)
         // rerender — перерисовать сетку (смены вида; при init сетки
         // ещё нет — false)
         _applyView: function(opts) {
             opts = opts || {};
             var v = this._view || 'full';
             var full = (v === 'full');
+            var minNoTotals = (this._viewLevel === 'min');
             var totalsBtn = document.getElementById('wsTotalsBtn');
-            if (totalsBtn) totalsBtn.hidden = !full;
+            if (totalsBtn) totalsBtn.hidden = !full || minNoTotals;
             // Task 335 (заявка: в видах «только сменные/только дневные»
             // шахматка НЕ растягивается до низа окна приложения):
             // класс-маркер на странице — десктоп-CSS собирает колонку
@@ -38566,10 +38619,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (viewPage && viewPage.classList && viewPage.classList.toggle) {
                 viewPage.classList.toggle('ws-view-filtered', !full);
             }
-            // шторка недоступна в сменном/дневном видах: открытую —
-            // закрыть (анимация/уборка как обычно); закрытую — просто
-            // спрятать вкладки (кнопка «Итоги учёта» уже скрыта)
-            if (!full && this._totalsOpen) {
+            // шторка недоступна в сменном/дневном видах (и уровню «min»
+            // — Task 340): открытую — закрыть (анимация/уборка как
+            // обычно; закрытие гейтом не блокируется); закрытую —
+            // просто спрятать вкладки (кнопка «Итоги учёта» уже скрыта)
+            if ((!full || minNoTotals) && this._totalsOpen) {
                 this.toggleTotals();
             } else {
                 this._updateTtTabsVisible();
@@ -38603,10 +38657,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Запертый вид (роль «КИП ИОС дежурный») — тост-пояснение,
         // состояние не меняется. Итог переключения — тост с описанием
         // вида (иконка без текста — нужен понятный отклик).
-        // Task 337: зритель («График работы — просмотр») сюда НЕ
-        // попадает — кнопка скрыта; программная защита тоже есть
+        // Task 340: «Вид» — инструмент ПРОСМОТРА: доступен всем
+        // уровням (заявка: «Все кнопки доступны, кроме "Сформировать"
+        // [и "Итогов учёта" у min]»); guard остался только для
+        // отсутствия прав (null — программные вызовы) и замка.
+        // Task 337/338 прятали кнопку зрителю — отменено
         cycleView: function() {
-            if (!this._canEdit) return;
+            if (this._viewLevel === null) return;
             if (this._viewLocked) {
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
                     KipToast.show('Роли «КИП ИОС дежурный» доступен только сменный вид табеля');
@@ -38623,6 +38680,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 shift: 'Сменный вид — только сменные сотрудники',
                 day: 'Дневной вид — только дневные сотрудники'
             };
+            if (this._viewLevel === 'min') {
+                // Task 340: у «min» итогов нет — тост без обещания
+                titles.full = 'Полный вид — все сотрудники (кроме «Мастер КИПиА»)';
+            }
             if (typeof KipToast !== 'undefined' && KipToast.show) {
                 KipToast.show(titles[next]);
             }
@@ -38635,49 +38696,84 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // сохраняется. _EMPLOYEES НЕ трогаем — фильтр только для
         // отрисовки (итоги/карточки/справочник работают по полному
         // списку; шторка в сменном/дневном видах закрыта)
+        // Task 340: уровень «min» — дополнительно СКРЫТЫ работники
+        // «Мастер КИПиА» (заявка: «в шахматке скрыты работники
+        // "Мастер КИПиА"»; фильтр по должности — _isMasterKipia)
         _viewEmployees: function() {
             var all = this._EMPLOYEES;
             var v = this._view || 'full';
-            if (v !== 'shift' && v !== 'day') return all;
-            var want = (v === 'shift') ? 'сменный' : 'дневной';
-            var out = [];
-            for (var i = 0; i < all.length; i++) {
-                if (String(all[i]['тип'] || '').trim() === want) out.push(all[i]);
+            var out = all;
+            if (v === 'shift' || v === 'day') {
+                var want = (v === 'shift') ? 'сменный' : 'дневной';
+                var typed = [];
+                for (var i = 0; i < all.length; i++) {
+                    if (String(all[i]['тип'] || '').trim() === want) typed.push(all[i]);
+                }
+                out = typed;
+            }
+            if (this._viewLevel === 'min') {
+                var visible = [];
+                for (var k = 0; k < out.length; k++) {
+                    if (!this._isMasterKipia(out[k])) visible.push(out[k]);
+                }
+                out = visible;
             }
             return out;
         },
 
-        // Хук роли из KipAuth._applyRoleToUI (роль могла прийти ПОЗЖЕ
-        // init — медленный путь bootstrap/фоновая проверка сессии):
-        // актуализируем _canEdit/«Сформировать» и ЗАМОК вида (роль
-        // «КИП ИОС дежурный» — только сменный). Смена замка меняет вид
-        // (заперт → «сменный»; снят — сохранённый kip8_ws_view_v1) и
-        // перерисовывает сетку. Вызывается многократно — идемпотентно
+        // Task 340: сотрудник с должностью «Мастер КИПиА»? (справочник
+        // «Сотрудники», колонка J — поле «должность»). Сравнение
+        // ТОЛЕРАНТНОЕ: без регистра, ё→е, пробелы схлопнуты; «мастер
+        // кипиа» в начале должности (точное совпадение или продолжение
+        // через пробел — «Мастер КИПиА см.1»), чтобы не поймать «Слесарь
+        // КИПиА»/«Начальник участка КИПиА»
+        _isMasterKipia: function(emp) {
+            var pos = String((emp && emp['должность']) || '')
+                .trim().toLowerCase()
+                .replace(/ё/g, 'е').replace(/\s+/g, ' ');
+            return pos === 'мастер кипиа' || pos.indexOf('мастер кипиа ') === 0;
+        },
+
+        // Хук роли из KipAuth._applyRoleToUI (роль/матрица могла прийти
+        // ПОЗЖЕ init — медленный путь bootstrap/фоновая проверка
+        // сессии): актуализируем уровень (_viewLevel) и производный
+        // _canEdit/«Сформировать», «Вид» (Task 340: кнопка просмотра —
+        // видна всем уровням, скрыта только без прав), ws-readonly
+        // (Task 338: hover ФИО — только уровню «min»), ЗАМОК вида
+        // (роль «КИП ИОС дежурный» — только редактор матрицы) и вид
+        // (замок → «сменный»; снят — сохранённый kip8_ws_view_v1) и
+        // перерисовывает сетку (в т.ч. фильтр «Мастер КИПиА» у min).
+        // Вызывается многократно — идемпотентно
         _onRoleUpdate: function(role) {
             if (!this._initialized) return;
-            // Task 337: право записи — из матрицы (workschedule.edit);
-            // легаси-список — только запас недоступной матрицы.
+            // Task 340: уровень из матрицы (три столбца «График
+            // работы»); легаси — запас недоступной матрицы.
             // Идемпотентно при повторных вызовах (heartbeat с той же
             // ролью): кнопки обновляем всегда (дёшево), вид и сетку —
-            // только когда право/замок РЕАЛЬНО изменились
-            var newCanEdit = this._computeCanEdit(role);
+            // только когда уровень/замок РЕАЛЬНО изменились
+            var newLevel = this._computeViewLevel(role);
+            var newCanEdit = (newLevel === 'edit');
             var genBtn = document.getElementById('wsGenerateBtn');
             if (genBtn) genBtn.hidden = !newCanEdit;
-            // Task 337: кнопка вида — редакторская (как «Сформировать»)
+            // Task 340: «Вид» — доступен всем уровням (просмотр);
+            // скрыт только при полном отсутствии прав
             var roleViewBtn = document.getElementById('wsViewBtn');
-            if (roleViewBtn) roleViewBtn.hidden = !newCanEdit;
-            // Task 338: режим зрителя — класс на странице (CSS: колонка
-            // ФИО без подсветки наведения; клик карточки не рендерится)
+            if (roleViewBtn) roleViewBtn.hidden = (newLevel === null);
+            // Task 338→340: ws-readonly (CSS: колонка ФИО без
+            // hover-подсветки) — только уровню «min» (карточек нет);
+            // уровню «view» карточка открывается — подсветка уместна
             var rolePageEl = document.getElementById('page-work-schedule');
             if (rolePageEl && rolePageEl.classList && rolePageEl.classList.toggle) {
-                rolePageEl.classList.toggle('ws-readonly', !newCanEdit);
+                rolePageEl.classList.toggle('ws-readonly', newLevel === 'min');
             }
             // Замок «КИП ИОС дежурный» — только если роль при этом
             // редактор матрицы (осознанное решение Task 293)
             var locked = (role === 'КИП ИОС дежурный') && newCanEdit;
             var changed = (newCanEdit !== this._canEdit) ||
+                (newLevel !== this._viewLevel) ||
                 (locked !== !!this._viewLocked);
             this._canEdit = newCanEdit;
+            this._viewLevel = newLevel;
             if (!changed) return;
             this._viewLocked = locked;
             if (locked) {
@@ -38685,11 +38781,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             } else {
                 var saved = null;
                 try { saved = localStorage.getItem('kip8_ws_view_v1'); } catch (e) {}
-                // Task 338: зритель — СМЕННЫЙ вид (шахматка дневных и
-                // «Итоги учёта» скрыты; уточнение Task 337)
-                this._view = newCanEdit
-                    ? ((saved === 'shift' || saved === 'day') ? saved : 'full')
-                    : 'shift';
+                // Task 340: зритель/min — сохранённый вид как у
+                // редактора (полный по умолчанию; Task 338 запирал в
+                // «сменном» — отменено трёхуровневой схемой)
+                this._view = (saved === 'shift' || saved === 'day') ? saved : 'full';
             }
             this._applyView({ rerender: true });
         },
@@ -39325,13 +39420,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // Task 311: пояснительные окна при наведении убраны по
                 // заявке — тултип (title) снят, hover-режим карточки
                 // удалён; назначение клика видно по курсору-пальцу.
-                // Task 338 (заявка: «карточки сотрудников» зрителю не
-                // видны): onclick рендерится ТОЛЬКО редакторам (как
-                // «+» заголовка «Сотрудник» — двойная защита: и здесь,
-                // и в onEmpCellClick/_openEmpPopup)
+                // Task 340 (заявка: уровням view карточка ОТКРЫВАЕТСЯ
+                // — БЕЗ элементов правки; min — нет): onclick
+                // рендерится уровням edit/view (гейт _empCardAllowed,
+                // двойная защита: и здесь, и в
+                // onEmpCellClick/_openEmpPopup)
                 var safeEmpTab = String(emp['таб_номер'] || '').replace(/'/g, '');
                 html += '<td class="ws-emp-col" data-tab="' + this._escAttr(safeEmpTab) + '"' +
-                        (this._canEdit
+                        (this._empCardAllowed()
                             ? ' onclick="WorkSchedule.onEmpCellClick(event, \'' + safeEmpTab + '\')"'
                             : '') +
                         '><div class="ws-emp-name">' +
@@ -39865,13 +39961,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // в ТЕЛО СТРАНИЦЫ (#wsTtPageBody, см. _ttBodyEl) вместо тела
         // шторки. Данные/вкладка — текущие (месяц/год сетки)
         onTotalsPageOpen: function() {
-            // Task 338 (заявка: «кнопка "Итоги учёта"» зрителю не видна):
-            // итоги доступны только в полном виде — зритель всегда в
-            // «сменном» (шахматка дневных скрыта), редактор в сменном/
-            // дневном тоже без итогов (гейт как в toggleTotals — защита
-            // от прямого перехода/крошек: назад, на табель)
+            // Task 338 (заявка: «кнопка "Итоги учёта"» уровню min не
+            // видна) + Task 340: итоги доступны только в полном виде И
+            // НЕ уровню «min» (workschedule.view.min) — редактор в
+            // сменном/дневном тоже без итогов (гейт как в toggleTotals
+            // — защита от прямого перехода/крошек: назад, на табель)
             var vGate = this._view || 'full';
-            if (vGate !== 'full') {
+            if (vGate !== 'full' || this._viewLevel === 'min') {
                 if (typeof navigateTo === 'function') navigateTo('work-schedule');
                 return;
             }
@@ -39996,17 +40092,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         toggleTotals: function() {
             // толерантный гейт: моки/старые состояния без _view = полный
             var vGate = this._view || 'full';
-            if (vGate !== 'full' && !this._totalsOpen && !this._ttPage) return;
+            // Task 340: итоги недоступны и уровню «min» (право
+            // workschedule.view.min — заявка: «Все кнопки доступны,
+            // кроме "Сформировать" и "Итоги учёта"»); ЗАКРЫТИЕ всегда
+            // разрешено (смена уровня/вида с открытой шторкой)
+            if ((vGate !== 'full' || this._viewLevel === 'min') &&
+                    !this._totalsOpen && !this._ttPage) return;
             // Task 334 (заявка): на МОБИЛЬНОМ итоги учёта открываются
             // ОТДЕЛЬНОЙ СТРАНИЦЕЙ #page-ws-totals («Итоги учёта», шапка
             // с многострелочным шевроном), НЕ шторкой: кнопка тулбара
-            // — просто переход. Гейт вида действует и здесь (в видах
-            // «сменный»/«дневной» итоги недоступны). Повторный тап
-            // кнопки на странице табеля невозможен (кнопка на другой
-            // странице); «закрытие» — шеврон/системный «назад»
+            // — просто переход. Гейт вида/уровня действует и здесь
+            // (в видах «сменный»/«дневной» и у «min» итоги недоступны).
+            // Повторный тап кнопки на странице табеля невозможен
+            // (кнопка на другой странице); «закрытие» — шеврон/
+            // системный «назад»
             if (typeof window !== 'undefined' && window.matchMedia
                     && !window.matchMedia('(min-width: 1024px)').matches) {
-                if (vGate !== 'full') return;
+                if (vGate !== 'full' || this._viewLevel === 'min') return;
                 if (typeof navigateTo === 'function') navigateTo('ws-totals');
                 return;
             }
@@ -42256,10 +42358,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Клик по полю сотрудника — прикреплённая карточка (кловер
         // активен, закрытие — клик мимо попапа или Esc).
         onEmpCellClick: function(ev, tabNo) {
-            // Task 338 (заявка: «карточки сотрудников» зрителю не видны):
-            // гейт права записи — двойная защита (onclick в сетке уже
-            // не рендерится зрителям; сюда — прямые/легаси вызовы)
-            if (!this._canEdit) return;
+            // Task 340 (заявка: уровням workschedule.view карточка
+            // ОТКРЫВАЕТСЯ, workschedule.view.min — нет): гейт
+            // _empCardAllowed (edit/view) — двойная защита (onclick в
+            // сетке рендерится только этим же уровням; сюда — прямые/
+            // легаси вызовы)
+            if (!this._empCardAllowed()) return;
             // взаимная блокировка попапов (обратное — onCellClick)
             this.closeCellPopup();
             var td = null;
@@ -42279,10 +42383,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // «прикреплена» (Task 311: hover-режим удалён — теперь только
         // клик, кловер активен, закрытие — клик мимо/Esc).
         _openEmpPopup: function(td, tabNo) {
-            // Task 338 (заявка): карточка сотрудника — редакторам;
-            // зритель («График работы — просмотр») попап не получает
-            // (гейт и для программных вызовов, не только клика)
-            if (!this._canEdit) return;
+            // Task 340 (заявка): карточка сотрудника — уровням
+            // edit/view (у «view» — БЕЗ элементов правки: «Уволить…»/
+            // «+ Отпуск…»/✎/✕ скрыты _canEdit в _renderEmpPopup);
+            // «min» попап не получает (гейт и для программных вызовов)
+            if (!this._empCardAllowed()) return;
             var popup = document.getElementById('wsEmpPopup');
             var closer = document.getElementById('wsEmpPopupCloser');
             if (!popup || !closer) return;
