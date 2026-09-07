@@ -4404,6 +4404,11 @@
         font-weight: 600;
         white-space: nowrap;
     }
+    /* Task 337 (заявка): кнопка вида — редакторская: зритель («График
+       работы — просмотр») её не видит (JS ставит [hidden]). Базовый
+       .ws-cross-btn (display: inline-flex) ПЕРЕБИВАЕТ UA-скрытие
+       [hidden] → display: none явно, специфичностью (0,2,0) */
+    .ws-view-btn[hidden] { display: none; }
 
     /* Task 251: попап выбора статуса рядом с ячейкой шахматки.
        Табличка «код — название» столбиком; фиксированное позиционирование —
@@ -37543,8 +37548,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
     var WorkSchedule = {
 
-        // Роли с правом записи (массив русских строк)
-        _WRITE_ROLES: ['КИП ИОС', 'КИП ИОС pro', 'КИП ИОС дежурный', 'Админ'],
+        // Роли с правом записи (массив русских строк).
+        // Task 337 (заявка): ЛЕГАСИ-запас «старого сервера» — матрица
+        // KIP8_Access недоступна (нет getMyAccess / сеть). РАБОЧАЯ
+        // проверка — ПРАВО workschedule.edit из МАТРИЦЫ (сервер шлюзит
+        // каждый запрос так же, RoleMatrixGate, Task 295): правка
+        // галочки в KIP8_Access меняет и сервер, и клиент (≤10 мин).
+        // ЗДЕСЬ список ЗАМЁРТВЛЁН на значениях матрицы ПО УМОЛЧАНИЮ
+        // (RoleMatrixInit, Task 293): «КИП ИОС дежурный» редактором
+        // БОЛЬШЕ не числится — смена решается галочками матрицы.
+        // Отдельно: «КИП ИОС дежурный» был в списке «на всякий случай»,
+        // хотя правом работ не наделён с Task 293
+        _WRITE_ROLES: ['КИП ИОС', 'КИП ИОС pro', 'Админ'],
 
         // Кэш данных
         _EMPLOYEES: [],
@@ -37777,10 +37792,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             try {
                 if (typeof KipAuth !== 'undefined' && KipAuth._cachedRole) role = KipAuth._cachedRole;
             } catch (e) {}
-            this._canEdit = (role === 'Админ') || (role && this._WRITE_ROLES.indexOf(role) !== -1);
+            this._canEdit = this._computeCanEdit(role);
 
             var genBtn = document.getElementById('wsGenerateBtn');
             if (genBtn) genBtn.hidden = !this._canEdit;
+            // Task 337 (заявка): кнопка ВИДА ТАБЕЛЯ #wsViewBtn — редакторская:
+            // зритель («График работы — просмотр») видит только полную
+            // шахматку, переключение видов — элемент управления, ему не
+            // нужнее «Сформировать» (замок роли был ПАЛЛИАТИВОМ Task 332
+            // — теперь правь через KIP8_Access, как описано в описании
+            // права workschedule.view: «кнопки и диалоги скрыты»)
+            var viewBtn = document.getElementById('wsViewBtn');
+            if (viewBtn) viewBtn.hidden = !this._canEdit;
             // Task 324 → 325: ряды действий/генерации тулбара — общий
             // НИЖНИЙ ряд Task 324 разделён по заявке Task 325 на ДВА:
             // ряд 2 — «Итоги учёта»/«Месяц»/«Год» (виден всем), ряд 3 —
@@ -38431,16 +38454,54 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // (в _renderGrid), гейт шторки — _applyView/toggleTotals.
         // ============================================================
 
+        // Task 337 (заявка: «у роли КИП ИОС дежурный — только просмотр,
+        // а показывает кнопки и пускает в правку»): право записи — из
+        // серверной МАТРИЦЫ KIP8_Access (как у расходомеров,
+        // FlowmeterData._computeCanInputReadings, Task 296):
+        //   · getMyAccess получен (found=true) → строго по чекбоксу
+        //     workschedule.edit (зритель — false, НЕЗАВИСИМО от роли);
+        //   · матрица недоступна (null — старый сервер/сеть) →
+        //     ЛЕГАСИ-список _WRITE_ROLES (Админ тоже легаси-запас:
+        //     сервер матрицы админу даёт все права — при живой
+        //     матрице галочка админа не нужна).
+        // Сервер шлюзит КАЖДЫЙ запрос по той же матрице
+        // (rmRequirePerm 'workschedule.edit', Task 295) — клиентская
+        // видимость прав не даёт: это только UX (кнопки «Сформировать»
+        // /«Вид», попапы правки). Пересчёт — при init и позднем
+        // приходе роли (_onRoleUpdate); правка галочки доезжает
+        // ≤ ~10 мин (heartbeat) или перезаходом
+        _computeCanEdit: function(role) {
+            if (!role) return false;
+            try {
+                if (typeof KipAuth !== 'undefined' &&
+                    typeof KipAuth._serverPerm === 'function') {
+                    var sp = KipAuth._serverPerm('workschedule.edit');
+                    if (sp !== null) return sp;
+                }
+            } catch (e) { /* ignore */ }
+            return (role === 'Админ') ||
+                (this._WRITE_ROLES.indexOf(role) !== -1);
+        },
+
         // Восстановление вида при init: роль «КИП ИОС дежурный» —
         // «сменный» насильно (замок), прочие роли — сохранённый
         // kip8_ws_view_v1 (полный по умолчанию). Применяет _applyView
         // (перерисовки НЕ зовёт — сетки ещё нет, отрисует loadGrid)
+        // Вид для зрителя — ВСЕГДА полный (Task 337): прав нет —
+        // сохранённый kip8_ws_view_v1 НЕ применяется, «сменный»/
+        // «дневной» остались от чужого сеанса или эпохи замка —
+        // сбрасываем: зритель должен видеть шахматку ЦЕЛИКОМ
         _initView: function(role) {
             var saved = null;
             try { saved = localStorage.getItem('kip8_ws_view_v1'); } catch (e) {}
-            this._viewLocked = (role === 'КИП ИОС дежурный');
+            var canEdit = this._computeCanEdit(role);
+            // Task 337: замок дежурного — только если роль ещё и редактор
+            // матрицы; зритель — всегда полный вид
+            this._viewLocked = (role === 'КИП ИОС дежурный') && canEdit;
             if (this._viewLocked) {
                 this._view = 'shift';
+            } else if (!canEdit) {
+                this._view = 'full';
             } else {
                 this._view = (saved === 'shift' || saved === 'day') ? saved : 'full';
             }
@@ -38506,8 +38567,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Клик по кнопке вида: полный → сменный → дневной → полный.
         // Запертый вид (роль «КИП ИОС дежурный») — тост-пояснение,
         // состояние не меняется. Итог переключения — тост с описанием
-        // вида (иконка без текста — нужен понятный отклик)
+        // вида (иконка без текста — нужен понятный отклик).
+        // Task 337: зритель («График работы — просмотр») сюда НЕ
+        // попадает — кнопка скрыта; программная защита тоже есть
         cycleView: function() {
+            if (!this._canEdit) return;
             if (this._viewLocked) {
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
                     KipToast.show('Роли «КИП ИОС дежурный» доступен только сменный вид табеля');
@@ -38556,19 +38620,35 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // перерисовывает сетку. Вызывается многократно — идемпотентно
         _onRoleUpdate: function(role) {
             if (!this._initialized) return;
-            this._canEdit = (role === 'Админ') ||
-                (role && this._WRITE_ROLES.indexOf(role) !== -1);
+            // Task 337: право записи — из матрицы (workschedule.edit);
+            // легаси-список — только запас недоступной матрицы.
+            // Идемпотентно при повторных вызовах (heartbeat с той же
+            // ролью): кнопки обновляем всегда (дёшево), вид и сетку —
+            // только когда право/замок РЕАЛЬНО изменились
+            var newCanEdit = this._computeCanEdit(role);
             var genBtn = document.getElementById('wsGenerateBtn');
-            if (genBtn) genBtn.hidden = !this._canEdit;
-            var locked = (role === 'КИП ИОС дежурный');
-            if (locked === !!this._viewLocked) return;
+            if (genBtn) genBtn.hidden = !newCanEdit;
+            // Task 337: кнопка вида — редакторская (как «Сформировать»)
+            var roleViewBtn = document.getElementById('wsViewBtn');
+            if (roleViewBtn) roleViewBtn.hidden = !newCanEdit;
+            // Замок «КИП ИОС дежурный» — только если роль при этом
+            // редактор матрицы (осознанное решение Task 293)
+            var locked = (role === 'КИП ИОС дежурный') && newCanEdit;
+            var changed = (newCanEdit !== this._canEdit) ||
+                (locked !== !!this._viewLocked);
+            this._canEdit = newCanEdit;
+            if (!changed) return;
             this._viewLocked = locked;
             if (locked) {
                 this._view = 'shift';
             } else {
                 var saved = null;
                 try { saved = localStorage.getItem('kip8_ws_view_v1'); } catch (e) {}
-                this._view = (saved === 'shift' || saved === 'day') ? saved : 'full';
+                // Task 337: зритель — всегда полный вид (переключения
+                // видов — редакторский инструмент, кнопки нет)
+                this._view = newCanEdit
+                    ? ((saved === 'shift' || saved === 'day') ? saved : 'full')
+                    : 'full';
             }
             this._applyView({ rerender: true });
         },
