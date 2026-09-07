@@ -4122,6 +4122,181 @@
     @keyframes wsRefreshSpin {
         to { transform: rotate(360deg); }
     }
+
+    /* ============================================================
+       Task 341: ПЕЧАТЬ ГРАФИКА РАБОТЫ (кнопка «Печать», ряд 1
+       тулбара). Печатный лист #wsPrintSheet создаётся в <body>
+       методом WorkSchedule.printGrid: на ЭКРАНЕ лист НЕ виден
+       (display:none), при ПЕЧАТИ скрывается всё приложение
+       (body > *:not(#wsPrintSheet)) и показывается только лист.
+       Вёрстка ВСЕГДА СВЕТЛАЯ («бумажная») — независимо от темы
+       приложения (тёмная тема не должна печатать чёрные листы);
+       свои классы wsp-*, никакой зависимости от переменных тем.
+       Формат — A4 АЛЬБОМНАЯ: 31 колонка дней + ФИО + «Дни»/«Часы».
+       Статусные ячейки несут inline-фон из справочника кодов
+       (как в шахматке) — печать фонов принудительна
+       (print-color-adjust: exact). Длинные списки переносятся на
+       следующие листы с повтором шапки (table-header-group),
+       строки не рвутся посередине (page-break-inside: avoid)
+       ============================================================ */
+    #wsPrintSheet { display: none; }
+    .ws-print-btn { white-space: nowrap; }
+
+    @media print {
+        @page { size: A4 landscape; margin: 8mm; }
+        html, body { background: #fff !important; }
+        /* всё приложение скрыто — остаётся только печатный лист */
+        body > *:not(#wsPrintSheet) { display: none !important; }
+        #wsPrintSheet {
+            display: block !important;
+            color: #1b1f24;
+            font: 10px/1.3 Arial, Helvetica, sans-serif;
+        }
+
+        /* шапка листа: заголовок, месяц/год/вид, норма, штамп */
+        #wsPrintSheet .wsp-head { margin-bottom: 3mm; }
+        #wsPrintSheet .wsp-title {
+            font-size: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+        #wsPrintSheet .wsp-sub {
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 1mm;
+        }
+        #wsPrintSheet .wsp-meta { font-size: 10px; color: #3c4650; margin-top: 0.8mm; }
+        #wsPrintSheet .wsp-printed { font-size: 9px; color: #5c6670; margin-top: 0.8mm; }
+
+        /* шахматка: фиксированная раскладка, колонки дней равные */
+        #wsPrintSheet .wsp-grid {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        #wsPrintSheet .wsp-grid thead { display: table-header-group; }
+        #wsPrintSheet .wsp-grid tr { page-break-inside: avoid; }
+        #wsPrintSheet .wsp-grid th,
+        #wsPrintSheet .wsp-grid td {
+            border: 1px solid #8f99a3;
+            text-align: center;
+            vertical-align: middle;
+            padding: 0;
+            height: 6.2mm;
+            overflow: hidden;
+        }
+        #wsPrintSheet .wsp-emp {
+            width: 50mm;
+            text-align: left;
+            padding: 0 1.5mm;
+            height: auto;
+            min-height: 6.2mm;
+        }
+        #wsPrintSheet .wsp-day { width: 6.5mm; }
+        #wsPrintSheet .wsp-day span {
+            display: block;
+            font-size: 6.5px;
+            color: #54606a;
+            line-height: 1.1;
+        }
+        /* выходные/праздники в шапке — заливка/цвет как в шахматке */
+        #wsPrintSheet .wsp-day.wsp-off { background: #dfe5e9; }
+        #wsPrintSheet .wsp-day.wsp-feast,
+        #wsPrintSheet .wsp-day.wsp-feast span { color: #b02a2a; }
+        #wsPrintSheet .wsp-tot { width: 9mm; font-weight: 700; }
+        #wsPrintSheet .wsp-fio {
+            display: block;
+            font-weight: 700;
+            font-size: 9px;
+            line-height: 1.2;
+        }
+        #wsPrintSheet .wsp-pos {
+            display: block;
+            font-size: 7.5px;
+            color: #4c5660;
+            line-height: 1.2;
+        }
+
+        /* ячейки дней: код статуса с inline-фоном печатается
+           принудительно (иначе браузер выбрасывает фоны) */
+        #wsPrintSheet .wsp-cell {
+            position: relative;
+            font-weight: 700;
+            font-size: 8.5px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        /* пустые ячейки нерабочих дней — серая заливка (как
+           розовая в шахматке, но в печатной гамме); статусные
+           ячейки сохраняют свой inline-фон */
+        #wsPrintSheet .wsp-cell.wsp-cell-off { background: #e2e8ec !important; }
+        /* план отпуска (записи ещё нет) — пунктирная рамка */
+        #wsPrintSheet .wsp-cell.wsp-vac {
+            border: 1px dashed #6e7780 !important;
+        }
+        /* бейджи мероприятий (правый нижний угол) — сплошные у
+           сформированных дней, пунктирные у пустых (план) */
+        #wsPrintSheet .wsp-ev-wrap {
+            position: absolute;
+            right: 0.6mm;
+            bottom: 0.4mm;
+            line-height: 1;
+            white-space: nowrap;
+        }
+        #wsPrintSheet .wsp-ev {
+            display: inline-block;
+            border: 1px solid #4c5660;
+            font-size: 6px;
+            font-weight: 700;
+            line-height: 1;
+            padding: 0.4mm 0.5mm 0.3mm;
+            margin-left: 0.5mm;
+        }
+        #wsPrintSheet .wsp-ev.wsp-ev-plan { border-style: dashed; }
+        /* переработка — красная точка в правом верхнем углу */
+        #wsPrintSheet .wsp-over {
+            position: absolute;
+            right: 0.7mm;
+            top: 0.7mm;
+            width: 1.6mm;
+            height: 1.6mm;
+            border-radius: 50%;
+            background: #c62828;
+        }
+        /* итоговая строка по подразделению */
+        #wsPrintSheet .wsp-sum td { font-weight: 700; background: #eef1f4; }
+        #wsPrintSheet .wsp-sum .wsp-emp {
+            text-align: right;
+            font-size: 9px;
+            color: #2c3640;
+        }
+
+        /* легенда кодов и пояснения */
+        #wsPrintSheet .wsp-legend {
+            margin-top: 2.5mm;
+            font-size: 8px;
+            line-height: 1.7;
+        }
+        #wsPrintSheet .wsp-legend-t { font-weight: 700; }
+        #wsPrintSheet .wsp-lg { margin-right: 4mm; white-space: nowrap; }
+        #wsPrintSheet .wsp-lg i {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border: 1px solid #7a838c;
+            margin-right: 1mm;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        #wsPrintSheet .wsp-foot {
+            margin-top: 1.5mm;
+            font-size: 7.5px;
+            color: #4c5660;
+            line-height: 1.5;
+        }
+    }
+
     /* Task 317: ИНФОРМАЦИОННОЕ ОКНО «данные от …» кнопки «Обновить» —
        строка возраста локальной копии УБРАНА из бара (занимала место
        в ряду 1, Task 314) и живёт в окне, появляющемся при НАВЕДЕНИИ
@@ -13458,6 +13633,25 @@
                          нативном title (двойное окно); штамп «данные
                          от …» убран из бара — не занимает место в ряду 1 -->
                     <button type="button" id="wsRefreshBtn" class="ws-refresh-btn" onclick="WorkSchedule.refreshData()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" fill="currentColor"/></svg>Обновить</button>
+                    <!-- Task 341: кнопка «Печать» — печать графика работы
+                         (шахматки ОТКРЫТОГО месяца) на бумагу/PDF.
+                         Функция ПРОСМОТРА: доступна ВСЕМ уровням
+                         доступа (edit/view/min) — печатается то, что
+                         видит пользователь: текущий вид табеля
+                         (полный/сменный/дневной), у уровня min
+                         «Мастер КИПиА» скрыт (фильтр _viewEmployees,
+                         Task 340). Клик строит печатный лист
+                         #wsPrintSheet в <body> (заголовок с нормой
+                         месяца, шахматка с цветами кодов из
+                         справочника, колонки «Дни»/«Часы» — те же
+                         счётчики, что во вкладке «Итоги учёта», и
+                         легенда кодов) и вызывает window.print().
+                         Печатная вёрстка — @media print (A4
+                         АЛЬБОМНАЯ, приложение целиком скрыто,
+                         показывается только лист; на экране лист
+                         display:none). Стиль кнопки — как у
+                         «Обновить» (нейтральный, иконка принтера) -->
+                    <button type="button" id="wsPrintBtn" class="ws-refresh-btn ws-print-btn" onclick="WorkSchedule.printGrid()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V6z" fill="currentColor"/></svg>Печать</button>
                     </div>
                     <!-- Task 311: кнопка «+ Сотрудник» УДАЛЕНА из тулбара
                          (Task 307 приносил её сюда со страницы
@@ -37847,6 +38041,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // защита программных вызовов/состояний до прихода матрицы)
             var viewBtn = document.getElementById('wsViewBtn');
             if (viewBtn) viewBtn.hidden = (this._viewLevel === null);
+            // Task 341: кнопка «Печать» — фича ПРОСМОТРА (ряд 1):
+            // видна ВСЕМ уровням (edit/view/min), скрыта только при
+            // полном отсутствии прав (раздел и так скрыт — защита
+            // программных вызовов/состояний до прихода матрицы)
+            var printBtn = document.getElementById('wsPrintBtn');
+            if (printBtn) printBtn.hidden = (this._viewLevel === null);
             // Task 338→340: класс ws-readonly (CSS выключает подсветку
             // наведения ФИО; клик карточки в сетке не рендерится) —
             // только уровню «min» (карточек нет); уровню «view»
@@ -38759,6 +38959,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // скрыт только при полном отсутствии прав
             var roleViewBtn = document.getElementById('wsViewBtn');
             if (roleViewBtn) roleViewBtn.hidden = (newLevel === null);
+            // Task 341: «Печать» — тоже фича просмотра (ряд 1):
+            // скрыта только при полном отсутствии прав
+            var rolePrintBtn = document.getElementById('wsPrintBtn');
+            if (rolePrintBtn) rolePrintBtn.hidden = (newLevel === null);
             // Task 338→340: ws-readonly (CSS: колонка ФИО без
             // hover-подсветки) — только уровню «min» (карточек нет);
             // уровню «view» карточка открывается — подсветка уместна
@@ -38899,6 +39103,253 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }).catch(function() {
                 done(false);
             });
+        },
+
+        // ============================================================
+        // Task 341 (заявка: «нужно реализовать функцию печати
+        // графика работ»): ПЕЧАТЬ ГРАФИКА РАБОТЫ. Кнопка «Печать»
+        // (ряд 1 тулбара, доступна всем уровням — фича ПРОСМОТРА)
+        // строит в <body> печатный лист #wsPrintSheet и вызывает
+        // window.print(). Печатается ТО, что видит пользователь:
+        // шахматка ОТКРЫТОГО месяца текущего вида табеля (у уровня
+        // min «Мастер КИПиА» скрыт — _viewEmployees, Task 340),
+        // ЭФФЕКТИВНЫЕ записи (серверные + локальные правки, как в
+        // сетке), колонки «Дни»/«Часы» (те же счётчики, что во
+        // вкладке «Итоги учёта»: явки/часы БЕЗ переработки д/н) и
+        // легенда кодов из справочника. Лист СВЕТЛЫЙ всегда (тёмная
+        // тема приложения на бумагу не переносится), формат —
+        // A4 альбомная (@media print в CSS скрывает приложение
+        // целиком). Лист НЕ удаляется после печати (на экране
+        // display:none) — следующая печать просто перезаписывает
+        // innerHTML: устойчиво к браузерам/десктопу без события
+        // afterprint
+        // ============================================================
+        printGrid: function() {
+            // прав на раздел нет вообще (раздел скрыт) — защита
+            // программных вызовов
+            if (this._viewLevel === null) return;
+            var viewEmps = this._viewEmployees();
+            if (!this._EMPLOYEES.length || !viewEmps.length) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Нет данных для печати — график пуст');
+                }
+                return;
+            }
+            // создать/найти печатный лист в корне <body>
+            var sheet = document.getElementById('wsPrintSheet');
+            if (!sheet) {
+                sheet = document.createElement('div');
+                sheet.id = 'wsPrintSheet';
+                document.body.appendChild(sheet);
+            }
+            // итоги месяца — те же счётчики, что во вкладке
+            // «Итоги учёта» (эффективные записи + типы персонала)
+            var agg = this._totalsAgg(
+                this._totalsEffectiveEntries(),
+                this._empTypeMap(this._EMPLOYEES));
+            sheet.innerHTML = this._buildPrintHtml(viewEmps, agg);
+            window.print();
+        },
+
+        // Task 341: HTML печатного листа (светлая «бумажная» вёрстка,
+        // классы wsp-* из @media print-блока CSS). Повторяет логику
+        // раскладки _renderGrid: шапка дней с днём недели/выходными/
+        // праздниками/«*» сокращённых, строки сотрудников вида, в
+        // ячейках — ЭФФЕКТИВНЫЕ записи (запись + локальная правка,
+        // __delete — ячейка пустая), план отпуска пунктиром,
+        // мероприятия бейджами (см. _printCell). В конце каждой
+        // строки — «Дни»/«Часы» (agg.byTab), внизу — итоговая
+        // строка (agg.grand) и легенда кодов справочника
+        _buildPrintHtml: function(viewEmps, agg) {
+            var months = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                          'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            var dows = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+            var daysInMonth = new Date(this._year, this._month, 0).getDate();
+            var viewLabels = { full: 'полный', shift: 'сменный', day: 'дневной' };
+
+            // норма месяца из производственного календаря (если
+            // данные года загружены; без них строка опускается)
+            var normTxt = '';
+            try {
+                if (typeof ProdCalendar !== 'undefined' && ProdCalendar.monthStats) {
+                    var ms = ProdCalendar.monthStats(this._year, this._month);
+                    if (ms && ms.workDays) {
+                        normTxt = 'Норма (40-час. неделя): ' + ms.workDays +
+                                  ' раб. дн. · ' +
+                                  (typeof this._fmtTotalsNum === 'function'
+                                      ? this._fmtTotalsNum(ms.hours40)
+                                      : String(ms.hours40)) + ' ч';
+                    }
+                }
+            } catch (e) { /* календарь недоступен — без нормы */ }
+
+            var now = new Date();
+            var pad2 = function(v) { return (v < 10 ? '0' : '') + v; };
+            var printed = pad2(now.getDate()) + '.' + pad2(now.getMonth() + 1) +
+                          '.' + now.getFullYear() + ' ' + pad2(now.getHours()) +
+                          ':' + pad2(now.getMinutes());
+
+            var html = '<div class="wsp-head">' +
+                '<div class="wsp-title">График работы — табель учёта рабочего времени</div>' +
+                '<div class="wsp-sub">' + months[this._month - 1] + ' ' + this._year +
+                ' г. · вид табеля: ' + (viewLabels[this._view] || 'полный') + '</div>' +
+                (normTxt ? '<div class="wsp-meta">' + normTxt + '</div>' : '') +
+                '<div class="wsp-printed">Распечатано: ' + printed + '</div>' +
+                '</div>';
+
+            // шапка таблицы: сотрудник + дни месяца + итоги
+            html += '<table class="wsp-grid"><thead><tr>';
+            html += '<th class="wsp-emp">Сотрудник</th>';
+            for (var d = 1; d <= daysInMonth; d++) {
+                var dt = new Date(this._year, this._month - 1, d);
+                var dInfo = (typeof ProdCalendar !== 'undefined' && ProdCalendar.dayInfo)
+                    ? ProdCalendar.dayInfo(this._year, this._month, d) : null;
+                var isOff = dInfo ? dInfo.off
+                          : (dt.getDay() === 0 || dt.getDay() === 6);
+                var isFeast = dInfo ? !!dInfo.holiday : false;
+                var isShort = dInfo ? !!dInfo.short : false;
+                html += '<th class="wsp-day' + (isOff ? ' wsp-off' : '') +
+                        (isFeast ? ' wsp-feast' : '') + '">' + d +
+                        (isShort ? '*' : '') + '<span>' + dows[dt.getDay()] +
+                        '</span></th>';
+            }
+            html += '<th class="wsp-tot">Дни</th><th class="wsp-tot">Часы</th>';
+            html += '</tr></thead><tbody>';
+
+            // строки сотрудников: эффективные записи + итоги
+            var entryIdx = this._buildEntryIndex();
+            var pend = this._PENDING || {};
+            for (var ei = 0; ei < viewEmps.length; ei++) {
+                var emp = viewEmps[ei];
+                var posLabel = this._posLabel(emp);
+                html += '<tr><td class="wsp-emp"><span class="wsp-fio">' +
+                        this._esc(emp['ФИО']) + '</span>' +
+                        (posLabel ? '<span class="wsp-pos">' + this._esc(posLabel) + '</span>' : '') +
+                        '</td>';
+                for (var day = 1; day <= daysInMonth; day++) {
+                    var ddt = new Date(this._year, this._month - 1, day);
+                    var isoDate = this._isoDate(ddt);
+                    var key = isoDate + '|' + emp['таб_номер'];
+                    var entry = entryIdx[key] || null;
+                    var pending = pend[key] || null;
+                    var effEntry = entry;
+                    if (pending) {
+                        if (pending.__delete) {
+                            effEntry = null;
+                        } else {
+                            effEntry = Object.assign({}, entry || {}, pending,
+                                                     { 'источник': 'руч' });
+                        }
+                    }
+                    html += this._printCell(day, isoDate, emp, effEntry);
+                }
+                var a = (agg && agg.byTab)
+                    ? agg.byTab[String(emp['таб_номер'] || '')] : null;
+                html += '<td class="wsp-tot">' + (a ? a.work : '') + '</td>' +
+                        '<td class="wsp-tot">' + (a
+                            ? (typeof this._fmtTotalsNum === 'function'
+                                ? this._fmtTotalsNum(a.hours)
+                                : String(a.hours))
+                            : '') + '</td>';
+                html += '</tr>';
+            }
+
+            // итог по подразделению (grand-счётчик вкладки «Месяц»)
+            if (agg && agg.grand) {
+                html += '<tr class="wsp-sum"><td class="wsp-emp" colspan="' +
+                        (daysInMonth + 1) + '">Итого — явки (дни) и часы, без переработки д/н</td>' +
+                        '<td class="wsp-tot">' + agg.grand.work + '</td>' +
+                        '<td class="wsp-tot">' + (typeof this._fmtTotalsNum === 'function'
+                            ? this._fmtTotalsNum(agg.grand.hours)
+                            : String(agg.grand.hours)) + '</td></tr>';
+            }
+            html += '</tbody></table>';
+
+            // легенда кодов (справочник — единственный источник имён)
+            var codes = this._STATUS_CODES || [];
+            if (codes.length) {
+                html += '<div class="wsp-legend"><span class="wsp-legend-t">Коды:</span>';
+                for (var ci = 0; ci < codes.length; ci++) {
+                    html += '<span class="wsp-lg"><i style="background:' +
+                            (codes[ci].color || '#ffffff') + ';"></i>' +
+                            this._esc(codes[ci].code) +
+                            (codes[ci].name ? ' — ' + this._esc(codes[ci].name) : '') +
+                            '</span>';
+                }
+                html += '</div>';
+            }
+            html += '<div class="wsp-foot">* — сокращённый предпраздничный рабочий день; ' +
+                    'пунктирная рамка ячейки — плановый отпуск (записи ещё нет); ' +
+                    'бейдж в углу ячейки — мероприятие (инструктаж/обучение/проверка); ' +
+                    'красная точка — переработка; «Дни»/«Часы» — явки и рабочие часы, ' +
+                    'переработка (д/н) учтена в приложении («Итоги учёта»).</div>';
+            return html;
+        },
+
+        // Task 341: ячейка печатной шахматки — упрощённый _renderCell
+        // без экранных фич (клики/подсветки/сегодня), цвета — inline
+        // из справочника (печать фонов — print-color-adjust: exact):
+        // основной код фоном; «.» — пустая; статус-мероприятие —
+        // бейдж (ядро пустое); план отпуска — пунктир; переработка —
+        // красная точка; пустые нерабочие — серая заливка
+        // (wsp-cell-off, как розовая в сетке — только ПУСТЫЕ ячейки,
+        // статусные сохраняют свой цвет)
+        _printCell: function(day, isoDate, emp, entry) {
+            var status = entry ? entry.статус : '';
+            var isOvertime = !!(entry && entry.переработка === 1);
+            var isDotCode = (status === '.');
+            var isEventStatus = !!status &&
+                this._EVENT_CODES.indexOf(status) !== -1;
+            var showMainCode = !!status && !isDotCode && !isEventStatus;
+
+            var classes = ['wsp-cell'];
+            var style = '';
+            if (showMainCode) {
+                var meta = this._statusMeta(status) || {};
+                if (meta.color) style += 'background:' + meta.color + ';';
+            }
+            // нерабочие дни (производственный календарь): заливка —
+            // только ПУСТЫМ ячейкам без плана (статусные — свой цвет)
+            var dayOff = this._calDayOff(day);
+            // план отпуска в пустой ячейке — пунктирная рамка
+            var vacPlan = null;
+            if (!status) {
+                vacPlan = this._vacationAt(isoDate, emp['таб_номер']);
+                if (vacPlan) classes.push('wsp-vac');
+            }
+            if (dayOff && !showMainCode && !vacPlan) classes.push('wsp-cell-off');
+
+            var content = showMainCode ? this._esc(status) : '';
+            if (isOvertime) content += '<i class="wsp-over"></i>';
+
+            // мероприятия дня — бейджами в углу (как в сетке):
+            // сплошные у сформированного дня, пунктирные у пустого
+            // (план); статус-мероприятие без строки в «Инструктажах»
+            // — виртуальный бейдж, чтобы день не потерял событие
+            var events = this._eventsAt(isoDate, emp['таб_номер']);
+            if (isEventStatus) {
+                var covered = false;
+                for (var ci = 0; ci < events.length; ci++) {
+                    if (events[ci].code === status) { covered = true; break; }
+                }
+                if (!covered) {
+                    events = events.concat([{ code: status, training: null }]);
+                }
+            }
+            var evHtml = '';
+            if (events.length) {
+                var solid = !!status;
+                var chips = '';
+                for (var evj = 0; evj < events.length; evj++) {
+                    chips += '<span class="wsp-ev' +
+                             (solid ? '' : ' wsp-ev-plan') + '">' +
+                             this._esc(events[evj].code) + '</span>';
+                }
+                evHtml = '<span class="wsp-ev-wrap">' + chips + '</span>';
+            }
+            return '<td class="' + classes.join(' ') + '"' +
+                   (style ? ' style="' + style + '"' : '') + '>' +
+                   content + evHtml + '</td>';
         },
 
         // force (Task 314): true — сеть обязательно (кнопка «Обновить»
