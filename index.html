@@ -4382,24 +4382,23 @@
        вид всегда нейтральный; ЗАПЕРТЫЙ вид (роль «КИП ИОС дежурный» —
        доступен только сменный) — класс ws-view-locked: приглушена,
        курсор обычный; клики всё равно игнорирует cycleView.
-       Текущий вид показывает ИКОНКА (группа «чужих» строк гаснет) +
-       информационное окно #wsViewTip */
+       Текущий вид озвучивается тостом и информационным окном
+       #wsViewTip. Task 334 (заявка): ЗНАЧКИ УДАЛЕНЫ — в кнопке
+       ТОЛЬКО текст «Вид» */
     .ws-view-btn.ws-view-locked {
         opacity: 0.6;
         cursor: default;
     }
     .ws-view-btn.ws-view-locked:active { opacity: 0.6; }
-    /* Task 333 (заявка: «кнопку переключения вида подпиши „Вид“»):
-       кнопка — уже НЕ квадрат-иконка: иконка + ПОДПИСЬ «Вид»
-       (как у текстовых кнопок бара, 13px/600); ширина — по
-       содержимому (auto + паддинги 9px), иконка не сжимается.
-       Подсказка #wsViewTip и aria-label сохраняются */
+    /* Task 333 → 334 (заявка: «без значков, просто „Вид“»):
+       ширина — по содержимому (auto + паддинги 9px),
+       текст 13px/600. Подсказка #wsViewTip и aria-label
+       сохраняются */
     .ws-view-btn {
         width: auto;
         padding: 0 9px;
         gap: 5px;
     }
-    .ws-view-btn svg { flex: 0 0 auto; }
     .ws-view-btn .ws-view-label {
         font-size: 13px;
         font-weight: 600;
@@ -5023,6 +5022,127 @@
             overflow: hidden;
         }
         #page-work-schedule.ws-tt-open .ws-tt-drawer { transform: none; }
+    }
+
+    /* ============================================================
+       Task 334 (заявка: МОБИЛЬНАЯ ВЕРСИЯ ТАБЕЛЬНОГО УЧЁТА):
+       1) кнопка ПЕРЕКРЁСТНОЙ ПОДСВЕТКИ #wsCrossBtn СКРЫТА — её
+          функционал (перекрестье строк/столбцов при НАВЕДЕНИИ
+          курсора) на сенсорном экране не реализуется;
+       2) окна «Мероприятия» (#wsEventsPanel) и «Нормы»
+          (#wsCalPanel) ИЗНАЧАЛЬНО СКРЫТЫ — раскрываются
+          компактными ЧИПАМИ .ws-mob-chips (тоггл, классы
+          ws-mob-events-on / ws-mob-norms-on на странице);
+       3) ИТОГИ УЧЁТА — ОТДЕЛЬНАЯ СТРАНИЦА #page-ws-totals
+          (не шторка): шапка с многострелочным шевроном и
+          заголовком «Итоги учёта», вкладки Месяц/Год, таблица
+          с ФАМИЛИЯМИ сотрудников (стики-колонка);
+       4) при ГОРИЗОНТАЛЬНОЙ прокрутке шахматки и таблиц итогов
+          колонка ФИО/фамилий СУЖАЕТСЯ до ПЕРВЫХ 4 БУКВ фамилии
+          (класс .ws-narrow на таблице + JS-обмен текста
+          span[data-s4] ⇄ span[data-full]). Всё — только ≤1023px;
+       на десктопе поведение прежнее (шторка, окна-трети бара,
+       подсветка, полное ФИО)
+       ============================================================ */
+    @media (max-width: 1023px) {
+        /* 1) кнопка подсветки — СКРЫТА на мобильном */
+        #wsCrossBtn { display: none; }
+
+        /* 2) окна мероприятий/норм — скрыты, пока чип не включён */
+        #page-work-schedule:not(.ws-mob-events-on) #wsEventsPanel,
+        #page-work-schedule:not(.ws-mob-norms-on) #wsCalPanel {
+            display: none;
+        }
+
+        /* 4) СУЖЕНИЕ колонки ФИО шахматки: класс .ws-narrow на
+           .ws-grid ставит/снимает JS по scrollLeft контейнера;
+           ширина фиксированная (узкая), таб. номер и подпись
+           должности скрыты — видны ТОЛЬКО 4 буквы фамилии */
+        .ws-grid.ws-narrow thead th.ws-emp-col,
+        .ws-grid.ws-narrow tbody td.ws-emp-col {
+            width: 76px;
+            min-width: 76px;
+            padding: 6px 4px;
+        }
+        .ws-grid.ws-narrow td.ws-emp-col .ws-tab-no,
+        .ws-grid.ws-narrow td.ws-emp-col .ws-emp-pos { display: none; }
+
+        /* 4) СУЖЕНИЕ колонки сотрудников таблиц итогов (шторка и
+           страница): класс .ws-narrow на .ws-tt-table */
+        .ws-tt-table.ws-narrow th.ws-tt-emp,
+        .ws-tt-table.ws-narrow td.ws-tt-emp {
+            width: 58px;
+        }
+        .ws-tt-table.ws-narrow .ws-tt-tabno { display: none; }
+    }
+
+    /* Task 334: ЧИПЫ мобильного бара — компактные капсулы-тогглы
+       «Мероприствия»/«Нормы» (высота ряда кнопок, прямые углы —
+       стиль кнопок тулбара Task 254/328); активный чип — акцент.
+       На десктопе ряд чипов НЕ отображается (окна и так в баре) */
+    .ws-mob-chips {
+        display: none;
+        gap: 6px;
+    }
+    .ws-mob-chip {
+        flex: 0 0 auto;
+        padding: 5px 11px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary, #e0e0e0);
+        background: var(--bg-tertiary, #0e1621);
+        border: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        border-radius: 0;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .ws-mob-chip[aria-pressed="true"] {
+        background: rgba(74, 143, 199, 0.22);
+        color: #6aa6e0;
+        border-color: rgba(74, 143, 199, 0.45);
+    }
+    [data-theme="light"] .ws-mob-chip {
+        color: #000;
+        background: #e9e7de;
+        border-color: rgba(0, 0, 0, 0.12);
+    }
+    [data-theme="light"] .ws-mob-chip[aria-pressed="true"] {
+        background: rgba(74, 143, 199, 0.16);
+        color: #1a4060;
+        border-color: rgba(74, 143, 199, 0.4);
+    }
+    @media (max-width: 1023px) {
+        .ws-mob-chips { display: flex; }
+    }
+
+    /* Task 334: СТРАНИЦА «Итоги учёта» (#page-ws-totals) —
+      (app-shell: шапка 56px липкая, вкладки, тело таблицы
+       во весь остаток экрана — страница НЕ прокручивается
+       целиком, скролл внутри тела как в шторке). Высота: 100vh
+       минус шапка 56px минус низ 70px (паддинг страницы под
+       нижнюю навигацию + safe-area) */
+    .ws-tt-page {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 56px - 70px - env(safe-area-inset-bottom, 0px));
+    }
+    .ws-tt-page-tabs {
+        display: flex;
+        gap: 6px;
+        padding: 8px 10px 0 10px;
+        flex: none;
+    }
+    /* тело страницы итогов: те же правила скролла, что у тела
+       шторки (.ws-tt-body), здесь — только компоновка страницы;
+       фон — как у панели шторки (стик-колонка ФИО сливается) */
+    .ws-tt-page-body { flex: 1 1 auto; }
+    .ws-tt-page-body { background: var(--bg-tertiary, #0e1621); }
+    [data-theme="light"] .ws-tt-page-body { background: #e9e7de; }
+    @media (min-width: 1024px) {
+        /* десктоп: страница итогов не используется (шторка);
+           при прямом заходе (#hash) — обычная прокрутка страницы */
+        .ws-tt-page { height: auto; }
+        .ws-tt-page-body { max-height: calc(100vh - 56px - 120px); }
     }
     /* Task 324 → 325 → 331: ШАПКА ШТОРКИ — только аварийное ⚠ (сбои
        загрузки года — ставит JS) и «Обновить» (год) у правого края
@@ -10523,6 +10643,20 @@
     [data-theme="light"] .dev-detail-top {
         background: #fcf8f0;
     }
+    /* Task 334 (заявка): блок картинка + «№ прибора» + «Место
+       установки» НЕ прокручивается по вертикали — ЛИПКИЙ под
+       шапкой страницы (56px, sticky): при прокрутке полной
+       карточки прибора верх остаётся на виду; тень отделяет его
+       от прокручивающегося содержимого (.dev-detail-rows) */
+    #page-device-detail .dev-detail-top {
+        position: sticky;
+        top: 56px;
+        z-index: 5;
+        box-shadow: 0 10px 14px -10px rgba(0, 0, 0, 0.6);
+    }
+    [data-theme="light"] #page-device-detail .dev-detail-top {
+        box-shadow: 0 10px 14px -10px rgba(0, 0, 0, 0.3);
+    }
     /* Картинка-превью — прижата к левому краю карточки */
     .dev-detail-image-wrap {
         position: relative;
@@ -11295,6 +11429,17 @@
             overflow-x: clip;
             height: auto;
             flex: none;
+        }
+        /* Task 334 (заявка: карточка прибора — блок картинка+№+Место
+           НЕ прокручивается по вертикали): страница КАРТОЧКИ ПРИБОРА —
+           ИСКЛЮЧЕНИЕ из «мобильной защиты»: overflow-y:auto делает
+           активную страницу СКРОЛЛ-КОНТЕЙНЕРОМ, и position: sticky
+           .dev-detail-top привязывается к НЕЙ (высота auto — сама не
+           прокручивается) вместо html — липкость НЕ срабатывает.
+           overflow: visible возвращает sticky к html (шапка 56px);
+           прокрутка страницы — документом, как у всех страниц */
+        #contentArea > #page-device-detail.page-content.active {
+            overflow: visible;
         }
         /* ====== SAFETY NET: автоочистка утечек ticket-open / ticket-img-viewing ======
            Если класс-блокировка остался на body, но соответствующий элемент
@@ -12584,10 +12729,23 @@
             max-width: 100%;
             padding-left: 0;  /* картинка вплотную к левому краю */
         }
-        /* Верхний блок: картинка квадратная слева, №/Место справа */
+        /* Верхний блок: картинка квадратная слева, №/Место справа.
+           Task 334 (заявка): блок НЕ прокручивается по вертикали —
+           ЛИПКИЙ у верха скролл-зоны панели (.detail-panel-body,
+           padding 16px): выносится на full-bleed отрицательными
+           маржами и возвращает внутренний отступ слева — картинка
+           на прежнем месте, а при прокрутке блок перекрывает всю
+           ширину зоны (контент не «просвечивает» по бокам) */
         #detailPanel .dev-detail-top {
             flex-direction: row;  /* ряд: картинка + мета */
             margin-bottom: 14px;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            margin-left: -16px;
+            margin-right: -16px;
+            padding-left: 16px;
+            box-shadow: 0 10px 14px -10px rgba(0, 0, 0, 0.5);
         }
         /* Квадратный блок картинки на десктопе */
         #detailPanel .dev-detail-image-wrap {
@@ -13204,13 +13362,13 @@
                              кнопка приглушена). Подсказка — информационное
                              окно #wsViewTip (как у «Обновить»/«Сформировать»,
                              Task 317/328), НЕ нативный title -->
+                        <!-- Task 334 (заявка): БЕЗ ЗНАЧКОВ — просто
+                             текст «Вид». Прежние иконки-полосы
+                             (wsViewIconFull/Shift/Day, 4 полосы
+                             группами) УДАЛЕНЫ — текущий вид озвучивается
+                             тостом при переключении и подписью
+                             информационного окна #wsViewTip -->
                         <button type="button" id="wsViewBtn" class="ws-cross-btn ws-view-btn" onclick="WorkSchedule.cycleView()" aria-label="Переключение вида табеля: полный">
-                            <svg id="wsViewIconFull" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16M4 9h16M4 15h16M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                            <svg id="wsViewIconShift" viewBox="0 0 24 24" aria-hidden="true" focusable="false" hidden><path d="M4 5h16M4 9h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 15h16M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.25"/></svg>
-                            <svg id="wsViewIconDay" viewBox="0 0 24 24" aria-hidden="true" focusable="false" hidden><path d="M4 5h16M4 9h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.25"/><path d="M4 15h16M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                            <!-- Task 333 (заявка): ПОДПИСЬ «Вид» — кнопка
-                                 переключения вида подпиши (иконка остаётся
-                                 слева, показывает текущий вид) -->
                             <span class="ws-view-label">Вид</span>
                         </button>
                         <!-- Task 328 (заявка): кнопка-иконка ПЕРЕКРЁСТНОЙ
@@ -13245,6 +13403,19 @@
                      ФИО», текст переносится. Заполняет
                      WorkSchedule._renderMonthEventsPanel (вызывается
                      из _renderGrid — смена месяца/загрузка/обновление) -->
+                <!-- Task 334 (заявка: мобильная версия табельного
+                     учёта): окна «Мероприятия» и «Нормы» ИЗНАЧАЛЬНО
+                     СКРЫТЫ на мобильном — раскрываются компактными
+                     ЧИПАМИ (тоггл). На десктопе чипы не видны,
+                     окна — как прежде (равные трети бара, Task 315).
+                     Классы на #page-work-schedule: ws-mob-events-on /
+                     ws-mob-norms-on — их ставит toggleMobPanel;
+                     без класса окно скрыто ТОЛЬКО в мобильной
+                     media (≤1023px) -->
+                <div class="ws-mob-chips" id="wsMobChips">
+                    <button type="button" id="wsChipEvents" class="ws-mob-chip" onclick="WorkSchedule.toggleMobPanel('events')" aria-pressed="false">Мероприствия</button>
+                    <button type="button" id="wsChipNorms" class="ws-mob-chip" onclick="WorkSchedule.toggleMobPanel('norms')" aria-pressed="false">Нормы</button>
+                </div>
                 <div id="wsEventsPanel" class="ws-events-panel" hidden></div>
                 <!-- Task 264/266/269/272: окошко производственного календаря
                      в баре кнопок графика — группа норм (заголовок +
@@ -13434,6 +13605,34 @@
                     <div class="ws-tt-hbar" id="wsTtHbar" aria-hidden="true"><div class="ws-hbar-thumb"></div></div>
                 </div>
             </div>
+            </div>
+        </div>
+
+        <!-- ============ Task 334 (заявка): ИТОГИ УЧЁТА — мобильная
+             СТРАНИЦА «Итоги учёта». На мобильном (≤1023px) кнопка
+             «Итоги учёта» тулбара табеля УХОДИТ на ЭТУ страницу
+             (toggleTotals → navigateTo('ws-totals')), а НЕ открывает
+             боковую шторку (шторка — десктопное поведение). Шапка —
+             как у остальных страниц: ЛИПКИЙ БАР с МНОГОСТРЕЛОЧНЫМ
+             шевроном «Назад» (глубина навигации; путь дашборд →
+             Документация ИОС → Табель → Итоги = 3 стрелки) и
+             заголовком «Итоги учёта». Вкладки «Месяц»/«Год» —
+             собственные кнопки страницы (синхронизированы с
+             setTotalsTab); таблица рендерится в тело страницы
+             #wsTtPageBody теми же _renderTotalsMonth/Year (через
+             _ttBodyEl), со СТИК-колонкой фамилий (ws-tt-emp —
+             мобильные правила таблиц итогов) и сужением фамилий до
+             4 букв при горизонтальной прокрутке. Закрытие —
+             шеврон/системный «назад» (popstate) либо переход на
+             любую страницу -->
+        <div id="page-ws-totals" class="page-content">
+            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Итоги учёта</div></div>
+            <div class="ws-tt-page">
+                <div class="ws-tt-page-tabs">
+                    <button type="button" id="wsTtPageTabMonth" class="ws-tt-tab active" onclick="WorkSchedule.setTotalsTab('month')">Месяц</button>
+                    <button type="button" id="wsTtPageTabYear" class="ws-tt-tab" onclick="WorkSchedule.setTotalsTab('year')">Год</button>
+                </div>
+                <div id="wsTtPageBody" class="ws-tt-body ws-tt-page-body"></div>
             </div>
         </div>
 
@@ -24540,6 +24739,14 @@
         if (page === 'work-schedule') {
             setTimeout(() => { if (typeof WorkSchedule !== 'undefined') WorkSchedule.init(); }, 30);
         }
+        // Task 334: мобильная СТРАНИЦА «Итоги учёта» — рендер таблиц
+        // (тело страницы) после активации; уход с неё (любой другой
+        // page) — флаг _ttPage снят, рендеры возвращаются в шторку
+        if (page === 'ws-totals') {
+            setTimeout(() => { if (typeof WorkSchedule !== 'undefined' && WorkSchedule.onTotalsPageOpen) WorkSchedule.onTotalsPageOpen(); }, 30);
+        } else if (typeof WorkSchedule !== 'undefined' && WorkSchedule._ttPage) {
+            WorkSchedule.onTotalsPageClose();
+        }
         if (page === 'plan-114') { setTimeout(() => { if (typeof plan114RenderList === 'function') plan114RenderList(); }, 30); }
         if (page === 'charts') { setTimeout(() => { if (typeof KipCharts !== 'undefined') KipCharts.onPageOpen(); }, 30); }
         if (TICKET_IDS.includes(page)) { setTimeout(() => initTicketsPage(page), 30); }
@@ -24856,6 +25063,9 @@
         // (Task 307/308: подразделы «Сотрудники»/«Инструктажи»/«Отпуска»
         //  удалены вместе со страницами — осталась только шахматка)
         'work-schedule':            'docs-ios',
+        // Task 334: мобильная страница «Итоги учёта» — дочь табеля
+        // (крошки: … / Табель учёта рабочего времени / Итоги учёта)
+        'ws-totals':                'work-schedule',
         // Инженерные калькуляторы
         'calc-kipa':        'calculators',
         'calc-electro':     'calculators',
@@ -25049,6 +25259,8 @@
         // (Task 307/308: подразделы «Сотрудники»/«Инструктажи»/«Отпуска»
         //  удалены — осталась метка самой шахматки)
         'work-schedule':            'Табель учёта рабочего времени',
+        // Task 334: мобильная страница итогов учёта
+        'ws-totals':                'Итоги учёта',
         'admin':            'Админ-панель',
         'admin-users':      'Пользователи',
         'admin-sessions':   'Активные сессии',
@@ -30246,7 +30458,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // READ_ROLES/WRITE_ROLES в WorkSchedule.gs также ограничены до ['Админ'].
         // Task 307: вкладка «Сотрудники» удалена; Task 308: вкладки
         // «Инструктажи» и «Отпуска» удалены — модуль одностраничный.
-        _WORK_SCHEDULE_PAGES: ['work-schedule'],
+        // Task 334: + мобильная страница итогов учёта (те же права,
+        // что у табеля — доступ наследуют все роли с workschedule.view)
+        _WORK_SCHEDULE_PAGES: ['work-schedule', 'ws-totals'],
         // Графики КИП ИОС — отдельная группа доступа (только Админ)
         _CHARTS_PAGES: ['charts'],
         _SECRET_PAGES: ['minesweeper', 'phonebook'],
@@ -37259,6 +37473,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // глушение эхо-событий скролла при синхронизации сетка ⇄ панель
         _totalsOpen: false,
         _totalsTab: 'month',
+        // Task 334: _ttPage — открыта мобильная СТРАНИЦА «Итоги
+        // учёта» (#page-ws-totals): рендеры таблиц идут в её тело
+        // (_ttBodyEl), шторка не трогается; снятие — любая навигация
+        // со страницы (onTotalsPageClose). _narrowAttached — слушатели
+        // горизонтальной прокрутки (сужение фамилий) уже повешены
+        _ttPage: false,
+        _narrowAttached: false,
         // Task 327 (заявка: «дополнительные скрытые столбцы»):
         // _totalsExtra — показаны дополнительные столбцы месячной
         // таблицы (Отгул, Больничный, Отпуск, Уч. отпуск, Прогул,
@@ -37368,6 +37589,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (t && t.closest && t.closest('th.ws-day-col')) return;
                 selfOnce._daySelect(null);
             }, true);
+
+            // Task 334: слушатели горизонтальной прокрутки — сужение
+            // колонки ФИО/фамилий до 4 букв (шахматка, шторка, страница
+            // итогов); однократно, passive
+            this._attachEmpNarrow();
 
             var now = new Date();
             this._year  = now.getFullYear();
@@ -38095,20 +38321,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
         },
 
-        // Кнопка вида #wsViewBtn: иконка текущего вида (полосы «чужой»
-        // группы гаснут), aria-label с названием вида, класс замка
-        // (роль «КИП ИОС дежурный» — приглушена)
+        // Кнопка вида #wsViewBtn (Task 334: БЕЗ иконок — только
+        // текст «Вид»): aria-label с названием текущего вида, класс
+        // замка (роль «КИП ИОС дежурный» — приглушена). Прежние
+        // иконки-полосы (wsViewIconFull/Shift/Day) удалены из HTML —
+        // их переключение здесь больше не нужно
         _updateViewBtn: function() {
             var btn = document.getElementById('wsViewBtn');
             if (!btn) return;
-            var icons = {
-                full: document.getElementById('wsViewIconFull'),
-                shift: document.getElementById('wsViewIconShift'),
-                day: document.getElementById('wsViewIconDay')
-            };
-            for (var k in icons) {
-                if (icons[k]) icons[k].hidden = (k !== this._view);
-            }
             var names = { full: 'полный', shift: 'сменный', day: 'дневной' };
             if (btn.setAttribute) {
                 btn.setAttribute('aria-label', 'Переключение вида табеля: сейчас ' +
@@ -38822,7 +39042,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         ' onclick="WorkSchedule.onEmpCellClick(event, \'' + safeEmpTab + '\')">' +
                         '<div class="ws-emp-name">' +
                         '<span class="ws-tab-no">' + this._esc(emp['таб_номер']) + '</span>' +
-                        this._esc(emp['ФИО']) + '</div>' + empPos + '</td>';
+                        // Task 334: ФИО — в span.ws-emp-full с data-full/
+                        // data-s4 (первые 4 буквы фамилии): JS-сужение при
+                        // горизонтальной прокрутке меняет textContent span
+                        // (толерантно к VM-мокам без _surname4)
+                        '<span class="ws-emp-full" data-full="' + this._escAttr(emp['ФИО']) + '" data-s4="' + this._escAttr((typeof this._surname4 === 'function') ? this._surname4(emp['ФИО']) : '') + '">' + this._esc(emp['ФИО']) + '</span></div>' + empPos + '</td>';
                 for (var day = 1; day <= daysInMonth; day++) {
                     var ddt = new Date(this._year, this._month - 1, day);
                     var isoDate = this._isoDate(ddt);
@@ -38871,6 +39095,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // вкладка обновляется вместе с сеткой (правки ячеек
             // видны сразу — тот же эффективный вид записей)
             this._renderTotalsIfOpen();
+            // Task 334: сужение ФИО — восстановить, если контейнер
+            // уже прокручен по горизонтали (перерисовка сетки)
+            if (typeof this._reapplyEmpNarrow === 'function') this._reapplyEmpNarrow();
         },
 
         // Task 325 (заявка): ШИРИНА КОЛОНКИ СОТРУДНИКОВ — ПО ТЕКСТУ В
@@ -39245,10 +39472,146 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // спрятана _applyView; гейт — защита от программных вызовов
         // и гонки «вид сменился в момент открытия»). ЗАКРЫТИЕ всегда
         // разрешено (смена вида из полного с открытой шторкой)
+        // ============================================================
+        // Task 334 (заявка: мобильная версия табельного учёта)
+        // ============================================================
+        // Чипы «Мероприятия»/«Нормы» мобильного бара: окна ИЗНАЧАЛЬНО
+        // СКРЫТЫ (CSS ≤1023px без классов ws-mob-*-on), чип РАСКРЫВАЕТ
+        // своё окно (тоггл; aria-pressed чипа = состояние). На десктопе
+        // чипов нет, классы бездействуют (правила только в mobile media)
+        toggleMobPanel: function(name) {
+            var page = document.getElementById('page-work-schedule');
+            if (!page || !page.classList || !page.classList.toggle) return;
+            var isEvents = (name === 'events');
+            var cls = isEvents ? 'ws-mob-events-on' : 'ws-mob-norms-on';
+            var chip = document.getElementById(
+                isEvents ? 'wsChipEvents' : 'wsChipNorms');
+            var on = !page.classList.contains(cls);
+            page.classList.toggle(cls, on);
+            if (chip && chip.setAttribute) {
+                chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+            }
+            if (on && typeof navigator !== 'undefined' && navigator.vibrate) {
+                navigator.vibrate(10);
+            }
+        },
+
+        // Открытие мобильной СТРАНИЦЫ «Итоги учёта» (вызов из navigateTo
+        // при переходе на ws-totals): флаг _ttPage включает рендер таблиц
+        // в ТЕЛО СТРАНИЦЫ (#wsTtPageBody, см. _ttBodyEl) вместо тела
+        // шторки. Данные/вкладка — текущие (месяц/год сетки)
+        onTotalsPageOpen: function() {
+            this._ttPage = true;
+            // вкладки страницы — активная по текущей вкладке итогов
+            var pm = document.getElementById('wsTtPageTabMonth');
+            var py = document.getElementById('wsTtPageTabYear');
+            if (pm && pm.classList && pm.classList.toggle) {
+                pm.classList.toggle('active', this._totalsTab !== 'year');
+            }
+            if (py && py.classList && py.classList.toggle) {
+                py.classList.toggle('active', this._totalsTab === 'year');
+            }
+            this._renderTotals();
+            if (typeof this._reapplyEmpNarrow === 'function') this._reapplyEmpNarrow();
+        },
+
+        // Уход со страницы итогов (любая навигация) — флаг снят:
+        // рендеры снова идут в шторку (десктоп), синхронизации
+        // строк/ползунка шторки — как прежде
+        onTotalsPageClose: function() {
+            this._ttPage = false;
+        },
+
+        // Контейнер таблиц итогов: на открытой мобильной странице —
+        // тело СТРАНИЦЫ, иначе — тело ШТОРКИ (десктоп/мобильный
+        // оверлей легаси). Все три рендера (месяц/год-загрузка/год)
+        // берут тело только через этот хелпер
+        _ttBodyEl: function() {
+            if (this._ttPage) {
+                var pb = document.getElementById('wsTtPageBody');
+                if (pb) return pb;
+            }
+            return document.getElementById('wsTtBody');
+        },
+
+        // Task 334 (заявка): ПЕРВЫЕ 4 БУКВЫ ФАМИЛИИ (первое слово
+        // ФИО) — текст суженной колонки при горизонтальной прокрутке
+        _surname4: function(fio) {
+            var str = String(fio || '').trim();
+            if (!str) return '';
+            var w = str.split(/\s+/)[0];
+            return w.substring(0, 4);
+        },
+
+        // Применить/снять СУЖЕНИЕ к таблицам внутри контейнера:
+        // класс .ws-narrow (CSS ≤1023px сужает колонку ФИО/фамилий
+        // и прячет таб. номер/должность) + обмен текста
+        // span[data-s4] ⇄ span[data-full]
+        _narrowApply: function(container, on) {
+            if (!container || !container.querySelectorAll) return;
+            var tables = container.querySelectorAll('.ws-grid, .ws-tt-table');
+            for (var t = 0; t < tables.length; t++) {
+                if (tables[t].classList && tables[t].classList.toggle) {
+                    tables[t].classList.toggle('ws-narrow', !!on);
+                }
+            }
+            var spans = container.querySelectorAll('[data-s4]');
+            for (var i = 0; i < spans.length; i++) {
+                spans[i].textContent = on
+                    ? (spans[i].getAttribute('data-s4') || '')
+                    : (spans[i].getAttribute('data-full') || '');
+            }
+        },
+
+        // После ПЕРЕРИСОВКИ (сетка/итоги) сужение СОХРАНЯЕТСЯ, если
+        // контейнер уже прокручен по горизонтали (перемотка месяца,
+        // «Обновить», правки ячеек — таблица перерисована, классы и
+        // текст ставятся заново)
+        _reapplyEmpNarrow: function() {
+            var ids = ['wsGridWrap', 'wsTtBody', 'wsTtPageBody'];
+            for (var i = 0; i < ids.length; i++) {
+                var el = document.getElementById(ids[i]);
+                if (el && el.scrollLeft > 6) this._narrowApply(el, true);
+            }
+        },
+
+        // Слушатели горизонтальной прокрутки (однократно, passive):
+        // шахматка (#wsGridWrap), тело шторки (#wsTtBody) и тело
+        // страницы итогов (#wsTtPageBody). Порог 6px — защита от
+        // субпиксельных дрожаний; при возврате к началу — полное ФИО
+        _attachEmpNarrow: function() {
+            if (this._narrowAttached) return;
+            this._narrowAttached = true;
+            var self = this;
+            var bind = function(id) {
+                var el = document.getElementById(id);
+                if (!el || !el.addEventListener) return;
+                el.addEventListener('scroll', function() {
+                    self._narrowApply(el, el.scrollLeft > 6);
+                }, { passive: true });
+            };
+            bind('wsGridWrap');
+            bind('wsTtBody');
+            bind('wsTtPageBody');
+        },
+
         toggleTotals: function() {
             // толерантный гейт: моки/старые состояния без _view = полный
             var vGate = this._view || 'full';
-            if (vGate !== 'full' && !this._totalsOpen) return;
+            if (vGate !== 'full' && !this._totalsOpen && !this._ttPage) return;
+            // Task 334 (заявка): на МОБИЛЬНОМ итоги учёта открываются
+            // ОТДЕЛЬНОЙ СТРАНИЦЕЙ #page-ws-totals («Итоги учёта», шапка
+            // с многострелочным шевроном), НЕ шторкой: кнопка тулбара
+            // — просто переход. Гейт вида действует и здесь (в видах
+            // «сменный»/«дневной» итоги недоступны). Повторный тап
+            // кнопки на странице табеля невозможен (кнопка на другой
+            // странице); «закрытие» — шеврон/системный «назад»
+            if (typeof window !== 'undefined' && window.matchMedia
+                    && !window.matchMedia('(min-width: 1024px)').matches) {
+                if (vGate !== 'full') return;
+                if (typeof navigateTo === 'function') navigateTo('ws-totals');
+                return;
+            }
             this._totalsOpen = !this._totalsOpen;
             var btn = document.getElementById('wsTotalsBtn');
             var panel = document.getElementById('wsTotalsPanel');
@@ -39605,7 +39968,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         setTotalsTab: function(tab) {
             // толерантный гейт: моки/старые состояния без _view = полный
             var vGate = this._view || 'full';
-            if (!this._totalsOpen && vGate !== 'full') return;
+            if (!this._totalsOpen && !this._ttPage && vGate !== 'full') return;
             this._totalsTab = (tab === 'year') ? 'year' : 'month';
             var mb = document.getElementById('wsTtTabMonth');
             var yb = document.getElementById('wsTtTabYear');
@@ -39615,11 +39978,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (yb && yb.classList && yb.classList.toggle) {
                 yb.classList.toggle('active', this._totalsTab === 'year');
             }
+            // Task 334: вкладки мобильной СТРАНИЦЫ итогов — синхронно
+            // с вкладками тулбара (одна и та же вкладка _totalsTab)
+            var pm = document.getElementById('wsTtPageTabMonth');
+            var py = document.getElementById('wsTtPageTabYear');
+            if (pm && pm.classList && pm.classList.toggle) {
+                pm.classList.toggle('active', this._totalsTab === 'month');
+            }
+            if (py && py.classList && py.classList.toggle) {
+                py.classList.toggle('active', this._totalsTab === 'year');
+            }
             // Task 327 → 329: шеврон доп. столбцов — только у месяца
             this._updateTtChv();
             // закрытая шторка: вкладка открывает её (перерисовку
-            // выполнит toggleTotals уже с выбранной вкладкой)
-            if (!this._totalsOpen) {
+            // выполнит toggleTotals уже с выбранной вкладкой);
+            // Task 334: на открытой СТРАНИЦЕ итогов вкладка просто
+            // перерисовывает таблицу (повторного перехода НЕ нужно)
+            if (!this._totalsOpen && !this._ttPage) {
                 this.toggleTotals();
             } else {
                 this._renderTotals();
@@ -39635,9 +40010,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // Перерисовка итогов, если панель открыта (вызывается из
-        // _renderGrid — правки ячеек, «Обновить», смена месяца)
+        // _renderGrid — правки ячеек, «Обновить», смена месяца);
+        // Task 334: и для открытой мобильной СТРАНИЦЫ итогов
         _renderTotalsIfOpen: function() {
-            if (this._totalsOpen) this._renderTotals();
+            if (this._totalsOpen || this._ttPage) this._renderTotals();
         },
 
         // Task 324: аварийная строка ⚠ шапки шторки — только
@@ -39659,7 +40035,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         _renderTotals: function() {
-            if (!this._totalsOpen) return;
+            // Task 334: рендер и для ОТКРЫТОЙ ШТОРКИ (_totalsOpen,
+            // десктоп), и для открытой мобильной СТРАНИЦЫ (_ttPage)
+            if (!this._totalsOpen && !this._ttPage) return;
             if (this._totalsTab === 'year') this._renderTotalsYear();
             else this._renderTotalsMonth();
         },
@@ -39683,7 +40061,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // fixed — см. CSS), заголовки переносятся на 2 строки при
         // нехватке; зебра строк сохранена
         _renderTotalsMonth: function() {
-            var body = document.getElementById('wsTtBody');
+            var body = (typeof this._ttBodyEl === 'function')
+                ? this._ttBodyEl() : document.getElementById('wsTtBody');
             if (!body) return;
             this._setTtWarn('');
             var entries = this._totalsEffectiveEntries();
@@ -39766,11 +40145,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // перерисовку шторки при наведённой строке сетки
                 if (i === this._hoverRow) trCls.push('ws-hover-row');
                 prevTier = empTier;
+                // Task 334: ФИО в span.ws-tt-name (data-full/data-s4) —
+                // сужение до 4 букв фамилии при горизонтальной прокрутке
+                // (толерантно к VM-мокам без _surname4)
+                var empS4 = (typeof this._surname4 === 'function')
+                    ? this._surname4(emp['ФИО']) : '';
                 html += '<tr' +
                         (trCls.length ? ' class="' + trCls.join(' ') + '"' : '') + '>' +
                     '<td class="ws-tt-emp"><span class="ws-tt-tabno">' +
                     this._esc(emp['таб_номер']) + '</span>' +
-                    this._esc(emp['ФИО']) + '</td>';
+                    '<span class="ws-tt-name" data-full="' + this._esc(emp['ФИО']) + '" data-s4="' + this._esc(empS4) + '">' +
+                    this._esc(emp['ФИО']) + '</span></td>';
                 for (var j = 0; j < cols.length; j++) {
                     var col = cols[j];
                     // Task 329 (заявка: «данные столбца переработки —
@@ -39839,6 +40224,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (this._applyTtHeadVar()) this._fitGrid();
             this._syncTotalsRows();
             if (this._hbarSyncAll) this._hbarSyncAll();
+            // Task 334: сужение фамилий — восстановить после рендера
+            if (typeof this._reapplyEmpNarrow === 'function') this._reapplyEmpNarrow();
         },
 
         // Вкладка «Год»: 12 колонок-месяцев (формат «дни/часы») +
@@ -39853,7 +40240,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // строк (имена — в стик-колонке сетки слева; архив без имён
         // бессмыслен)
         _renderTotalsYear: function() {
-            var body = document.getElementById('wsTtBody');
+            var body = (typeof this._ttBodyEl === 'function')
+                ? this._ttBodyEl() : document.getElementById('wsTtBody');
             if (!body) return;
             var self = this;
             if (!this._YEAR_DATA || this._YEAR_DATA.year !== this._year) {
@@ -39867,7 +40255,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }, function(err) {
                     body.innerHTML = '<div class="ws-tt-empty">Ошибка загрузки данных года: ' +
                         self._esc(err && err.message ? err.message : err) +
-                        '. Нажмите «Обновить» в панели кнопок, чтобы повторить.</div>';
+                        '. Нажмите «Обновить» в панели кнопок табеля, чтобы повторить.</div>';
                     self._fitTtDrawer();
                 });
                 return;
@@ -39933,7 +40321,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // как в сетке; подсветка строки (ws-hover-row) — вместе со
         // строкой сетки. Task 324: сбои года — ⚠ #wsTtWarn в шапке
         _renderTotalsYearTable: function() {
-            var body = document.getElementById('wsTtBody');
+            var body = (typeof this._ttBodyEl === 'function')
+                ? this._ttBodyEl() : document.getElementById('wsTtBody');
             if (!body) return;
             var md = this._YEAR_DATA;
             if (!md || md.year !== this._year) return;
@@ -40003,12 +40392,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             function yearRow(emp, trCls) {
                 var tab = String(emp['таб_номер']);
                 var sumWork = 0, sumHours = 0, sumOver = 0, sumOverDays = 0;
+                // Task 334: ФИО в span.ws-tt-name (data-full/data-s4);
+                // толерантно к VM-мокам без _surname4
+                var empS4 = (typeof self._surname4 === 'function')
+                    ? self._surname4(emp['ФИО']) : '';
                 var out = '<tr' +
                     (trCls && trCls.length
                         ? ' class="' + trCls.join(' ') + '"' : '') + '>' +
                     '<td class="ws-tt-emp"><span class="ws-tt-tabno">' +
                     self._esc(emp['таб_номер']) + '</span>' +
-                    self._esc(emp['ФИО']) + '</td>';
+                    '<span class="ws-tt-name" data-full="' + self._esc(emp['ФИО']) + '" data-s4="' + self._esc(empS4) + '">' +
+                    self._esc(emp['ФИО']) + '</span></td>';
                 for (var mm = 1; mm <= 12; mm++) {
                     var a = perMonth[mm][tab];
                     var w = a ? a.work : 0;
@@ -40108,6 +40502,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (this._applyTtHeadVar()) this._fitGrid();
             this._syncTotalsRows();
             if (this._hbarSyncAll) this._hbarSyncAll();
+            // Task 334: сужение фамилий — восстановить после рендера
+            if (typeof this._reapplyEmpNarrow === 'function') this._reapplyEmpNarrow();
         },
 
         // Task 316: НАВЕДЕНИЕ на дату шапки — подсветка ВСЕГО столбца
@@ -40213,7 +40609,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     }
                 }
             }
-            var ttBody = document.getElementById('wsTtBody');
+            // Task 334: контейнер — АКТУАЛЬНОЕ тело итогов (шторка
+            // ИЛИ мобильная страница; _ttBodyEl; толерантно к мокам)
+            var ttBody = (typeof this._ttBodyEl === 'function')
+                ? this._ttBodyEl() : document.getElementById('wsTtBody');
             if (ttBody && ttBody.querySelectorAll) {
                 var tRows = ttBody.querySelectorAll('.ws-tt-table tbody tr');
                 if (ri < tRows.length) {
