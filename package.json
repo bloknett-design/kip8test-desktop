@@ -1,6 +1,6 @@
 {
   "name": "kipia-desktop-test",
-  "version": "2.1.7",
+  "version": "2.1.8",
   "description": "КИПиА — справочник инженера (десктопное приложение, TEST)",
   "main": "electron/main.js",
   "scripts": {
@@ -47,12 +47,13 @@
         {
           "target": "nsis",
           "arch": [
-            "x64"
+            "x64",
+            "ia32"
           ]
         }
       ],
       "icon": "images/icon-512.png",
-      "artifactName": "KIPiA-Test-Setup-${version}.${ext}"
+      "artifactName": "KIPiA-Test-Setup-${version}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,

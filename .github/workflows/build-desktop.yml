@@ -68,12 +68,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Windows (NSIS) + publish update metadata
+      - name: Build Windows (NSIS, x64 + ia32/Win32) + publish update metadata
         run: npx electron-builder --win --publish onTagOrDraft
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Windows installer
+      - name: Upload Windows installers (x64 + Win32)
         uses: actions/upload-artifact@v4
         with:
           name: KIPiA-win-setup
@@ -139,15 +139,16 @@ jobs:
         with:
           name: 'КИПиА ${{ github.ref_name }}'
           body: |
-            ## Десктопное приложение КИПиА ${{ github.ref_name }}
+            ## Десктопное приложение КИПиА (Test) ${{ github.ref_name }}
 
             ### Установка
-            - **Windows** — скачайте `KIPiA-Setup-*.exe`, запустите установщик (на русском языке)
-            - **Linux** — скачайте `KIPiA-*.AppImage` (портативный, без установки) или `KIPiA-*.deb` (`sudo dpkg -i`)
-            - **macOS** — скачайте `KIPiA-*.dmg`, перетащите в Applications
+            - **Windows 64-бит** — скачайте `KIPiA-Test-Setup-*-x64.exe`, запустите установщик (на русском языке)
+            - **Windows 32-бит (Win32)** — скачайте `KIPiA-Test-Setup-*-ia32.exe` — отдельная сборка для 32-битных систем
+            - **Linux** — скачайте `KIPiA-Test-*.AppImage` (портативный, без установки) или `KIPiA-Test-*.deb` (`sudo dpkg -i`)
+            - **macOS** — скачайте `KIPiA-Test-*.dmg`, перетащите в Applications
 
             ### Автообновление
-            Начиная с версии 1.0.2, приложение автоматически проверяет обновления при запуске. При наличии новой версии появится предложение скачать и установить её.
+            Приложение автоматически проверяет обновления при запуске. Каждая сборка (64-бит и 32-бит) обновляется независимо — приложение само выбирает подходящий файл.
           draft: false
           prerelease: false
           files: |
