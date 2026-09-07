@@ -4132,7 +4132,9 @@
        Вёрстка ВСЕГДА СВЕТЛАЯ («бумажная») — независимо от темы
        приложения (тёмная тема не должна печатать чёрные листы);
        свои классы wsp-*, никакой зависимости от переменных тем.
-       Формат — A4 АЛЬБОМНАЯ: 31 колонка дней + ФИО + «Дни»/«Часы».
+       Формат — A4 АЛЬБОМНАЯ: 31 колонка дней + ФИО + итоги
+       «Дни»/«Часы»/«Перераб.» (Task 342 — заявка: «добавь колонку
+       переработок»: дни/часы переработки кодов д/н).
        Статусные ячейки несут inline-фон из справочника кодов
        (как в шахматке) — печать фонов принудительна
        (print-color-adjust: exact). Длинные списки переносятся на
@@ -4205,6 +4207,20 @@
         #wsPrintSheet .wsp-day.wsp-feast,
         #wsPrintSheet .wsp-day.wsp-feast span { color: #b02a2a; }
         #wsPrintSheet .wsp-tot { width: 9mm; font-weight: 700; }
+        /* Task 342 (заявка: «добавь колонку переработок»): колонка
+           итогов «Перераб.» — дни/часы переработки кодов д/н
+           («3/36» — 3 дня, 36 часов; нет — «—»). Чуть шире
+           «Дни»/«Часы» под двухстрочный заголовок и значение
+           «дни/часы»; бюджет A4 landscape (297 − 16 = 281 мм):
+           50 + 31×6,5 + 9 + 9 + 12 = 281,5 мм — fixed-раскладка
+           прижмёт при нехватке */
+        #wsPrintSheet .wsp-tot.wsp-tot-over { width: 12mm; }
+        #wsPrintSheet .wsp-tot-over span {
+            display: block;
+            font-size: 6.5px;
+            color: #54606a;
+            line-height: 1.1;
+        }
         #wsPrintSheet .wsp-fio {
             display: block;
             font-weight: 700;
@@ -39115,8 +39131,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // min «Мастер КИПиА» скрыт — _viewEmployees, Task 340),
         // ЭФФЕКТИВНЫЕ записи (серверные + локальные правки, как в
         // сетке), колонки «Дни»/«Часы» (те же счётчики, что во
-        // вкладке «Итоги учёта»: явки/часы БЕЗ переработки д/н) и
-        // легенда кодов из справочника. Лист СВЕТЛЫЙ всегда (тёмная
+        // вкладке «Итоги учёта»: явки/часы БЕЗ переработки д/н),
+        // «Перераб.» — дни/часы переработки кодов д/н (Task 342)
+        // и легенда кодов из справочника. Лист СВЕТЛЫЙ всегда (тёмная
         // тема приложения на бумагу не переносится), формат —
         // A4 альбомная (@media print в CSS скрывает приложение
         // целиком). Лист НЕ удаляется после печати (на экране
@@ -39158,7 +39175,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // ячейках — ЭФФЕКТИВНЫЕ записи (запись + локальная правка,
         // __delete — ячейка пустая), план отпуска пунктиром,
         // мероприятия бейджами (см. _printCell). В конце каждой
-        // строки — «Дни»/«Часы» (agg.byTab), внизу — итоговая
+        // строки — «Дни»/«Часы»/«Перераб.» (agg.byTab; Task 342 —
+        // переработка в формате «дни/часы»), внизу — итоговая
         // строка (agg.grand) и легенда кодов справочника
         _buildPrintHtml: function(viewEmps, agg) {
             var months = ['Январь','Февраль','Март','Апрель','Май','Июнь',
@@ -39213,7 +39231,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         (isShort ? '*' : '') + '<span>' + dows[dt.getDay()] +
                         '</span></th>';
             }
-            html += '<th class="wsp-tot">Дни</th><th class="wsp-tot">Часы</th>';
+            // Task 342 (заявка: «добавь колонку переработок»):
+            // «Перераб.» — дни/часы переработки кодов д/н (формат
+            // годовой вкладки «Итогов»: «3/36»; ноль — «—»,
+            // часы с запятой — _fmtTotalsNum)
+            html += '<th class="wsp-tot">Дни</th><th class="wsp-tot">Часы</th>' +
+                    '<th class="wsp-tot wsp-tot-over">Перераб.<span>дни/ч</span></th>';
             html += '</tr></thead><tbody>';
 
             // строки сотрудников: эффективные записи + итоги
@@ -39251,17 +39274,34 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                 ? this._fmtTotalsNum(a.hours)
                                 : String(a.hours))
                             : '') + '</td>';
+                // Task 342: переработка — «дни/часы» («3/36»);
+                // 0 дней — «—», сотрудника нет в agg — пусто
+                // (как соседние колонки итогов)
+                html += '<td class="wsp-tot wsp-tot-over">' +
+                        (a && a.overDays
+                            ? a.overDays + '/' +
+                              (typeof this._fmtTotalsNum === 'function'
+                                  ? this._fmtTotalsNum(a.over)
+                                  : String(a.over))
+                            : (a ? '—' : '')) + '</td>';
                 html += '</tr>';
             }
 
-            // итог по подразделению (grand-счётчик вкладки «Месяц»)
+            // итог по подразделению (grand-счётчик вкладки «Месяц»);
+            // Task 342: + переработка (grand.overDays/over)
             if (agg && agg.grand) {
                 html += '<tr class="wsp-sum"><td class="wsp-emp" colspan="' +
-                        (daysInMonth + 1) + '">Итого — явки (дни) и часы, без переработки д/н</td>' +
+                        (daysInMonth + 1) + '">Итого — явки (дни), часы (без переработки д/н), переработка (дни/ч)</td>' +
                         '<td class="wsp-tot">' + agg.grand.work + '</td>' +
                         '<td class="wsp-tot">' + (typeof this._fmtTotalsNum === 'function'
                             ? this._fmtTotalsNum(agg.grand.hours)
-                            : String(agg.grand.hours)) + '</td></tr>';
+                            : String(agg.grand.hours)) + '</td>' +
+                        '<td class="wsp-tot wsp-tot-over">' +
+                        (agg.grand.overDays ? agg.grand.overDays + '/' +
+                            (typeof this._fmtTotalsNum === 'function'
+                                ? this._fmtTotalsNum(agg.grand.over)
+                                : String(agg.grand.over))
+                            : '—') + '</td></tr>';
             }
             html += '</tbody></table>';
 
@@ -39281,8 +39321,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             html += '<div class="wsp-foot">* — сокращённый предпраздничный рабочий день; ' +
                     'пунктирная рамка ячейки — плановый отпуск (записи ещё нет); ' +
                     'бейдж в углу ячейки — мероприятие (инструктаж/обучение/проверка); ' +
-                    'красная точка — переработка; «Дни»/«Часы» — явки и рабочие часы, ' +
-                    'переработка (д/н) учтена в приложении («Итоги учёта»).</div>';
+                    'красная точка — переработка; «Дни»/«Часы» — явки и рабочие часы ' +
+                    '(без переработки д/н); «Перераб.» — дни/часы переработки ' +
+                    '(коды д/н — работа в выходные/праздники).</div>';
             return html;
         },
 
