@@ -5070,30 +5070,40 @@
         }
 
         /* 4) СУЖЕНИЕ колонки ФИО шахматки: класс .ws-narrow на
-           .ws-grid ставит/снимает JS по scrollLeft контейнера;
-           ширина фиксированная (узкая), таб. номер и подпись
-           должности скрыты — видны ТОЛЬКО 4 буквы фамилии */
+           .ws-grid ставится/снимается JS по scrollLeft контейнера;
+           ширина — ПО ШИРИНЕ СОКРАЩЁННОГО ТЕКСТА (Task 336: «ширина
+           столбца сотрудников должна быть по ширине сокращённого
+           текста»): переменную --ws-emp-nw меряет JS
+           (_measureEmpNarrowW — максимум «Сотр»/4 буквы фамилии
+           + паддинги 8 + 2); таб. номер и подпись должности
+           скрыты — видны ТОЛЬКО 4 буквы фамилии */
         .ws-grid.ws-narrow thead th.ws-emp-col,
         .ws-grid.ws-narrow tbody td.ws-emp-col {
-            width: 76px;
-            min-width: 76px;
+            width: var(--ws-emp-nw, 52px);
+            min-width: var(--ws-emp-nw, 52px);
             padding: 6px 4px;
         }
         .ws-grid.ws-narrow td.ws-emp-col .ws-tab-no,
         .ws-grid.ws-narrow td.ws-emp-col .ws-emp-pos { display: none; }
 
         /* 4) СУЖЕНИЕ колонки сотрудников таблиц итогов (шторка и
-           страница): класс .ws-narrow на .ws-tt-table */
+           страница): класс .ws-narrow на .ws-tt-table; ширина —
+           по сокращённому тексту (Task 336, переменная
+           --ws-tt-emp-nw меряется JS; для МЕСЯЧНОЙ таблицы
+           срабатывает правило ПОСЛЕ 42%-й доли — см. ниже) */
         .ws-tt-table.ws-narrow th.ws-tt-emp,
         .ws-tt-table.ws-narrow td.ws-tt-emp {
-            width: 58px;
+            width: var(--ws-tt-emp-nw, 48px);
         }
         .ws-tt-table.ws-narrow .ws-tt-tabno { display: none; }
 
-        /* Task 335 (заявка: «сужаться не резко, а ПЛАВНО в начале
-           прокрутки»): ширина/мин-ширина/паддинги колонки ФИО и
-           колонки сотрудников итогов АНИМИРУЮТСЯ (0.22s ease) в
-           обоих направлениях — класс .ws-narrow ставится в самом
+        /* Task 335 → 336 (заявка: «сужаться не резко, а ПЛАВНО в
+           начале прокрутки»; Task 336: «сделай ЕЩЁ ПЛАВНЕЕ»):
+           ширина/мин-ширина/паддинги колонки ФИО и колонки
+           сотрудников итогов АНИМИРУЮТСЯ — 0.35s с мягкой кривой
+           cubic-bezier(0.4, 0, 0.2, 1) (замедление в начале и
+           в конце — «плавнее», чем прежние 0.22s ease) — в
+           обоих направлениях; класс .ws-narrow ставится в самом
            начале прокрутки (порог 0 — см. _attachEmpNarrow),
            сужение разворачивается плавно; возврат к scrollLeft=0 —
            плавное расширение. Таб.номер/должность скрываются
@@ -5101,8 +5111,9 @@
            маскируется анимацией ширины) */
         .ws-grid thead th.ws-emp-col,
         .ws-grid tbody td.ws-emp-col {
-            transition: width 0.22s ease, min-width 0.22s ease,
-                        padding 0.22s ease;
+            transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                        min-width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                        padding 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
         /* Task 335 (заявка): шапка «Сотрудник +» в суженном виде —
            «Сотр»: текст меняется span-обменом (data-full/data-s4
@@ -5567,6 +5578,21 @@
         text-overflow: ellipsis;
         white-space: nowrap;
     }
+    /* Task 336 (заявка: «ширина столбца сотрудников — ПО ШИРИНЕ
+       СОКРАЩЁННОГО ТЕКСТА, так же в таблицах итогов вкладок
+       месяц и год»): суженная ширина колонки «Сотрудник» итогов —
+       переменная --ws-tt-emp-nw (меряет JS _measureEmpNarrowW —
+       максимум «Сотр»/4 букв фамилии + паддинги 16 + 2). Правило —
+       ОБЯЗАТЕЛЬНО ПОСЛЕ базовой 42%-й доли (специфичность
+       (0,3,1) равна — побеждает ПОЗДНИЙ): месячная таблица
+       (fixed-раскладка) раньше НЕ сужалась — 42% из базового
+       правила перекрывало узкую ширину из раннего Task 334-блока,
+       колонка оставалась широкой при прокрутке. Теперь явная
+       узкая ширина перебивает долю — сужается и месяц, и год */
+    .ws-tt-table.ws-narrow th.ws-tt-emp,
+    .ws-tt-table.ws-narrow td.ws-tt-emp {
+        width: var(--ws-tt-emp-nw, 48px);
+    }
     [data-theme="light"] .ws-tt-table th.ws-tt-emp,
     [data-theme="light"] .ws-tt-table td.ws-tt-emp {
         background: #e9e7de;
@@ -5582,17 +5608,19 @@
         .ws-tt-table.ws-tt-year:not(.ws-tt-arch) th.ws-tt-emp,
         .ws-tt-table.ws-tt-year:not(.ws-tt-arch) td.ws-tt-emp { display: none; }
     }
-    /* Task 335 (заявка: «сужаться не резко, а ПЛАВНО в начале
-       прокрутки»): ПЛАВНОСТЬ сужения колонки «Сотрудник» таблиц
-       итогов — transition на ширину (0.22s ease, оба направления;
-       42% → 58px интерполируется движком как length-percentage).
+    /* Task 335 → 336 (заявка: «сужаться не резко, а ПЛАВНО в
+       начале прокрутки»; Task 336: «сделай ЕЩЁ ПЛАВНЕЕ»):
+       ПЛАВНОСТЬ сужения колонки «Сотрудник» таблиц итогов —
+       transition на ширину (0.35s, мягкая кривая
+       cubic-bezier(0.4, 0, 0.2, 1), оба направления;
+       42% → px интерполируется движком как length-percentage).
        Правило — ПОСЛЕ базового .ws-tt-emp (специфичность равна,
        порядок решает); только мобильная вёрстка — десктоп не
        анимируется (колонки месяца на десктопе скрыты/фиксированы) */
     @media (max-width: 1023px) {
         .ws-tt-table th.ws-tt-emp,
         .ws-tt-table td.ws-tt-emp {
-            transition: width 0.22s ease;
+            transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
     }
     /* Task 333 (заявка: «Архив в годовой таблице всё же нужен»):
@@ -5804,6 +5832,23 @@
         left: 0;
         z-index: 3;
         text-align: left;
+        /* Task 336 (заявка: вертикальная полоса в ШАПКЕ шахматки
+           между «Сотрудник +» и первым днём — только со стороны
+           ячейки «Сотрудник +», В ОДНОЙ ПЛОСКОСТИ с полосами
+           строк): у td.ws-emp-col есть правая граница 1px
+           (border-collapse), и его padding-box — относительно
+           которого позиционируется ::after — на 0.5px ЛЕВЕЕ,
+           чем у th (границы не было): полоса шапки сдвинута
+           вправо и «залезала» на сторону ячейки дня (замер 3×:
+           шапка [184.5..186.5], строки [184..186] + граница
+           [186..187] — видимый стык «ступенькой»). Прозрачная
+           правая граница 1px центрируется на той же грани, что
+           и границы строк: padding-боксы th и td совпадают,
+           ::after шапки рисуется теми же 2px, что у строк, —
+           линии непрерывны по вертикали; сама граница НЕ видна
+           (transparent), содержимое первого th дня сдвигается
+           на 0.5px — выравнивается с содержимым td дней */
+        border-right: 1px solid transparent;
         /* Task 325 (заявка): ширина колонки — ПО ТЕКСТУ В САМОМ
            ШИРОКОМ: переменную --ws-emp-w меряет JS
            (_measureEmpCol — № таб. + ФИО/должность + заголовок) при
@@ -11898,6 +11943,19 @@
             overflow-y: auto;
             min-height: 0;
         }
+        /* Task 336 (заявка: блок картинка+«№ прибора»+«Место
+           установки» ВПЛОТУЮ к верхнему бару — десктоп): когда в
+           скролл-зоне панели рендерится КАРТОЧКА ПРИБОРА (первый
+           её блок .dev-detail-top — sticky top:0), верхний паддинг
+           зоны убирается — блок начинается ровно под строкой крошек
+           (#detailBreadcrumbBar над панелью), и в покое, и при
+           прокрутке (замер: зазор 16px → 0). Прочие карточки панели
+           (кабельный журнал и др., без .dev-detail-top) — прежние
+           16px. Приём — :has по структуре дев-карточки, без правок
+           JS-рендера */
+        #detailPanel .detail-panel-body:has(> .dev-detail-card > .dev-detail-top) {
+            padding-top: 0;
+        }
         #detailPanel .detail-panel-footer {
             display: none;  /* показывается только когда есть содержимое */
             flex-shrink: 0;
@@ -12826,10 +12884,16 @@
             z-index: 5;
             margin-left: -16px;
             margin-right: -16px;
-            /* Task 335 (заявка): блок вплотную к верхнему бару —
-               компенсируем и ВЕРХНИЙ отступ скролл-зоны панели
-               (padding 16px), как боковые full-bleed маржи */
-            margin-top: -16px;
+            /* Task 336 (заявка: блок вплотную к верхнему бару и на
+               десктопе): прежняя компенсация верхнего паддинга
+               (отрицательная маржа −16px, Task 335) на реальном
+               рендере НЕ работала — маржа sticky-блока
+               СХЛОПЫВАЕТСЯ с маржей обёртки .dev-detail-card и не
+               доходит до паддинга скролл-зоны (замер: блок
+               стабильно на +16px ниже бара — и в покое, и при
+               прокрутке). Правильный приём — убрать сам паддинг
+               (правило :has ниже, Task 336); маржа удалена, чтобы
+               не утянуть карточку выше скролл-зоны (обрезка) */
             padding-left: 16px;
             box-shadow: 0 10px 14px -10px rgba(0, 0, 0, 0.5);
         }
@@ -37902,6 +37966,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
                 document.fonts.ready.then(function() {
                     try { self._measureEmpCol(); } catch (e) {}
+                    // Task 336: суженная ширина (по сокращённому тексту)
+                    // — тот же повторный замер после загрузки шрифта
+                    try { if (self._measureEmpNarrowW) self._measureEmpNarrowW(); } catch (e) {}
                 });
             }
 
@@ -39258,6 +39325,76 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             page.style.setProperty('--ws-emp-w', wpx);
         },
 
+        // Task 336 (заявка: «ширина столбца сотрудников должна быть
+        // ПО ШИРИНЕ СОКРАЩЁННОГО ТЕКСТА — так же в таблицах итогов
+        // вкладок месяц и год»): замер ширины СУЖЕННОЙ колонки —
+        // максимум по всем span[data-s4] («Сотр» шапки + 4 буквы
+        // фамилии строк). Приём: текст ВСЕХ спанов контейнера
+        // временно меняется на сокращённый, ОДИН замер
+        // getBoundingClientRect (спаны inline — ширина = текст,
+        // не зависит от ширины колонки и эллипсиса), текст
+        // возвращается. К максимуму прибавляются горизонтальные
+        // паддинги ЯЧЕЙКИ в суженном виде (сетка 6px 4px → 8;
+        // итоги 5px 8px → 16 — дубль CSS .ws-narrow) и 2px запас
+        // (границы border-collapse + субпиксельность). Результат —
+        // в CSS-переменные на body: --ws-emp-nw (сетка) и
+        // --ws-tt-emp-nw (итоги: шторка И страница — обе таблицы
+        // читают одну переменную). НЕВИДИМЫЙ контейнер (страница
+        // не активна — rect.width = 0) пропускается: сетка меряется
+        // при своём рендере (страница табеля активна), итоги — при
+        // своём (страница итогов/шторка). Вызывается из
+        // _reapplyEmpNarrow (после КАЖДОГО рендера сетки/итогов —
+        // смена месяца, «Обновить», правки) и по document.fonts.ready
+        // (поздний шрифт меняет ширину текста, как у --ws-emp-w)
+        _measureEmpNarrowW: function() {
+            if (typeof document === 'undefined' || !document.body
+                    || !document.body.style
+                    || !document.body.style.setProperty) return;
+            var setVar = function(name, wpx) {
+                if (wpx <= 0) return;
+                if (document.body.style.getPropertyValue(name) === wpx) return;
+                document.body.style.setProperty(name, wpx);
+            };
+            // максимум ширины сокращённого текста в контейнере
+            // (0 = контейнер скрыт/пуст — переменная не трогается)
+            var maxW = function(container) {
+                if (!container || !container.querySelectorAll) return 0;
+                try {
+                    if (container.getBoundingClientRect
+                            && container.getBoundingClientRect().width <= 0) return 0;
+                } catch (e) { return 0; }
+                var spans = container.querySelectorAll('[data-s4]');
+                if (!spans || !spans.length) return 0;
+                var olds = [], w = 0, i;
+                // 1) всем спанам — сокращённый текст
+                for (i = 0; i < spans.length; i++) {
+                    var s4 = spans[i].getAttribute
+                        ? (spans[i].getAttribute('data-s4') || '') : '';
+                    olds.push(spans[i].textContent);
+                    if (s4) spans[i].textContent = s4;
+                }
+                // 2) один reflow — замер всех
+                for (i = 0; i < spans.length; i++) {
+                    var sw = spans[i].getBoundingClientRect
+                        ? spans[i].getBoundingClientRect().width : 0;
+                    if (sw > w) w = sw;
+                }
+                // 3) вернуть текст
+                for (i = 0; i < spans.length; i++) {
+                    spans[i].textContent = olds[i];
+                }
+                return w;
+            };
+            // сетка (шахматка): + 8 (суженные паддинги 6px 4px) + 2
+            var gw = maxW(document.getElementById('wsGridWrap'));
+            if (gw > 0) setVar('--ws-emp-nw', Math.ceil(gw + 8 + 2) + 'px');
+            // итоги: шторка ИЛИ страница (меряется видимая)
+            var tw = maxW(document.getElementById('wsTtBody'));
+            var pw = maxW(document.getElementById('wsTtPageBody'));
+            if (tw < pw) tw = pw;
+            if (tw > 0) setVar('--ws-tt-emp-nw', Math.ceil(tw + 16 + 2) + 'px');
+        },
+
         // Task 315: окно 2 бара — данные ВСЕХ мероприятий открытого
         // месяца (заявка: «второе окно с данными всех мероприятий на
         // открытый месяц, между кнопками и окном времени и
@@ -39677,8 +39814,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // текст ставятся заново). Task 335: порог 0 — ЛЮБАЯ величина
         // прокрутки (сужение с самого начала, заявка «плавно в
         // начале прокрутки»); плавность разворота — CSS-переход
-        // ширины колонки (0.22s ease)
+        // ширины колонки (Task 336: 0.35s cubic-bezier). Task 336:
+        // здесь же — ЗАМЕР суженной ширины (_measureEmpNarrowW):
+        // рендеры сетки/итогов зовут _reapplyEmpNarrow последними,
+        // DOM готов, свой контейнер видим (сетка — на странице
+        // табеля, итоги — на странице итогов/в шторке); невидимые
+        // контейнеры замер пропускает
         _reapplyEmpNarrow: function() {
+            // Task 336: ширина суженной колонки — по сокращённому
+            // тексту (толерантно к VM-мокам без метода)
+            if (typeof this._measureEmpNarrowW === 'function') {
+                try { this._measureEmpNarrowW(); } catch (e) {}
+            }
             var ids = ['wsGridWrap', 'wsTtBody', 'wsTtPageBody'];
             for (var i = 0; i < ids.length; i++) {
                 var el = document.getElementById(ids[i]);
