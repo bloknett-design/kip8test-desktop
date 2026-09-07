@@ -4987,6 +4987,21 @@
             flex: 1 1 auto;
             min-width: 0;
         }
+        /* Task 335 (заявка: при виде «только сменные/только дневные»
+           шахматка НЕ растягивается до низа окна приложения):
+           класс ws-view-filtered на #page-work-schedule ставит
+           _applyView (сменный/дневной вид) — колонка шахматки
+           собирается по ВЫСОТЕ КОНТЕНТА (таблица природных высот
+           строк + бордюрчик + зона ползунка сразу под ней), ниже —
+           фон рабочей области. Полный вид — прежнее заполнение
+           всей высоты (Task 252): колонка тянется вниз (stretch),
+           контейнер flex:1, строки распределяет _fitGrid */
+        #page-work-schedule.ws-view-filtered .ws-grid-col {
+            align-self: flex-start;
+        }
+        #page-work-schedule.ws-view-filtered .ws-grid-wrap {
+            flex: 0 1 auto;
+        }
         #page-work-schedule .ws-grid-wrap {
             min-width: 0;
             flex: 1 1 auto;
@@ -5074,10 +5089,54 @@
             width: 58px;
         }
         .ws-tt-table.ws-narrow .ws-tt-tabno { display: none; }
+
+        /* Task 335 (заявка: «сужаться не резко, а ПЛАВНО в начале
+           прокрутки»): ширина/мин-ширина/паддинги колонки ФИО и
+           колонки сотрудников итогов АНИМИРУЮТСЯ (0.22s ease) в
+           обоих направлениях — класс .ws-narrow ставится в самом
+           начале прокрутки (порог 0 — см. _attachEmpNarrow),
+           сужение разворачивается плавно; возврат к scrollLeft=0 —
+           плавное расширение. Таб.номер/должность скрываются
+           мгновенно (display не анимируется — их растворение
+           маскируется анимацией ширины) */
+        .ws-grid thead th.ws-emp-col,
+        .ws-grid tbody td.ws-emp-col {
+            transition: width 0.22s ease, min-width 0.22s ease,
+                        padding 0.22s ease;
+        }
+        /* Task 335 (заявка): шапка «Сотрудник +» в суженном виде —
+           «Сотр»: текст меняется span-обменом (data-full/data-s4
+           в _renderGrid), плюсик-индикатор добавления скрыт */
+        .ws-grid.ws-narrow thead th.ws-emp-col .ws-emp-head-plus {
+            display: none;
+        }
+    }
+
+    /* Task 335 (заявка): мобильный горизонтальный скролл шахматки
+       и таблиц итогов работает СРАЗУ — без предварительного
+       pinch-zoom («в мобильном не сразу работает прокрутка…
+       только после увеличения шахматки щипком»). Причина:
+       генератор pinch-zoom-целей (assignPinchZoomTargets,
+       правило 6) вешает класс pinch-zoom-target на САМИ таблицы
+       (.ws-grid/.ws-tt-table — обёртка ищется по ИНЛАЙН-стилю
+       overflowX, а у наших скролл-зон overflow задан CSS-классом),
+       а базовое правило .pinch-zoom-target { touch-action: pan-y }
+       ЗАПРЕЩАЕТ браузеру горизонтальный пан — до тех пор, пока
+       pinch-зум не добавит .zoomed (touch-action: pan-x pan-y).
+       Приём Task 230 (таблица хронологии): селекторы ниже
+       переопределяют touch-action на pan-x pan-y — один палец
+       скроллит контейнер СРАЗУ; щипок из двух пальцев по-прежнему
+       уходит в JS-обработчик pinch-zoom (pinch-zoom в значении
+       нет — браузер не перехватывает жест) */
+    .ws-grid.pinch-zoom-target,
+    .ws-tt-table.pinch-zoom-target,
+    .ws-grid-wrap.pinch-zoom-target,
+    .ws-tt-body.pinch-zoom-target {
+        touch-action: pan-x pan-y;
     }
 
     /* Task 334: ЧИПЫ мобильного бара — компактные капсулы-тогглы
-       «Мероприствия»/«Нормы» (высота ряда кнопок, прямые углы —
+       «Мероприятия»/«Нормы» (высота ряда кнопок, прямые углы —
        стиль кнопок тулбара Task 254/328); активный чип — акцент.
        На десктопе ряд чипов НЕ отображается (окна и так в баре) */
     .ws-mob-chips {
@@ -5522,6 +5581,19 @@
            архивных строк НЕТ, имена негде взять) */
         .ws-tt-table.ws-tt-year:not(.ws-tt-arch) th.ws-tt-emp,
         .ws-tt-table.ws-tt-year:not(.ws-tt-arch) td.ws-tt-emp { display: none; }
+    }
+    /* Task 335 (заявка: «сужаться не резко, а ПЛАВНО в начале
+       прокрутки»): ПЛАВНОСТЬ сужения колонки «Сотрудник» таблиц
+       итогов — transition на ширину (0.22s ease, оба направления;
+       42% → 58px интерполируется движком как length-percentage).
+       Правило — ПОСЛЕ базового .ws-tt-emp (специфичность равна,
+       порядок решает); только мобильная вёрстка — десктоп не
+       анимируется (колонки месяца на десктопе скрыты/фиксированы) */
+    @media (max-width: 1023px) {
+        .ws-tt-table th.ws-tt-emp,
+        .ws-tt-table td.ws-tt-emp {
+            transition: width 0.22s ease;
+        }
     }
     /* Task 333 (заявка: «Архив в годовой таблице всё же нужен»):
        ПОДПИСЬ-заголовок блока архива — под основной таблицей года */
@@ -10657,6 +10729,16 @@
     [data-theme="light"] #page-device-detail .dev-detail-top {
         box-shadow: 0 10px 14px -10px rgba(0, 0, 0, 0.3);
     }
+    /* Task 335 (заявка): блок картинка+«№ прибора»+«Место установки»
+       ПРИМЫКАЕТ ВПЛОТУЮЮ к верхнему бару. При прокрутке мобильная
+       шапка страницы сжимается до 40px (.page-content.scrolled
+       .page-inline-header), а липкий блок оставался на top:56px —
+       между шапкой и блоком появлялась ЩЕЛЬ с просвечивающим
+       контентом. Теперь липкость следует высоте шапки: 56px → 40px
+       (тот же приём, что у .cj-group-header) */
+    #page-device-detail.scrolled .dev-detail-top {
+        top: 40px;
+    }
     /* Картинка-превью — прижата к левому краю карточки */
     .dev-detail-image-wrap {
         position: relative;
@@ -12744,6 +12826,10 @@
             z-index: 5;
             margin-left: -16px;
             margin-right: -16px;
+            /* Task 335 (заявка): блок вплотную к верхнему бару —
+               компенсируем и ВЕРХНИЙ отступ скролл-зоны панели
+               (padding 16px), как боковые full-bleed маржи */
+            margin-top: -16px;
             padding-left: 16px;
             box-shadow: 0 10px 14px -10px rgba(0, 0, 0, 0.5);
         }
@@ -13413,7 +13499,7 @@
                      без класса окно скрыто ТОЛЬКО в мобильной
                      media (≤1023px) -->
                 <div class="ws-mob-chips" id="wsMobChips">
-                    <button type="button" id="wsChipEvents" class="ws-mob-chip" onclick="WorkSchedule.toggleMobPanel('events')" aria-pressed="false">Мероприствия</button>
+                    <button type="button" id="wsChipEvents" class="ws-mob-chip" onclick="WorkSchedule.toggleMobPanel('events')" aria-pressed="false">Мероприятия</button>
                     <button type="button" id="wsChipNorms" class="ws-mob-chip" onclick="WorkSchedule.toggleMobPanel('norms')" aria-pressed="false">Нормы</button>
                 </div>
                 <div id="wsEventsPanel" class="ws-events-panel" hidden></div>
@@ -38307,6 +38393,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var full = (v === 'full');
             var totalsBtn = document.getElementById('wsTotalsBtn');
             if (totalsBtn) totalsBtn.hidden = !full;
+            // Task 335 (заявка: в видах «только сменные/только дневные»
+            // шахматка НЕ растягивается до низа окна приложения):
+            // класс-маркер на странице — десктоп-CSS собирает колонку
+            // шахматки по ВЫСОТЕ контента (align-self/flex), JS
+            // _fitGrid капсулирует высоту строк природной (не
+            // растягивает); полный вид — прежнее заполнение (Task 252)
+            var viewPage = document.getElementById('page-work-schedule');
+            if (viewPage && viewPage.classList && viewPage.classList.toggle) {
+                viewPage.classList.toggle('ws-view-filtered', !full);
+            }
             // шторка недоступна в сменном/дневном видах: открытую —
             // закрыть (анимация/уборка как обычно); закрытую — просто
             // спрятать вкладки (кнопка «Итоги учёта» уже скрыта)
@@ -38940,11 +39036,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // вешаются по _canEdit, а сам openEmployeeForm внутри
             // ещё раз проверяет право записи.
             var empHeadAdd = this._canEdit ? ' ws-emp-head-add' : '';
+            // Task 335 (заявка): «Сотрудник +» в суженном виде —
+            // «Сотр»: текст в span с data-full/data-s4 — тот же
+            // span-обмен, что у ФИО (_narrowApply); плюсик-индикатор
+            // скрывается CSS (.ws-grid.ws-narrow .ws-emp-head-plus)
             html += '<th class="ws-emp-col' + empHeadAdd + '"' +
                     (this._canEdit
                         ? ' onclick="WorkSchedule.openEmployeeForm()"'
                         : '') +
-                    '>Сотрудник' +
+                    '><span class="ws-emp-head-txt" data-full="Сотрудник" data-s4="Сотр">Сотрудник</span>' +
                     (this._canEdit ? '<i class="ws-emp-head-plus">+</i>' : '') +
                     '</th>';
             for (var d = 1; d <= daysInMonth; d++) {
@@ -39547,8 +39647,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // класс .ws-narrow (CSS ≤1023px сужает колонку ФИО/фамилий
         // и прячет таб. номер/должность) + обмен текста
         // span[data-s4] ⇄ span[data-full]
+        // Task 335: сужение — ТОЛЬКО мобильная вёрстка (≤1023px):
+        // на десктопе класс .ws-narrow не имеет CSS-эффекта, а обмен
+        // текста ПОРТИЛ бы ФИО при горизонтальной прокрутке шторки
+        // (годовая таблица) — включение гасится принудительно
         _narrowApply: function(container, on) {
             if (!container || !container.querySelectorAll) return;
+            if (on && typeof window !== 'undefined' && window.matchMedia
+                    && !window.matchMedia('(max-width: 1023px)').matches) {
+                on = false;
+            }
             var tables = container.querySelectorAll('.ws-grid, .ws-tt-table');
             for (var t = 0; t < tables.length; t++) {
                 if (tables[t].classList && tables[t].classList.toggle) {
@@ -39566,19 +39674,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // После ПЕРЕРИСОВКИ (сетка/итоги) сужение СОХРАНЯЕТСЯ, если
         // контейнер уже прокручен по горизонтали (перемотка месяца,
         // «Обновить», правки ячеек — таблица перерисована, классы и
-        // текст ставятся заново)
+        // текст ставятся заново). Task 335: порог 0 — ЛЮБАЯ величина
+        // прокрутки (сужение с самого начала, заявка «плавно в
+        // начале прокрутки»); плавность разворота — CSS-переход
+        // ширины колонки (0.22s ease)
         _reapplyEmpNarrow: function() {
             var ids = ['wsGridWrap', 'wsTtBody', 'wsTtPageBody'];
             for (var i = 0; i < ids.length; i++) {
                 var el = document.getElementById(ids[i]);
-                if (el && el.scrollLeft > 6) this._narrowApply(el, true);
+                if (el && el.scrollLeft > 0) this._narrowApply(el, true);
             }
         },
 
         // Слушатели горизонтальной прокрутки (однократно, passive):
         // шахматка (#wsGridWrap), тело шторки (#wsTtBody) и тело
-        // страницы итогов (#wsTtPageBody). Порог 6px — защита от
-        // субпиксельных дрожаний; при возврате к началу — полное ФИО
+        // страницы итогов (#wsTtPageBody). Task 335 (заявка: «сужаться
+        // … плавно в НАЧАЛЕ прокрутки»): порог 0 — как только
+        // прокрутка началась, класс ставится сразу, а CSS-переход
+        // ширины разворачивает сужение плавно; при возврате к
+        // scrollLeft=0 — плавное расширение и полное ФИО
         _attachEmpNarrow: function() {
             if (this._narrowAttached) return;
             this._narrowAttached = true;
@@ -39587,7 +39701,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var el = document.getElementById(id);
                 if (!el || !el.addEventListener) return;
                 el.addEventListener('scroll', function() {
-                    self._narrowApply(el, el.scrollLeft > 6);
+                    self._narrowApply(el, el.scrollLeft > 0);
                 }, { passive: true });
             };
             bind('wsGridWrap');
@@ -40087,6 +40201,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // на десктопе CSS задаёт явную УЗКУЮ ширину по заголовку
             // в 2 строки (сумма ширин = ширина таблицы = ширина
             // шторки, _fitTtDrawer); на мобайле классы не действуют
+            // Task 335 (заявка: «на странице итогов учёта за месяц
+            // должны отображаться ВСЕ столбцы»): на МОБИЛЬНОЙ
+            // СТРАНИЦЕ итогов доп. столбцы включены ВСЕГДА —
+            // переключателя «Ещё» на странице нет (шеврон только у
+            // десктоп-шторки); широкая таблица прокручивается
+            // горизонтально (фамилии сужаются — Task 334/335).
+            // Десктоп-шторка — прежнее поведение (_totalsExtra)
+            var extraOn = this._ttPage ? true : !!this._totalsExtra;
             var cols = [
                 // Task 331 (заявка): Явки и Переработка — ПОДПИСЬ В
                 // СКОБКАХ, что количества — в ДНЯХ («Явки (дни)»,
@@ -40098,7 +40220,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 { key: 'hours', name: 'Часы',        cls: 'ws-tt-hours', wcls: 'ws-tt-c-hours' },
                 { key: 'over',  name: 'Переработка (дни)', cls: 'ws-tt-over',  wcls: 'ws-tt-c-over' }
             ];
-            if (this._totalsExtra) {
+            if (extraOn) {
                 cols = cols.concat([
                     { key: 'ОВ',    name: 'Отгул (ОВ)',        wcls: 'ws-tt-c-ov' },
                     { key: 'Б',     name: 'Больничный (Б)',     wcls: 'ws-tt-c-b' },
@@ -40118,7 +40240,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // снизу закрывает бордюрчик .ws-tt-foot
             var html = '<table class="ws-tt-table">' +
                 '<thead><tr>' +
-                '<th class="ws-tt-emp">Сотрудник</th>';
+                // Task 335: «Сотрудник» → «Сотр» при сужении (span-обмен)
+                '<th class="ws-tt-emp"><span class="ws-tt-emp-head" data-full="Сотрудник" data-s4="Сотр">Сотрудник</span></th>';
             for (var c = 0; c < cols.length; c++) {
                 html += '<th' + (cols[c].wcls ? ' class="' + cols[c].wcls + '"' : '')
                             + (cols[c].title
@@ -40187,7 +40310,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 && window.matchMedia
                 && window.matchMedia('(min-width: 1024px)').matches;
             if (table && !isDesktop) {
-                table.style.minWidth = this._totalsExtra
+                table.style.minWidth = extraOn
                     ? (cols.length * 64) + 'px' : '';
                 table.style.width = '';
             } else if (table) {
@@ -40431,7 +40554,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var html = '';
             if (employees.length) {
                 html = '<table class="ws-tt-table ws-tt-year">' +
-                    '<thead><tr><th class="ws-tt-emp">Сотрудник</th>';
+                    // Task 335: «Сотрудник» → «Сотр» при сужении
+                    '<thead><tr><th class="ws-tt-emp"><span class="ws-tt-emp-head" data-full="Сотрудник" data-s4="Сотр">Сотрудник</span></th>';
                 for (var h = 1; h <= 12; h++) {
                     html += '<th>' + monthsAbbr[h - 1] + '</th>';
                 }
@@ -40466,7 +40590,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (archived.length) {
                 html += '<div class="ws-tt-arch-cap">Архив</div>' +
                     '<table class="ws-tt-table ws-tt-year ws-tt-arch">' +
-                    '<thead><tr><th class="ws-tt-emp">Сотрудник</th>';
+                    // Task 335: «Сотрудник» → «Сотр» при сужении
+                    '<thead><tr><th class="ws-tt-emp"><span class="ws-tt-emp-head" data-full="Сотрудник" data-s4="Сотр">Сотрудник</span></th>';
                 for (var h2 = 1; h2 <= 12; h2++) {
                     html += '<th>' + monthsAbbr[h2 - 1] + '</th>';
                 }
@@ -40713,6 +40838,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             wrap.style.setProperty('--ws-row-h', '1px');
             for (var k = 0; k < n; k++) rows[k].style.height = '';
             var natural = measureNatural();
+            // Task 335 (заявка): в ФИЛЬТРОВАННЫХ видах (сменный/
+            // дневной) шахматка НЕ растягивается до низа окна
+            // приложения: высота строки КАПСУЛИРУЕТСЯ природной —
+            // таблица заканчивается последней строкой, ниже — фон
+            // рабочей области (класс ws-view-filtered собирает
+            // колонку по контенту). Полный вид — прежнее
+            // заполнение до низа (Task 252)
+            if (this._view && this._view !== 'full' && h > natural) {
+                h = natural;
+            }
             if (h < natural) {
                 // компактный ярус: колонка ФИО без нижнего паддинга роскоши
                 wrap.classList.add('ws-compact');
@@ -40730,9 +40865,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             // Применяем целые высоты: остаток (budget - h*n < n пикселей)
             // первым строкам по +1px — таблица заполняет область ровно до
-            // низа окна, без щели снизу
+            // низа окна, без щели снизу. Task 335: при КАПСУЛИРОВАНИИ
+            // высоты (фильтрованный вид) остаток может быть БОЛЬШЕ n —
+            // ограничиваем раздачу максимумом n-1 (каждой строке не
+            // более +1px), чтобы капсул не нарушался лишним пикселем
             wrap.style.setProperty('--ws-row-h', h + 'px');
             var rem = budget - h * n;
+            if (rem < 0) rem = 0;
+            if (rem > n - 1) rem = n - 1;
             for (var i = 0; i < n; i++) {
                 rows[i].style.height = (h + (i < rem ? 1 : 0)) + 'px';
             }
