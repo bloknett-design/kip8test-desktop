@@ -1448,3 +1448,30 @@ Worklog этого репо с 2026-08-29 не велся (зеркало — в
   CI Build Desktop App — success (ТРИ установщика + blockmap-ы).
 - electron/main.js НЕ тронут (нативных модулей нет; контент живой
   с Pages kip8test).
+
+---
+
+## Task 345 — регрессия изоляции kip8-desktop ↔ kip8test-desktop (2026-09-08)
+
+**Заявка:** «нужно проверить, чтобы не было общей регистрации между
+десктопными приложениями kip8-desktop и kip8test-desktop».
+
+**Результат аудита: изоляция ПОЛНАЯ.** Electron хранит localStorage/
+cookies/SW в папке userData своего приложения (%APPDATA%\<productName>):
+у kip8-desktop — «KIPiA», у kip8test-desktop — «KIPiA Test» → папки и
+хранилища раздельны, общий вход невозможен (в отличие от мобильных PWA
+на одном origin — инцидент Task 344). Git-история productName никогда
+не пересекалась («КИПиА (Test)» → «KIPiA Test» против «KIPiA»).
+Подробности и полный чек-лист — scripts/task345-desktop-isolation-check.py
+в kip8test (34/34 PASS по обоим десктопам).
+
+**Guard (tests/test-task345.js, +11 → 218/0):** package.json —
+name/productName/appId/publish.repo/shortcutName/artifactName остаются
+тестовыми; electron/main.js — REMOTE_APP_URL ведёт на /kip8test/ (не на
+прод), нет app.setName / app.setPath('userData') / partition:;
+index.html — обёртка isolateLocalStorage и префикс «kip8test:» на месте.
+Негативный тест: подмена productName → 'KIPiA' роняет прогон (217/1).
+run-all.js kip8test-desktop синками не перезаписывается → guard
+гоняется CI при каждом пуше.
+
+Следующий номер задачи: 346.

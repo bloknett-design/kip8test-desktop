@@ -26,6 +26,10 @@ require('./test-rtd.js');
 require('./test-thermocouple.js');
 require('./test-orifice.js');
 require('./test-utils.js');
+// Task 345 — регрессия изоляции десктопов kip8-desktop ↔ kip8test-desktop
+// (productName/appId/REMOTE_APP_URL: тест-десктоп не должен стать «продом»
+// копипастой — иначе общая папка userData = общий вход)
+require('./test-task345.js');
 
 // Запускаем
 runAll().then(exitCode => {
