@@ -1845,6 +1845,30 @@
         color: #c53030;
     }
 
+    /* Task 353: кнопка удаления пользователя — усиленный красный
+       (destruct-действие, отличимо от «Сбросить вход»). Свой аккаунт —
+       disabled (гард «нельзя себя» есть и на сервере). */
+    .admin-delete-btn {
+        padding: 6px 12px;
+        background: rgba(255,107,107,0.16);
+        border: 1px solid rgba(255,107,107,0.45);
+        border-radius: 8px;
+        color: #ff8585;
+        font-size: 12px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        transition: background 0.15s, transform 0.1s;
+    }
+    .admin-delete-btn:active { transform: scale(0.96); }
+    .admin-delete-btn:hover { background: rgba(255,107,107,0.28); }
+    .admin-delete-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    [data-theme="light"] .admin-delete-btn {
+        background: rgba(220,70,70,0.12);
+        border-color: rgba(220,70,70,0.4);
+        color: #c53030;
+    }
+
     /* Карточки статистики */
     .admin-stats-container {
         padding: 12px 10px 24px;
@@ -1908,6 +1932,7 @@
         .admin-add-btn { padding: 8px 10px; font-size: 12px; }
         .admin-role-select { max-width: 100%; font-size: 11px; padding: 5px 8px; }
         .admin-action-btn { font-size: 11px; padding: 5px 8px; }
+        .admin-delete-btn { font-size: 11px; padding: 5px 8px; }
         .admin-item { padding: 10px 12px; }
         .admin-item-email { font-size: 13px; }
         .admin-badge { font-size: 10px; padding: 2px 6px; }
@@ -1927,6 +1952,7 @@
         .admin-item-actions { gap: 4px; }
         .admin-role-select { font-size: 10px; padding: 4px 6px; }
         .admin-action-btn { font-size: 10px; padding: 4px 6px; }
+        .admin-delete-btn { font-size: 10px; padding: 4px 6px; }
     }
 
     @media (max-width: 400px) {
@@ -2734,6 +2760,100 @@
     /* select опции — тёмный фон для dropdown */
     .create-user-field option { background: #1a1f2e; color: #fff; }
     [data-theme="light"] .create-user-field option { background: #fff; color: #1a1a1a; }
+
+    /* Delete User Modal (Task 353: подтверждение удаления
+       пользователя). Визуальный язык create-user-модалки, акцент —
+       красный: destructive-действие. */
+    .delete-user-overlay {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.6); z-index: 1000;
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0; pointer-events: none; transition: opacity 0.25s;
+        backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    }
+    .delete-user-overlay.active { opacity: 1; pointer-events: auto; }
+    .delete-user-modal {
+        background: rgba(26, 34, 51, 0.98);
+        border: 1px solid rgba(255, 107, 107, 0.35);
+        border-radius: 16px; padding: 28px 24px 22px; max-width: 360px; width: 90%;
+        box-shadow: 0 16px 48px rgba(0,0,0,0.4); position: relative;
+    }
+    [data-theme="light"] .delete-user-modal {
+        background: rgba(250, 249, 245, 0.98);
+        border-color: rgba(220, 70, 70, 0.35);
+        box-shadow: 0 16px 48px rgba(0,0,0,0.15);
+    }
+    .delete-user-close {
+        position: absolute; top: 12px; right: 12px; width: 28px; height: 28px;
+        border-radius: 8px; display: flex; align-items: center; justify-content: center;
+        cursor: pointer; background: transparent; border: none;
+        -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    }
+    .delete-user-close:active { background: rgba(255,107,107,0.15); }
+    .delete-user-close svg { stroke: rgba(140,170,200,0.7); }
+    [data-theme="light"] .delete-user-close svg { stroke: rgba(0,0,0,0.5); }
+    .delete-user-title {
+        text-align: center; font-size: 18px; font-weight: 700; color: #e0e0e0;
+        letter-spacing: -0.3px; margin-bottom: 6px;
+    }
+    [data-theme="light"] .delete-user-title { color: #1a1a1a; }
+    /* Email цели — вставляется textContent'ом (XSS-безопасно) */
+    .delete-user-email {
+        text-align: center; font-size: 14px; font-weight: 600; color: #ff8585;
+        word-break: break-all; margin-bottom: 16px;
+    }
+    [data-theme="light"] .delete-user-email { color: #c53030; }
+    .delete-user-warn {
+        font-size: 12.5px; color: rgba(255,255,255,0.65); line-height: 1.55;
+        margin-bottom: 10px;
+    }
+    [data-theme="light"] .delete-user-warn { color: rgba(20,20,19,0.65); }
+    .delete-user-note {
+        font-size: 11px; color: rgba(255,255,255,0.4); line-height: 1.5;
+        margin-bottom: 18px;
+    }
+    [data-theme="light"] .delete-user-note { color: rgba(20,20,19,0.45); }
+    .delete-user-btns {
+        display: flex; gap: 10px; margin-top: 4px;
+    }
+    .delete-user-cancel {
+        flex: 1; padding: 12px;
+        background: rgba(74, 143, 199, 0.12);
+        border: 1px solid rgba(74, 143, 199, 0.3);
+        border-radius: 10px;
+        color: #8fb4d6; font-size: 14px; font-weight: 600;
+        font-family: inherit; cursor: pointer;
+        transition: background 0.15s, transform 0.1s;
+    }
+    .delete-user-cancel:active { transform: scale(0.97); }
+    .delete-user-cancel:hover { background: rgba(74, 143, 199, 0.22); }
+    [data-theme="light"] .delete-user-cancel {
+        background: rgba(74, 143, 199, 0.08);
+        border-color: rgba(74, 143, 199, 0.35);
+        color: #3d6a94;
+    }
+    .delete-user-confirm {
+        flex: 1; padding: 12px;
+        background: rgba(255, 107, 107, 0.2);
+        border: 1px solid rgba(255, 107, 107, 0.45);
+        border-radius: 10px;
+        color: #ff8585; font-size: 14px; font-weight: 700;
+        font-family: inherit; cursor: pointer;
+        transition: background 0.15s, transform 0.1s;
+    }
+    .delete-user-confirm:active { transform: scale(0.97); }
+    .delete-user-confirm:hover { background: rgba(255, 107, 107, 0.3); }
+    .delete-user-confirm:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    [data-theme="light"] .delete-user-confirm {
+        background: rgba(220, 70, 70, 0.12);
+        border-color: rgba(220, 70, 70, 0.4);
+        color: #c53030;
+    }
+    .delete-user-error {
+        font-size: 12px; color: #ff6b6b; text-align: center;
+        margin-top: 10px; min-height: 16px; line-height: 1.4;
+    }
+    [data-theme="light"] .delete-user-error { color: #d64545; }
 
     /* ========== Кабельный журнал (редактирование) ==========
        Дизайн: список-зебра во всю ширину экрана, непрозрачный фон,
@@ -14486,6 +14606,7 @@
                     <option value="ADMIN_UPDATE_ROLE">Смена роли</option>
                     <option value="ADMIN_RESET_LOGIN">Сброс входа</option>
                     <option value="ADMIN_CREATE_USER">Создание пользователя</option>
+                    <option value="ADMIN_DELETE_USER">Удаление пользователя (Task 353)</option>
                     <option value="ADMIN_ACCESS_DENIED">Отказ в доступе</option>
                     <option value="CABLE_JOURNAL_APPEND">Каб. журнал: добавление</option>
                     <option value="CABLE_JOURNAL_UPDATE">Каб. журнал: изменение</option>
@@ -45245,6 +45366,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _sessions: null,
         _logs: null,
 
+        // Task 353: цель удаления в открытой модалке
+        // ({ userId, email } или null).
+        _deleteTarget: null,
+
         // Список ролей для <select> (тот же, что в Utils.gs Admin.updateRole).
         // Task 157: полный список ролей (12) — берётся из ROLE_ACCESS,
         // чтобы админ-панель всегда соответствовала матрице доступа.
@@ -45451,6 +45576,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 const resetBtn = online
                     ? '<button type="button" class="admin-action-btn" onclick="KipAdmin.resetLogin(' + u.id + ', \'' + self._esc(u.email) + '\')">Сбросить вход</button>'
                     : '';
+                // Task 353: кнопка удаления. СВОЙ аккаунт — disabled
+                // (сервер тоже запретит: «Нельзя удалить собственный
+                // аккаунт» — но кнопка не дёргает модалку зря).
+                const isSelf = !!(KipAuth._cachedEmail && u.email &&
+                    String(KipAuth._cachedEmail).toLowerCase() ===
+                    String(u.email).toLowerCase());
+                const deleteBtn = isSelf
+                    ? '<button type="button" class="admin-delete-btn" disabled title="Нельзя удалить собственный аккаунт">Удалить</button>'
+                    : '<button type="button" class="admin-delete-btn" onclick="KipAdmin.openDeleteUser(' + u.id + ')">Удалить</button>';
 
                 return '' +
                     '<div class="admin-item">' +
@@ -45464,6 +45598,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         '<div class="admin-item-actions">' +
                             roleSelect +
                             resetBtn +
+                            deleteBtn +
                         '</div>' +
                     '</div>';
             }).join('');
@@ -45772,6 +45907,80 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }).catch(function(err) {
                 if (errEl) errEl.textContent = err.message || String(err);
                 if (btn) { btn.disabled = false; btn.textContent = 'Создать пользователя'; }
+            });
+        },
+
+        // ============================================================
+        // Task 353: Удаление пользователя (модалка подтверждения).
+        // Сервер: роут adminDeleteUser (Utils.gs Admin.deleteUser,
+        // Task 351) — под замком: сносит сессии (по user_id ИЛИ email),
+        // активные OTP и строку users; гарды «нельзя себя»/
+        // «последнего админа»; аудит ADMIN_DELETE_USER. Ответ:
+        // { ok, deleted, sessionsRemoved, otpsRemoved }.
+        // ============================================================
+
+        // Открыть модалку подтверждения удаления.
+        openDeleteUser: function(userId) {
+            // Список мог устареть (юзер уже удалён с другого
+            // устройства) — молча ничего не делаем; после загрузки
+            // список перерендерится уже без него.
+            const user = (this._users || []).find(function(u) {
+                return Number(u.id) === Number(userId);
+            });
+            if (!user) return;
+            this._deleteTarget = { userId: user.id, email: user.email };
+            // Email вставляется textContent'ом — экранирование не
+            // нужно (XSS-безопасно by design, без _esc-HTML).
+            const emailEl = document.getElementById('deleteUserEmail');
+            if (emailEl) emailEl.textContent = user.email || ('ID ' + user.id);
+            const errEl = document.getElementById('deleteUserError');
+            if (errEl) errEl.textContent = '';
+            const btn = document.getElementById('deleteUserBtn');
+            if (btn) { btn.disabled = false; btn.textContent = 'Удалить'; }
+            const overlay = document.getElementById('deleteUserOverlay');
+            if (overlay) overlay.classList.add('active');
+        },
+
+        // Закрыть модалку (Отмена / крестик / клик по фону).
+        closeDeleteUser: function() {
+            const overlay = document.getElementById('deleteUserOverlay');
+            if (overlay) overlay.classList.remove('active');
+            this._deleteTarget = null;
+        },
+
+        // Подтвердить удаление — вызов сервера.
+        confirmDeleteUser: function() {
+            if (!this._deleteTarget) return;
+            const self = this;
+            const userId = this._deleteTarget.userId;
+            const email = this._deleteTarget.email;
+            const errEl = document.getElementById('deleteUserError');
+            const btn = document.getElementById('deleteUserBtn');
+            if (errEl) errEl.textContent = '';
+            if (btn) { btn.disabled = true; btn.textContent = 'Удаление…'; }
+            this._api('adminDeleteUser', { userId: userId }).then(function(res) {
+                // Показываем масштаб снесённого (сессии) — из ответа
+                // сервера; поле может отсутствовать у старого
+                // сервера (до Task 351) — тогда просто без деталей.
+                const sessions = res && res.sessionsRemoved != null
+                    ? res.sessionsRemoved : 0;
+                if (typeof showToast === 'function') {
+                    showToast('Пользователь удалён: ' + (email || '') +
+                              (sessions ? ' (сессий закрыто: ' + sessions + ')' : ''));
+                }
+                self.closeDeleteUser();
+                // Юзер исчез из users, его сессии снесены —
+                // обновить оба списка.
+                self.loadUsers();
+                self.loadSessions();
+            }).catch(function(err) {
+                // Ошибка остаётся В МОДАЛКЕ (не тостом — юзер её не
+                // пропустит): гарды сервера приходят на русском
+                // («Нельзя удалить собственный аккаунт», «Нельзя
+                // удалить последнего админа», «User not found»).
+                // Кнопка возвращается в рабочее состояние.
+                if (errEl) errEl.textContent = err.message || String(err);
+                if (btn) { btn.disabled = false; btn.textContent = 'Удалить'; }
             });
         },
 
@@ -46454,6 +46663,25 @@ window.addEventListener('load', function() {
         <button type="button" id="createUserBtn" class="create-user-btn" onclick="KipAdmin.createUser()">Создать пользователя</button>
         <div id="createUserError" class="create-user-error"></div>
         <div class="create-user-hint">Пользователь добавится с состоянием «вход не выполнен». После первого входа он появится в списке сессий.</div>
+    </div>
+</div>
+
+<!-- Delete User Modal (Админ: удалить пользователя — Task 353).
+     Email цели вставляется JS-ом через textContent (XSS-безопасно). -->
+<div class="delete-user-overlay" id="deleteUserOverlay" onclick="KipAdmin.closeDeleteUser()">
+    <div class="delete-user-modal" onclick="event.stopPropagation()">
+        <div class="delete-user-close" onclick="KipAdmin.closeDeleteUser()">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:none;stroke-width:2;stroke-linecap:round;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </div>
+        <div class="delete-user-title">Удалить пользователя?</div>
+        <div class="delete-user-email" id="deleteUserEmail"></div>
+        <div class="delete-user-warn">Аккаунт будет удалён безвозвратно: строка в «Пользователях», все его сессии и активные коды входа.</div>
+        <div class="delete-user-note">История журнала событий сохраняется. Если пользователь понадобится снова — создайте его заново через «+ Добавить».</div>
+        <div class="delete-user-btns">
+            <button type="button" class="delete-user-cancel" onclick="KipAdmin.closeDeleteUser()">Отмена</button>
+            <button type="button" id="deleteUserBtn" class="delete-user-confirm" onclick="KipAdmin.confirmDeleteUser()">Удалить</button>
+        </div>
+        <div id="deleteUserError" class="delete-user-error"></div>
     </div>
 </div>
 
