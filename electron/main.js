@@ -1,7 +1,34 @@
-const { app, BrowserWindow, Menu, shell, dialog, protocol, session } = require('electron');
+const { app, BrowserWindow, Menu, shell, dialog, protocol, session, net } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { autoUpdater } = require('electron-updater');
+
+// ============================================================
+// Флаг legacy-сборки для Windows 7/8.1 (Task 354)
+// ============================================================
+// Обычная сборка (Electron 35) требует Windows 10+: PE-заголовок её
+// бинарников объявляет OS 10.00, и загрузчик Windows 7/8.1 отклоняет
+// KIPiA.exe с ошибкой «не является приложением Win32».
+// Для старых систем собирается ЛЕГАСИ-установщик (Electron 22.3.27,
+// Chromium 108, PE OS 5.01): electron-builder кладёт в package.json
+// поле kipiaWin7Legacy: true (extraMetadata в electron-builder-legacy.yml).
+// В обычной и dev-сборке поля нет → флаг false, поведение прежнее.
+const appPkg = require('../package.json');
+const IS_LEGACY_WIN7 = appPkg.kipiaWin7Legacy === true;
+
+// В legacy-сборке автообновление оболочки ОТКЛЮЧЕНО (Task 354): основной
+// канал (latest.yml в GitHub Releases) раздаёт сборки на Electron 35
+// (только Windows 10+) — обновившись, приложение перестало бы запускаться
+// на Windows 7. Пользователь обновляется вручную: скачивает новый
+// *-win7-*.exe из релизов. Содержимое справочника при этом по-прежнему
+// обновляется автоматически — приложение грузит index.html с GitHub Pages.
+let autoUpdater = null;
+if (!IS_LEGACY_WIN7) {
+  try {
+    autoUpdater = require('electron-updater').autoUpdater;
+  } catch (e) {
+    console.log('[autoUpdater] Модуль недоступен:', e.message);
+  }
+}
 
 let mainWindow = null;
 
@@ -35,10 +62,12 @@ protocol.registerSchemesAsPrivileged([
 // Для macOS: скачивает .zip и заменяет приложение.
 // Для Linux AppImage: скачивает новый .AppImage.
 
-autoUpdater.autoDownload = false; // не скачивать автоматически — спросим пользователя
-autoUpdater.autoInstallOnAppQuit = true; // установить при закрытии
+if (autoUpdater) {
+  autoUpdater.autoDownload = false; // не скачивать автоматически — спросим пользователя
+  autoUpdater.autoInstallOnAppQuit = true; // установить при закрытии
+}
 
-autoUpdater.on('update-available', (info) => {
+function onUpdateAvailable(info) {
   // Новая версия найдена — спрашиваем пользователя
   if (!mainWindow) return;
   dialog.showMessageBox(mainWindow, {
@@ -54,42 +83,47 @@ autoUpdater.on('update-available', (info) => {
       autoUpdater.downloadUpdate();
     }
   });
-});
+}
 
-autoUpdater.on('download-progress', (progressObj) => {
-  // Можно показать прогресс в заголовке окна
-  if (mainWindow) {
-    mainWindow.setProgressBar(progressObj.percent / 100);
-  }
-});
+if (autoUpdater) {
+  autoUpdater.on('update-available', onUpdateAvailable);
 
-autoUpdater.on('update-downloaded', (info) => {
-  // Обновление скачано — предлагаем установить
-  if (mainWindow) {
-    mainWindow.setProgressBar(-1); // сбросить прогресс
-  }
-  dialog.showMessageBox(mainWindow, {
-    type: 'info',
-    title: 'Обновление загружено',
-    message: `Версия ${info.version} загружена`,
-    detail: 'Установить сейчас? Приложение перезапустится.',
-    buttons: ['Установить', 'Позже'],
-    defaultId: 0,
-    cancelId: 1
-  }).then((result) => {
-    if (result.response === 0) {
-      autoUpdater.quitAndInstall();
+  autoUpdater.on('download-progress', (progressObj) => {
+    // Можно показать прогресс в заголовке окна
+    if (mainWindow) {
+      mainWindow.setProgressBar(progressObj.percent / 100);
     }
   });
-});
 
-autoUpdater.on('error', (err) => {
-  // Ошибка обновления — не показываем пользователю (не критично)
-  console.log('[autoUpdater] Ошибка:', err.message);
-});
+  autoUpdater.on('update-downloaded', (info) => {
+    // Обновление скачано — предлагаем установить
+    if (mainWindow) {
+      mainWindow.setProgressBar(-1); // сбросить прогресс
+    }
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Обновление загружено',
+      message: `Версия ${info.version} загружена`,
+      detail: 'Установить сейчас? Приложение перезапустится.',
+      buttons: ['Установить', 'Позже'],
+      defaultId: 0,
+      cancelId: 1
+    }).then((result) => {
+      if (result.response === 0) {
+        autoUpdater.quitAndInstall();
+      }
+    });
+  });
 
-// Функция проверки обновлений
+  autoUpdater.on('error', (err) => {
+    // Ошибка обновления — не показываем пользователю (не критично)
+    console.log('[autoUpdater] Ошибка:', err.message);
+  });
+}
+
+// Функция проверки обновлений (в legacy-сборке — no-op)
 function checkForUpdates() {
+  if (!autoUpdater) return;
   try {
     autoUpdater.checkForUpdates().catch(() => {});
   } catch (e) {
@@ -203,46 +237,68 @@ async function deepCleanAfterLoad() {
 // ============================================================
 
 function registerProtocolHandler() {
-  protocol.handle('app', (request) => {
-    const url = new URL(request.url);
-    let filePath = path.normalize(path.join(APP_ROOT, url.pathname));
+  const mimeTypes = {
+    '.html':  'text/html; charset=utf-8',
+    '.js':    'application/javascript; charset=utf-8',
+    '.css':   'text/css; charset=utf-8',
+    '.json':  'application/json; charset=utf-8',
+    '.png':   'image/png',
+    '.jpg':   'image/jpeg',
+    '.jpeg':  'image/jpeg',
+    '.svg':   'image/svg+xml',
+    '.ico':   'image/x-icon',
+    '.woff':  'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf':   'font/ttf',
+    '.webp':  'image/webp',
+    '.webmanifest': 'application/manifest+json'
+  };
+
+  // Общая логика обоих API-путей: разбор URL, запрет выхода за APP_ROOT,
+  // чтение файла. Возвращает { status, data: Buffer, mimeType }.
+  function resolveFile(url) {
+    let filePath;
+    try {
+      const u = new URL(url);
+      filePath = path.normalize(path.join(APP_ROOT, u.pathname));
+    } catch (e) {
+      return { status: 403, data: Buffer.from('Forbidden') };
+    }
 
     if (!filePath.startsWith(APP_ROOT)) {
-      return new Response('Forbidden', { status: 403 });
+      return { status: 403, data: Buffer.from('Forbidden') };
     }
 
     const ext = path.extname(filePath).toLowerCase();
-    const mimeTypes = {
-      '.html':  'text/html; charset=utf-8',
-      '.js':    'application/javascript; charset=utf-8',
-      '.css':   'text/css; charset=utf-8',
-      '.json':  'application/json; charset=utf-8',
-      '.png':   'image/png',
-      '.jpg':   'image/jpeg',
-      '.jpeg':  'image/jpeg',
-      '.svg':   'image/svg+xml',
-      '.ico':   'image/x-icon',
-      '.woff':  'font/woff',
-      '.woff2': 'font/woff2',
-      '.ttf':   'font/ttf',
-      '.webp':  'image/webp',
-      '.webmanifest': 'application/manifest+json'
-    };
     const mimeType = mimeTypes[ext] || 'application/octet-stream';
 
     try {
       const data = fs.readFileSync(filePath);
-      return new Response(data, {
-        status: 200,
-        headers: {
-          'content-type': mimeType,
-          'cache-control': 'no-cache'
-        }
-      });
+      return { status: 200, data, mimeType };
     } catch (err) {
-      return new Response('Not Found: ' + url.pathname, { status: 404 });
+      return { status: 404, data: Buffer.from('Not Found: ' + url) };
     }
-  });
+  }
+
+  if (typeof protocol.handle === 'function') {
+    // Electron 25+ — основная сборка (Electron 35, Windows 10+)
+    protocol.handle('app', (request) => {
+      const r = resolveFile(request.url);
+      const headers = { 'cache-control': 'no-cache' };
+      if (r.mimeType) headers['content-type'] = r.mimeType;
+      else headers['content-type'] = 'text/plain; charset=utf-8';
+      return new Response(r.data, { status: r.status, headers: headers });
+    });
+  } else {
+    // Electron 22 (legacy-сборка для Windows 7/8.1, Task 354):
+    // protocol.handle() появился только в Electron 25 — здесь старый
+    // callback-API registerBufferProtocol (существует с древних версий,
+    // объявлен deprecated, но в 22-й ветке — единственный путь).
+    protocol.registerBufferProtocol('app', (request, callback) => {
+      const r = resolveFile(request.url);
+      callback({ data: r.data, mimeType: r.mimeType || 'text/plain; charset=utf-8' });
+    });
+  }
 }
 
 // ============================================================
@@ -251,31 +307,53 @@ function registerProtocolHandler() {
 
 const LOCAL_APP_URL = 'app://localhost/index.html';
 
+// Проверка доступности удалённого сервера через модуль net Electron.
+// ЕДИНЫЙ путь для Electron 22 и 35 (Task 354): в Node 16 (поставляется с
+// Electron 22) нет global fetch в main-процессе, а net есть в обеих версиях
+// и использует сетевой стек Chromium (системный прокси — бонус для корпоративных сетей).
+function isRemoteAvailable(url, timeoutMs) {
+  return new Promise((resolve) => {
+    let req = null;
+    let timer = null;
+    let settled = false;
+    const done = (ok) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      if (req) { try { req.destroy(); } catch (e) { /* уже закрыт */ } }
+      resolve(ok);
+    };
+    try {
+      req = net.request({ url: url, method: 'HEAD' });
+    } catch (e) {
+      resolve(false);
+      return;
+    }
+    timer = setTimeout(() => done(false), timeoutMs);
+    req.on('response', (res) => {
+      done(res.statusCode >= 200 && res.statusCode < 400);
+    });
+    req.on('error', () => {
+      done(false);
+    });
+    req.end();
+  });
+}
+
 async function loadApp() {
   if (!mainWindow) return;
 
   // Проверяем доступность удалённого сервера (timeout 4 сек)
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+  const remoteOk = await isRemoteAvailable(REMOTE_APP_URL, 4000);
 
-    const response = await fetch(REMOTE_APP_URL, {
-      method: 'HEAD',
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-
-    if (response.ok) {
-      console.log('[loadApp] Удалённый сервер доступен, загружаем:', REMOTE_APP_URL);
-      mainWindow.loadURL(REMOTE_APP_URL);
-      return;
-    }
-  } catch (e) {
-    // Сервер недоступен — используем локальные файлы
-    console.log('[loadApp] Удалённый сервер недоступен, fallback на локальные файлы');
+  if (remoteOk) {
+    console.log('[loadApp] Удалённый сервер доступен, загружаем:', REMOTE_APP_URL);
+    mainWindow.loadURL(REMOTE_APP_URL);
+    return;
   }
 
-  // Fallback: загружаем из локальных файлов (app://)
+  // Сервер недоступен — используем локальные файлы (app://)
+  console.log('[loadApp] Удалённый сервер недоступен, fallback на локальные файлы');
   mainWindow.loadURL(LOCAL_APP_URL);
 }
 
@@ -391,6 +469,18 @@ function createMenu() {
         {
           label: 'Проверить обновления',
           click: () => {
+            if (IS_LEGACY_WIN7) {
+              // Task 354: в legacy-сборке автообновление отключено — основной
+              // канал раздаёт сборки на Electron 35 (только Windows 10+).
+              dialog.showMessageBox(mainWindow, {
+                type: 'info',
+                title: 'Обновления',
+                message: 'Это legacy-сборка для Windows 7/8.1',
+                detail: 'Автообновление оболочки отключено: основной канал обновлений требует Windows 10+.\n\nСодержимое справочника обновляется автоматически при каждом запуске (загружается с сервера).\n\nЕсли понадобится новая версия оболочки — скачайте файл *-win7-*.exe из раздела Releases на GitHub.',
+                buttons: ['OK']
+              });
+              return;
+            }
             checkForUpdates();
             dialog.showMessageBox(mainWindow, {
               type: 'info',
@@ -458,8 +548,10 @@ app.whenReady().then(async () => {
   createWindow();
 
   // Проверяем обновления через 5 секунд после запуска
-  // (не блокируем загрузку приложения)
-  setTimeout(checkForUpdates, 5000);
+  // (не блокируем загрузку приложения; в legacy-сборке — отключено, Task 354)
+  if (!IS_LEGACY_WIN7) {
+    setTimeout(checkForUpdates, 5000);
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
