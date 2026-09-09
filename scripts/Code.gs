@@ -25,6 +25,7 @@
  *   Admin.listUsers(token)                 → результат
  *   Admin.updateRole(token, userId, newRole) → результат
  *   Admin.resetLogin(token, userId)        → результат
+ *   Admin.deleteUser(token, userId)        → результат  // Task 351
  *   Admin.createUser(token, email, role)   → результат
  *   Admin.listSessions(token)              → результат
  *   Admin.listLogs(token, limit)           → результат
@@ -69,6 +70,7 @@ const GATE_ACTIONS = {
   'adminListUsers':     'admin.panel',
   'adminUpdateRole':    'admin.panel',
   'adminResetLogin':    'admin.panel',
+  'adminDeleteUser':    'admin.panel',  // Task 351: удаление юзера — только админ-панель
   'adminCreateUser':    'admin.panel',
   'adminListSessions':  'admin.panel',
   'adminListLogs':      'admin.panel',
@@ -96,6 +98,12 @@ function _gateLegacyWarn(action) {
  */
 function doPost(e) {
   try {
+    // Task 351: сброс кэша чтений НА ОДНО выполнение (см. Utils.gs:
+    // _rowsCache / beginExecution). GAS может переиспользовать
+    // глобальное состояние между запросами на одном инстансе — без
+    // сброса второй запрос получил бы снапшот листов первого.
+    Utils.beginExecution();
+
     const action = (e.parameter.action || '').trim();
     const payload = e.postData && e.postData.contents
       ? JSON.parse(e.postData.contents)
@@ -161,6 +169,12 @@ function doPost(e) {
 
       case 'adminResetLogin':
         result = Admin.resetLogin(payload.token, payload.userId);
+        break;
+
+      // Task 351: удаление пользователя (сессии + OTP + строка users;
+      // гарды «нельзя себя / последнего админа»; аудит ADMIN_DELETE_USER)
+      case 'adminDeleteUser':
+        result = Admin.deleteUser(payload.token, payload.userId);
         break;
 
       case 'adminCreateUser':
@@ -337,6 +351,9 @@ function _json(obj) {
  * триггеры hourlyCleanup, потом создадут новый — без дубликатов.
  */
 function hourlyCleanup() {
+  // Task 351: сброс кэша чтений (крон — отдельное выполнение; см. doPost)
+  Utils.beginExecution();
+
   Utils.cleanupExpiredSessions();
   Utils.cleanupExpiredOtpCodes();
   Utils.cleanupOldAuditLogs();

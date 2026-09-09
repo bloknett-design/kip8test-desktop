@@ -1492,3 +1492,17 @@ run-all.js kip8test-desktop синками не перезаписывается
 - Релиз НЕ нужен: менялся только справочник scripts/Code.gs.
 
 Следующий номер задачи: 348.
+
+## Task 351 (09.09.2026) — синхрон справочника Code.gs (вариант kip8test)
+
+- scripts/Code.gs = kip8test/scripts/Code.gs байт-в-байт:
+  Utils.beginExecution() в doPost+hourlyCleanup (сброс кэша
+  чтений Task 351), роут case 'adminDeleteUser' + гейт
+  admin.panel, сигнатура в шапке;
+- Остальные файлы Task 351 (Utils/Sessions) сюда не входят —
+  в этом репо только Code.gs (guard изоляции Task 345);
+- Тесты: **218/0** — без изменений (роутер тест-инвариантов не
+  трогал);
+- Релиз НЕ нужен: менялся только справочник scripts/Code.gs.
+
+Следующий номер задачи: 352.
