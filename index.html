@@ -3270,9 +3270,15 @@
        нет данных за предыдущие сутки (до ввода); «Еженедельно»/«Ежемесячно»
        — прошла календарная неделя/месяц последних данных. После сохранения
        новых показаний цвет возвращается к зелёному. Класс добавляет
-       renderList по FlowmeterData._isOverdue. */
-    .flow-summary-val.flow-summary-val-due { color: #e74c3c; }
-    [data-theme="light"] .flow-summary-val.flow-summary-val-due { color: #c0392b; }
+       renderList по FlowmeterData._isOverdue.
+       Task 359: красный ЯРЧЕ + шрифт крупнее (16px/700 → 18px/800) —
+       значение лучше притягивает взгляд (замечание пользователя). */
+    .flow-summary-val.flow-summary-val-due {
+        color: #ff5c47;
+        font-size: 18px;
+        font-weight: 800;
+    }
+    [data-theme="light"] .flow-summary-val.flow-summary-val-due { color: #e8230a; font-size: 18px; font-weight: 800; }
     .flow-summary-days { font-size: 12px; font-weight: 400; color: var(--text-secondary); margin-left: 8px; }
     /* Task 231: дата — под-элемент label «Последние показания» в карточке (одна строка,
        как в детальной карточке Task 229). Меньший шрифт, нейтральный цвет. */
