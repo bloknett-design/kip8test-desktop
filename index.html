@@ -4292,9 +4292,17 @@
        «Дни»/«Часы»/«Перераб.» (Task 342 — заявка: «добавь колонку
        переработок»: дни/часы переработки кодов д/н). Task 343
        (заявка: «из печати убери строку итогов и миниатюры иконок
-       мероприятий»): итоговой строки по подразделению и бейджей
-       мероприятий в ячейках в печати НЕТ (правила wsp-sum /
-       wsp-ev удалены).
+       мероприятий»): итоговой строки по подразделению в печати
+       НЕТ (agg.grand не используется; grand-итоги — «Итоги
+       учёта» приложения). Task 361 (заявки: «столбец с
+       сотрудниками сделай уже, по ширине текста в нём», «размер
+       таблицы увеличь насколько возможно», «шрифт строк над и
+       под таблицей больше — текст на печати очень маленький»,
+       «отображение значков мероприятий в ячейках шахматки»):
+       колонка «Сотрудник» — по ширине текста (inline width из
+       _buildPrintHtml по canvas measureText), дни делят остаток
+       ширины поровну, шрифты листа УВЕЛИЧЕНЫ, бейджи мероприятий
+       в ячейках ВЕРНУТЫ (wsp-ev-* — как экранная сетка, Task 314).
        Статусные ячейки несут inline-фон из справочника кодов
        (как в шахматке) — печать фонов принудительна
        (print-color-adjust: exact). Длинные списки переносятся на
@@ -4312,24 +4320,31 @@
         #wsPrintSheet {
             display: block !important;
             color: #1b1f24;
-            font: 10px/1.3 Arial, Helvetica, sans-serif;
+            /* Task 361: базовый шрифт листа 10→11px — печать
+               читается легче (заявка: «текст на печати очень
+               маленький, неудобно читать») */
+            font: 11px/1.35 Arial, Helvetica, sans-serif;
         }
 
         /* шапка листа: заголовок, месяц/год/вид, норма, штамп */
         #wsPrintSheet .wsp-head { margin-bottom: 3mm; }
         #wsPrintSheet .wsp-title {
-            font-size: 15px;
+            /* Task 361: 15→18px — заголовок крупнее */
+            font-size: 18px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.6px;
         }
         #wsPrintSheet .wsp-sub {
-            font-size: 12px;
+            /* Task 361: 12→14px */
+            font-size: 14px;
             font-weight: 600;
             margin-top: 1mm;
         }
-        #wsPrintSheet .wsp-meta { font-size: 10px; color: #3c4650; margin-top: 0.8mm; }
-        #wsPrintSheet .wsp-printed { font-size: 9px; color: #5c6670; margin-top: 0.8mm; }
+        /* Task 361: строки над таблицей крупнее: meta 10→12px,
+           штамп 9→11px */
+        #wsPrintSheet .wsp-meta { font-size: 12px; color: #3c4650; margin-top: 0.8mm; }
+        #wsPrintSheet .wsp-printed { font-size: 11px; color: #5c6670; margin-top: 0.8mm; }
 
         /* шахматка: фиксированная раскладка, колонки дней равные */
         #wsPrintSheet .wsp-grid {
@@ -4345,20 +4360,31 @@
             text-align: center;
             vertical-align: middle;
             padding: 0;
-            height: 6.2mm;
+            /* Task 361: 6.2→7.2mm — ячейки выше, таблица крупнее */
+            height: 7.2mm;
             overflow: hidden;
         }
         #wsPrintSheet .wsp-emp {
-            width: 50mm;
+            /* Task 361 (заявка: «столбец с сотрудниками сделай
+               уже, по ширине текста в нём»): НЕ фиксированные
+               50mm — ширину задаёт inline style из
+               _buildPrintHtml (по самой длинной ФИО/должности,
+               canvas measureText, кламп 24–48mm); 34mm —
+               CSS-фолбэк, если JS ширину не задал. Освободившаяся
+               ширина достаётся колонкам дней */
+            width: 34mm;
             text-align: left;
             padding: 0 1.5mm;
             height: auto;
-            min-height: 6.2mm;
+            min-height: 7.2mm;
         }
-        #wsPrintSheet .wsp-day { width: 6.5mm; }
+        /* Task 361: у колонок дней НЕТ своей ширины (прежде
+           6.5mm) — в fixed-раскладке все 31 день делят остаток
+           после «Сотрудника» (по тексту) и итогов ПОРОВНУ:
+           узкая колонка ФИО = широкие дни = крупнее таблица */
         #wsPrintSheet .wsp-day span {
             display: block;
-            font-size: 6.5px;
+            font-size: 7.5px;
             color: #54606a;
             line-height: 1.1;
         }
@@ -4366,30 +4392,34 @@
         #wsPrintSheet .wsp-day.wsp-off { background: #dfe5e9; }
         #wsPrintSheet .wsp-day.wsp-feast,
         #wsPrintSheet .wsp-day.wsp-feast span { color: #b02a2a; }
-        #wsPrintSheet .wsp-tot { width: 9mm; font-weight: 700; }
+        /* Task 361: 9→10mm под шрифт 11px */
+        #wsPrintSheet .wsp-tot { width: 10mm; font-weight: 700; }
         /* Task 342 (заявка: «добавь колонку переработок»): колонка
            итогов «Перераб.» — дни/часы переработки кодов д/н
-           («3/36» — 3 дня, 36 часов; нет — «—»). Чуть шире
-           «Дни»/«Часы» под двухстрочный заголовок и значение
-           «дни/часы»; бюджет A4 landscape (297 − 16 = 281 мм):
-           50 + 31×6,5 + 9 + 9 + 12 = 281,5 мм — fixed-раскладка
-           прижмёт при нехватке */
-        #wsPrintSheet .wsp-tot.wsp-tot-over { width: 12mm; }
+           («3/36» — 3 дня, 36 часов; нет — «—»). Шире «Дни»/
+           «Часы» под двухстрочный заголовок и значение
+           «дни/часы»; Task 361 бюджет A4 landscape (297 − 16 =
+           281 мм): «Сотрудник» по тексту (24–48) + 31 день ×
+           остаток (~6,8–7,2 мм) + 10 + 10 + 14 = 281 — дни делят
+           остаток поровну (fixed-раскладка) */
+        #wsPrintSheet .wsp-tot.wsp-tot-over { width: 14mm; }
         #wsPrintSheet .wsp-tot-over span {
             display: block;
-            font-size: 6.5px;
+            font-size: 7.5px;
             color: #54606a;
             line-height: 1.1;
         }
+        /* Task 361: ФИО 9→10.5px, должность 7.5→8.5px — крупнее;
+           ширина колонки подстраивается по тексту (см. wsp-emp) */
         #wsPrintSheet .wsp-fio {
             display: block;
             font-weight: 700;
-            font-size: 9px;
+            font-size: 10.5px;
             line-height: 1.2;
         }
         #wsPrintSheet .wsp-pos {
             display: block;
-            font-size: 7.5px;
+            font-size: 8.5px;
             color: #4c5660;
             line-height: 1.2;
         }
@@ -4399,7 +4429,9 @@
         #wsPrintSheet .wsp-cell {
             position: relative;
             font-weight: 700;
-            font-size: 8.5px;
+            /* Task 361: код в ячейке 8.5→10px — ячейки шире и
+               текст крупнее (заявка: «размер таблицы увеличь») */
+            font-size: 10px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -4411,18 +4443,43 @@
         #wsPrintSheet .wsp-cell.wsp-vac {
             border: 1px dashed #6e7780 !important;
         }
-        /* Task 343 (заявка: «из печати убери … миниатюры иконок
-           мероприятий»): бейджи мероприятий в ячейках печати
-           УБРАНЫ — правила wsp-ev-wrap/wsp-ev/wsp-ev-plan удалены.
-           Экранная сетка показывает бейджи мероприятий как раньше
-           (классы ws-*, Task 314) — правка касается только печати */
-        /* переработка — красная точка в правом верхнем углу */
+        /* Task 361 (заявка: «сделай отображение на печати значков
+           мероприятий в ячейках шахматки»): бейджи мероприятий в
+           печати ВЕРНУТЫ (Task 343 их убирал; заявка 361 вернула).
+           Формат — как в экранной сетке (Task 314): сплошной
+           бейдж с inline-цветом кода — у сформированного дня,
+           пунктирный (план) — у пустой ячейки/плана отпуска.
+           Правый НИЖНИЙ угол (точка переработки — правый
+           верхний, конфликтов нет); цвет печатается принудительно */
+        #wsPrintSheet .wsp-ev-wrap {
+            position: absolute;
+            right: 0.5mm;
+            bottom: 0.4mm;
+            line-height: 1;
+            white-space: nowrap;
+        }
+        #wsPrintSheet .wsp-ev {
+            display: inline-block;
+            border: 1px solid #4c5660;
+            border-radius: 0.5mm;
+            font-size: 7.5px;
+            font-weight: 700;
+            line-height: 1;
+            padding: 0.4mm 0.5mm 0.3mm;
+            margin-left: 0.5mm;
+            color: #263238;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        #wsPrintSheet .wsp-ev.wsp-ev-plan { border-style: dashed; }
+        /* переработка — красная точка в правом верхнем углу
+           (Task 361: 1.6→2.2mm — заметнее на печати) */
         #wsPrintSheet .wsp-over {
             position: absolute;
             right: 0.7mm;
             top: 0.7mm;
-            width: 1.6mm;
-            height: 1.6mm;
+            width: 2.2mm;
+            height: 2.2mm;
             border-radius: 50%;
             background: #c62828;
         }
@@ -4437,11 +4494,14 @@
            (один столбик, каждый код отдельной строкой; прежде —
            весь справочник в одну строку). Точка цвета у строки
            мероприятия — цвет кода из справочника (как в окне
-           «Мероприятия»), печатается принудительно */
+           «Мероприятия»), печатается принудительно.
+           Task 361: шрифт блоков под таблицей 8→11px (заявка:
+           «размер шрифта всех строк над и под таблицей сделай
+           больше») */
         #wsPrintSheet .wsp-mev {
             margin-top: 2.5mm;
-            font-size: 8px;
-            line-height: 1.7;
+            font-size: 11px;
+            line-height: 1.6;
         }
         #wsPrintSheet .wsp-mev-t { font-weight: 700; }
         #wsPrintSheet .wsp-mev-item {
@@ -4450,8 +4510,8 @@
         }
         #wsPrintSheet .wsp-mev-item i {
             display: inline-block;
-            width: 7px;
-            height: 7px;
+            width: 9px;
+            height: 9px;
             border: 1px solid #7a838c;
             margin-right: 1mm;
             -webkit-print-color-adjust: exact;
@@ -4461,11 +4521,12 @@
         #wsPrintSheet .wsp-mev-none { color: #4c5660; }
 
         /* легенда кодов и пояснения (Task 360: только коды
-           этого месяца, одна строка — один код) */
+           этого месяца, одна строка — один код; Task 361:
+           шрифт 8→11px, точка 7→9px) */
         #wsPrintSheet .wsp-legend {
             margin-top: 2.5mm;
-            font-size: 8px;
-            line-height: 1.7;
+            font-size: 11px;
+            line-height: 1.6;
         }
         #wsPrintSheet .wsp-legend-t { font-weight: 700; }
         #wsPrintSheet .wsp-lg {
@@ -4474,8 +4535,8 @@
         }
         #wsPrintSheet .wsp-lg i {
             display: inline-block;
-            width: 7px;
-            height: 7px;
+            width: 9px;
+            height: 9px;
             border: 1px solid #7a838c;
             margin-right: 1mm;
             -webkit-print-color-adjust: exact;
@@ -4483,7 +4544,8 @@
         }
         #wsPrintSheet .wsp-foot {
             margin-top: 1.5mm;
-            font-size: 7.5px;
+            /* Task 361: 7.5→10px — сноска читается легче */
+            font-size: 10px;
             color: #4c5660;
             line-height: 1.5;
         }
@@ -40051,8 +40113,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // «Перераб.» — дни/часы переработки кодов д/н (Task 342),
         // легенда кодов из справочника. Task 343 (заявка: «из
         // печати убери строку итогов и миниатюры иконок
-        // мероприятий»): итоговой строки по подразделению и
-        // бейджей мероприятий в ячейках в печати НЕТ.
+        // мероприятий»): итоговой строки по подразделению в
+        // печати нет (agg.grand не используется). Task 361 (заявка:
+        // «столбец с сотрудниками сделай уже, по ширине текста
+        // в нём…», «размер таблицы увеличь», «шрифт строк над и
+        // под таблицей больше», «значки мероприятий в ячейках»):
+        // ширина колонки «Сотрудник» — по тексту (canvas
+        // measureText, inline style), дни делят остаток поровну,
+        // шрифты листа увеличены, бейджи мероприятий в ячейках
+        // ВЕРНУТЫ (см. _printCell).
         // Task 360 (заявка): ПОД шахматкой — список мероприятий
         // текущего месяца (один столбик: дата · код · тема · ФИО,
         // как в окне «Мероприятия»), ПОД ним — перечень кодов
@@ -40098,8 +40167,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // праздниками/«*» сокращённых, строки сотрудников вида, в
         // ячейках — ЭФФЕКТИВНЫЕ записи (запись + локальная правка,
         // __delete — ячейка пустая), план отпуска пунктиром;
-        // Task 343: бейджи мероприятий в ячейках УБРАНЫ (см.
-        // _printCell). В конце каждой строки — «Дни»/«Часы»/
+        // Task 361: бейджи мероприятий в ячейках печати ВЕРНУТЫ
+        // (см. _printCell). В конце каждой строки — «Дни»/«Часы»/
         // «Перераб.» (agg.byTab; Task 342 — переработка в формате
         // «дни/часы»), внизу — Task 360: список мероприятий
         // текущего месяца (один столбик) и перечень кодов ТОЛЬКО
@@ -40133,6 +40202,56 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                           '.' + now.getFullYear() + ' ' + pad2(now.getHours()) +
                           ':' + pad2(now.getMinutes());
 
+            // Task 361 (заявка: «в печати столбец с сотрудниками
+            // сделай уже, по ширине текста в нём, а в общем размер
+            // таблицы увеличь»): ширина колонки «Сотрудник» — по
+            // САМОМУ ДЛИННОМУ тексту печатаемых строк (ФИО 10.5px
+            // bold / должность 8.5px), а НЕ фиксированные 50mm.
+            // В браузере меряем точно через canvas measureText
+            // (тот же шрифт, что в печати); вне браузера
+            // (VM-тесты) — оценка ~0.62em на символ. Плюс
+            // 2×1.5mm горизонтального паддинга и запас; кламп
+            // 24–48mm (очень длинное ФИО переносится), округление
+            // вверх до 0.5mm. Освободившаяся ширина достаётся
+            // колонкам дней: в fixed-раскладке дни без указанной
+            // ширины делят остаток поровну (правило .wsp-day
+            // { width: … } удалено из CSS)
+            var self = this;
+            var fioPx = 10.5;
+            var posPx = 8.5;
+            var measureTxt = function(txt, font, px) {
+                txt = String(txt == null ? '' : txt);
+                if (!txt) return 0;
+                // фолбэк-оценка: ~0.62em на символ кириллицы Arial
+                var w = txt.length * px * 0.62;
+                try {
+                    if (typeof document !== 'undefined' &&
+                        document.createElement) {
+                        var cnv = document.createElement('canvas');
+                        if (cnv && cnv.getContext) {
+                            var mctx = cnv.getContext('2d');
+                            if (mctx && mctx.measureText) {
+                                mctx.font = font;
+                                w = mctx.measureText(txt).width;
+                            }
+                        }
+                    }
+                } catch (e) { /* canvas недоступен — оценка по символам */ }
+                return w;
+            };
+            var maxTxtPx = 0;
+            for (var wi = 0; wi < viewEmps.length; wi++) {
+                maxTxtPx = Math.max(maxTxtPx,
+                    measureTxt(viewEmps[wi]['ФИО'],
+                               '700 ' + fioPx + 'px Arial', fioPx),
+                    measureTxt(self._posLabel(viewEmps[wi]),
+                               posPx + 'px Arial', posPx));
+            }
+            // px→mm (96dpi) + 3.5mm паддинги/запас; шаг 0.5mm вверх
+            var empWmm = Math.ceil(((maxTxtPx * 25.4 / 96) + 3.5) * 2) / 2;
+            if (empWmm < 24) empWmm = 24;
+            if (empWmm > 48) empWmm = 48;
+
             var html = '<div class="wsp-head">' +
                 '<div class="wsp-title">График работы — табель учёта рабочего времени</div>' +
                 '<div class="wsp-sub">' + months[this._month - 1] + ' ' + this._year +
@@ -40141,9 +40260,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 '<div class="wsp-printed">Распечатано: ' + printed + '</div>' +
                 '</div>';
 
-            // шапка таблицы: сотрудник + дни месяца + итоги
+            // шапка таблицы: сотрудник + дни месяца + итоги.
+            // Task 361: у «Сотрудника» — inline ширина по тексту
+            // (см. измерение выше); у дней ширины НЕТ — fixed-
+            // раскладка делит остаток поровну (таблица крупнее)
             html += '<table class="wsp-grid"><thead><tr>';
-            html += '<th class="wsp-emp">Сотрудник</th>';
+            html += '<th class="wsp-emp" style="width:' + empWmm + 'mm">Сотрудник</th>';
             for (var d = 1; d <= daysInMonth; d++) {
                 var dt = new Date(this._year, this._month - 1, d);
                 var dInfo = (typeof ProdCalendar !== 'undefined' && ProdCalendar.dayInfo)
@@ -40351,7 +40473,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             html += '</div>';
             html += '<div class="wsp-foot">* — сокращённый предпраздничный рабочий день; ' +
                     'пунктирная рамка ячейки — плановый отпуск (записи ещё нет); ' +
-                    'красная точка — переработка; «Дни»/«Часы» — явки и рабочие часы ' +
+                    'красная точка — переработка; значок в углу ячейки — ' +
+                    'мероприятие дня (коды и цвета — в перечне выше; пунктирный ' +
+                    'значок — день ещё не сформирован); «Дни»/«Часы» — явки и рабочие часы ' +
                     '(без переработки д/н); «Перераб.» — дни/часы переработки ' +
                     '(коды д/н — работа в выходные/праздники).</div>';
             return html;
@@ -40363,10 +40487,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // основной код фоном; «.» — пустая; план отпуска — пунктир;
         // переработка — красная точка; пустые нерабочие — серая
         // заливка (wsp-cell-off, как розовая в сетке — только ПУСТЫЕ
-        // ячейки, статусные сохраняют свой цвет). Task 343: бейджи
-        // мероприятий (мини-«иконки» в углу) УБРАНЫ из печати —
-        // статус-мероприятие (И/ОБ/ПЗ/ПР/*) печатается ПУСТОЙ
-        // ячейкой, события дня в печать не переносятся
+        // ячейки, статусные сохраняют свой цвет). Task 361 (заявка:
+        // «сделай отображение на печати значков мероприятий в
+        // ячейках шахматки»): бейджи мероприятий ВЕРНУТЫ в печать
+        // (Task 343 их убирал) — статус-мероприятие печатается
+        // ПУСТОЙ ячейкой + бейдж в углу, события дня — бейджами
+        // (как в экранной сетке, Task 314)
         _printCell: function(day, isoDate, emp, entry) {
             var status = entry ? entry.статус : '';
             var isOvertime = !!(entry && entry.переработка === 1);
@@ -40395,17 +40521,43 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var content = showMainCode ? this._esc(status) : '';
             if (isOvertime) content += '<i class="wsp-over"></i>';
 
-            // Task 343 (заявка: «из печати убери … миниатюры иконок
-            // мероприятий»): блок бейджей мероприятий УДАЛЁН —
-            // _eventsAt НЕ вызывается, виртуальный бейдж
-            // статус-мероприятия не строится. Мероприятия дня
-            // (инструктажи/обучение/проверки) на бумагу не
-            // переносятся: в приложении они видны в окне
-            // «Мероприятия в этот день» (клик по ячейке) и в
-            // разделе «Инструктажи»
+            // Task 361 (заявка: «сделай отображение на печати
+            // значков мероприятий в ячейках шахматки»): бейджи
+            // мероприятий в печати ВЕРНУТЫ (Task 343 их убирал).
+            // Формат — как в экранной сетке (Task 314): события
+            // дня из листа «Инструктажи» (_eventsAt) — сплошные
+            // бейджи с inline-цветом кода у сформированного дня,
+            // пунктирные (план) — у пустой ячейки/плана отпуска;
+            // статус-мероприятие (И/ОБ/ПЗ/ПР/*) без строки в
+            // «Инструктажах» — виртуальный бейдж, чтобы день не
+            // «потерял» мероприятие. Точка переработки — правый
+            // ВЕРХНИЙ угол, бейджи — правый нижний (без конфликтов)
+            var events = (typeof this._eventsAt === 'function')
+                ? (this._eventsAt(isoDate, emp['таб_номер']) || []) : [];
+            if (isEventStatus) {
+                var covered = false;
+                for (var ci = 0; ci < events.length; ci++) {
+                    if (events[ci].code === status) { covered = true; break; }
+                }
+                if (!covered) {
+                    events = events.concat([{ code: status, training: null }]);
+                }
+            }
+            var evHtml = '';
+            if (events.length) {
+                var solid = !!status;
+                var chips = '';
+                for (var evj = 0; evj < events.length; evj++) {
+                    var evMeta = this._statusMeta(events[evj].code) || {};
+                    chips += '<span class="wsp-ev' + (solid ? '' : ' wsp-ev-plan') + '"' +
+                             (solid && evMeta.color ? ' style="background:' + evMeta.color + ';"' : '') +
+                             '>' + this._esc(events[evj].code) + '</span>';
+                }
+                evHtml = '<span class="wsp-ev-wrap">' + chips + '</span>';
+            }
             return '<td class="' + classes.join(' ') + '"' +
                    (style ? ' style="' + style + '"' : '') + '>' +
-                   content + '</td>';
+                   content + evHtml + '</td>';
         },
 
         // force (Task 314): true — сеть обязательно (кнопка «Обновить»
