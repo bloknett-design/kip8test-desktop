@@ -4497,9 +4497,24 @@
            «Мероприятия»), печатается принудительно.
            Task 361: шрифт блоков под таблицей 8→11px (заявка:
            «размер шрифта всех строк над и под таблицей сделай
-           больше») */
-        #wsPrintSheet .wsp-mev {
+           больше»).
+           Task 364 (заявка: «коды под графиком на печати размести
+           в столбик справа от столбика мероприятий»): мероприятия
+           и коды — ДВЕ КОЛОНКИ одного ряда под таблицей (обёртка
+           wsp-bottom, flex-ряд: мероприятия слева, коды справа),
+           каждая запись/код — по-прежнему отдельной строкой своего
+           столбика; отступ сверху 2.5mm перенесён на обёртку */
+        #wsPrintSheet .wsp-bottom {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 5mm;
             margin-top: 2.5mm;
+        }
+        #wsPrintSheet .wsp-mev {
+            flex: 1 1 auto;
+            min-width: 0;
+            margin-top: 0;
             font-size: 11px;
             line-height: 1.6;
         }
@@ -4522,9 +4537,13 @@
 
         /* легенда кодов и пояснения (Task 360: только коды
            этого месяца, одна строка — один код; Task 361:
-           шрифт 8→11px, точка 7→9px) */
+           шрифт 8→11px, точка 7→9px; Task 364: правая колонка
+           ряда wsp-bottom — «в столбик справа от столбика
+           мероприятий», без растяжения на всю ширину) */
         #wsPrintSheet .wsp-legend {
-            margin-top: 2.5mm;
+            flex: 0 0 auto;
+            max-width: 44%;
+            margin-top: 0;
             font-size: 11px;
             line-height: 1.6;
         }
@@ -6794,7 +6813,7 @@
        вокруг СТОЛБЦОВ группы выходных — шапка с датами + все строки +
        низ последней строки. Заменила тонкие 1px-линии стыков Task 255:
        при разной толщине границ в border-collapse ПОБЕЖДАЕТ ШИРЕ —
-       3px красная всегда перекрывает 1px соседа, красить рабочий
+       2px красная всегда перекрывает 1px соседа (Task 364), красить рабочий
        день по другую сторону стыка не нужно. Классы ставит JS
        (_renderGrid на th, _renderCell на td): ws-wgrp — столбец
        группы, ws-wgrp-first / ws-wgrp-last — первый/последний
@@ -6806,16 +6825,18 @@
        ЗАВЫШЕНА (.ws-cell): иначе в светлой теме правило
        [data-theme="light"] .ws-grid tbody td { border-color } (0,2,2,
        ниже по файлу) перекрасит красную границу в серый. Цвет
-       #e53935, толщина 3px — заметно при 1px-линиях сетки. */
+       #e57373, толщина 2px — спокойнее яркого #e53935 (Task 364:
+       заявка «сделай 2px и по меньше яркости»: та же рамка,
+       тоньше и бледнее). */
     .ws-grid thead th.ws-day-col.ws-wgrp {
-        box-shadow: inset 0 3px 0 0 #e53935;
+        box-shadow: inset 0 2px 0 0 #e57373;
     }
-    .ws-grid thead th.ws-day-col.ws-wgrp-first { border-left: 3px solid #e53935; }
-    .ws-grid thead th.ws-day-col.ws-wgrp-last { border-right: 3px solid #e53935; }
-    .ws-grid tbody td.ws-cell.ws-wgrp-first { border-left: 3px solid #e53935; }
-    .ws-grid tbody td.ws-cell.ws-wgrp-last { border-right: 3px solid #e53935; }
+    .ws-grid thead th.ws-day-col.ws-wgrp-first { border-left: 2px solid #e57373; }
+    .ws-grid thead th.ws-day-col.ws-wgrp-last { border-right: 2px solid #e57373; }
+    .ws-grid tbody td.ws-cell.ws-wgrp-first { border-left: 2px solid #e57373; }
+    .ws-grid tbody td.ws-cell.ws-wgrp-last { border-right: 2px solid #e57373; }
     .ws-grid tbody tr:last-child td.ws-cell.ws-wgrp {
-        border-bottom: 3px solid #e53935;
+        border-bottom: 2px solid #e57373;
     }
 
     /* === Task 260: производственный календарь === */
@@ -40461,6 +40482,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             for (var fi = 0; fi < evEmps.length; fi++) {
                 fioIdx[evEmps[fi]['таб_номер']] = evEmps[fi]['ФИО'];
             }
+            // Task 364 (заявка: «коды под графиком на печати
+            // размести в столбик справа от столбика мероприятий»):
+            // обёртка wsp-bottom — мероприятия и коды в ОДНОМ РЯДУ
+            // (мероприятия слева, коды справа; CSS @media print),
+            // сноска wsp-foot — ниже обёртки на всю ширину листа
+            html += '<div class="wsp-bottom">';
             html += '<div class="wsp-mev"><span class="wsp-mev-t">' +
                     'Мероприятия · ' + monthsNom[this._month - 1] + ' ' + this._year +
                     (evList.length ? ' · ' + evList.length : '') + '</span>';
@@ -40509,7 +40536,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // справочник в одну строку). Порядок — справочник
             // _STATUS_CODES (единственный источник имён);
             // легаси-код, удалённый из справочника, попадает в
-            // конец без цвета и имени (только код)
+            // конец без цвета и имени (только код). Task 364:
+            // столбик кодов — ПРАВАЯ колонка ряда wsp-bottom
+            // (слева — мероприятия), а не секция под списком
             var codes = this._STATUS_CODES || [];
             html += '<div class="wsp-legend"><span class="wsp-legend-t">Коды:</span>';
             for (var ci = 0; ci < codes.length; ci++) {
@@ -40534,7 +40563,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             for (var li = 0; li < legacy.length; li++) {
                 html += '<span class="wsp-lg">' + this._esc(legacy[li]) + '</span>';
             }
-            html += '</div>';
+            html += '</div></div>';
             html += '<div class="wsp-foot">* — сокращённый предпраздничный рабочий день; ' +
                     'пунктирная рамка ячейки — плановый отпуск (записи ещё нет); ' +
                     'красная точка — переработка; значок в углу ячейки — ' +
