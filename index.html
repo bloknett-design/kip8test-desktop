@@ -3218,6 +3218,21 @@
         color: #4a8fc7; font-size: 13px; font-weight: 600;
         text-decoration: none;
     }
+    /* Task 358: баннер «ждут отправки» — показания введены, но ещё
+       не доставлены на сервер (нет связи); уйдут автоматически */
+    .flow-outbox-banner {
+        display: flex; align-items: center; gap: 8px;
+        margin: 8px 14px 4px; padding: 10px 12px;
+        border-radius: 8px;
+        background: rgba(230,150,20,0.10);
+        border: 1px solid rgba(230,150,20,0.32);
+        font-size: 13px; line-height: 1.35;
+        color: var(--text-primary);
+    }
+    .flow-outbox-ico {
+        font-size: 16px; line-height: 1;
+        color: #e69614; flex: 0 0 auto;
+    }
     .flow-sheet-link:hover { background: rgba(74,143,199,0.18); }
     /* Карточка расходомера — без рамки, с разделителем снизу, зебра (как приборы/блокировки/регуляторы) */
     .flow-card {
@@ -31215,6 +31230,24 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // ============================================================
+        // Task 358: доставка «последнего шанса» при закрытии приложения
+        // или вкладки. sendBeacon не требует preflight (text/plain —
+        // simple request, как и основной POST в api()) и не ждёт ответа:
+        // браузер гарантированно ставит запрос в очередь ДО выгрузки
+        // страницы. Возвращает true, если запрос принят в очередь.
+        // Доставка при этом не подтверждается — запись остаётся в outbox
+        // (FlowmeterData), следующий запуск сверит с сервером.
+        // ============================================================
+        sendBeacon: function(action, payload) {
+            try {
+                var url = this.WEB_APP_URL + '?action=' + encodeURIComponent(action);
+                var blob = new Blob([JSON.stringify(payload || {})],
+                                    { type: 'text/plain;charset=utf-8' });
+                return navigator.sendBeacon(url, blob);
+            } catch (e) { return false; }
+        },
+
+        // ============================================================
         // Флоу входа: отправить OTP.
         // ============================================================
         sendOTP: function() {
@@ -35872,6 +35905,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // границе недели/месяца) без перезагрузки страницы. Guard
             // внутри: init() вызывается на каждый заход в раздел.
             this._startOverdueTimer();
+
+            // Task 358: флаш outbox — доставка показаний, не дошедших в
+            // прошлой сессии (закрыл приложение до ответа сервера /
+            // пропала сеть). Мягкий: пустой outbox → мгновенный выход
+            // без сетевой активности. + слушатели online/visibility.
+            this._ensureOutboxWatchers();
+            this._flushOutbox('init');
         },
 
         // ============================================================
@@ -36173,6 +36213,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
 
             var html = '';
+            // Task 358: честный индикатор — N показаний ещё НЕ на
+            // сервере (нет связи в прошлой сессии); уйдут автоматически.
+            // Пользователь должен ЗНАТЬ, что введённое не доставлено.
+            var outboxN = 0;
+            try { outboxN = this._outboxCount(); } catch (e) { outboxN = 0; }
+            if (outboxN > 0) {
+                html += '<div class="flow-outbox-banner">' +
+                    '<span class="flow-outbox-ico">⟳</span>' +
+                    '<span>Показаний ждут отправки: ' + outboxN +
+                    ' — уйдут на сервер автоматически при восстановлении связи</span>' +
+                    '</div>';
+            }
+
             for (var i = 0; i < meters.length; i++) {
                 var m = meters[i];
                 var consumption = m.curr - m.prev;
@@ -37284,6 +37337,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     apiPayload.gcal = (gcalVal !== null) ? gcalVal : (meter.gcal || '');
                 }
 
+                // Task 358: write-ahead — показание фиксируется в outbox
+                // ДО любых сетевых round-trip'ов (валидация + запись —
+                // это ещё 2 запроса, секунды при плохой сети). Удаление —
+                // только по ответу сервера / отмене пользователя. Если
+                // приложение закрыть сейчас — показание уйдёт beacon'ом
+                // или при следующем запуске.
+                var outboxCid = 'fl' + Date.now() + '-' +
+                                Math.random().toString(36).slice(2, 8);
+                this._outboxAdd({
+                    cid: outboxCid,
+                    kind: 'day',
+                    payload: apiPayload,
+                    isEdit: isEdit,
+                    ts: Date.now(),
+                    state: 'pending'
+                });
+
                 var rules = this._getRulesForMeter(id);
                 var lastArch = this._getLastArchiveForValidation(id, meter);
                 var self = this;
@@ -37305,6 +37375,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             if (typeof KipToast !== 'undefined' && KipToast.show) {
                                 KipToast.show(validation.hardBlock.message || 'Ошибка валидации');
                             }
+                            // Task 358: валидация отвергла — из outbox убираем
+                            if (outboxCid) self._outboxRemove(outboxCid);
                             setTimeout(function() { self.load(); }, 200);
                             return;
                         }
@@ -37312,11 +37384,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             // Soft-confirm: показываем модалку, отправку откладываем
                             self._pendingApiPayload = apiPayload;
                             self._pendingAnomalyCodes = validation.codes;
+                            // Task 358: запись остаётся в outbox в статусе
+                            // «ждёт подтверждения». Раньше быстрый переход
+                            // к следующей карточке ЗАТИРАЛ _pendingApiPayload
+                            // новым вводом — показание терялось молча.
+                            // Теперь: не подтвердил — модалка пере-показывается
+                            // при флаше; подтвердил — уйдёт; отменил — удалится.
+                            self._pendingCid = outboxCid;
+                            self._outboxUpdate(outboxCid, {
+                                state: 'awaiting-confirm',
+                                codes: validation.codes
+                            });
                             self._showAnomalyModal(meter, validation.codes);
                             return;
                         }
                         // Ошибок нет — отправляем сразу
-                        self._sendUpdateReading(apiPayload, isEdit);
+                        self._sendUpdateReading(apiPayload, isEdit, outboxCid);
                     })
                     .catch(function(err) {
                         // Fallback: fetch упал — валидируем без recentAllMeters
@@ -37327,16 +37410,24 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             if (typeof KipToast !== 'undefined' && KipToast.show) {
                                 KipToast.show(validation.hardBlock.message || 'Ошибка валидации');
                             }
+                            // Task 358: валидация отвергла — из outbox убираем
+                            if (outboxCid) self._outboxRemove(outboxCid);
                             setTimeout(function() { self.load(); }, 200);
                             return;
                         }
                         if (validation.codes && validation.codes.length > 0) {
                             self._pendingApiPayload = apiPayload;
                             self._pendingAnomalyCodes = validation.codes;
+                            // Task 358: та же защита, что в главной ветке
+                            self._pendingCid = outboxCid;
+                            self._outboxUpdate(outboxCid, {
+                                state: 'awaiting-confirm',
+                                codes: validation.codes
+                            });
                             self._showAnomalyModal(meter, validation.codes);
                             return;
                         }
-                        self._sendUpdateReading(apiPayload, isEdit);
+                        self._sendUpdateReading(apiPayload, isEdit, outboxCid);
                     });
             }
         },
@@ -37483,6 +37574,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (modal) modal.remove();
             this._pendingApiPayload = null;
             this._pendingAnomalyCodes = null;
+            // Task 358: осознанная отмена — запись из outbox удаляем
+            if (this._pendingCid) this._outboxRemove(this._pendingCid);
+            this._pendingCid = null;
             // Оптимистичное обновление UI нужно откатить
             this.load();
         },
@@ -37494,9 +37588,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!this._pendingApiPayload) return;
             var payload = this._pendingApiPayload;
             var isEdit = !!payload.isEdit;
+            var cid = this._pendingCid || null;
             this._pendingApiPayload = null;
             this._pendingAnomalyCodes = null;
-            this._sendUpdateReading(payload, isEdit);
+            this._pendingCid = null;
+            // Task 358: пользователь подтвердил — запись переводится
+            // в «pending» и уходит (cid передан для контроля доставки)
+            if (cid) this._outboxUpdate(cid, { state: 'pending', codes: null });
+            this._sendUpdateReading(payload, isEdit, cid);
         },
 
         // Task 286/289: собрать и отправить «расход за месяц».
@@ -37551,18 +37650,37 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var self = this;
             this.closeInput();
 
+            // Task 358: write-ahead — «расход за месяц» тоже фиксируем
+            // в outbox до отправки (закрытие приложения при полёте
+            // запроса больше не теряет запись)
+            var outboxCid = 'flp' + Date.now() + '-' +
+                            Math.random().toString(36).slice(2, 8);
+            this._outboxAdd({
+                cid: outboxCid,
+                kind: 'period',
+                payload: apiPayload,
+                isEdit: false,
+                ts: Date.now(),
+                state: 'pending'
+            });
+
             this._api('flowmeter.updatePeriodReading', apiPayload).then(function(res) {
                 // Подстраховка: новый сервер возвращает data.entryType;
                 // если эхо не совпало — что-то пошло не так (ветка не та)
                 var etEcho = (res && res.entryType) || '';
                 if (etEcho !== type) {
                     console.error('updatePeriodReading: entryType echo !=', type, res);
+                    // Task 358: старый сервер ничего не записал — запись
+                    // остаётся в outbox, уйдёт после обновления Apps Script
+                    self._outboxUpdate(outboxCid, { state: 'retry' });
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
                         KipToast.show('Неожиданный ответ сервера — обновите Apps Script (DEPLOY-Task286)');
                     }
                     setTimeout(function() { self.load(); }, 200);
                     return;
                 }
+                // Task 358: доставлено — из outbox убираем
+                self._outboxRemove(outboxCid);
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
                     KipToast.show('Расход за ' + flowEntryTypeAcc(type) + ' сохранён');
                 }
@@ -37572,15 +37690,27 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var msg = (err && err.message) ? String(err.message) : '';
                 if (msg.indexOf('Unknown action') !== -1) {
                     // Сервер без Task 286 — запись НЕ создана, ничего не испорчено
+                    // Task 358: оставляем в outbox — уйдёт после обновления сервера
+                    self._outboxUpdate(outboxCid, { state: 'retry', lastErr: msg });
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
                         KipToast.show('Сервер не поддерживает ввод за период — обновите Apps Script (DEPLOY-Task286)');
                     }
-                } else {
+                } else if (err && err._kind === 'SERVER') {
                     // Бизнес-ошибка (date_inconsistent и т.п.) — показываем
-                    // человекочитаемое serverMessage, если сервер его приложил
+                    // человекочитаемое serverMessage, если сервер его приложил.
+                    // Task 358: окончательный отказ — из outbox убираем
+                    self._outboxRemove(outboxCid);
                     var out = (err && err.serverMessage) ? err.serverMessage : (msg || 'сеть');
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
                         KipToast.show('Ошибка сохранения: ' + out);
+                    }
+                } else {
+                    // Task 358: сеть/сессия — показание не теряется, уйдёт
+                    // автоматически при восстановлении связи
+                    self._outboxUpdate(outboxCid, { state: 'retry', lastErr: msg });
+                    self._scheduleOutboxRetry();
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Нет связи с сервером — показания сохранены на устройстве и будут отправлены автоматически');
                     }
                 }
             });
@@ -37588,9 +37718,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Task 199: фактическая отправка updateReading на сервер
         // (используется и при отсутствии аномалий, и после confirm)
-        _sendUpdateReading: function(apiPayload, isEdit) {
+        _sendUpdateReading: function(apiPayload, isEdit, outboxCid) {
             var self = this;
-            this._api('flowmeter.updateReading', apiPayload).then(function(res) {
+            // Task 358: return промиса — вызывающий может дождаться
+            // фактического исхода доставки (используется тестами;
+            // Electron-флаш использует beacon-ветку _outboxFlushBeacons)
+            return this._api('flowmeter.updateReading', apiPayload).then(function(res) {
                 if (res && res.ok === false) {
                     // Task 108/199: серверная ошибка (edit_window_expired /
                     // not_your_input / sign_neg / date_inconsistent / ...)
@@ -37605,12 +37738,350 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     }
                     setTimeout(function() { self.load(); }, 200);
                 }
+                // Task 358: сервер ОТВЕТИЛ (успех или осознанный отказ) —
+                // доставка состоялась, запись из outbox убираем
+                if (outboxCid) self._outboxRemove(outboxCid);
             }).catch(function(err) {
                 console.error('flowmeter.updateReading:', err);
-                if (typeof KipToast !== 'undefined' && KipToast.show) {
-                    KipToast.show('Ошибка сохранения: ' + (err.message || 'сеть'));
+                if (outboxCid && self._outboxIsPermanentError(err)) {
+                    // Task 358: сервер окончательно отверг (окно правки /
+                    // чужой ввод / ...) — ретраить бессмысленно
+                    self._outboxRemove(outboxCid);
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Ошибка сохранения: ' + (err.message || 'сеть'));
+                    }
+                } else if (outboxCid) {
+                    // Task 358: сеть/сессия — показание НЕ теряется:
+                    // остаётся в outbox и уйдёт автоматически (ретрай /
+                    // online / следующий запуск). Тост — честный.
+                    self._outboxUpdate(outboxCid, {
+                        state: 'retry',
+                        lastErr: String(err && err.message || err)
+                    });
+                    self._scheduleOutboxRetry();
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Нет связи с сервером — показания сохранены на устройстве и будут отправлены автоматически');
+                    }
+                } else {
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Ошибка сохранения: ' + (err.message || 'сеть'));
+                    }
                 }
             });
+        },
+
+        // ============================================================
+        // Task 358: OUTBOX — журнал гарантированной доставки показаний
+        // ============================================================
+        // Проблема: «Сохранить» → оптимистичный UI уже обновил карточку,
+        // но фактическая запись на сервере происходит ДВУМЯ round-trip'ами
+        // позже (getRecentAllMeters для валидации → updateReading). Если
+        // пользователь сразу закрывает приложение/вкладку или при плохой
+        // сети уходит к следующему расходомеру — fetch прерывается,
+        // показания теряются МОЛЧА (карточка выглядела сохранённой).
+        //
+        // Решение — write-ahead журнал в localStorage:
+        //   • запись попадает в outbox ДО любого сетевого запроса;
+        //   • удаляется ТОЛЬКО после ответа сервера (доставлено/отвергнуто)
+        //     или явной отмены пользователем (анномальная запись);
+        //   • сеть/сессия — остаётся; флаш автоматический: init раздела,
+        //     window.online, вкладка снова видима, ретрай-таймер с бэкоффом;
+        //   • при закрытии — sendBeacon «последнего шанса» (ответа нет:
+        //     запись НЕ удаляем; следующий запуск сверит с сервером —
+        //     дубликат уберёт дедуп, дыру отправит заново).
+        //
+        // Дедуп обязателен: сервер пишет архив appendRow'ом без проверки
+        // дублей — бездумный повтор создал бы дубликат в архиве. Перед
+        // повтором сверяемся с фактом: 'day' — meters-строка
+        // (flowmeter.list), 'period' — архив (flowmeter.archive).
+        // ============================================================
+        _OUTBOX_KEY: 'kip8_flow_outbox_v1',
+
+        _outboxLoad: function() {
+            try {
+                var json = localStorage.getItem(this._OUTBOX_KEY);
+                if (!json) return [];
+                var arr = JSON.parse(json);
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) { return []; }
+        },
+
+        _outboxSave: function(entries) {
+            try {
+                localStorage.setItem(this._OUTBOX_KEY, JSON.stringify(entries || []));
+            } catch (e) { /* quota/disabled — флеш всё равно попробует */ }
+        },
+
+        _outboxAdd: function(entry) {
+            if (!entry || !entry.cid) return;
+            var entries = this._outboxLoad();
+            var replaced = false;
+            for (var i = 0; i < entries.length; i++) {
+                if (entries[i].cid === entry.cid) { entries[i] = entry; replaced = true; break; }
+            }
+            if (!replaced) entries.push(entry);
+            this._outboxSave(entries);
+        },
+
+        _outboxRemove: function(cid) {
+            if (!cid) return;
+            var entries = this._outboxLoad();
+            var out = [];
+            for (var i = 0; i < entries.length; i++) {
+                if (entries[i].cid !== cid) out.push(entries[i]);
+            }
+            this._outboxSave(out);
+        },
+
+        _outboxUpdate: function(cid, patch) {
+            if (!cid || !patch) return;
+            var entries = this._outboxLoad();
+            for (var i = 0; i < entries.length; i++) {
+                if (entries[i].cid === cid) {
+                    for (var k in patch) { entries[i][k] = patch[k]; }
+                    break;
+                }
+            }
+            this._outboxSave(entries);
+        },
+
+        _outboxCount: function() {
+            return this._outboxLoad().length;
+        },
+
+        // Окончательный отказ сервера — ретраить бессмысленно (вечный
+        // цикл + тост на каждом запуске). НЕ окончательные: сеть (нет
+        // _kind='SERVER'), истёкшая сессия (после входа отправим),
+        // 'Unknown action' (сервер старее запроса — после обновления
+        // Apps Script уйдёт), нет токена.
+        _outboxIsPermanentError: function(err) {
+            if (!err) return false;
+            if (err._kind !== 'SERVER') return false;
+            var msg = String(err.message || err.error || err);
+            if (/session|токен|token/i.test(msg)) return false;      // лечится входом
+            if (/unknown action/i.test(msg)) return false;           // лечится апгрейдом сервера
+            return true;  // edit_window_expired / not_your_input / sign_neg / ...
+        },
+
+        // Отправить одну запись outbox. Возвращает Promise со строкой:
+        //   'sent'  — сервер подтвердил (запись удалена из outbox);
+        //   'done'  — сервер окончательно отверг (запись удалена);
+        //   'stop'  — сеть/сессия (запись ОСТАВЛЕНА, флаш останавливается:
+        //             следующие тоже не уйдут — не дёргаем сервер зря).
+        _sendOutboxEntry: function(entry) {
+            var self = this;
+            var action = (entry.kind === 'period')
+                ? 'flowmeter.updatePeriodReading'
+                : 'flowmeter.updateReading';
+            var payload = entry.payload || {};
+            payload.isEdit = !!entry.isEdit;
+            return this._api(action, payload).then(function(res) {
+                if (entry.kind === 'period') {
+                    // Зеркало интерактивной ветки: старый сервер без
+                    // Task 286 мог бы записать период как суточные —
+                    // эхо entryType обязано совпасть, иначе не удаляем
+                    // (запись уйдёт после обновления Apps Script).
+                    var etEcho = String((res && res.entryType) || '');
+                    if (etEcho.toLowerCase() !== String(payload.entryType || 'месяц').toLowerCase()) {
+                        self._outboxUpdate(entry.cid, { state: 'retry' });
+                        return 'done';
+                    }
+                }
+                self._outboxRemove(entry.cid);
+                return 'sent';
+            }).catch(function(err) {
+                if (self._outboxIsPermanentError(err)) {
+                    self._outboxRemove(entry.cid);
+                    return 'done';
+                }
+                self._outboxUpdate(entry.cid,
+                    { state: 'retry', lastErr: String(err && err.message || err) });
+                return 'stop';
+            });
+        },
+
+        // Пере-показ модалки аномалии: пользователь ввёл показания,
+        // валидация вернула soft-confirm (модалка), но он УЖЕ ушёл к
+        // следующей карточке и ответа не дал. Без Task 358 payload
+        // терялся бесследно (затирался следующим вводом). Теперь запись
+        // ждёт подтверждения в outbox — модалка показывается снова.
+        _reshowAnomalyModal: function(entry) {
+            var modal = document.getElementById('flowAnomalyModal');
+            if (modal) return;                    // уже открыта — дождёмся решения
+            if (this._pendingApiPayload) return;  // интерактивная в работе
+            var meter = null;
+            var meters = this._METERS || [];
+            for (var i = 0; i < meters.length; i++) {
+                if (String(meters[i].id) === String((entry.payload || {}).id)) {
+                    meter = meters[i]; break;
+                }
+            }
+            if (!meter || !Array.isArray(entry.codes) || entry.codes.length === 0) return;
+            this._pendingApiPayload = entry.payload;
+            this._pendingCid = entry.cid;
+            this._pendingAnomalyCodes = entry.codes;
+            this._showAnomalyModal(meter, entry.codes);
+        },
+
+        // Главный флаш: дедуп (сверка с фактом на сервере) →
+        // последовательная отправка недоставленного (порядок ввода
+        // важен: у одного расходомера prev→curr цепочка).
+        _flushOutbox: function(reason) {
+            var self = this;
+            var entries = this._outboxLoad();
+            if (entries.length === 0) return Promise.resolve(0);
+            if (this._outboxFlushing) return Promise.resolve(0);
+            var token = null;
+            try { token = KipAuth.getToken(); } catch (e) { token = null; }
+            if (!token) return Promise.resolve(0);   // после входа init флашнет
+            this._outboxFlushing = true;
+            var finish = function(sent) {
+                self._outboxFlushing = false;
+                if (sent > 0) {
+                    self._outboxRetryTries = 0;
+                    try {
+                        if (typeof KipToast !== 'undefined' && KipToast.show) {
+                            KipToast.show('Показания, ожидавшие связи, отправлены: ' + sent);
+                        }
+                    } catch (e) { /* ignore */ }
+                }
+                return sent;
+            };
+
+            var dayEntries = [], periodEntries = [];
+            entries.forEach(function(e) {
+                (e.kind === 'period' ? periodEntries : dayEntries).push(e);
+            });
+
+            // Дедуп 'day': один flowmeter.list на все записи
+            var p = Promise.resolve();
+            if (dayEntries.length > 0) {
+                p = p.then(function() {
+                    return self._api('flowmeter.list', {}).then(function(data) {
+                        var meters = (data && Array.isArray(data.meters)) ? data.meters : [];
+                        dayEntries.forEach(function(e) {
+                            var meter = null;
+                            for (var i = 0; i < meters.length; i++) {
+                                if (String(meters[i].id) === String((e.payload || {}).id)) {
+                                    meter = meters[i]; break;
+                                }
+                            }
+                            if (meter &&
+                                String(meter.dateCurr || '') === String((e.payload || {}).dateCurr || '') &&
+                                String(parseFloat(meter.curr)) === String(parseFloat((e.payload || {}).curr))) {
+                                // уже на сервере (beacon дошёл в прошлый раз)
+                                self._outboxRemove(e.cid);
+                                e._delivered = true;
+                            }
+                        });
+                    }).catch(function() { /* сеть — отправим ниже как есть */ });
+                });
+            }
+            // Дедуп 'period': архив по каждому расходомеру
+            periodEntries.forEach(function(e) {
+                p = p.then(function() {
+                    return self._api('flowmeter.archive', { id: (e.payload || {}).id, limit: 30 })
+                        .then(function(data) {
+                            var recs = (data && Array.isArray(data.records)) ? data.records : [];
+                            for (var r = 0; r < recs.length; r++) {
+                                var rec = recs[r];
+                                if (String(rec.entryType || '').toLowerCase() ===
+                                        String((e.payload || {}).entryType || '').toLowerCase() &&
+                                    String(rec.dateCurr || '') === String((e.payload || {}).dateCurr || '') &&
+                                    String(parseFloat(rec.curr)) === String(parseFloat((e.payload || {}).curr))) {
+                                    self._outboxRemove(e.cid);
+                                    e._delivered = true;
+                                    break;
+                                }
+                            }
+                        }).catch(function() { /* сеть — отправим ниже */ });
+                });
+            });
+
+            // Отправка недоставленного — последовательно; останавливаемся
+            // при сетевой ошибке и при открытой модалке подтверждения.
+            p = p.then(function() {
+                var remaining = self._outboxLoad();
+                var sent = 0;
+                var send = function() {
+                    if (remaining.length === 0) return Promise.resolve(sent);
+                    var e = remaining[0];
+                    if (e.state === 'awaiting-confirm') {
+                        self._reshowAnomalyModal(e);
+                        return Promise.resolve(sent);   // ждём решения пользователя
+                    }
+                    return self._sendOutboxEntry(e).then(function(result) {
+                        remaining.shift();
+                        if (result === 'sent') sent++;
+                        if (result === 'stop') remaining = [];   // сеть — стоп
+                        return send();
+                    });
+                };
+                return send();
+            });
+            return p.then(finish, function() { return finish(0); });
+        },
+
+        // Ретрай с бэкоффом 15с → 30с → 60с (потом раз в минуту).
+        // Сброс счётчика — при успехе (finish) и на online/visible.
+        _scheduleOutboxRetry: function() {
+            var self = this;
+            if (this._outboxRetryTimer) return;
+            if (this._outboxLoad().length === 0) return;
+            this._outboxRetryTries = (this._outboxRetryTries || 0) + 1;
+            var delay = Math.min(15000 * Math.pow(2, this._outboxRetryTries - 1), 60000);
+            this._outboxRetryTimer = setTimeout(function() {
+                self._outboxRetryTimer = null;
+                self._flushOutbox('retry');
+            }, delay);
+        },
+
+        // Слушатели online/visibility — вешаются один раз (init
+        // вызывается на каждый заход в раздел).
+        _ensureOutboxWatchers: function() {
+            if (this._outboxWatchersOn) return;
+            this._outboxWatchersOn = true;
+            var self = this;
+            window.addEventListener('online', function() {
+                self._outboxRetryTries = 0;
+                self._flushOutbox('online');
+            });
+            document.addEventListener('visibilitychange', function() {
+                if (document.visibilityState === 'visible') {
+                    self._outboxRetryTries = 0;
+                    self._flushOutbox('visible');
+                }
+            });
+        },
+
+        // «Последний шанс» при закрытии (pagehide / Electron close):
+        // sendBeacon всех неотправленных, КРОМЕ «ждёт подтверждения»
+        // (пользователь аномалию не подтвердил — не отправляем за него).
+        // Ответа не будет: записи остаются в outbox, следующий запуск
+        // сверит с сервером и при нужде отправит заново.
+        _outboxFlushBeacons: function() {
+            var n = 0;
+            try {
+                var token = KipAuth.getToken();
+                if (!token) return 0;
+                var entries = this._outboxLoad();
+                for (var i = 0; i < entries.length; i++) {
+                    var e = entries[i];
+                    if (e.state === 'awaiting-confirm') continue;
+                    var action = (e.kind === 'period')
+                        ? 'flowmeter.updatePeriodReading'
+                        : 'flowmeter.updateReading';
+                    var payload = Object.assign({}, e.payload || {});
+                    payload.token = token;
+                    payload.isEdit = !!e.isEdit;
+                    if (KipAuth.sendBeacon(action, payload)) {
+                        e.beacon = Date.now();
+                        n++;
+                    }
+                }
+                if (n > 0) this._outboxSave(entries);
+            } catch (err) { /* закрытие — не падаем */ }
+            return n;
         },
 
         // ============================================================
@@ -38124,6 +38595,36 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             } catch (e) { return dateStr; }
         }
     };
+
+    // ============================================================
+    // Task 358: страница закрывается — «последний шанс» доставить
+    // неотправленные показания. sendBeacon не требует ответа и
+    // ставится браузером в очередь ДО выгрузки страницы (обычный
+    // fetch при закрытии убивается). Запись остаётся в outbox —
+    // при следующем запуске дедуп-флаш уберёт её, если beacon дошёл,
+    // или отправит заново, если нет.
+    // ============================================================
+    window.addEventListener('pagehide', function() {
+        try {
+            if (typeof FlowmeterData !== 'undefined' &&
+                typeof FlowmeterData._outboxFlushBeacons === 'function') {
+                FlowmeterData._outboxFlushBeacons();
+            }
+        } catch (e) { /* выгрузка — не падаем */ }
+    });
+    // Есть недоставленные показания — предупреждаем при обновлении
+    // страницы/выходе (как Task 251 в шахматке): данные ещё только
+    // на устройстве. В PWA-сворачивании НЕ срабатывает (pagehide
+    // выше уже отправил beacon — запись под защитой outbox).
+    window.addEventListener('beforeunload', function(ev) {
+        try {
+            if (typeof FlowmeterData !== 'undefined' &&
+                FlowmeterData._outboxCount() > 0) {
+                ev.preventDefault();
+                ev.returnValue = '';
+            }
+        } catch (e) { /* ignore */ }
+    });
 
     // ============================================================
     // WorkSchedule — модуль «График работы» (Task 201)
