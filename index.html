@@ -38068,6 +38068,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 for (var i = 0; i < entries.length; i++) {
                     var e = entries[i];
                     if (e.state === 'awaiting-confirm') continue;
+                    // Task 358: недавно уже beacon-или (закрытие → быстрая
+                    // перезагрузка → снова закрытие) — НЕ дублируем отправку:
+                    // сервер пишет архив appendRow без дедупа, повторный
+                    // beacon создал бы дубль строки. Через 60 с повтор
+                    // разрешён (первая попытка могла не дойти).
+                    if (e.beacon && (Date.now() - e.beacon) < 60000) continue;
                     var action = (e.kind === 'period')
                         ? 'flowmeter.updatePeriodReading'
                         : 'flowmeter.updateReading';
