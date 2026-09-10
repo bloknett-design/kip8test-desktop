@@ -4431,14 +4431,47 @@
            УБРАНА — правило удалено; grand-итоги остаются во
            вкладке «Месяц» раздела «Итоги учёта» приложения */
 
-        /* легенда кодов и пояснения */
+        /* Task 360 (заявка): под шахматкой — СПИСОК МЕРОПРИЯТИЙ
+           текущего месяца (один столбик, каждая запись отдельной
+           строкой), под ним — ПЕРЕЧЕНЬ КОДОВ только этого месяца
+           (один столбик, каждый код отдельной строкой; прежде —
+           весь справочник в одну строку). Точка цвета у строки
+           мероприятия — цвет кода из справочника (как в окне
+           «Мероприятия»), печатается принудительно */
+        #wsPrintSheet .wsp-mev {
+            margin-top: 2.5mm;
+            font-size: 8px;
+            line-height: 1.7;
+        }
+        #wsPrintSheet .wsp-mev-t { font-weight: 700; }
+        #wsPrintSheet .wsp-mev-item {
+            display: block;
+            page-break-inside: avoid;
+        }
+        #wsPrintSheet .wsp-mev-item i {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border: 1px solid #7a838c;
+            margin-right: 1mm;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        #wsPrintSheet .wsp-mev-date { font-weight: 700; }
+        #wsPrintSheet .wsp-mev-none { color: #4c5660; }
+
+        /* легенда кодов и пояснения (Task 360: только коды
+           этого месяца, одна строка — один код) */
         #wsPrintSheet .wsp-legend {
             margin-top: 2.5mm;
             font-size: 8px;
             line-height: 1.7;
         }
         #wsPrintSheet .wsp-legend-t { font-weight: 700; }
-        #wsPrintSheet .wsp-lg { margin-right: 4mm; white-space: nowrap; }
+        #wsPrintSheet .wsp-lg {
+            display: block;
+            page-break-inside: avoid;
+        }
         #wsPrintSheet .wsp-lg i {
             display: inline-block;
             width: 7px;
@@ -40020,6 +40053,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // печати убери строку итогов и миниатюры иконок
         // мероприятий»): итоговой строки по подразделению и
         // бейджей мероприятий в ячейках в печати НЕТ.
+        // Task 360 (заявка): ПОД шахматкой — список мероприятий
+        // текущего месяца (один столбик: дата · код · тема · ФИО,
+        // как в окне «Мероприятия»), ПОД ним — перечень кодов
+        // ТОЛЬКО этого месяца с наименованиями (один столбик).
         // Лист СВЕТЛЫЙ всегда (тёмная
         // тема приложения на бумагу не переносится), формат —
         // A4 альбомная (@media print в CSS скрывает приложение
@@ -40064,8 +40101,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 343: бейджи мероприятий в ячейках УБРАНЫ (см.
         // _printCell). В конце каждой строки — «Дни»/«Часы»/
         // «Перераб.» (agg.byTab; Task 342 — переработка в формате
-        // «дни/часы»), внизу — легенда кодов справочника
-        // (Task 343: итоговая строка agg.grand убрана)
+        // «дни/часы»), внизу — Task 360: список мероприятий
+        // текущего месяца (один столбик) и перечень кодов ТОЛЬКО
+        // этого месяца (Task 343: итоговая строка agg.grand убрана)
         _buildPrintHtml: function(viewEmps, agg) {
             var months = ['Январь','Февраль','Март','Апрель','Май','Июнь',
                           'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
@@ -40130,6 +40168,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // строки сотрудников: эффективные записи + итоги
             var entryIdx = this._buildEntryIndex();
             var pend = this._PENDING || {};
+            // Task 360: статусы, ПРИСУТСТВУЮЩИЕ в этом месяце (по
+            // ЭФФЕКТИВНЫМ записям ПЕЧАТАЕМЫХ строк — как в сетке:
+            // локальные правки учитываются, __delete исключается),
+            // для перечня кодов под списком мероприятий: печатаются
+            // только коды этого месяца, а не весь справочник.
+            // «.» и коды мероприятий (И/ОБ/ПЗ/ПР/*) — тоже коды
+            // месяца: «.» виден в ячейках, коды мероприятий —
+            // раскрываются в списке мероприятий выше
+            var usedCodes = {};
             for (var ei = 0; ei < viewEmps.length; ei++) {
                 var emp = viewEmps[ei];
                 var posLabel = this._posLabel(emp);
@@ -40153,6 +40200,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         }
                     }
                     html += this._printCell(day, isoDate, emp, effEntry);
+                    // Task 360: помечаем код месяца (эффективный
+                    // статус ячейки)
+                    if (effEntry && effEntry['статус']) {
+                        usedCodes[effEntry['статус']] = true;
+                    }
                 }
                 var a = (agg && agg.byTab)
                     ? agg.byTab[String(emp['таб_номер'] || '')] : null;
@@ -40184,19 +40236,119 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // «Дни»/«Часы»/«Перераб.» (agg.byTab)
             html += '</tbody></table>';
 
-            // легенда кодов (справочник — единственный источник имён)
-            var codes = this._STATUS_CODES || [];
-            if (codes.length) {
-                html += '<div class="wsp-legend"><span class="wsp-legend-t">Коды:</span>';
-                for (var ci = 0; ci < codes.length; ci++) {
-                    html += '<span class="wsp-lg"><i style="background:' +
-                            (codes[ci].color || '#ffffff') + ';"></i>' +
-                            this._esc(codes[ci].code) +
-                            (codes[ci].name ? ' — ' + this._esc(codes[ci].name) : '') +
-                            '</span>';
-                }
-                html += '</div>';
+            // Task 360 (заявка: «под графиком вначале должен
+            // отображаться список мероприятий на текущий месяц в
+            // один столбик»): те же записи и та же выборка, что в
+            // окне «Мероприятия» тулбара (_renderMonthEventsPanel,
+            // Task 313) — записи листа «Инструктажи», ПЕРЕСЕКАЮЩИЕ
+            // открытый месяц (дата_начала..дата_окончания; ISO
+            // сравниваются лексикографически = хронологически),
+            // сортировка по дате начала, затем по таб. номеру.
+            // Каждое мероприятие — ОТДЕЛЬНОЙ строкой (один
+            // столбик): точка цвета кода, диапазон дат («02.09»,
+            // «02–05.09», «29.09–02.10»), «код · тема · ФИО».
+            // Пустой месяц — строка «нет мероприятий в этом
+            // месяце» (как в окне тулбара)
+            var monthsNom = ['январь','февраль','март','апрель','май','июнь',
+                             'июль','август','сентябрь','октябрь','ноябрь','декабрь'];
+            var mStart = this._year + '-' + pad2(this._month) + '-01';
+            var mEnd = this._year + '-' + pad2(this._month) + '-' +
+                       pad2(new Date(this._year, this._month, 0).getDate());
+            var evList = [];
+            var trs = this._TRAININGS || [];
+            for (var ti = 0; ti < trs.length; ti++) {
+                var tr = trs[ti];
+                var trS = tr['дата_начала'];
+                if (!trS) continue;
+                var trE = tr['дата_окончания'] || trS;
+                if (trE < mStart || trS > mEnd) continue;
+                evList.push(tr);
             }
+            evList.sort(function(a, b) {
+                return String(a['дата_начала']).localeCompare(String(b['дата_начала'])) ||
+                       String(a['таб_номер']).localeCompare(String(b['таб_номер']));
+            });
+            // ФИО по таб. номеру (сотрудник мог быть удалён/в
+            // архиве — показываем таб. номер)
+            var fioIdx = {};
+            var evEmps = this._EMPLOYEES || [];
+            for (var fi = 0; fi < evEmps.length; fi++) {
+                fioIdx[evEmps[fi]['таб_номер']] = evEmps[fi]['ФИО'];
+            }
+            html += '<div class="wsp-mev"><span class="wsp-mev-t">' +
+                    'Мероприятия · ' + monthsNom[this._month - 1] + ' ' + this._year +
+                    (evList.length ? ' · ' + evList.length : '') + '</span>';
+            if (!evList.length) {
+                html += '<span class="wsp-mev-item wsp-mev-none">' +
+                        'нет мероприятий в этом месяце</span>';
+            }
+            for (var ki = 0; ki < evList.length; ki++) {
+                var ev = evList[ki];
+                var evCode = (typeof this._trainingCodeOf === 'function')
+                    ? this._trainingCodeOf(ev['тип']) : '';
+                var evMeta = evCode ? (this._statusMeta(evCode) || {}) : {};
+                var evFio = fioIdx[ev['таб_номер']] ||
+                            ('таб. №' + ev['таб_номер']);
+                // «02.09» из ISO; диапазон в один месяц — «02–05.09»,
+                // через границу — «29.09–02.10» (как в окне
+                // «Мероприятия» тулбара)
+                var evS = String(ev['дата_начала']);
+                var evE = String(ev['дата_окончания'] || ev['дата_начала']);
+                var evRange;
+                if (evS === evE) {
+                    evRange = evS.slice(8) + '.' + evS.slice(5, 7);
+                } else if (evS.slice(0, 7) === evE.slice(0, 7)) {
+                    evRange = evS.slice(8) + '–' + evE.slice(8) + '.' +
+                              evE.slice(5, 7);
+                } else {
+                    evRange = evS.slice(8) + '.' + evS.slice(5, 7) + '–' +
+                              evE.slice(8) + '.' + evE.slice(5, 7);
+                }
+                var evText = (evCode ? evCode + ' · ' : '') +
+                             (ev['тема'] || evMeta.name || '—') + ' · ' + evFio;
+                html += '<span class="wsp-mev-item">' +
+                        '<i style="background:' + (evMeta.color || '#3a3a3a') + ';"></i>' +
+                        '<b class="wsp-mev-date">' + this._esc(evRange) + '</b>' +
+                        '<span class="wsp-mev-text">' + this._esc(evText) + '</span>' +
+                        '</span>';
+            }
+            html += '</div>';
+
+            // Task 360 (заявка: «а под списком, в один столбик
+            // перечень кодов с их наименованием только которые есть
+            // в этом месяце»): в печать идут ТОЛЬКО коды,
+            // ПРИСУТСТВУЮЩИЕ в этом месяце (usedCodes — эффективные
+            // записи печатаемых строк, см. выше), КАЖДЫЙ КОД
+            // ОТДЕЛЬНОЙ СТРОКОЙ (один столбик; прежде — весь
+            // справочник в одну строку). Порядок — справочник
+            // _STATUS_CODES (единственный источник имён);
+            // легаси-код, удалённый из справочника, попадает в
+            // конец без цвета и имени (только код)
+            var codes = this._STATUS_CODES || [];
+            html += '<div class="wsp-legend"><span class="wsp-legend-t">Коды:</span>';
+            for (var ci = 0; ci < codes.length; ci++) {
+                if (!usedCodes[codes[ci].code]) continue;
+                html += '<span class="wsp-lg"><i style="background:' +
+                        (codes[ci].color || '#ffffff') + ';"></i>' +
+                        this._esc(codes[ci].code) +
+                        (codes[ci].name ? ' — ' + this._esc(codes[ci].name) : '') +
+                        '</span>';
+            }
+            // легаси-коды месяца, которых нет в справочнике
+            var legacy = [];
+            for (var lk in usedCodes) {
+                if (!Object.prototype.hasOwnProperty.call(usedCodes, lk)) continue;
+                var known = false;
+                for (var cj = 0; cj < codes.length; cj++) {
+                    if (codes[cj].code === lk) { known = true; break; }
+                }
+                if (!known) legacy.push(lk);
+            }
+            legacy.sort();
+            for (var li = 0; li < legacy.length; li++) {
+                html += '<span class="wsp-lg">' + this._esc(legacy[li]) + '</span>';
+            }
+            html += '</div>';
             html += '<div class="wsp-foot">* — сокращённый предпраздничный рабочий день; ' +
                     'пунктирная рамка ячейки — плановый отпуск (записи ещё нет); ' +
                     'красная точка — переработка; «Дни»/«Часы» — явки и рабочие часы ' +
