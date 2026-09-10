@@ -435,6 +435,8 @@ function createWindow() {
     shell.openExternal(url);
   });
 
+  // Task 358: перехват закрытия — флаш outbox до убийства рендерера
+  attachCloseFlush(mainWindow);
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -447,6 +449,35 @@ function createWindow() {
 // ============================================================
 // МЕНЮ
 // ============================================================
+
+// ============================================================
+// Task 358: перехват закрытия окна — перед уничтожением рендерера
+// даём ему до 1.2 с отправить показания расходомеров, не дошедшие
+// до сервера (outbox-журнал в localStorage; navigator.sendBeacon не
+// требует ответа и ставится браузером в очередь ДО выгрузки).
+// Сценарий: пользователь ввёл показания, нажал «Сохранить» и сразу
+// закрыл приложение — фактическая запись на сервере шла вторым
+// запросом и прерывалась закрытием, показания терялись молча.
+// ============================================================
+let __kipAllowClose = false;   // before-quit / quitAndInstall — не задерживаем
+let __kipCloseFlushed = false; // флеш уже выполнен для этого окна
+
+app.on('before-quit', () => { __kipAllowClose = true; });
+
+function attachCloseFlush(win) {
+  win.on('close', (e) => {
+    if (__kipAllowClose || __kipCloseFlushed) return;
+    __kipCloseFlushed = true;
+    e.preventDefault();
+    const finish = () => { try { win.destroy(); } catch (err) { /* уже закрыто */ } };
+    try {
+      const js = 'window.FlowmeterData && typeof FlowmeterData._outboxFlushBeacons === "function" '
+               + '? FlowmeterData._outboxFlushBeacons() : 0';
+      win.webContents.executeJavaScript(js, false).then(finish, finish);
+      setTimeout(finish, 1200);  // страховка: не держим закрытие дольше 1.2 с
+    } catch (err) { finish(); }
+  });
+}
 
 function createMenu() {
   const template = [

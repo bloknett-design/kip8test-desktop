@@ -1506,3 +1506,11 @@ run-all.js kip8test-desktop синками не перезаписывается
 - Релиз НЕ нужен: менялся только справочник scripts/Code.gs.
 
 Следующий номер задачи: 352.
+
+---
+Task ID: 358
+Task: Electron-часть гарантированной доставки показаний расходомеров (outbox, перенос из kip8test c0d6b75): перехват закрытия окна.
+
+Реализация electron/main.js: attachCloseFlush(mainWindow) — close → preventDefault → executeJavaScript('FlowmeterData._outboxFlushBeacons()') → destroy (страховка 1.2 с); флаги __kipAllowClose (before-quit — авто-обновление не ломается) и __kipCloseFlushed. Рендерер (index.html) пришёл CI-автосинком kip8test@c0d6b75: write-ahead outbox + дедуп-флаш + sendBeacon + 60с-подавление повторных beacon. Релиз новой сборки не требуется: main.js исполняется из репо напрямую (electron-builder упаковывает файлы при следующем релизе; до него — dev/портабл запуски уже с защитой).
+
+Следующий номер задачи: 359.
