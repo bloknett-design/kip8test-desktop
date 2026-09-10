@@ -3250,6 +3250,14 @@
     .flow-summary-item { display: flex; flex-direction: column; }
     .flow-summary-label { font-size: 11px; color: var(--text-secondary); }
     .flow-summary-val { font-size: 16px; font-weight: 700; color: #5ab870; }
+    /* Task 348: «пора вводить новые данные» — показания в списке карточек
+       становятся КРАСНЫМИ (зрительное напоминание): «Ежедневно» — с 6:00
+       нет данных за предыдущие сутки (до ввода); «Еженедельно»/«Ежемесячно»
+       — прошла календарная неделя/месяц последних данных. После сохранения
+       новых показаний цвет возвращается к зелёному. Класс добавляет
+       renderList по FlowmeterData._isOverdue. */
+    .flow-summary-val.flow-summary-val-due { color: #e74c3c; }
+    [data-theme="light"] .flow-summary-val.flow-summary-val-due { color: #c0392b; }
     .flow-summary-days { font-size: 12px; font-weight: 400; color: var(--text-secondary); margin-left: 8px; }
     /* Task 231: дата — под-элемент label «Последние показания» в карточке (одна строка,
        как в детальной карточке Task 229). Меньший шрифт, нейтральный цвет. */
@@ -35858,6 +35866,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // 3. Загрузить свежие данные с сервера.
             //    load() всегда рендерит по завершении (успех или ошибка).
             this.load();
+
+            // Task 348: минутный таймер контроля «пора вводить» — цвет
+            // показаний в списке сам меняется на красный в 6:00 (и на
+            // границе недели/месяца) без перезагрузки страницы. Guard
+            // внутри: init() вызывается на каждый заход в раздел.
+            this._startOverdueTimer();
         },
 
         // ============================================================
@@ -35947,6 +35961,108 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // ============================================================
+        // Task 348: контроль «пора вводить новые данные» — красный
+        // цвет показаний в списке карточек (зрительное напоминание).
+        //   Ежедневно   — с 6:00 текущих суток нет показаний за
+        //                 предыдущие сутки; после ввода и сохранения
+        //                 цвет зелёный до 6:00 следующих суток
+        //                 (цикл ввода начинается в 6:00: до 6:00
+        //                 действует цикл прошлых суток — «предыдущие
+        //                 сутки» для него ещё старше на день).
+        //   Еженедельно — календарная неделя (пн–вс) последних
+        //                 данных уже прошла; зелёный — та же неделя.
+        //   Ежемесячно  — календарный месяц последних данных уже
+        //                 прошёл; зелёный — тот же месяц.
+        // Нет данных / нечитаемая дата — «пора вводить» (красный).
+        // ============================================================
+        _isOverdue: function(m, now) {
+            if (!m) return false;
+            // Кросс-реалмово-безопасная проверка переданной даты
+            // (instanceof Date не работает между VM/песочницами):
+            // валидна ли «как дата» — иначе берём текущее время
+            var n = (now && typeof now.getTime === 'function' && !isNaN(now.getTime()))
+                    ? now : new Date();
+            var d = this._parseMdy(m.dateCurr);
+            if (!d) return true;  // данных нет — пора вводить
+            var period = String(m.period || '').toLowerCase();
+            if (period.indexOf('недел') !== -1) {
+                // Еженедельно: календарная неделя данных прошла (неделя пн–вс)
+                return this._mondayOf(d) < this._mondayOf(n);
+            }
+            if (period.indexOf('месяч') !== -1) {
+                // Ежемесячно: календарный месяц данных прошёл
+                return (d.getFullYear() * 12 + d.getMonth()) < (n.getFullYear() * 12 + n.getMonth());
+            }
+            // «Ежедневно» (и неизвестный период — как ежедневный):
+            // «предыдущие сутки» текущего цикла ввода (граница 6:00)
+            var anchor = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+            if (n.getHours() < 6) anchor.setDate(anchor.getDate() - 1);  // до 6:00 — цикл прошлых суток
+            anchor.setDate(anchor.getDate() - 1);  // «предыдущие сутки» цикла
+            // красный, если последние данные СТАРЬЕ предыдущих суток цикла
+            return this._dayKey(d) < this._dayKey(anchor);
+        },
+
+        // Task 348: 'M/D/YYYY' → Date (локальная полночь) | null
+        _parseMdy: function(s) {
+            try {
+                var p = String(s || '').split('/');
+                if (p.length !== 3) return null;
+                var d = new Date(+p[2], +p[0] - 1, +p[1]);
+                return isNaN(d.getTime()) ? null : d;
+            } catch (e) { return null; }
+        },
+
+        // Task 348: числовой ключ дня YYYYMMDD (сравнение дат без времени)
+        _dayKey: function(d) {
+            return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+        },
+
+        // Task 348: понедельник недели даты (локальная полночь)
+        _mondayOf: function(d) {
+            var r = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            r.setDate(r.getDate() - (r.getDay() + 6) % 7);
+            return r;
+        },
+
+        // Task 348: сигнатура состояний «пора вводить» видимых
+        // расходомеров ('id:0/1,id:0/1…'). Минутный таймер сравнивает
+        // её с моментом последнего рендера — DOM перерисовывается
+        // только при реальном изменении (не каждую минуту).
+        _calcOverdueSig: function() {
+            var meters = [];
+            try { meters = this._getVisibleMeters() || []; } catch (e) { meters = []; }
+            var parts = [];
+            for (var i = 0; i < meters.length; i++) {
+                parts.push(meters[i].id + ':' + (this._isOverdue(meters[i], null) ? 1 : 0));
+            }
+            return parts.join(',');
+        },
+
+        // Task 348: минутный таймер — при изменении состояния «пора
+        // вводить» (наступило 6:00 / понедельник / 1-е число)
+        // перерисовать список: цвет показаний сам сменится на красный
+        // (и обратно на зелёный после ввода данных) без перезагрузки.
+        // Запускается один раз — init() вызывается на каждый заход
+        // в раздел, guard по _overdueTimer.
+        _startOverdueTimer: function() {
+            var self = this;
+            if (this._overdueTimer) return;
+            this._overdueSig = this._calcOverdueSig();
+            this._overdueTimer = setInterval(function() {
+                try {
+                    var sig = self._calcOverdueSig();
+                    if (sig === self._overdueSig) return;
+                    self._overdueSig = sig;
+                    // Перерисовываем список, только если открыт раздел
+                    // расходомеров; иначе рендер произойдёт при следующем
+                    // заходе в раздел (init → renderList)
+                    var pg = document.getElementById('page-flowmeter-data');
+                    if (pg && pg.classList.contains('active')) self.renderList();
+                } catch (e) { /* ignore */ }
+            }, 60 * 1000);
+        },
+
+        // ============================================================
         // Загрузить данные из Google Sheets через Apps Script
         // Если нет токена (гостевой режим) — рендерим fallback/кэш
         // Всегда рендерит по завершении (успех или ошибка),
@@ -36015,6 +36131,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var meters = this._getVisibleMeters();
             var isFavTab = (this._activeTab === 'fav');
 
+            // Task 348: зафиксировать сигнатуру состояний «пора вводить»
+            // (id:0/1) с отрендеренным набором — минутный таймер
+            // (_startOverdueTimer) сравнивает с ней и перерисовывает
+            // список только при реальном изменении состояния
+            this._overdueSig = this._calcOverdueSig();
+
             // Заглушка для пустого списка
             if (!meters || meters.length === 0) {
                 if (isFavTab) {
@@ -36081,7 +36203,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // Task 247: пробел вынесен ЗА пределы span даты — блок «за ДД.ММ.ГГГГ г.»
                 // неразрывен (white-space: nowrap), переносится на новую строку целиком.
                 html += '<span class="flow-summary-label">Последние показания <span class="flow-summary-date-inline">за ' + this._fmtDate(m.dateCurr) + ' г.</span></span>';
-                html += '<span class="flow-summary-val">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + '</span>';
+                // Task 348: красный цвет показаний — «пора вводить новые
+                // данные» (6:00 / прошедшая неделя / прошедший месяц)
+                html += '<span class="flow-summary-val' + (this._isOverdue(m, null) ? ' flow-summary-val-due' : '') + '">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + '</span>';
                 var subParts = [];
                 if (m.temp !== null && m.temp !== undefined) { subParts.push(tempStr); }
                 if (m.gcal !== null && m.gcal !== undefined) { subParts.push(gcalStr); }
@@ -36935,12 +37059,30 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var dateEndLabel = document.getElementById('flowInputDateEndLabel');
 
             // Суточный ввод (а также редактирование и не-№1 расходомеры):
-            // одно поле даты, предзаполнено сегодня — как до Task 286
+            // одно поле даты. Task 348: по умолчанию — ПРЕДЫДУЩИЕ сутки
+            // (совпадает с подписью поля «Дата за предыдущие сутки»):
+            // если пользователь забудет выбрать дату, данные сохранятся
+            // за предыдущие сутки. При редактировании (isEdit) — предзаполнение
+            // СУЩЕСТВУЮЩЕЙ датой записи (раньше молча подставлялся «сегодня» —
+            // правка сдвигала дату показаний вперёд).
             if (type === 'сутки' || isEdit || !dailyMode) {
                 if (dateEndGroup) dateEndGroup.style.display = 'none';
                 if (dateEndField) dateEndField.value = '';
                 if (dateLabel) dateLabel.textContent = 'Дата за предыдущие сутки';
-                if (dateField) dateField.value = flowDateToInputVal(now);
+                if (dateField) {
+                    var prefill = null;
+                    if (isEdit && m && m.dateCurr) {
+                        var mdy = String(m.dateCurr).split('/');
+                        if (mdy.length === 3) {
+                            prefill = new Date(+mdy[2], +mdy[0] - 1, +mdy[1]);
+                        }
+                    }
+                    if (!prefill || isNaN(prefill.getTime())) {
+                        // Task 348: дефолт нового ввода — предыдущие сутки
+                        prefill = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+                    }
+                    dateField.value = flowDateToInputVal(prefill);
+                }
                 return;
             }
 
@@ -37061,10 +37203,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     dateStr = (+dp[1]) + '/' + (+dp[2]) + '/' + (+dp[0]);
                 }
             }
-            // Если дата не указана — используем сегодня
+            // Task 348: дата не указана — сохраняем ПРЕДЫДУЩИЕ сутки
+            // (дефолт поля «Дата за предыдущие сутки»; раньше молча
+            // подставлялся «сегодня» — показания за вчерашний день
+            // сохранялись сегодняшней датой)
             if (!dateStr) {
                 var now = new Date();
-                dateStr = (now.getMonth() + 1) + '/' + now.getDate() + '/' + now.getFullYear();
+                var prevDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+                dateStr = (prevDay.getMonth() + 1) + '/' + prevDay.getDate() + '/' + prevDay.getFullYear();
             }
 
             var id = window._flowDetailId;
