@@ -3272,7 +3272,10 @@
        новых показаний цвет возвращается к зелёному. Класс добавляет
        renderList по FlowmeterData._isOverdue.
        Task 359: красный ЯРЧЕ + шрифт крупнее (16px/700 → 18px/800) —
-       значение лучше притягивает взгляд (замечание пользователя). */
+       значение лучше притягивает взгляд (замечание пользователя).
+       Task 365 (поправка заявки): красный — НЕ час: с 6:00 новых
+       суток (следующих за сутками ввода данных) показания держатся
+       красными, пока не введут новые данные; окна 6:00–7:00 нет. */
     .flow-summary-val.flow-summary-val-due {
         color: #ff5c47;
         font-size: 18px;
@@ -36076,7 +36079,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         if (data && Array.isArray(data.meters) && data.meters.length > 0) {
                             // Не перезаписывать данные, уже загруженные с сервера
                             if (!self._loaded) {
-                                self._METERS = data.meters;
+                                self._METERS = self._normalizeMeters(data.meters);
                             }
                             if (!silent) self.renderList();
                         }
@@ -36096,7 +36099,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var cached = JSON.parse(json);
                     if (cached && Array.isArray(cached.meters)) {
                         if (!this._loaded) {
-                            this._METERS = cached.meters;
+                            this._METERS = this._normalizeMeters(cached.meters);
                             this._loaded = true;
                         }
                         if (!silent) this.renderList();
@@ -36112,6 +36115,29 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             try {
                 localStorage.setItem(this._cacheKey, JSON.stringify({ meters: meters, ts: Date.now() }));
             } catch (e) { /* quota or disabled */ }
+        },
+
+        // Task 365: нормализация периода расходомеров на клиенте.
+        // Заявка: «в Хозрасчёте №12 период указан еженедельно, но
+        // фактически нужно ежедневно, в соответствии с формой ввода
+        // данных» — таблица хозрасчётов (Google Sheets, лист
+        // hozraschet_meters) хранит устаревший «Еженедельно», а ввод
+        // по №12 суточный (единое поле «Дата за предыдущие сутки»,
+        // как у всех не-№1). Нормализуем период при ЛЮБОМ источнике
+        // данных (сервер / кэш localStorage / fallback-json), чтобы
+        // бейдж «Ежедневно», логика «пора вводить» (_isOverdue) и
+        // суточная форма ввода совпадали. Когда период в таблице
+        // станет «Ежедневно» — нормализация ничего не изменит
+        // (идемпотентна).
+        _normalizeMeters: function(meters) {
+            if (!Array.isArray(meters)) return meters;
+            for (var i = 0; i < meters.length; i++) {
+                var nm = meters[i];
+                if (nm && nm.id === 12 && nm.period !== 'Ежедневно') {
+                    nm.period = 'Ежедневно';
+                }
+            }
+            return meters;
         },
 
         // Форматирование числа с разделителями
@@ -36153,6 +36179,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         //                 (цикл ввода начинается в 6:00: до 6:00
         //                 действует цикл прошлых суток — «предыдущие
         //                 сутки» для него ещё старше на день).
+        //   Task 365 (поправка заявки): красный «Ежедневно»
+        //   стартует в 6:00 НОВЫХ суток — следующих за сутками
+        //   ввода данных — и ДЕРЖИТСЯ, пока не введут новые данные;
+        //   часового окна 6:00–7:00 НЕТ (первоначальная
+        //   формулировка «ровно час» отменена поправкой
+        //   пользователя: зелёный возвращается только вместе
+        //   с новыми показаниями).
         //   Еженедельно — календарная неделя (пн–вс) последних
         //                 данных уже прошла; зелёный — та же неделя.
         //   Ежемесячно  — календарный месяц последних данных уже
@@ -36276,7 +36309,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             this._api('flowmeter.list', {}).then(function(data) {
                 if (data && Array.isArray(data.meters)) {
-                    self._METERS = data.meters;
+                    self._METERS = self._normalizeMeters(data.meters);
                     self._loaded = true;
                     self._persistData(self._METERS);
                 }
@@ -43436,7 +43469,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // класс ws-weekend остаётся маркером нерабочих дней, но фон
             // обычных выходных больше НЕ розовый (розовый — только
             // праздники, ws-feast); вместо тонких 1px-линий стыков —
-            // красная 3px-рамка вокруг ГРУППЫ столбцов выходных (не
+            // красная рамка-группа вокруг столбцов выходных (не
             // каждую ячейку): ws-wgrp на каждом столбце группы,
             // ws-wgrp-first/-last на первом/последнем (край таблицы —
             // тоже край группы: нерабочий 1-го числа получает left,
@@ -43444,7 +43477,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // верх — шапка th (см. _renderGrid). Праздники в группу НЕ
             // входят. Обе стороны стыка красить больше не нужно: при
             // разной толщине границ в border-collapse побеждает ШИРЕ
-            // (3px перекрывает 1px соседа). Гварды typeof — старые
+            // (2px перекрывает 1px соседа, Task 364). Гварды typeof — старые
             // VM-хосты без новых хелперов не падают (праздников нет)
             var lastDay = new Date(this._year, this._month, 0).getDate();
             var dayOff = this._calDayOff(day);
