@@ -3278,11 +3278,14 @@
     /* Task 367: показания введены, но ещё НЕ доставлены на сервер
        (нет связи; запись ждёт в outbox). Только ЦВЕТ — размер/вес
        шрифта как у обычного зелёного значения. После доставки
-       (флаш/online) renderList пересчитает класс — снова зелёный. */
+       (флаш/online) renderList пересчитает класс — снова зелёный.
+       Task 370 (заявка): цвет чуть ярче и ближе к жёлтому —
+       #ffc400 (тёмная) / #cc9900 (светлая); было: более тёмные
+       оранжевые тона Task 367 (см. DEPLOY-Task367/370). */
     .flow-summary-val.flow-summary-val-pending {
-        color: #f5a623;
+        color: #ffc400;
     }
-    [data-theme="light"] .flow-summary-val.flow-summary-val-pending { color: #c96e00; }
+    [data-theme="light"] .flow-summary-val.flow-summary-val-pending { color: #cc9900; }
     .flow-summary-days { font-size: 12px; font-weight: 400; color: var(--text-secondary); margin-left: 8px; }
     /* Task 231: дата — под-элемент label «Последние показания» в карточке (одна строка,
        как в детальной карточке Task 229). Меньший шрифт, нейтральный цвет. */
