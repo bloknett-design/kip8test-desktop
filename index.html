@@ -3218,18 +3218,10 @@
         color: #4a8fc7; font-size: 13px; font-weight: 600;
         text-decoration: none;
     }
-    /* Task 358: баннер «ждут отправки» — показания введены, но ещё
-       не доставлены на сервер (нет связи); уйдут автоматически.
-       Task 366: без иконки (заявка), текст с номерами расходомеров. */
-    .flow-outbox-banner {
-        display: flex; align-items: center; gap: 8px;
-        margin: 8px 14px 4px; padding: 10px 12px;
-        border-radius: 8px;
-        background: rgba(230,150,20,0.10);
-        border: 1px solid rgba(230,150,20,0.32);
-        font-size: 13px; line-height: 1.35;
-        color: var(--text-primary);
-    }
+    /* Task 367: баннер недоставленных показаний УБРАН (заявка:
+       «упростить ещё — баннер вовсе»); недоставленные показания
+       видны ЦВЕТОМ ЗНАЧЕНИЯ карточки — жёлто-оранжевый
+       .flow-summary-val-pending (ниже, рядом с flow-summary-val). */
     .flow-sheet-link:hover { background: rgba(74,143,199,0.18); }
     /* Карточка расходомера — без рамки, с разделителем снизу, зебра (как приборы/блокировки/регуляторы) */
     .flow-card {
@@ -3272,13 +3264,25 @@
        значение лучше притягивает взгляд (замечание пользователя).
        Task 365 (поправка заявки): красный — НЕ час: с 6:00 новых
        суток (следующих за сутками ввода данных) показания держатся
-       красными, пока не введут новые данные; окна 6:00–7:00 нет. */
+       красными, пока не введут новые данные; окна 6:00–7:00 нет.
+       Task 367 (заявка): НЕдоставленные показания — жёлто-оранжевый
+       цвет значения (приоритет НАД красным — ввод уже состоялся);
+       после доставки сервером — снова зелёный. Недельные/месячные —
+       красный по календарной неделе пн–вс / месяцу (Task 357). */
     .flow-summary-val.flow-summary-val-due {
         color: #ff5c47;
         font-size: 18px;
         font-weight: 800;
     }
     [data-theme="light"] .flow-summary-val.flow-summary-val-due { color: #e8230a; font-size: 18px; font-weight: 800; }
+    /* Task 367: показания введены, но ещё НЕ доставлены на сервер
+       (нет связи; запись ждёт в outbox). Только ЦВЕТ — размер/вес
+       шрифта как у обычного зелёного значения. После доставки
+       (флаш/online) renderList пересчитает класс — снова зелёный. */
+    .flow-summary-val.flow-summary-val-pending {
+        color: #f5a623;
+    }
+    [data-theme="light"] .flow-summary-val.flow-summary-val-pending { color: #c96e00; }
     .flow-summary-days { font-size: 12px; font-weight: 400; color: var(--text-secondary); margin-left: 8px; }
     /* Task 231: дата — под-элемент label «Последние показания» в карточке (одна строка,
        как в детальной карточке Task 229). Меньший шрифт, нейтральный цвет. */
@@ -36198,12 +36202,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     ? now : new Date();
             var d = this._parseMdy(m.dateCurr);
             if (!d) return true;  // данных нет — пора вводить
+            // Task 367 (заявка): недельные — красный по КАЛЕНДАРНОЙ
+            // неделе (пн–вс), месячные — по календарному месяцу
+            // (поведение Task 357 подтверждено пользователем).
+            // Распознавание периода укреплено: сокращения («Еженед.»,
+            // «Ежемес.») и «N раз в неделю/месяц» из таблицы попадают
+            // в свою ветку, а не считаются суточными.
             var period = String(m.period || '').toLowerCase();
-            if (period.indexOf('недел') !== -1) {
+            if (/недел|еженед/.test(period)) {
                 // Еженедельно: календарная неделя данных прошла (неделя пн–вс)
                 return this._mondayOf(d) < this._mondayOf(n);
             }
-            if (period.indexOf('месяч') !== -1) {
+            if (/месяц|месяч|ежемес/.test(period)) {
                 // Ежемесячно: календарный месяц данных прошёл
                 return (d.getFullYear() * 12 + d.getMonth()) < (n.getFullYear() * 12 + n.getMonth());
             }
@@ -36387,20 +36397,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
 
             var html = '';
-            // Task 358: честный индикатор — показания ещё НЕ на сервере
-            // (нет связи в прошлой сессии); уйдут автоматически.
-            // Пользователь должен ЗНАТЬ, что введённое не доставлено.
-            // Task 366: текст с НОМЕРАМИ расходомеров, без иконки
-            // (заявка: «более информативное и просто читаемое»).
-            var outboxEntries = [];
-            try { outboxEntries = this._outboxLoad(); } catch (e) { outboxEntries = []; }
-            var outboxBanner = (outboxEntries.length > 0)
-                ? this._outboxBannerText(outboxEntries) : null;
-            if (outboxBanner) {
-                html += '<div class="flow-outbox-banner">' +
-                    '<span>' + this._esc(outboxBanner) + '</span>' +
-                    '</div>';
-            }
+            // Task 367 (заявка: «упростить ещё — баннер убрать вовсе»):
+            // недоставленные показания видны ЦВЕТОМ ЗНАЧЕНИЯ карточки —
+            // жёлто-оранжевый .flow-summary-val-pending (вместо баннера
+            // над списком, Tasks 358/366). Собираем номера расходомеров,
+            // у которых в outbox ещё есть записи (state любой — всё,
+            // что не доставлено и не отменено пользователем).
+            var pendingIds = {};
+            try {
+                var outboxEntries = this._outboxLoad();
+                for (var oi = 0; oi < outboxEntries.length; oi++) {
+                    var pid = ((outboxEntries[oi] || {}).payload || {}).id;
+                    if (pid !== undefined && pid !== null && pid !== '') {
+                        pendingIds[String(pid)] = true;
+                    }
+                }
+            } catch (e) { /* outbox недоступен — обычные цвета */ }
 
             for (var i = 0; i < meters.length; i++) {
                 var m = meters[i];
@@ -36433,8 +36445,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // неразрывен (white-space: nowrap), переносится на новую строку целиком.
                 html += '<span class="flow-summary-label">Последние показания <span class="flow-summary-date-inline">за ' + this._fmtDate(m.dateCurr) + ' г.</span></span>';
                 // Task 348: красный цвет показаний — «пора вводить новые
-                // данные» (6:00 / прошедшая неделя / прошедший месяц)
-                html += '<span class="flow-summary-val' + (this._isOverdue(m, null) ? ' flow-summary-val-due' : '') + '">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + '</span>';
+                // данные» (6:00 / прошедшая неделя / прошедший месяц).
+                // Task 367: недоставленные (outbox) — жёлто-оранжевый,
+                // приоритет НАД красным: ввод уже состоялся, «пора
+                // вводить» до доставки врало бы; после доставки цвет
+                // пересчитается (зелёный; красный вернётся лишь для
+                // действительно устаревших данных).
+                var valCls = 'flow-summary-val';
+                if (pendingIds[String(m.id)]) valCls += ' flow-summary-val-pending';
+                else if (this._isOverdue(m, null)) valCls += ' flow-summary-val-due';
+                html += '<span class="' + valCls + '">' + this._fmtNum(m.curr) + ' ' + this._esc(m.unit) + '</span>';
                 var subParts = [];
                 if (m.temp !== null && m.temp !== undefined) { subParts.push(tempStr); }
                 if (m.gcal !== null && m.gcal !== undefined) { subParts.push(gcalStr); }
@@ -37529,6 +37549,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     ts: Date.now(),
                     state: 'pending'
                 });
+                // Task 367: значение карточки — жёлто-оранжевое, пока
+                // показание не доставлено (рендер выше успевал показать
+                // зелёный ДО записи в outbox)
+                this.renderList();
 
                 var rules = this._getRulesForMeter(id);
                 var lastArch = this._getLastArchiveForValidation(id, meter);
@@ -37839,6 +37863,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 ts: Date.now(),
                 state: 'pending'
             });
+            // Task 367: значение карточки — жёлто-оранжевое до доставки
+            this.renderList();
 
             this._api('flowmeter.updatePeriodReading', apiPayload).then(function(res) {
                 // Подстраховка: новый сервер возвращает data.entryType;
@@ -38028,44 +38054,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return this._outboxLoad().length;
         },
 
-        // Task 366: текст баннера недоставленных показаний (заявка:
-        // «замени на более информативное и просто читаемое сообщение
-        // и без иконки»). Было: «⟳ Показаний ждут отправки: N — уйдут
-        // на сервер при восстановлении связи» — видно количество, но
-        // не видно, ЧЬИ показания не ушли. Теперь: номера расходомеров
-        // (у одного может быть несколько записей — «№2 ×2»), обычная
-        // грамматика ед./мн. числа, иконки нет. null — записей нет,
-        // баннер не показывается.
-        _outboxBannerText: function(entries) {
-            if (!Array.isArray(entries) || entries.length === 0) return null;
-            var order = [], counts = {};
-            for (var i = 0; i < entries.length; i++) {
-                var pid = ((entries[i] || {}).payload || {}).id;
-                var key = (pid === undefined || pid === null || pid === '') ? '' : String(pid);
-                if (key === '') continue;
-                if (!counts[key]) { counts[key] = 0; order.push(key); }
-                counts[key]++;
-            }
-            if (order.length === 0) {
-                // страховка: номера не извлеклись (не должно случаться) —
-                // текст по счётчику, чтобы пользователь всё равно ЗНАЛ,
-                // что введённое не доставлено (суть Task 358)
-                return (entries.length === 1)
-                    ? 'Показание не отправлено — отправится на сервер автоматически при восстановлении связи'
-                    : 'Показания (' + entries.length + ') не отправлены — отправятся на сервер автоматически при восстановлении связи';
-            }
-            var parts = [];
-            for (var j = 0; j < order.length; j++) {
-                var part = '№' + order[j];
-                if (counts[order[j]] > 1) part += ' ×' + counts[order[j]];
-                parts.push(part);
-            }
-            var list = parts.join(', ');
-            if (entries.length === 1) {
-                return 'Показание ' + list + ' не отправлено — отправится на сервер автоматически при восстановлении связи';
-            }
-            return 'Показания ' + list + ' не отправлены — отправятся на сервер автоматически при восстановлении связи';
-        },
+        // Task 367: баннер недоставленных показаний убран по заявке
+        // («упростить ещё — убрать баннер вовсе»); вместо него жёлто-
+        // оранжевый цвет ЗНАЧЕНИЙ карточек — .flow-summary-val-pending
+        // в renderList. Хелпер _outboxBannerText удалён вместе с ним.
 
         // Окончательный отказ сервера — ретраить бессмысленно (вечный
         // цикл + тост на каждом запуске). НЕ окончательные: сеть (нет
@@ -38156,6 +38148,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._outboxFlushing = true;
             var finish = function(sent) {
                 self._outboxFlushing = false;
+                // Task 367: записи ушли/вычищены дедупом — цвета
+                // значений карточек пересчитать (жёлто-оранжевый →
+                // зелёный/красный)
+                try { self.renderList(); } catch (e) { /* ignore */ }
                 if (sent > 0) {
                     self._outboxRetryTries = 0;
                     try {
