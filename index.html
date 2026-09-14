@@ -8614,6 +8614,31 @@
     [data-theme="light"] .valve-swipe-bg {
         background: linear-gradient(135deg, rgba(40, 95, 97, 0.9), rgba(74, 138, 140, 0.8));
     }
+    /* Task 369: карточка «Проекты» — свайп-ячейка + янтарно-коричневая
+       подложка в цвет кнопки (#b08048). Свайп в любую сторону открывает
+       «Проекты по статусу», тап — «По отделениям» (как раньше). */
+    .project-swipe-cell > #projectsEntryBtn {
+        position: relative;
+        z-index: 1;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        margin: 0;
+        touch-action: pan-y;
+    }
+    .project-swipe-cell > #projectsEntryBtn.swipe-active {
+        transition: none;
+    }
+    .project-swipe-bg {
+        background: linear-gradient(135deg, rgba(146, 98, 44, 0.95), rgba(176, 128, 72, 0.85));
+    }
+    [data-theme="light"] .project-swipe-bg {
+        background: linear-gradient(135deg, rgba(156, 108, 52, 0.9), rgba(176, 128, 72, 0.8));
+    }
+    /* Отдельно стоящая строка «Проекты»: базовый отступ .dev-swipe-cell
+       (4px снизу) не нужен — зазор между строками задаёт margin-top
+       соседних .menu-btn-row (6px), как было до обёртки в ячейку. */
+    #page-kip-ios > .menu-btn-row .dev-swipe-cell {
+        margin-bottom: 0;
+    }
 
     /* ===== Телефонный справочник ===== */
     .pb-search-wrap {
@@ -14434,7 +14459,13 @@
             </div>
 
             <div class="menu-btn-row">
-                <div class="menu-btn" id="projectsEntryBtn" style="border-color:rgba(176,128,72,0.35);"><div class="menu-btn-text"><div class="menu-btn-label" style="color:#b08048;">Проекты</div><div class="menu-btn-sublabel">По отделениям</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('projects')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow" style="color:rgba(176,128,72,0.4);">›</i></div>
+                <!-- Task 369: свайп-ячейка — как у «Приборы»/«Клапана»:
+                     тап → по отделениям, свайп в любую сторону → по статусу. -->
+                <div class="dev-swipe-cell project-swipe-cell" id="projectSwipeCell">
+                    <div class="dev-swipe-bg dev-swipe-bg-left project-swipe-bg"><span>По статусу</span></div>
+                    <div class="dev-swipe-bg dev-swipe-bg-right project-swipe-bg"><span>По статусу</span></div>
+                    <div class="menu-btn" id="projectsEntryBtn" style="border-color:rgba(176,128,72,0.35);"><div class="menu-btn-text"><div class="menu-btn-label" style="color:#b08048;">Проекты</div><div class="menu-btn-sublabel">По отделениям</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('projects')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow" style="color:rgba(176,128,72,0.4);">›</i></div>
+                </div>
             </div>
             <div class="menu-btn-row">
                 <div class="menu-btn" id="cablesEntryBtn" style="border-color:rgba(120,144,100,0.35);"><div class="menu-btn-text"><div class="menu-btn-label" style="color:#8aa070;">Кабельный журнал</div><div class="menu-btn-sublabel">Журнал КИП пр-ва ИОС</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('cables')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow" style="color:rgba(120,144,100,0.4);">›</i></div>
@@ -14560,6 +14591,18 @@
             <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Проекты по отделениям</div><input type="search" id="projectProdSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="projectsRenderSorted('prod')" hidden><button type="button" id="projectProdSearchInputToggleBtn" class="dev-search-toggle-btn" aria-label="Поиск" data-search-input="projectProdSearchInput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></div>
             <div id="projectProdInfo" class="pb-info-bar" style="padding:6px 14px;font-size:11px;color:var(--text-secondary);border-bottom:1px solid var(--border-color);">Загрузка…</div>
             <div id="projectProdList"></div>
+        </div>
+
+        <!-- ======================== ПРОЕКТЫ — ПО СТАТУСУ (Task 369) ========================
+             Открывается свайпом кнопки «Проекты» на странице КИП ИОС (в любую
+             сторону). Группы — по столбцу «Статус проекта» листа «Проекты»:
+             «Новый» → «Выполнен» → «Остановлен» → «Отменен/Отменён» →
+             неизвестные статусы по алфавиту → «(без статуса)». Тап по группе
+             открывает страницу группы (project-group) с подгруппами по годам. -->
+        <div id="page-projects-status" class="page-content">
+            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Проекты по статусу</div><input type="search" id="projectStatusSearchInput" class="dev-header-search" placeholder="Поиск…" autocomplete="off" enterkeyhint="search" oninput="projectsRenderSorted('status')" hidden><button type="button" id="projectStatusSearchInputToggleBtn" class="dev-search-toggle-btn" aria-label="Поиск" data-search-input="projectStatusSearchInput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></div>
+            <div id="projectStatusInfo" class="pb-info-bar" style="padding:6px 14px;font-size:11px;color:var(--text-secondary);border-bottom:1px solid var(--border-color);">Загрузка…</div>
+            <div id="projectStatusList"></div>
         </div>
 
         <!-- ======================== КАРТОЧКА ПРОЕКТА ======================== -->
@@ -22427,6 +22470,25 @@
         if (s === 'отменен' || s === 'отменён') return 'project-card-status-cancel';
         return '';
     }
+    // Task 369: группировка проектов по столбцу «Статус проекта» (свайп
+    // кнопки «Проекты» на странице КИП ИОС). Порядок известных статусов
+    // фиксирован: активные («Новый») первыми, затем «Выполнен»,
+    // «Остановлен», «Отменен/Отменён»; незнакомые статусы — по алфавиту
+    // после известных; проекты с пустым статусом — в самом конце.
+    const PROJECT_STATUS_ORDER = ['Новый', 'Выполнен', 'Остановлен', 'Отменен', 'Отменён'];
+    function projectStatusGroupKey(status) {
+        const s = String(status || '').trim();
+        return s || '(без статуса)';
+    }
+    // Ключ сортировки группы статуса: '<приоритет>:<имя>'. Даёт
+    // детерминированный порядок групп и при одинаковых приоритетах
+    // (неизвестные статусы) — по алфавиту имён.
+    function projectStatusSortKey(status) {
+        const s = String(status || '').trim();
+        if (!s) return '9:(без статуса)';
+        const i = PROJECT_STATUS_ORDER.indexOf(s);
+        return (i === -1 ? '5:' : '0' + i + ':') + s;
+    }
 
     // Возвращает timestamp для сортировки по «Дате утв.».
     // Поддерживаемые форматы:
@@ -22490,7 +22552,7 @@
                 localStorage.setItem('projectsLastUpdate', new Date().toISOString());
             } catch (e) {
                 console.error('projectInitSorted error:', e);
-                const ids = { prod: 'projectProdList' };
+                const ids = { prod: 'projectProdList', status: 'projectStatusList' }; // Task 369
                 const el = document.getElementById(ids[mode]);
                 if (el) el.innerHTML = '<div class="pb-empty">Ошибка загрузки.<br>Проверьте соединение.</div>';
                 return;
@@ -22509,6 +22571,8 @@
     function projectsRenderSorted(mode) {
         const ids = {
             prod: { list: 'projectProdList', info: 'projectProdInfo', search: 'projectProdSearchInput', page: 'page-projects-prod' },
+            // Task 369: список проектов по статусам (свайп кнопки «Проекты»)
+            status: { list: 'projectStatusList', info: 'projectStatusInfo', search: 'projectStatusSearchInput', page: 'page-projects-status' },
         };
         const id = ids[mode];
         if (!id) return;
@@ -22530,13 +22594,24 @@
         let filtered = projectData.projects || [];
 
         // Сортировка: по «Отделению», внутри отделения — по «Дате утв.» (старые → новые).
-        const sortKey = 'Отделение';
+        // Task 369: режим 'status' — сначала по приоритету статуса
+        // (PROJECT_STATUS_ORDER / projectStatusSortKey), внутри статуса —
+        // та же «Дата утв.» от старых к новым.
+        const isStatusMode = (mode === 'status');
+        const sortKey = isStatusMode ? 'Статус проекта' : 'Отделение';
         filtered.sort((a, b) => {
-            const va = (a[sortKey] || '').toString().toLowerCase();
-            const vb = (b[sortKey] || '').toString().toLowerCase();
-            if (va < vb) return -1;
-            if (va > vb) return 1;
-            // Внутри отделения — по дате утверждения (от старых к новым).
+            if (isStatusMode) {
+                const ka = projectStatusSortKey(a['Статус проекта']);
+                const kb = projectStatusSortKey(b['Статус проекта']);
+                if (ka < kb) return -1;
+                if (ka > kb) return 1;
+            } else {
+                const va = (a[sortKey] || '').toString().toLowerCase();
+                const vb = (b[sortKey] || '').toString().toLowerCase();
+                if (va < vb) return -1;
+                if (va > vb) return 1;
+            }
+            // Внутри группы — по дате утверждения (от старых к новым).
             const da = projectDateSortValue(a['Дата утв.']);
             const db = projectDateSortValue(b['Дата утв.']);
             if (da < db) return -1;
@@ -22557,10 +22632,13 @@
         }
 
         // Группировка верхнего уровня — по «Отделению».
+        // Task 369: режим 'status' — по столбцу «Статус проекта»
+        // (пустой статус → «(без статуса)»).
         const groups = {};
         const groupOrder = [];
         for (const d of filtered) {
-            const g = d[sortKey] || '(без отделения)';
+            const g = isStatusMode ? projectStatusGroupKey(d['Статус проекта'])
+                                   : (d[sortKey] || '(без отделения)');
             if (!groups[g]) { groups[g] = []; groupOrder.push(g); }
             groups[g].push(d);
         }
@@ -22569,6 +22647,9 @@
         // подгруппа с самым старым проектом идёт первой; подгруппы, где все даты
         // пустые/невалидные ('00.00.00'), уходят в конец. При совпадении «минимальной»
         // даты добиваем по алфавиту (имя отделения).
+        // Task 369: в режиме 'status' порядок групп уже задан сортировкой
+        // элементов выше (приоритет статуса) — повторно не сортируем.
+        if (!isStatusMode) {
         groupOrder.sort((a, b) => {
             const itemsA = groups[a];
             const itemsB = groups[b];
@@ -22589,6 +22670,7 @@
             if (va > vb) return 1;
             return 0;
         });
+        } // Task 369: конец if (!isStatusMode)
 
         info.textContent = '';
 
@@ -22673,8 +22755,10 @@
         }
 
         // Фильтр по отделению (как было раньше).
+        // Task 369: режим 'status' — фильтр по группе статуса.
         const sortKey = 'Отделение';
         let items = (projectData.projects || []).filter(d => {
+            if (mode === 'status') return projectStatusGroupKey(d['Статус проекта']) === group;
             const g = d[sortKey] || '(без отделения)';
             return g === group;
         });
@@ -23956,16 +24040,142 @@
     }
 
     // ===== Кнопка Проекты на странице КИП И ОС =====
+    // Task 369: как у «Приборы»/«Клапана» — свайп-ячейка с подложками.
+    // Отличие: альтернативная группировка одна («По статусу»), поэтому
+    // свайп В ЛЮБУЮ сторону (влево или вправо) открывает её:
+    //   tap → по отделениям (projects-prod, как раньше)
+    //   swipe ← / swipe → → по статусам (projects-status, Task 369)
+    const PROJECT_SWIPE_THRESHOLD = 12;    // px до определения направления
+    const PROJECT_SWIPE_NAV_RATIO = 0.3;   // доля ширины для перехода
+    let projectSwipeState = null;
+    let projectSwipeMoved = false;
+
     function projectsInitEntryButton() {
         const btn = document.getElementById('projectsEntryBtn');
         if (!btn || btn.dataset.initialized) return;
         btn.dataset.initialized = '1';
+        btn.addEventListener('pointerdown', onProjectSwipePointerDown);
         btn.addEventListener('click', function() {
+            if (projectSwipeMoved) return;
             if (navigator.vibrate) navigator.vibrate(15);
             navigateTo('projects-prod');
         });
         // Обновить sublabel количеством проектов
         projectsUpdateEntrySublabel();
+    }
+
+    function onProjectSwipePointerDown(e) {
+        if (e.button !== undefined && e.button !== 0) return;
+        const el = e.currentTarget;
+        const cell = document.getElementById('projectSwipeCell');
+        if (!el || !cell) return;
+        const rect = el.getBoundingClientRect();
+        projectSwipeState = {
+            el: el,
+            cell: cell,
+            startX: e.clientX,
+            startY: e.clientY,
+            width: rect.width,
+            currentDx: 0,
+            active: false,
+            moved: false
+        };
+        window.addEventListener('pointermove', onProjectSwipePointerMove);
+        window.addEventListener('pointerup', onProjectSwipePointerUp);
+        window.addEventListener('pointercancel', onProjectSwipePointerUp);
+    }
+
+    function onProjectSwipePointerMove(e) {
+        if (!projectSwipeState) return;
+        const st = projectSwipeState;
+        const dx = e.clientX - st.startX;
+        const dy = e.clientY - st.startY;
+        if (!st.active) {
+            if (Math.abs(dx) > PROJECT_SWIPE_THRESHOLD || Math.abs(dy) > PROJECT_SWIPE_THRESHOLD) {
+                if (Math.abs(dx) > Math.abs(dy) * 1.5) {
+                    st.active = true;
+                    st.el.classList.add('swipe-active');
+                    st.el.style.pointerEvents = 'none';
+                    if (navigator.vibrate) navigator.vibrate(10);
+                } else {
+                    // Вертикальное — скролл, отменяем
+                    cleanupProjectSwipe();
+                    return;
+                }
+            } else {
+                return;
+            }
+        }
+        e.preventDefault();
+        let effectiveDx = dx;
+        if (Math.abs(dx) > st.width) {
+            const overshoot = Math.abs(dx) - st.width;
+            effectiveDx = Math.sign(dx) * (st.width + overshoot * 0.3);
+        }
+        st.currentDx = effectiveDx;
+        st.el.style.transform = 'translateX(' + effectiveDx + 'px)';
+        st.cell.classList.toggle('swiping-left',  effectiveDx < 0);
+        st.cell.classList.toggle('swiping-right', effectiveDx > 0);
+    }
+
+    function onProjectSwipePointerUp(e) {
+        if (!projectSwipeState) return;
+        const st = projectSwipeState;
+        const threshold = st.width * PROJECT_SWIPE_NAV_RATIO;
+        const shouldNav = st.active && Math.abs(st.currentDx) > threshold;
+
+        if (shouldNav) {
+            if (navigator.vibrate) navigator.vibrate(20);
+            st.el.classList.remove('swipe-active');
+            st.el.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
+            // Оба направления — одна цель: «По статусу» (единственная
+            // альтернативная группировка проектов, Task 369).
+            st.el.style.transform = 'translateX(' + (st.currentDx < 0 ? '-100%' : '100%') + ')';
+            st.el.style.opacity = '0';
+            const targetPage = 'projects-status';
+            setTimeout(function() {
+                navigateTo(targetPage);
+                setTimeout(function() {
+                    st.el.style.transition = '';
+                    st.el.style.opacity = '';
+                    st.el.style.transform = '';
+                    st.el.style.pointerEvents = '';
+                    st.cell.classList.remove('swiping-left', 'swiping-right');
+                }, 100);
+            }, 200);
+            projectSwipeState = null;
+            window.removeEventListener('pointermove', onProjectSwipePointerMove);
+            window.removeEventListener('pointerup', onProjectSwipePointerUp);
+            window.removeEventListener('pointercancel', onProjectSwipePointerUp);
+        } else {
+            // Возвращаем карточку на место (с анимацией)
+            st.el.classList.remove('swipe-active');
+            st.el.style.transform = '';
+            st.el.style.pointerEvents = '';
+            st.cell.classList.remove('swiping-left', 'swiping-right');
+            st.moved = st.active;
+            cleanupProjectSwipe();
+        }
+    }
+
+    function cleanupProjectSwipe() {
+        if (!projectSwipeState) return;
+        const st = projectSwipeState;
+        st.el.classList.remove('swipe-active');
+        st.el.style.pointerEvents = '';
+        st.el.style.transform = '';
+        if (st.cell) {
+            st.cell.classList.remove('swiping-left', 'swiping-right');
+        }
+        // Если был активный свайп — блокируем следующий click
+        if (st.active) {
+            projectSwipeMoved = true;
+            setTimeout(function() { projectSwipeMoved = false; }, 300);
+        }
+        projectSwipeState = null;
+        window.removeEventListener('pointermove', onProjectSwipePointerMove);
+        window.removeEventListener('pointerup', onProjectSwipePointerUp);
+        window.removeEventListener('pointercancel', onProjectSwipePointerUp);
     }
     async function projectsUpdateEntrySublabel() {
         const btn = document.getElementById('projectsEntryBtn');
@@ -24975,7 +25185,7 @@
         'valves-prod', 'valves-type', 'valves-name',
         'valve-group',
         'regulators-prod', 'regulator-group',
-        'projects-prod', 'project-group',
+        'projects-prod', 'projects-status', 'project-group', // Task 369
         'cable-journal-edit',
         'tickets-1000v', 'tickets-4', 'tickets-5', 'tickets-6',
         'flowmeter-data'
@@ -25440,6 +25650,7 @@
         if (page === 'valve-group') { setTimeout(() => { if (typeof valveRenderGroup === 'function') valveRenderGroup(); }, 30); }
         if (page === 'regulator-group') { setTimeout(() => { if (typeof regulatorRenderGroup === 'function') regulatorRenderGroup(); }, 30); }
         if (page === 'projects-prod') { setTimeout(() => { if (typeof projectInitSorted === 'function') projectInitSorted('prod'); }, 30); }
+        if (page === 'projects-status') { setTimeout(() => { if (typeof projectInitSorted === 'function') projectInitSorted('status'); }, 30); } // Task 369
         if (page === 'project-detail') { setTimeout(() => { if (typeof projectRenderDetail === 'function') projectRenderDetail(); }, 30); }
         if (page === 'project-group') { setTimeout(() => { if (typeof projectsRenderGroup === 'function') projectsRenderGroup(); }, 30); }
         if (page === 'cable-journal-edit') { setTimeout(() => { if (typeof KipCableJournal !== 'undefined') KipCableJournal.init(); }, 30); }
@@ -25884,6 +26095,7 @@
         'regulator-detail': 'regulators-prod',
         'regulator-group':  'regulators-prod',
         'projects-prod':    'kip-ios',
+        'projects-status':  'kip-ios',   // Task 369: свайп кнопки «Проекты»
         'project-detail':   'projects-prod',
         'project-group':    'projects-prod',
         'cable-journal-edit':   'kip-ios',
@@ -25938,6 +26150,7 @@
         'regulator-detail': 'Регулятор',
         'regulator-group':  'Группа регуляторов',
         'projects-prod':    'Проекты',
+        'projects-status':  'Проекты по статусу',   // Task 369
         'project-detail':   'Проект',
         'project-group':    'Группа проектов',
         'cable-journal-edit':   'Кабельный журнал',
@@ -28192,7 +28405,7 @@
                     'device-detail', 'dev-group', 'lockouts-prod', 'lockout-detail',
                     'lock-group', 'valves-prod', 'valve-detail', 'valve-group',
                     'regulators-prod', 'regulator-detail', 'regulator-group',
-                    'projects-prod', 'project-detail', 'project-group',
+                    'projects-prod', 'projects-status', 'project-detail', 'project-group', // Task 369
                     'cable-journal-edit', 'cable-journal-add', 'cable-journal-view',
                     'kip-ios', 'library-internal', 'library-electro',
                     'plan-114', 'exam-tickets', 'admin-users', 'admin-sessions',
@@ -31179,7 +31392,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                          'lockouts-prod', 'lockout-detail', 'lock-group',
                          'valves-prod', 'valves-type', 'valves-name', 'valve-detail', 'valve-group',
                          'regulators-prod', 'regulator-detail', 'regulator-group',
-                         'projects-prod', 'project-detail', 'project-group',
+                         'projects-prod', 'projects-status', 'project-detail', 'project-group', // Task 369
                          'cable-journal-edit',
                          'cable-journal-add',
                          'cable-journal-view',
