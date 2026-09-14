@@ -29953,16 +29953,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         if(step<=0){step=10;}
         if(type==='rtd'){
             let rtdType=document.getElementById('temp_rtd_type').value;
-            let sensorData={
-                cu50_1428:{r0:50,alpha:0.00428,name:'50М (Cu50)',nsc:'cu',formula:'R(t) = R₀(1 + 0,00428·t)'},
-                cu100_1428:{r0:100,alpha:0.00428,name:'100М (Cu100)',nsc:'cu',formula:'R(t) = R₀(1 + 0,00428·t)'},
-                cu50_1426:{r0:50,alpha:0.00426,name:'50М (Cu50)',nsc:'cu',formula:'R(t) = R₀(1 + 0,00426·t)'},
-                cu100_1426:{r0:100,alpha:0.00426,name:'100М (Cu100)',nsc:'cu',formula:'R(t) = R₀(1 + 0,00426·t)'},
-                pt50_1391:{r0:50,name:'50П (Pt50)',nsc:'pt1391',formula:'R(t) = R₀[1 + At + Bt²], A=3,96847·10⁻³, B=−5,84·10⁻⁷'},
-                pt100_1391:{r0:100,name:'100П (Pt100)',nsc:'pt1391',formula:'R(t) = R₀[1 + At + Bt²], A=3,96847·10⁻³, B=−5,84·10⁻⁷'},
-                pt100_1385:{r0:100,name:'Pt100 (IEC)',nsc:'pt1385',formula:'R(t) = R₀[1 + At + Bt² + C(t−100)t³], IEC 60751 / ГОСТ 6651-2009'},
-                pt1000_1385:{r0:1000,name:'Pt1000 (IEC)',nsc:'pt1385',formula:'R(t) = R₀[1 + At + Bt² + C(t−100)t³], IEC 60751 / ГОСТ 6651-2009'}
-            };
+            // Task 371: карта типов ТС — общая с блоком
+            // «Расчёт произвольных значений» (см. getRtdSensorMap)
+            let sensorData=getRtdSensorMap();
             let sd=sensorData[rtdType];
             if(!sd){showToast('Неизвестный тип ТС');return;}
             let isCu=sd.nsc==='cu';
@@ -29988,6 +29981,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 html+=`<tr style="background:rgba(13,17,23,0.4);"><td style="padding:8px 12px;font-size:14px;color:rgba(255,255,255,0.4);">${formatNumber(tMin)}</td><td style="padding:8px 12px;font-size:14px;color:#4ac771;">${formatNumber(rv)}</td></tr>`;
             }
             html+=`</tbody></table></div>`;
+            // Task 371: под таблицей — блок «Расчёт произвольных значений»
+            // (по примеру раздела «Шкала-сигнал», живой двусторонний расчёт)
+            html+=tempCustomCalcHtml('Сопротивление R(t), Ом','Например: 61,8');
             resDiv.innerHTML=html;
         } else {
             let tcType=document.getElementById('temp_tc_type').value;
@@ -30014,6 +30010,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 html+=`<tr style="background:rgba(13,17,23,0.4);"><td style="padding:8px 12px;font-size:14px;color:rgba(255,255,255,0.4);">${formatNumber(tMin)}</td><td style="padding:8px 12px;font-size:14px;color:#4ac771;">${formatNumber(ev)}</td></tr>`;
             }
             html+=`</tbody></table></div>`;
+            // Task 371: под таблицей — блок «Расчёт произвольных значений»
+            html+=tempCustomCalcHtml('Термо-ЭДС E(t), мВ','Например: 2,2');
             resDiv.innerHTML=html;
         }
         resDiv.style.display='block';
@@ -30126,6 +30124,107 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
         }
         return mv;
+    }
+
+    // Task 371: блок «Расчёт произвольных значений» на странице
+    // «Датчики температуры» — под таблицей значений, по примеру
+    // раздела «Шкала-сигнал»: живой двусторонний расчёт
+    // t ↔ R(t) (ТС) / t ↔ E(t) (ТП) при вводе в любое поле.
+    // Карта типов ТС вынесена из calcTempSensor() для переиспользования.
+    function getRtdSensorMap(){
+        return {
+            cu50_1428:{r0:50,alpha:0.00428,name:'50М (Cu50)',nsc:'cu',formula:'R(t) = R₀(1 + 0,00428·t)'},
+            cu100_1428:{r0:100,alpha:0.00428,name:'100М (Cu100)',nsc:'cu',formula:'R(t) = R₀(1 + 0,00428·t)'},
+            cu50_1426:{r0:50,alpha:0.00426,name:'50М (Cu50)',nsc:'cu',formula:'R(t) = R₀(1 + 0,00426·t)'},
+            cu100_1426:{r0:100,alpha:0.00426,name:'100М (Cu100)',nsc:'cu',formula:'R(t) = R₀(1 + 0,00426·t)'},
+            pt50_1391:{r0:50,name:'50П (Pt50)',nsc:'pt1391',formula:'R(t) = R₀[1 + At + Bt²], A=3,96847·10⁻³, B=−5,84·10⁻⁷'},
+            pt100_1391:{r0:100,name:'100П (Pt100)',nsc:'pt1391',formula:'R(t) = R₀[1 + At + Bt²], A=3,96847·10⁻³, B=−5,84·10⁻⁷'},
+            pt100_1385:{r0:100,name:'Pt100 (IEC)',nsc:'pt1385',formula:'R(t) = R₀[1 + At + Bt² + C(t−100)t³], IEC 60751 / ГОСТ 6651-2009'},
+            pt1000_1385:{r0:1000,name:'Pt1000 (IEC)',nsc:'pt1385',formula:'R(t) = R₀[1 + At + Bt² + C(t−100)t³], IEC 60751 / ГОСТ 6651-2009'}
+        };
+    }
+    // Task 371: HTML блока «Расчёт произвольных значений» — единый для
+    // веток ТС и ТП (отличаются подпись второго поля и пример в нём);
+    // разметка повторяет scaleCustomCalcPanel раздела «Шкала-сигнал»
+    function tempCustomCalcHtml(valLabel,valPlaceholder){
+        return `<div id="tempCustomCalcPanel"><div class="converter-result-label-title" style="margin-top:16px;">Расчёт произвольных значений</div><div class="scale-form" style="margin-top:8px;"><div style="color:rgba(255,255,255,0.25); font-size:11px; margin-bottom:10px; line-height:1.4;">Введите значение в любое поле — другое рассчитается автоматически</div><div class="scale-form-label">Температура (°C)</div><input type="text" inputmode="numeric" id="tempQueryTemp" class="scale-field" placeholder="Например: 55" oninput="tempQueryFromTemp()" autocomplete="off" enterkeyhint="done"><div class="scale-form-label">${valLabel}</div><input type="text" inputmode="numeric" id="tempQueryVal" class="scale-field" placeholder="${valPlaceholder}" oninput="tempQueryFromValue()" autocomplete="off" enterkeyhint="done"></div></div>`;
+    }
+    // Task 371: диапазоны НСХ по типу датчика — границы применимости
+    // формул (и проверка введённых произвольных значений)
+    function getTempSensorRange(){
+        let type=document.getElementById('temp_sensor_type').value;
+        if(type==='rtd'){
+            let rtdType=document.getElementById('temp_rtd_type').value;
+            if(rtdType.indexOf('cu')===0){ return {min:-50,max:200}; }
+            return {min:-200,max:850};
+        }
+        let tcType=document.getElementById('temp_tc_type').value;
+        let r={K:[-270,1372],J:[-210,1200],T:[-270,400],N:[-270,1300],E:[-270,1000],R:[-50,1768],S:[-50,1768],B:[0,1820]}[tcType];
+        return r?{min:r[0],max:r[1]}:{min:-50,max:1768};
+    }
+    // Task 371: прямое значение по температуре из ТЕКУЩЕЙ формы
+    // (R(t) для ТС, E(t) для ТП) — как queryFromScaleLive читает поля живьём
+    function tempCalcForwardValue(t){
+        let type=document.getElementById('temp_sensor_type').value;
+        if(type==='rtd'){
+            let sd=getRtdSensorMap()[document.getElementById('temp_rtd_type').value];
+            if(!sd){return null;}
+            return sd.nsc==='cu'?calcCuResistance(t,sd.r0,sd.alpha):calcRtdResistance(t,sd.r0,sd.nsc);
+        }
+        return calcTcVoltage(t,document.getElementById('temp_tc_type').value);
+    }
+    // Task 371: температура по значению R/E — обращение монотонной
+    // характеристики НСХ бисекцией (аналитически не обращается:
+    // у Pt ниже 0°C член C, у ТП — полиномы высоких степеней)
+    function tempCalcInvertValue(v){
+        let rng=getTempSensorRange();
+        let f=function(t){return tempCalcForwardValue(t);};
+        let vmin=f(rng.min),vmax=f(rng.max);
+        if(v===null||isNaN(v)||v<vmin-1e-9||v>vmax+1e-9){return null;}
+        let lo=rng.min,hi=rng.max;
+        for(let i=0;i<80;i++){
+            let mid=(lo+hi)/2;
+            if(f(mid)<v){lo=mid;}else{hi=mid;}
+        }
+        return (lo+hi)/2;
+    }
+    // Task 371: живой расчёт «температура → R/E» (ввод в поле температуры)
+    function tempQueryFromTemp(){
+        let tEl=document.getElementById('tempQueryTemp');
+        let vEl=document.getElementById('tempQueryVal');
+        if(!tEl||!vEl){return;}
+        let t=parseLocaleNumber(tEl.value);
+        if(isNaN(t)){vEl.value='';return;}
+        let rng=getTempSensorRange();
+        if(t<rng.min||t>rng.max){
+            vEl.value='';
+            showToast('Температура вне диапазона НСХ ('+formatNumber(rng.min)+' … '+formatNumber(rng.max)+' °C)');
+            return;
+        }
+        let val=tempCalcForwardValue(t);
+        if(val===null){vEl.value='';return;}
+        vEl.value=formatNumber(val);
+    }
+    // Task 371: живой расчёт «R/E → температура» (ввод в поле значения)
+    function tempQueryFromValue(){
+        let tEl=document.getElementById('tempQueryTemp');
+        let vEl=document.getElementById('tempQueryVal');
+        if(!tEl||!vEl){return;}
+        let v=parseLocaleNumber(vEl.value);
+        if(isNaN(v)){tEl.value='';return;}
+        let type=document.getElementById('temp_sensor_type').value;
+        let unit=type==='rtd'?'Ом':'мВ';
+        let rng=getTempSensorRange();
+        let f=function(t){return tempCalcForwardValue(t);};
+        let vmin=f(rng.min),vmax=f(rng.max);
+        if(v<vmin-1e-9||v>vmax+1e-9){
+            tEl.value='';
+            showToast('Значение вне диапазона НСХ ('+formatNumber(vmin)+' … '+formatNumber(vmax)+' '+unit+')');
+            return;
+        }
+        let t=tempCalcInvertValue(v);
+        if(t===null){tEl.value='';return;}
+        tEl.value=formatNumber(t);
     }
 
     // DOMContentLoaded
