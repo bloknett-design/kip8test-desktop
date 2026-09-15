@@ -1143,6 +1143,36 @@
         line-height: 1.5;
     }
     
+    /* ===== Task 372: «Датчики температуры» — страница карточек ===== */
+    .ts-page { padding: 4px 0 12px; position: relative; z-index: 2; }
+    .ts-group-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 16px 0 10px; font-size: 16px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.2px; }
+    .ts-group-title .ts-group-sub { font-size: 12px; font-weight: 500; color: var(--conv-info-text); }
+    .ts-group-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 22px; padding: 0 7px; border-radius: 7px; font-size: 12px; font-weight: 800; letter-spacing: 0.5px; flex-shrink: 0; }
+    .ts-group-badge-rtd { background: rgba(74, 199, 113, 0.14); color: #4ac771; border: 1px solid rgba(74, 199, 113, 0.35); }
+    .ts-group-badge-tc { background: rgba(199, 150, 74, 0.14); color: #c7964a; border: 1px solid rgba(199, 150, 74, 0.35); }
+    .ts-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+    .ts-card { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; background: var(--card-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--card-border); border-radius: 14px; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; -webkit-user-select: none; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    .ts-card:hover, .ts-card:active { transform: scale(0.97); background: var(--active-bg); border-color: rgba(74, 143, 199, 0.35); }
+    .ts-card-top { display: flex; align-items: center; gap: 8px; }
+    .ts-card-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 20px; padding: 0 6px; border-radius: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; flex-shrink: 0; }
+    .ts-card-badge-rtd { background: rgba(74, 199, 113, 0.14); color: #4ac771; border: 1px solid rgba(74, 199, 113, 0.3); }
+    .ts-card-badge-tc { background: rgba(199, 150, 74, 0.14); color: #c7964a; border: 1px solid rgba(199, 150, 74, 0.3); }
+    .ts-card-name { font-size: 17px; font-weight: 600; color: var(--text-primary); line-height: 1.25; overflow-wrap: break-word; word-break: break-word; }
+    .ts-card-meta { font-size: 12px; color: var(--conv-info-text); line-height: 1.45; }
+    .ts-card-range { font-size: 11px; color: rgba(255, 255, 255, 0.3); line-height: 1.4; }
+    .ts-card-arrow { margin-left: auto; color: rgba(255, 255, 255, 0.12); font-size: 18px; font-style: normal; font-weight: 700; flex-shrink: 0; }
+    .ts-card:hover .ts-card-arrow, .ts-card:active .ts-card-arrow { color: rgba(74, 143, 199, 0.4); }
+    /* Task 372: чип выбранного датчика на странице датчика */
+    .ts-view-chip { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-height: 44px; padding: 9px 12px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; }
+    .ts-view-chip-name { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+    .ts-view-chip-meta { font-size: 11px; color: var(--conv-info-text); line-height: 1.35; }
+    [data-theme="light"] .ts-card-range { color: rgba(20, 20, 19, 0.35); }
+    [data-theme="light"] .ts-card-arrow { color: rgba(20, 20, 19, 0.15); }
+    [data-theme="light"] .ts-card-badge-rtd, [data-theme="light"] .ts-group-badge-rtd { background: rgba(43, 138, 74, 0.1); color: #2b8a4a; border-color: rgba(43, 138, 74, 0.3); }
+    [data-theme="light"] .ts-card-badge-tc, [data-theme="light"] .ts-group-badge-tc { background: rgba(156, 108, 52, 0.1); color: #8a5c26; border-color: rgba(156, 108, 52, 0.3); }
+    @media (max-width: 1023px) { .ts-cards-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
+    @media (max-width: 400px) { .ts-card { padding: 10px 12px; } .ts-card-name { font-size: 15px; } .ts-card-meta { font-size: 11px; } }
+
     .method-indicator { background: rgba(30, 42, 56, 0.75); backdrop-filter: blur(8px); margin: 10px 0; padding: 12px 14px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(74, 143, 199, 0.15); position: relative; z-index: 2; }
     
     .query-btn {
@@ -14718,7 +14748,7 @@
                 <div class="menu-btn" onclick="navigateTo('scale-signal')"><div class="menu-btn-text"><div class="menu-btn-label">Шкала-сигнал</div><div class="menu-btn-sublabel">Расчёт диапазонов шкалы и сигнала</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('scale-signal')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow">›</i></div>
                 <div class="menu-btn" onclick="navigateTo('error-select')"><div class="menu-btn-text"><div class="menu-btn-label">Расчёт погрешности</div><div class="menu-btn-sublabel">ГОСТ 8.401-80, ГОСТ OIML R 76-1-2011, ТС, ТП</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('error-select')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow">›</i></div>
                 <div class="menu-btn" onclick="navigateTo('buoy-select')"><div class="menu-btn-text"><div class="menu-btn-label">Буйковый уровнемер</div><div class="menu-btn-sublabel">Калибровка, выталкивающая сила</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('buoy-select')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow">›</i></div>
-                <div class="menu-btn" onclick="navigateTo('temp-sensors')"><div class="menu-btn-text"><div class="menu-btn-label">Датчики температуры</div><div class="menu-btn-sublabel">Расчёт R и мВ по температуре (°C)</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('temp-sensors')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow">›</i></div>
+                <div class="menu-btn" onclick="navigateTo('temp-sensors')"><div class="menu-btn-text"><div class="menu-btn-label">Датчики температуры</div><div class="menu-btn-sublabel">Термометры сопротивления и термопары</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('temp-sensors')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow">›</i></div>
                 <div class="menu-btn" onclick="navigateTo('orifice-select')"><div class="menu-btn-text"><div class="menu-btn-label">Сужающее устройство</div><div class="menu-btn-sublabel">Расчёт диафрагмы по расходу и перепаду</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('orifice-select')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow">›</i></div>
             </div>
         </div>
@@ -16807,50 +16837,30 @@
                 </div>
             </div>
         </div>
-        <div id="page-temp-sensors" class="page-content conv-3col-page">
+        <div id="page-temp-sensors" class="page-content">
             <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Датчики температуры</div></div>
+
+            <!-- Task 372: страница выбора датчика — карточки вместо выпадающих
+                 списков (типы жили в select temp_sensor_type / temp_rtd_type /
+                 temp_tc_type). Карточки рендеряет renderTempSensorCards(). -->
+            <div class="ts-page">
+                <div class="ts-group-title"><span class="ts-group-badge ts-group-badge-rtd">ТС</span><span>Термометры сопротивления</span><span class="ts-group-sub">ГОСТ 6651-2009</span></div>
+                <div id="tsRtdCards" class="ts-cards-grid"></div>
+                <div class="ts-group-title ts-group-title-tc"><span class="ts-group-badge ts-group-badge-tc">ТП</span><span>Термопары</span><span class="ts-group-sub">ГОСТ Р 8.585-2001</span></div>
+                <div id="tsTcCards" class="ts-cards-grid"></div>
+            </div>
+        </div>
+
+        <!-- Task 372: страница выбранного датчика температуры — диапазон
+             измерения, шаг таблицы, таблица значений, «Расчёт произвольных
+             значений» (Task 371) и справочная информация по типу датчика -->
+        <div id="page-temp-sensor-view" class="page-content conv-3col-page">
+            <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title" id="tempSensorViewTitle">Датчик температуры</div></div>
             <div class="conv-columns">
                 <div class="conv-col conv-col-input">
                     <div class="scale-form">
                 <div class="scale-form-label">Тип датчика</div>
-                <select id="temp_sensor_type" class="scale-field" onchange="updateTempSensorOptions()" autocomplete="off">
-                    <option value="rtd" selected>Термометр сопротивления (ТС)</option>
-                    <option value="tc">Термопара (ТП)</option>
-                </select>
-                <div id="rtd_options">
-                    <div class="scale-form-label" style="margin-top:12px;">Тип ТС</div>
-                    <select id="temp_rtd_type" class="scale-field" autocomplete="off">
-                        <optgroup label="Cu  (α = 0,00428 °С⁻¹)">
-                            <option value="cu50_1428" selected>50М (Cu50)</option>
-                            <option value="cu100_1428">100М (Cu100)</option>
-                        </optgroup>
-                        <optgroup label="Cu  (α = 0,00426 °С⁻¹)">
-                            <option value="cu50_1426">50М (Cu50)</option>
-                            <option value="cu100_1426">100М (Cu100)</option>
-                        </optgroup>
-                        <optgroup label="Pt  (α = 0,00391 °С⁻¹)">
-                            <option value="pt50_1391">50П (Pt50)</option>
-                            <option value="pt100_1391">100П (Pt100)</option>
-                        </optgroup>
-                        <optgroup label="Pt  (α = 0,00385 °С⁻¹)">
-                            <option value="pt100_1385">Pt100 (IEC)</option>
-                            <option value="pt1000_1385">Pt1000 (IEC)</option>
-                        </optgroup>
-                    </select>
-                </div>
-                <div id="tc_options" style="display:none;">
-                    <div class="scale-form-label" style="margin-top:12px;">Тип термопары</div>
-                    <select id="temp_tc_type" class="scale-field" autocomplete="off">
-                        <option value="K" selected>ТХА (K)</option>
-                        <option value="J">ТЖК (J)</option>
-                        <option value="T">ТМК (T)</option>
-                        <option value="N">ТНН (N)</option>
-                        <option value="E">ТХКн (E)</option>
-                        <option value="R">ТПП (R)</option>
-                        <option value="S">ТПП (S)</option>
-                        <option value="B">ТПР (B)</option>
-                    </select>
-                </div>
+                <div id="tempSensorViewChip" class="ts-view-chip"></div>
                 <div class="scale-form-label" style="margin-top:12px;">Диапазон измерения (°C)</div>
                 <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items: stretch;"><input type="text" inputmode="numeric" id="temp_sensor_min" class="scale-field" style="flex: 1; margin-bottom: 0;" value="0" placeholder="min °C" autocomplete="off" enterkeyhint="next"><input type="text" inputmode="numeric" id="temp_sensor_max" class="scale-field" style="flex: 1; margin-bottom: 0;" value="100" placeholder="max °C" autocomplete="off" enterkeyhint="next"></div>
                 <div class="scale-form-label">Шаг таблицы (°C)</div>
@@ -16863,15 +16873,12 @@
             <div id="tempSensorResults" class="converter-result-group" style="display:none;"></div>
                 </div>
                 <div class="conv-col conv-col-info">
-                    
-            <div class="conv-info-block" style="margin:14px 0 10px;padding:14px 16px;background:var(--card-bg);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--card-border);border-radius:14px;position:relative;z-index:2;">
+                    <!-- Task 372: справка заполняется под тип датчика
+                         (tempSensorInfoHtml): в термометрах НЕТ информации о
+                         термопарах, в термопарах — о термометрах. -->
+            <div id="tempSensorInfo" class="conv-info-block" style="margin:14px 0 10px;padding:14px 16px;background:var(--card-bg);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--card-border);border-radius:14px;position:relative;z-index:2;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--accent-blue);fill:none;stroke-width:2;stroke-linecap:round;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span style="font-size:14px;font-weight:700;color:var(--text-primary);letter-spacing:-0.2px;">Справочная информация</span></div>
-                <div style="font-size:12px;color:var(--conv-info-text);line-height:1.6;">
-                    <div style="margin-bottom:8px;"><b style="color:var(--conv-info-bold);">Термопреобразователи сопротивления (ТС):</b> измеряют температуру по изменению электрического сопротивления чувствительного элемента. Для медных ТС: R(t) = R₀·(1 + α·t). Для платиновых: R(t) = R₀·[1 + A·t + B·t² + C·(t−100)·t³] (ниже 0°C добавляется член C).</div>
-                    <div style="margin-bottom:8px;"><b style="color:var(--conv-info-bold);">Термопары (ТП):</b> измеряют температуру по термо-ЭДС, возникающей в спае двух разнородных проводников. НСХ термопар стандартизированы ГОСТ Р 8.585-2001. Наиболее распространённые типы: ТХА (K), ТЖК (J), ТМК (T), ТНН (N), ТХКн (E), R, ТПП (S), ТПР (B).</div>
-                    <div style="margin-bottom:8px;"><b style="color:var(--conv-info-bold);">Температурные коэффициенты ТС:</b> Cu: α = 0,00428 °C⁻¹ (50М, 100М) или 0,00426 °C⁻¹. Pt: α = 0,00391 °C⁻¹ (50П, 100П) или 0,00385 °C⁻¹ (IEC 60751). Ni: α = 0,00617 °C⁻¹.</div>
-                    <div><b style="color:var(--conv-info-bold);">Нормативные документы:</b> ГОСТ 6651-2009 (ТС), ГОСТ Р 8.585-2001 (ТП), IEC 60751 (Pt).</div>
-                </div>
+                <div id="tempSensorInfoBody" style="font-size:12px;color:var(--conv-info-text);line-height:1.6;"></div>
             </div>
                 </div>
             </div>
@@ -25656,6 +25663,22 @@
         if (page === 'projects-status') { setTimeout(() => { if (typeof projectInitSorted === 'function') projectInitSorted('status'); }, 30); } // Task 369
         if (page === 'project-detail') { setTimeout(() => { if (typeof projectRenderDetail === 'function') projectRenderDetail(); }, 30); }
         if (page === 'project-group') { setTimeout(() => { if (typeof projectsRenderGroup === 'function') projectsRenderGroup(); }, 30); }
+        // Task 372: «Датчики температуры» — карточки списка рендерятся при
+        // открытии страницы; детальная страница без выбранного датчика
+        // (прямой переход по hash после перезагрузки) уходит на список.
+        if (page === 'temp-sensor-view' && !tempSensorKey) { page = 'temp-sensors'; }
+        if (page === 'temp-sensors') { if (typeof renderTempSensorCards === 'function') renderTempSensorCards(); }
+        // Task 372: на десктопе последний сегмент хлебных крошек страницы
+        // датчика — имя выбранного датчика (50М (Cu50), ТХА (K)…), а не
+        // статическая метка «Датчик температуры» (customCurrentLabel).
+        if (page === 'temp-sensor-view' && tempSensorKey) {
+            setTimeout(() => {
+                if (typeof updateDesktopBreadcrumb === 'function') {
+                    let s372 = (typeof tempSensorFindByKey === 'function') ? tempSensorFindByKey(tempSensorKey) : null;
+                    if (s372) updateDesktopBreadcrumb(null, s372.name);
+                }
+            }, 60);
+        }
         if (page === 'cable-journal-edit') { setTimeout(() => { if (typeof KipCableJournal !== 'undefined') KipCableJournal.init(); }, 30); }
         if (page === 'cable-journal-add')  { setTimeout(() => { if (typeof KipCableJournal !== 'undefined') KipCableJournal.initAddPage(); }, 30); }
         if (page === 'device-favorites') { setTimeout(() => { if (typeof KipFav !== 'undefined') KipFav.initFavoritesPage(); }, 30); }
@@ -26024,6 +26047,7 @@
         'error-select':     'calc-kipa',
         'buoy-select':      'calc-kipa',
         'temp-sensors':     'calc-kipa',
+        'temp-sensor-view': 'temp-sensors',   // Task 372: страница датчика
         'orifice-select':   'calc-kipa',
         // Конвертер единиц — категории
         'conv-pressure':    'converter',
@@ -26201,6 +26225,7 @@
         'buoy-select':      'Буйковый уровнемер',
         'buoy-calc':        'Буйковый уровнемер',
         'temp-sensors':     'Датчики температуры',
+        'temp-sensor-view': 'Датчик температуры',   // Task 372
         'minesweeper':      'Сапёр',
         'phonebook':        'Телефонный справочник',
         // Task 249: читаемые метки для крошек страниц Графика работы
@@ -26316,7 +26341,7 @@
         'scale-signal':   { label: 'Шкала-сигнал',              sublabel: 'Расчёт диапазонов шкалы и сигнала',             target: 'scale-signal',   category: 'calculators' },
         'error-select':   { label: 'Расчёт погрешности',        sublabel: 'ГОСТ 8.401-80, ГОСТ OIML R 76-1-2011, ТС, ТП',  target: 'error-select',   category: 'calculators' },
         'buoy-select':    { label: 'Буйковый уровнемер',        sublabel: 'Калибровка, выталкивающая сила',                target: 'buoy-select',    category: 'calculators' },
-        'temp-sensors':   { label: 'Датчики температуры',       sublabel: 'Расчёт R и мВ по температуре (°C)',             target: 'temp-sensors',   category: 'calculators' },
+        'temp-sensors':   { label: 'Датчики температуры',       sublabel: 'Термометры сопротивления и термопары',             target: 'temp-sensors',   category: 'calculators' },
         'orifice-select': { label: 'Сужающее устройство',       sublabel: 'Расчёт диафрагмы по расходу и перепаду',        target: 'orifice-select', category: 'calculators' },
         // ===== Электротехника — подразделы (страница page-calc-electro) =====
         'circuit-breaker':{ label: 'Автоматический выключатель', sublabel: 'Расчёт по мощности, току, сечению кабеля',     target: 'circuit-breaker',category: 'calculators' },
@@ -28400,7 +28425,7 @@
             if (tabPage === 'calculators') {
                 isActive = ['calculators', 'calc-kipa', 'calc-electro', 'calc-geometry',
                     'converter', 'scale-signal', 'error-select', 'buoy-select',
-                    'temp-sensors', 'orifice-select', 'circuit-breaker',
+                    'temp-sensors', 'temp-sensor-view', 'orifice-select', 'circuit-breaker',
                     'geo-circle', 'geo-ring', 'geo-cylinder', 'geo-horiz',
                     'geo-sphere', 'geo-cone'].includes(currentPage);
             } else if (tabPage === 'docs') {
@@ -29937,13 +29962,112 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     // Initialize kit page with 2 default devices
     (function(){ addKitDevice('number', '0.5', '0', '1.6'); addKitDevice('number', '0.25', '4', '20'); })();
 
-    function updateTempSensorOptions(){
-        let type=document.getElementById('temp_sensor_type').value;
-        document.getElementById('rtd_options').style.display=type==='rtd'?'block':'none';
-        document.getElementById('tc_options').style.display=type==='tc'?'block':'none';
+    // ============================================================
+    // Task 372: «Датчики температуры» — страница карточек и страница
+    // датчика. Раньше тип датчика выбирался выпадающими списками
+    // (temp_sensor_type / temp_rtd_type / temp_tc_type) прямо в форме
+    // расчёта; теперь список датчиков — карточки на #page-temp-sensors,
+    // а расчёт живёт на отдельной странице #page-temp-sensor-view.
+    // ============================================================
+    // Состояние: ключ выбранного датчика (см. getTempSensorCatalog).
+    var tempSensorKey=null;
+    // Карта типов термопар (имена как в бывшем select temp_tc_type)
+    function getTcSensorMap(){
+        return {K:'ТХА (K)',J:'ТЖК (J)',T:'ТМК (T)',N:'ТНН (N)',E:'ТХКн (E)',R:'ТПП (R)',S:'ТПП (S)',B:'ТПР (B)'};
+    }
+    // Каталог всех датчиков температуры — источник карточек страницы
+    // выбора, диапазонов НСХ и справочной информации. Порядок как в
+    // бывших выпадающих списках: ТС (Cu → Pt), затем ТП (K…B).
+    function getTempSensorCatalog(){
+        let rtd=getRtdSensorMap();
+        let alphaTxt={pt1391:'α = 0,00391 (ГОСТ)',pt1385:'α = 0,00385 (IEC)'};
+        let fmtR=function(v){return String(v).replace('-','−');};
+        let list=[];
+        ['cu50_1428','cu100_1428','cu50_1426','cu100_1426','pt50_1391','pt100_1391','pt100_1385','pt1000_1385'].forEach(function(k){
+            let sd=rtd[k];
+            if(!sd){return;}
+            let isCu=sd.nsc==='cu';
+            let alpha=isCu?('α = '+String(sd.alpha).replace('.',',')+' °C⁻¹'):alphaTxt[sd.nsc];
+            list.push({key:k,kind:'rtd',name:sd.name,meta:'R₀ = '+sd.r0+' Ом · '+alpha,range:isCu?{min:-50,max:200}:{min:-200,max:850}});
+        });
+        let tcm={K:{mat:'хромель-алюмель',r:[-270,1372]},J:{mat:'железо-константан',r:[-210,1200]},T:{mat:'медь-константан',r:[-270,400]},N:{mat:'никросил-нисил',r:[-270,1300]},E:{mat:'хромель-константан',r:[-270,1000]},R:{mat:'платинородий-платина',r:[-50,1768]},S:{mat:'платинородий-платина',r:[-50,1768]},B:{mat:'платинородий-платинородий',r:[0,1820]}};
+        ['K','J','T','N','E','R','S','B'].forEach(function(k){
+            let m=tcm[k];
+            list.push({key:'tc_'+k,kind:'tc',tc:k,name:getTcSensorMap()[k],meta:m.mat,range:{min:m.r[0],max:m.r[1]}});
+        });
+        return list;
+    }
+    // Поиск датчика в каталоге по ключу
+    function tempSensorFindByKey(key){
+        let found=null;
+        getTempSensorCatalog().forEach(function(s){ if(s.key===key){found=s;} });
+        return found;
+    }
+    // Рендер карточек на странице выбора (идемпотентный)
+    function renderTempSensorCards(){
+        let rtdBox=document.getElementById('tsRtdCards');
+        let tcBox=document.getElementById('tsTcCards');
+        if(!rtdBox||!tcBox){return;}
+        if(rtdBox.children.length&&tcBox.children.length){return;}
+        let fmtR=function(v){return String(v).replace('-','−');};
+        let rtdHtml='',tcHtml='';
+        getTempSensorCatalog().forEach(function(s){
+            let cls=s.kind==='rtd'?'ts-card-badge-rtd':'ts-card-badge-tc';
+            let card='<div class="ts-card'+(s.kind==='tc'?' ts-card-tc':'')+'" onclick="openTempSensor(\''+s.key+'\')" role="button" tabindex="0" aria-label="'+s.name+'">'
+                +'<div class="ts-card-top"><span class="ts-card-badge '+cls+'">'+(s.kind==='rtd'?'ТС':'ТП')+'</span><span class="ts-card-name">'+s.name+'</span><i class="ts-card-arrow">›</i></div>'
+                +'<div class="ts-card-meta">'+s.meta+'</div>'
+                +'<div class="ts-card-range">НСХ: '+fmtR(s.range.min)+'…'+fmtR(s.range.max)+' °C</div>'
+                +'</div>';
+            if(s.kind==='rtd'){rtdHtml+=card;}else{tcHtml+=card;}
+        });
+        rtdBox.innerHTML=rtdHtml;
+        tcBox.innerHTML=tcHtml;
+    }
+    // Открытие страницы датчика: карточка → #page-temp-sensor-view
+    function openTempSensor(key){
+        let sel=tempSensorFindByKey(key);
+        if(!sel){showToast('Датчик не найден');return;}
+        tempSensorKey=key;
+        let title=document.getElementById('tempSensorViewTitle');
+        if(title){title.textContent=sel.name+(sel.kind==='rtd'?' — термометр сопротивления':' — термопара');}
+        let chip=document.getElementById('tempSensorViewChip');
+        if(chip){chip.innerHTML='<span class="ts-card-badge '+(sel.kind==='rtd'?'ts-card-badge-rtd':'ts-card-badge-tc')+'">'+(sel.kind==='rtd'?'ТС':'ТП')+'</span><span class="ts-view-chip-name">'+sel.name+'</span><span class="ts-view-chip-meta">'+sel.meta+'</span>';}
+        let mn=document.getElementById('temp_sensor_min'),mx=document.getElementById('temp_sensor_max'),st=document.getElementById('temp_sensor_step');
+        if(mn){mn.value='0';}
+        if(mx){mx.value='100';}
+        if(st){st.value='10';}
+        let res=document.getElementById('tempSensorResults');
+        if(res){res.innerHTML='';res.style.display='none';}
+        let body=document.getElementById('tempSensorInfoBody');
+        if(body){body.innerHTML=tempSensorInfoHtml(sel);}
+        if(typeof navigator!=='undefined'&&navigator.vibrate){navigator.vibrate(10);}
+        navigateTo('temp-sensor-view');
+    }
+    // Справочная информация на странице датчика (заявка Task 372):
+    // блок остаётся в КАЖДОМ датчике, но в термометрах НЕТ информации
+    // о термопарах, а в термопарах — о термометрах.
+    function tempSensorInfoHtml(sel){
+        let b='color:var(--conv-info-bold);';
+        if(sel.kind==='rtd'){
+            let sd=getRtdSensorMap()[sel.key]||{};
+            return '<div style="margin-bottom:8px;"><b style="'+b+'">Тип:</b> Термопреобразователь сопротивления (ТС) — измеряет температуру по изменению электрического сопротивления чувствительного элемента.</div>'
+                +'<div style="margin-bottom:8px;"><b style="'+b+'">Этот датчик:</b> '+(sd.name||sel.name)+'; R₀ = '+(sd.r0||'—')+' Ом; формула: '+(sd.formula||'—')+'; диапазон НСХ: '+sel.range.min+'…'+sel.range.max+' °C.</div>'
+                +'<div style="margin-bottom:8px;"><b style="'+b+'">Формулы ТС:</b> медные: R(t) = R₀·(1 + α·t); платиновые: R(t) = R₀·[1 + A·t + B·t² + C·(t−100)·t³] — член C добавляется ниже 0 °C.</div>'
+                +'<div style="margin-bottom:8px;"><b style="'+b+'">Температурные коэффициенты:</b> Cu: α = 0,00428 °C⁻¹ (50М, 100М) или 0,00426 °C⁻¹; Pt: α = 0,00391 °C⁻¹ (50П, 100П, ГОСТ 6651-2009) или 0,00385 °C⁻¹ (IEC 60751).</div>'
+                +'<div><b style="'+b+'">Нормативные документы:</b> ГОСТ 6651-2009 (ТС), IEC 60751 (Pt).</div>';
+        }
+        return '<div style="margin-bottom:8px;"><b style="'+b+'">Тип:</b> Термопара (ТП) — измеряет температуру по термо-ЭДС, возникающей в спае двух разнородных проводников (эффект Зеебека).</div>'
+            +'<div style="margin-bottom:8px;"><b style="'+b+'">Этот датчик:</b> '+sel.name+'; электроды: '+sel.meta+'; диапазон НСХ: '+sel.range.min+'…'+sel.range.max+' °C; E(0 °C) = 0 мВ (опорный спай 0 °C).</div>'
+            +'<div style="margin-bottom:8px;"><b style="'+b+'">НСХ термопар:</b> стандартизированы ГОСТ Р 8.585-2001; расчёт — полиномы НИСТ ITS-90 (SRD 60): E(t) = Σ cᵢ·tⁱ.</div>'
+            +'<div style="margin-bottom:8px;"><b style="'+b+'">Наиболее распространённые типы:</b> ТХА (K), ТЖК (J), ТМК (T), ТНН (N), ТХКн (E), ТПП (R), ТПП (S), ТПР (B).</div>'
+            +'<div><b style="'+b+'">Нормативные документы:</b> ГОСТ Р 8.585-2001 (ТП).</div>';
     }
     function calcTempSensor(){
-        let type=document.getElementById('temp_sensor_type').value;
+        // Task 372: датчик — из состояния страницы карточек (раньше —
+        // выпадающие списки temp_sensor_type / temp_rtd_type / temp_tc_type)
+        let sel=tempSensorFindByKey(tempSensorKey);
+        if(!sel){showToast('Выберите датчик температуры');return;}
+        let type=sel.kind;
         let tMin=parseLocaleNumber(document.getElementById('temp_sensor_min').value);
         let tMax=parseLocaleNumber(document.getElementById('temp_sensor_max').value);
         let step=parseLocaleNumber(document.getElementById('temp_sensor_step').value)||10;
@@ -29952,7 +30076,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         if(tMin>=tMax){showToast('Минимум должен быть меньше максимума');return;}
         if(step<=0){step=10;}
         if(type==='rtd'){
-            let rtdType=document.getElementById('temp_rtd_type').value;
+            let rtdType=sel.key;
             // Task 371: карта типов ТС — общая с блоком
             // «Расчёт произвольных значений» (см. getRtdSensorMap)
             let sensorData=getRtdSensorMap();
@@ -29986,8 +30110,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             html+=tempCustomCalcHtml('Сопротивление R(t), Ом','Например: 61,8');
             resDiv.innerHTML=html;
         } else {
-            let tcType=document.getElementById('temp_tc_type').value;
-            let names={K:'ТХА (K)',J:'ТЖК (J)',T:'ТМК (T)',N:'ТНН (N)',E:'ТХКн (E)',R:'ТПП (R)',S:'ТПП (S)',B:'ТПР (B)'};
+            let tcType=sel.tc;
+            let names=getTcSensorMap();
             let html=`<div class="converter-result-label-title">Результаты расчёта (ГОСТ Р 8.585-2001)</div>`;
             html+=`<div class="converter-result-item"><span class="converter-result-label">Тип термопары</span><span class="converter-result-value">${names[tcType]}</span></div>`;
             html+=`<div class="converter-result-item"><span class="converter-result-label">Диапазон</span><span class="converter-result-value">${formatNumber(tMin)} … ${formatNumber(tMax)} °C</span></div>`;
@@ -30149,29 +30273,26 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     function tempCustomCalcHtml(valLabel,valPlaceholder){
         return `<div id="tempCustomCalcPanel"><div class="converter-result-label-title" style="margin-top:16px;">Расчёт произвольных значений</div><div class="scale-form" style="margin-top:8px;"><div style="color:rgba(255,255,255,0.25); font-size:11px; margin-bottom:10px; line-height:1.4;">Введите значение в любое поле — другое рассчитается автоматически</div><div class="scale-form-label">Температура (°C)</div><input type="text" inputmode="numeric" id="tempQueryTemp" class="scale-field" placeholder="Например: 55" oninput="tempQueryFromTemp()" autocomplete="off" enterkeyhint="done"><div class="scale-form-label">${valLabel}</div><input type="text" inputmode="numeric" id="tempQueryVal" class="scale-field" placeholder="${valPlaceholder}" oninput="tempQueryFromValue()" autocomplete="off" enterkeyhint="done"></div></div>`;
     }
-    // Task 371: диапазоны НСХ по типу датчика — границы применимости
-    // формул (и проверка введённых произвольных значений)
+    // Task 371/372: диапазоны НСХ по типу датчика — границы применимости
+    // формул (и проверка введённых произвольных значений). Task 372:
+    // единый источник диапазонов — каталог getTempSensorCatalog();
+    // датчик берётся из состояния страницы карточек.
     function getTempSensorRange(){
-        let type=document.getElementById('temp_sensor_type').value;
-        if(type==='rtd'){
-            let rtdType=document.getElementById('temp_rtd_type').value;
-            if(rtdType.indexOf('cu')===0){ return {min:-50,max:200}; }
-            return {min:-200,max:850};
-        }
-        let tcType=document.getElementById('temp_tc_type').value;
-        let r={K:[-270,1372],J:[-210,1200],T:[-270,400],N:[-270,1300],E:[-270,1000],R:[-50,1768],S:[-50,1768],B:[0,1820]}[tcType];
-        return r?{min:r[0],max:r[1]}:{min:-50,max:1768};
+        let sel=tempSensorFindByKey(tempSensorKey);
+        if(sel){ return {min:sel.range.min,max:sel.range.max}; }
+        return {min:-50,max:200};
     }
-    // Task 371: прямое значение по температуре из ТЕКУЩЕЙ формы
+    // Task 371/372: прямое значение по температуре ВЫБРАННОГО датчика
     // (R(t) для ТС, E(t) для ТП) — как queryFromScaleLive читает поля живьём
     function tempCalcForwardValue(t){
-        let type=document.getElementById('temp_sensor_type').value;
-        if(type==='rtd'){
-            let sd=getRtdSensorMap()[document.getElementById('temp_rtd_type').value];
+        let sel=tempSensorFindByKey(tempSensorKey);
+        if(!sel){return null;}
+        if(sel.kind==='rtd'){
+            let sd=getRtdSensorMap()[sel.key];
             if(!sd){return null;}
             return sd.nsc==='cu'?calcCuResistance(t,sd.r0,sd.alpha):calcRtdResistance(t,sd.r0,sd.nsc);
         }
-        return calcTcVoltage(t,document.getElementById('temp_tc_type').value);
+        return calcTcVoltage(t,sel.tc);
     }
     // Task 371: температура по значению R/E — обращение монотонной
     // характеристики НСХ бисекцией (аналитически не обращается:
@@ -30212,8 +30333,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         if(!tEl||!vEl){return;}
         let v=parseLocaleNumber(vEl.value);
         if(isNaN(v)){tEl.value='';return;}
-        let type=document.getElementById('temp_sensor_type').value;
-        let unit=type==='rtd'?'Ом':'мВ';
+        // Task 372: единица — по выбранному датчику (карточка), а не select
+        let selQ=tempSensorFindByKey(tempSensorKey);
+        let unit=(selQ&&selQ.kind==='rtd')?'Ом':'мВ';
         let rng=getTempSensorRange();
         let f=function(t){return tempCalcForwardValue(t);};
         let vmin=f(rng.min),vmax=f(rng.max);
@@ -31013,7 +31135,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         }
 
         // Map: select element → current optgroup hint for its options
-        // Used for temp_rtd_type where optgroup data is shown inline
+        // Used for selects with optgroups (e.g. buoy_signal_type) where
+        // optgroup data is shown inline (Task 372: temp_rtd_type удалён)
         function getOptgroupHints(select) {
             var hints = {};
             var currentGroup = '';
@@ -31480,7 +31603,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                       'error-generic-fraction', 'error-generic-number', 'error-generic-underline',
                       'error-kit', 'error-temp-rtd', 'error-temp-tc',
                       'error-flow', 'error-level', 'error-pressure', 'error-scale', 'error-temp',
-                      'buoy-select', 'buoy-calc', 'temp-sensors',
+                      'buoy-select', 'buoy-calc', 'temp-sensors', 'temp-sensor-view',
                       'orifice-select', 'orifice-quick', 'orifice-dp', 'orifice-flow', 'orifice-diameter',
                       'circuit-breaker',
                       'geo-circle', 'geo-ring', 'geo-cylinder', 'geo-horiz', 'geo-sphere', 'geo-cone'],
