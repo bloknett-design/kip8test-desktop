@@ -30270,7 +30270,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             html+=`<div class="converter-result-item"><span class="converter-result-label">Диапазон</span><span class="converter-result-value">${formatNumber(tMin)} … ${formatNumber(tMax)} °C</span></div>`;
             html+=`<div class="converter-result-item"><span class="converter-result-label">R₀ (при 0°C)</span><span class="converter-result-value">${sd.r0} Ом</span></div>`;
             html+=`<div class="converter-result-item"><span class="converter-result-label">Формула</span><span class="converter-result-value">${sd.formula}</span></div>`;
-            html+=`<div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; margin-bottom:0;"><div class="converter-result-label-title">Таблица значений (шаг ${formatNumber(step)}°C)</div><button type="button" class="query-btn" onclick="copyCalcTable('tempTableContainer')" style="width:auto; padding:5px 10px; font-size:11px;"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</button></div>`;
+            // Task 374: кнопка «Копировать» над таблицей убрана (заявка);
+            // отступ сверху 12px сохранён на самом заголовке
+            html+=`<div class="converter-result-label-title" style="margin-top:12px;">Таблица значений (шаг ${formatNumber(step)}°C)</div>`;
             html+=`<div id="tempTableContainer" style="overflow-x:auto;border-radius:10px;border:1px solid rgba(255,255,255,0.05);"><table style="min-width:100%;width:100%;border-collapse:collapse;"><thead><tr style="background:rgba(22,27,34,0.7);"><th style="padding:10px 12px;font-size:13px;color:#4a8fc7;text-align:left;">t, °C</th><th style="padding:10px 12px;font-size:13px;color:#4ac771;text-align:left;">R(t), Ом</th></tr></thead><tbody>`;
             let start=Math.ceil(tMin/step)*step;
             let end=Math.floor(tMax/step)*step;
@@ -30299,7 +30301,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             html+=`<div class="converter-result-item"><span class="converter-result-label">Диапазон</span><span class="converter-result-value">${formatNumber(tMin)} … ${formatNumber(tMax)} °C</span></div>`;
             html+=`<div class="converter-result-item"><span class="converter-result-label">E(0°C)</span><span class="converter-result-value">0,000 мВ</span></div>`;
             html+=`<div class="converter-result-item"><span class="converter-result-label">Формула</span><span class="converter-result-value">E = Σ cᵢ·tⁱ (полином НИСТ)</span></div>`;
-            html+=`<div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; margin-bottom:0;"><div class="converter-result-label-title">Таблица значений (шаг ${formatNumber(step)}°C)</div><button type="button" class="query-btn" onclick="copyCalcTable('tempTableContainer')" style="width:auto; padding:5px 10px; font-size:11px;"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</button></div>`;
+            // Task 374: кнопка «Копировать» над таблицей убрана (заявка);
+            // отступ сверху 12px сохранён на самом заголовке
+            html+=`<div class="converter-result-label-title" style="margin-top:12px;">Таблица значений (шаг ${formatNumber(step)}°C)</div>`;
             html+=`<div id="tempTableContainer" style="overflow-x:auto;border-radius:10px;border:1px solid rgba(255,255,255,0.05);"><table style="min-width:100%;width:100%;border-collapse:collapse;"><thead><tr style="background:rgba(22,27,34,0.7);"><th style="padding:10px 12px;font-size:13px;color:#4a8fc7;text-align:left;">t, °C</th><th style="padding:10px 12px;font-size:13px;color:#4ac771;text-align:left;">E(t), мВ</th></tr></thead><tbody>`;
             let start=Math.ceil(tMin/step)*step;
             let end=Math.floor(tMax/step)*step;
