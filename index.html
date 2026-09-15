@@ -4574,12 +4574,15 @@
            и коды — ДВЕ КОЛОНКИ одного ряда под таблицей (обёртка
            wsp-bottom, flex-ряд: мероприятия слева, коды справа),
            каждая запись/код — по-прежнему отдельной строкой своего
-           столбика; отступ сверху 2.5mm перенесён на обёртку */
+           столбика; отступ сверху 2.5mm перенесён на обёртку.
+           Task 375: расстояние между столбиками — ровно 10px */
         #wsPrintSheet .wsp-bottom {
             display: flex;
             flex-direction: row;
             align-items: flex-start;
-            gap: 5mm;
+            /* Task 375 (заявка: «на расстоянии 10px»): зазор между
+               столбиком мероприятий и столбиком кодов — 10px */
+            gap: 10px;
             margin-top: 2.5mm;
         }
         #wsPrintSheet .wsp-mev {
@@ -37896,6 +37899,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Открыть sheet ввода новых показаний
         // isEdit (Task 108): если true — предзаполняем форму текущими показаниями
         openInput: function(isEdit) {
+            // Task 375 (анти-дубль №1): осознанное новое открытие формы —
+            // кулдаун повторного «Сохранить» снимается (быстрая смена
+            // решения не блокируется; дубль по значению ловят №2/№3)
+            this._inputAcceptedAt = 0;
             var id = window._flowDetailId;
             var m = null;
             for (var i = 0; i < this._METERS.length; i++) {
@@ -38126,6 +38133,41 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             document.getElementById('flowInputSheet').classList.remove('active');
         },
 
+        // Task 375: проверка «эти показания уже введены/уже в очереди».
+        // true — отправку заблокировать (дубль), false — новый ввод.
+        // Ключ сравнения: id + curr + dateCurr (prev НАМЕРЕННО не входит:
+        // повторный вызов «Сохранить» сдвигал prev, и именно такие
+        // «двойные сдвиги» должны ловиться). Покрывает:
+        //   • состояние в памяти (первый вызов уже обновил meter.curr,
+        //     ответ сервера ещё не пришёл);
+        //   • outbox (запись ждёт доставки/подтверждения аномалии —
+        //     второй «Сохранить», второе окно приложения);
+        //   • данные сервера после load() (пользователь вводит то же
+        //     значение повторно, не заметив, что уже сохранил).
+        // isEdit (правка в окне 1 ч) не блокируется: сервер обновляет
+        // запись на месте (Task 359), дубля не создаёт.
+        _isDuplicateReadingInput: function(id, num, dateStr, isEdit) {
+            if (isEdit) return false;
+            var meters = this._METERS || [];
+            for (var i = 0; i < meters.length; i++) {
+                if (String(meters[i].id) !== String(id)) continue;
+                if (String(parseFloat(meters[i].curr || 0)) === String(num) &&
+                    String(meters[i].dateCurr || '') === String(dateStr)) {
+                    return true;
+                }
+            }
+            var pending = this._outboxLoad();
+            for (var p = 0; p < pending.length; p++) {
+                var pl = (pending[p] && pending[p].payload) || {};
+                if (String(pl.id) !== String(id)) continue;
+                if (String(parseFloat(pl.curr || 0)) === String(num) &&
+                    String(pl.dateCurr || '') === String(dateStr)) {
+                    return true;
+                }
+            }
+            return false;
+        },
+
         // Сохранить введённые показания
         submitInput: function() {
             var field = document.getElementById('flowInputField');
@@ -38141,6 +38183,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (isNaN(num)) {
                 field.style.borderColor = '#e55';
                 setTimeout(function() { field.style.borderColor = ''; }, 1500);
+                return;
+            }
+
+            // Task 375 (анти-дубль №1): защита от ПОВТОРНОГО срабатывания
+            // «Сохранить» — двойной тап в момент анимации закрытия sheet
+            // (0.3 c), Enter + клик, дрожь тача. Второй вызов успевал
+            // сдвинуть prev→curr ЕЩЁ раз: второй payload с другим prev
+            // проходил серверный дедуп Task 366 и дописывал строку-дубль
+            // в архив. Кулдаун 2.5 c после ПРИНЯТОГО ввода (флаг ставится
+            // ниже, перед оптимистичным обновлением); openInput() снимает.
+            if (this._inputAcceptedAt &&
+                (Date.now() - this._inputAcceptedAt) < 2500) {
                 return;
             }
 
@@ -38229,6 +38283,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             var id = window._flowDetailId;
             var self = this;
+
+            // Task 375 (анти-дубль №2/№3): эти показания уже введены за
+            // эту дату (в памяти — первый вызов уже обновил meter.curr)
+            // или уже ждут доставки в outbox (второе окно, двойной клик
+            // до ответа сервера). Повторный ввод ТОГО ЖЕ значения за ту
+            // же дату раньше сдвигал prev→curr и дописывал мусорную
+            // строку с расходом 0; правка значения — кнопкой «Изменить
+            // показания» (окно 1 ч).
+            if (this._isDuplicateReadingInput(id, num, dateStr, isEdit)) {
+                this.closeInput();
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Эти показания уже введены за эту дату — для правки используйте «Изменить показания» (окно 1 час)');
+                }
+                return;
+            }
+            // Task 375 (анти-дубль №1): ввод принят — кулдаун активен
+            this._inputAcceptedAt = Date.now();
 
             // Оптимистичное обновление UI: сразу обновляем в памяти
             var meter = null;
@@ -38617,6 +38688,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             };
 
             var self = this;
+            // Task 375 (анти-дубль №1): ввод принят (даты прошли hard-
+            // проверки) — кулдаун активен и для ветки «расход за месяц»
+            this._inputAcceptedAt = Date.now();
             this.closeInput();
 
             // Task 358: write-ahead — «расход за месяц» тоже фиксируем
@@ -38823,6 +38897,32 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return this._outboxLoad().length;
         },
 
+        // Task 375: убрать копии одного показания из списка записей
+        // outbox. Ключ: id + dateCurr + curr + entryType (prev НЕ входит
+        // — «двойной сдвиг» prev и есть мусорная копия). Порядок
+        // сохраняется (старейшие первыми); копии удаляются из журнала
+        // на месте (_outboxRemove). Вызывается из _flushOutbox ДО
+        // серверных дедуп-запросов — экономит и round-trip'ы.
+        _outboxCollapseDuplicates: function(entries) {
+            var seen = {};
+            var kept = [];
+            var arr = entries || [];
+            for (var i = 0; i < arr.length; i++) {
+                var e = arr[i] || {};
+                var pl = e.payload || {};
+                var key = String(pl.id) + '|' + String(pl.dateCurr || '') +
+                          '|' + String(parseFloat(pl.curr || 0)) + '|' +
+                          String(pl.entryType || '');
+                if (Object.prototype.hasOwnProperty.call(seen, key)) {
+                    if (e.cid) this._outboxRemove(e.cid);
+                    continue;
+                }
+                seen[key] = true;
+                kept.push(e);
+            }
+            return kept;
+        },
+
         // Task 367: баннер недоставленных показаний убран по заявке
         // («упростить ещё — убрать баннер вовсе»); вместо него жёлто-
         // оранжевый цвет ЗНАЧЕНИЙ карточек — .flow-summary-val-pending
@@ -38931,6 +39031,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
                 return sent;
             };
+
+            // Task 375 (анти-дубль №4): свёртка копий одного показания
+            // ВНУТРИ outbox — до разбора day/period и серверных
+            // дедуп-запросов. Одно показание (id + dateCurr + curr +
+            // entryType) должно уйти на сервер ОДИН раз, каким бы ни
+            // был prev: повторный «Сохранить» (двойной сдвиг prev),
+            // задвоение из второго окна, копии, накопленные до
+            // клиентских защит Task 375. Оставляем СТАРЕЙШУЮ запись
+            // (первая в очереди = реальные показания); поздние копии
+            // (в т.ч. со сдвинутым prev) — мусор, убираем.
+            entries = this._outboxCollapseDuplicates(entries);
+            if (entries.length === 0) return Promise.resolve(0);
 
             var dayEntries = [], periodEntries = [];
             entries.forEach(function(e) {
