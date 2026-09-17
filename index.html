@@ -4768,18 +4768,42 @@
        95px. Значок НЕ активен (окно свёрнуто) — приглушён
        контрастом (opacity 0.45); наведение/фокус/раскрытие — полная
        контрастность; шеврон ПОВОРАЧИВАЕТСЯ на 180°. Виден значок
-       только когда текст НЕ влезает (или окно уже раскрыто) */
+       только когда текст НЕ влезает (или окно уже раскрыто).
+       Task 379 (заявка): раскрытое окно — ОВЕРЛЕЙ: низ смещается
+       вниз ПОВЕРХ ряда 2/3 бара и шахматки, ГАБАРИТ БАРА НЕ
+       РАСТЁТ — прирост высоты компенсируется отрицательным
+       margin-bottom (95px − высота, ставит JS _barExp*): окно
+       продолжает занимать в строке бара РОВНО 95px; height и
+       margin-bottom анимируются СИНХРОННО — раскладка не
+       дёргается ни на миг (сумма всегда 95px) */
     .ws-events-panel {
         position: relative;          /* якорь значка .ws-bar-exp */
-        transition: height 0.18s ease;
+        transition: height 0.18s ease, margin-bottom 0.18s ease;
         scrollbar-width: none;       /* Firefox: полоса скрыта */
         -ms-overflow-style: none;    /* IE/legacy Edge */
     }
     .ws-cal-panel {
         position: relative;
-        transition: height 0.18s ease;
+        transition: height 0.18s ease, margin-bottom 0.18s ease;
         scrollbar-width: none;
         -ms-overflow-style: none;
+    }
+    /* Task 379 (заявка: «при раскрытии должны смещаться вниз по
+       верх бара, не увеличивая его в размере»): раскрытое окно —
+       ОВЕРЛЕЙ над содержимым ниже бара: z-index 55 — поверх
+       sticky-шапки сетки (z 2) и рядов бара, ПОД шапкой
+       приложения (z 60), шторкой итогов (z 75), нижней навигацией
+       (z 100); тень «парения» отделяет окно от накрытой
+       шахматки. Фон окон непрозрачный (var(--bg-tertiary)) —
+       текст читается поверх сетки */
+    .ws-events-panel.ws-bar-open,
+    .ws-cal-panel.ws-bar-open {
+        z-index: 55;
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.38);
+    }
+    [data-theme="light"] .ws-events-panel.ws-bar-open,
+    [data-theme="light"] .ws-cal-panel.ws-bar-open {
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
     }
     .ws-events-panel::-webkit-scrollbar,
     .ws-cal-panel::-webkit-scrollbar {
@@ -5091,7 +5115,8 @@
         background: var(--bg-primary, #1a2233);
     }
     [data-theme="light"] .ws-popup-swatch.ws-swatch-dot {
-        background: #eef0f2;
+        /* Task 379: фон ПУСТОЙ ячейки светлой темы — #FFFFFF */
+        background: #FFFFFF;
     }
     /* Task 312: .ws-popup-swatch-empty (пустой пунктирный свотч строки
        «— выходной —») УДАЛЁН — строка убрана из попапа, классов-«жителей»
@@ -6987,8 +7012,8 @@
         color: var(--text-secondary, rgba(255,255,255,0.25));
     }
     /* Task 314: код «.» (плановый выходной) — ячейка выглядит как
-       ПУСТАЯ: тот же фон (var(--bg-primary), светлая тема — #eef0f2,
-       см. override ниже). Task 356 (заявка): центральный символ «·»
+       ПУСТАЯ: тот же фон (var(--bg-primary), светлая тема — #FFFFFF
+       (Task 379), см. override ниже). Task 356 (заявка): центральный символ «·»
        (U+00B7) убран — «.»-ячейка неотличима от пустой (метка «·»
        осталась в попапе выбора статуса и select «Дополнительно…»).
        Inline-цвет из листа
@@ -6999,8 +7024,8 @@
        обычный выходной — как пустая ячейка + красная рамка-группа.
        Класс —
        и маркер для тестов. Светлая тема: --bg-primary страницы
-       #FAF9F5 — но фон ЯЧЕЕК сетки #eef0f2 (Task 250), совпадаем
-       с ячейками, а не со страницей. */
+       #FAF9F5 — но фон ЯЧЕЕК сетки #FFFFFF (Task 250→379),
+       совпадаем с ячейками, а не со страницей. */
     .ws-grid tbody td.ws-cell.ws-dot-code {
         background: var(--bg-primary, #1a2233);
     }
@@ -7524,17 +7549,24 @@
     [data-theme="light"] .ws-grid tbody td {
         border-color: rgb(64, 80, 102);
     }
-    /* Task 250: светлая тема — сплошной фон пустых ячеек шахматки
-       (раньше transparent, просвечивал фон страницы) */
+    /* Task 250 → Task 379 (заявка: «переделай, фон пустых ячеек
+       #FFFFFF — ячейки значений НЕ в шторке итогов, а в шахматке
+       табеля»): сплошной фон ПУСТЫХ ячеек значений шахматки —
+       ЧИСТЫЙ БЕЛЫЙ #FFFFFF (было #eef0f2). Тёмная тема не тронута
+       (Task 319: #eef0f2 + brightness(0.88)); статусные ячейки
+       перекрывают фон inline-цветом кода, праздники — #f8e2e9
+       (Task 363), выходные — фон пустой + красная рамка-группа;
+       подсветки «сегодня»/перекрестья — inset-заливки ПОВЕРХ фона,
+       работают как прежде */
     [data-theme="light"] .ws-grid tbody td.ws-cell {
-        background: #eef0f2;
+        background: #FFFFFF;
     }
-    /* Task 314: светлая тема — «.»-ячейка = пустая (#eef0f2);
-       правило выше специфичности базового, чтобы не зависеть от
-       порядка с Task 250. Праздники — #f8e2e9 (правило feast ниже
-       специфичнее, Task 363) */
+    /* Task 314 → 379: светлая тема — «.»-ячейка = пустая
+       (#FFFFFF); правило выше специфичности базового, чтобы не
+       зависеть от порядка с Task 250/379. Праздники — #f8e2e9
+       (правило feast ниже специфичнее, Task 363) */
     [data-theme="light"] .ws-grid tbody td.ws-cell.ws-dot-code {
-        background: #eef0f2;
+        background: #FFFFFF;
     }
     /* Task 251: светлая тема — попап выбора статуса */
     [data-theme="light"] .ws-cell-popup {
@@ -42793,7 +42825,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Рендеры окон заменяют innerHTML ЦЕЛИКОМ — значок (пере)-
         // создаётся после каждого рендера; раскрытое состояние — класс
         // ws-bar-open на самом окне (переживает перерисовки), высота
-        // пересчитывается под НОВЫЙ объём текста
+        // пересчитывается под НОВЫЙ объём текста.
+        // Task 379 (заявка): при раскрытии окна смещаются вниз ПОВЕРХ
+        // бара, НЕ увеличивая его в размере — прирост высоты
+        // компенсируется отрицательным margin-bottom (95px −
+        // scrollHeight): окно занимает в строке бара РОВНО 95px
+        // (grid-строка/колонка не растёт, сетка под баром НЕ
+        // уезжает); раскрытое окно — оверлей (CSS .ws-bar-open:
+        // z-index 55 + тень) поверх ряда 2/3 бара и шахматки; height
+        // и margin-bottom анимируются СИНХРОННО — сумма всегда 95px
         // ============================================================
         _barExpSync: function(el) {
             if (!el) return;
@@ -42817,26 +42857,38 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // свернуть, значок спрятать
                 el.classList.remove('ws-bar-open');
                 el.style.height = '';
+                el.style.marginBottom = '';   // Task 379: габарит бара
                 open = false;
             } else if (open) {
                 // остаёмся раскрытыми — низ окна следует за НОВЫМ
-                // объёмом текста (замер после перерисовки)
+                // объёмом текста (замер после перерисовки);
+                // Task 379: отрицательный margin-bottom компенсирует
+                // прирост высоты — ГАБАРИТ БАРА НЕ МЕНЯЕТСЯ, окно
+                // уходит вниз ОВЕРЛЕЕМ поверх ряда 2/3 и шахматки
                 el.style.height = el.scrollHeight + 'px';
+                el.style.marginBottom = (95 - el.scrollHeight) + 'px';
             }
             btn.classList.toggle('on', open);
             btn.style.display = (need || open) ? '' : 'none';
         },
 
-        // Task 378: клик по значку — раскрыть/свернуть окно бара
+        // Task 378 → 379: клик по значку — раскрыть/свернуть окно
+        // бара. Раскрытие: высота = scrollHeight (весь текст),
+        // margin-bottom = 95 − высота (ОТРИЦАТЕЛЬНЫЙ) — низ окна
+        // смещается вниз ПОВЕРХ бара оверлеем, а строка бара
+        // сохраняет габарит 95px (бар НЕ увеличивается в размере,
+        // сетка под ним не уезжает)
         _barExpToggle: function(el) {
             if (!el) return;
             var open = el.classList.contains('ws-bar-open');
             if (open) {
                 el.classList.remove('ws-bar-open');
                 el.style.height = '';
+                el.style.marginBottom = '';
             } else {
                 el.classList.add('ws-bar-open');
                 el.style.height = el.scrollHeight + 'px';
+                el.style.marginBottom = (95 - el.scrollHeight) + 'px';
             }
             this._barExpSync(el);
         },
