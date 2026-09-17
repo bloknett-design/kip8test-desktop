@@ -38740,6 +38740,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
                         KipToast.show('Сервер не поддерживает ввод за период — обновите Apps Script (DEPLOY-Task286)');
                     }
+                } else if (err && err._kind === 'SERVER' &&
+                           /archive_write_failed/i.test(msg)) {
+                    // Task 376: архив не записан (архив — единственное
+                    // хранилище периодической записи!) — запись ОСТАЁТСЯ в
+                    // outbox и уйдёт повторно автоматически.
+                    self._outboxUpdate(outboxCid, { state: 'retry', lastErr: msg });
+                    self._scheduleOutboxRetry();
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Запись в архив не удалась — отправим повторно автоматически');
+                    }
                 } else if (err && err._kind === 'SERVER') {
                     // Бизнес-ошибка (date_inconsistent и т.п.) — показываем
                     // человекочитаемое serverMessage, если сервер его приложил.
@@ -38788,6 +38798,24 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (outboxCid) self._outboxRemove(outboxCid);
             }).catch(function(err) {
                 console.error('flowmeter.updateReading:', err);
+                // Task 376: meters на сервере уже записан, но строка архива
+                // не доставлена (замок/квота при всех ретраях) — запись
+                // ОСТАЁТСЯ в outbox и уйдёт повторно автоматически:
+                // повторная запись meters идемпотентна, серверный дедуп
+                // Task 366/375 не даст дубль строки архива.
+                if (outboxCid && err &&
+                        /archive_write_failed/i.test(String((err && err.message) || err))) {
+                    self._outboxUpdate(outboxCid, {
+                        state: 'retry',
+                        lastErr: String(err.message || err)
+                    });
+                    self._scheduleOutboxRetry();
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Показания сохранены, но запись в архив не удалась — отправим повторно автоматически');
+                    }
+                    setTimeout(function() { self.load(); }, 200);
+                    return;
+                }
                 if (outboxCid && self._outboxIsPermanentError(err)) {
                     // Task 358: сервер окончательно отверг (окно правки /
                     // чужой ввод / ...) — ретраить бессмысленно
@@ -38940,6 +38968,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (/session|токен|token/i.test(msg)) return false;      // лечится входом
             if (/unknown action/i.test(msg)) return false;           // лечится апгрейдом сервера
             if (/server_busy/i.test(msg)) return false;             // Task 366: замок архива занят — ретрай позже
+            if (/archive_write_failed/i.test(msg)) return false;    // Task 376: meters записан, архив нет — ретрай позже
             return true;  // edit_window_expired / not_your_input / sign_neg / ...
         },
 
@@ -39029,6 +39058,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         }
                     } catch (e) { /* ignore */ }
                 }
+                // Task 376: что-то осталось (сеть/сессия/server_busy/
+                // archive_write_failed — флаш остановился на 'stop') —
+                // планируем ретрай с бэкоффом сами: раньше запись ждала
+                // только online/visibility/следующий заход в раздел.
+                try {
+                    if (self._outboxLoad().length > 0) {
+                        self._scheduleOutboxRetry();
+                    }
+                } catch (e) { /* ignore */ }
                 return sent;
             };
 
@@ -39049,12 +39087,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 (e.kind === 'period' ? periodEntries : dayEntries).push(e);
             });
 
-            // Дедуп 'day': один flowmeter.list на все записи
+            // Дедуп 'day': один flowmeter.list на все записи.
+            // Task 376: сверки с meters МАЛО — meters-строка пишется
+            // РАНЬШЕ архива и могла остаться ЕДИНСТВЕННОЙ записью
+            // (архивная строка терялась при таймауте замка/квоте, ответ
+            // был ok:true, запись из outbox удалялась — №12). Теперь
+            // запись считается доставленной ТОЛЬКО когда в архиве есть
+            // её строка (entryType + dateCurr + curr): meters-совпадение
+            // без строки архива → запись ОСТАЁТСЯ и уйдёт повторно
+            // (повторная запись meters идемпотентна, серверный дедуп
+            // Task 366/375 не даст дубль строки архива).
             var p = Promise.resolve();
             if (dayEntries.length > 0) {
                 p = p.then(function() {
                     return self._api('flowmeter.list', {}).then(function(data) {
                         var meters = (data && Array.isArray(data.meters)) ? data.meters : [];
+                        var candidates = [];
                         dayEntries.forEach(function(e) {
                             var meter = null;
                             for (var i = 0; i < meters.length; i++) {
@@ -39065,11 +39113,48 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             if (meter &&
                                 String(meter.dateCurr || '') === String((e.payload || {}).dateCurr || '') &&
                                 String(parseFloat(meter.curr)) === String(parseFloat((e.payload || {}).curr))) {
-                                // уже на сервере (beacon дошёл в прошлый раз)
-                                self._outboxRemove(e.cid);
-                                e._delivered = true;
+                                // meters совпал — кандидат на «уже доставлено»
+                                // (beacon дошёл в прошлый раз); финальное слово
+                                // за архивом
+                                candidates.push({ e: e, id: (e.payload || {}).id });
                             }
                         });
+                        // Task 376: подтверждение по архиву — один запрос на
+                        // расходомер (обычно кандидатов 0–1: записи с ответом
+                        // сервера из outbox уже удалены)
+                        var ids = [];
+                        candidates.forEach(function(c) {
+                            if (ids.indexOf(String(c.id)) === -1) ids.push(String(c.id));
+                        });
+                        var vp = Promise.resolve();
+                        ids.forEach(function(mid) {
+                            vp = vp.then(function() {
+                                return self._api('flowmeter.archive', { id: mid, limit: 30 })
+                                    .then(function(adata) {
+                                        var recs = (adata && Array.isArray(adata.records))
+                                                   ? adata.records : [];
+                                        candidates.forEach(function(c) {
+                                            if (String(c.id) !== mid) return;
+                                            var pl = (c.e.payload || {});
+                                            var etNeedle = String(pl.entryType || 'сутки').trim().toLowerCase();
+                                            if (etNeedle !== 'сутки') return;   // day-записи — только 'сутки'
+                                            for (var r = 0; r < recs.length; r++) {
+                                                var rec = recs[r];
+                                                if (String(rec.entryType || 'сутки').toLowerCase() === etNeedle &&
+                                                    String(rec.dateCurr || '') === String(pl.dateCurr || '') &&
+                                                    String(parseFloat(rec.curr)) === String(parseFloat(pl.curr))) {
+                                                    // строка архива на месте — теперь точно доставлено
+                                                    self._outboxRemove(c.e.cid);
+                                                    c.e._delivered = true;
+                                                    break;
+                                                }
+                                            }
+                                        });
+                                    })
+                                    .catch(function() { /* сеть — отправим ниже как есть */ });
+                            });
+                        });
+                        return vp;
                     }).catch(function() { /* сеть — отправим ниже как есть */ });
                 });
             }
