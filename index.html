@@ -6463,8 +6463,12 @@
        акцентом. Тон мягкий, чтобы не спорить с красным «выходным» и
        зелёной звёздочкой сокращённого дня в той же шапке. */
     .ws-grid thead th.ws-day-col.ws-today-col {
-        background-image: linear-gradient(rgba(74, 143, 199, 0.20), rgba(74, 143, 199, 0.20));
+        /* Task 377 (заявка: «выделение текущего дня — посильнее»):
+           градиент 0.20 → 0.40, число — жирнее; + акцентная полоса
+           2px ::after под датой (правило ниже) */
+        background-image: linear-gradient(rgba(74, 143, 199, 0.40), rgba(74, 143, 199, 0.40));
         color: var(--accent-blue, #4a8fc7);
+        font-weight: 700;
     }
     /* Task 316: НАВЕДЕНИЕ/КЛИК на дату в шапке — выделяется ВЕСЬ
        столбец (как «сегодня» Task 313). Два состояния: ws-hover-col —
@@ -6485,6 +6489,36 @@
     .ws-grid thead th.ws-day-col.ws-sel-col {
         background-image: linear-gradient(rgba(74, 143, 199, 0.30), rgba(74, 143, 199, 0.30));
         color: var(--accent-blue, #4a8fc7);
+    }
+    /* Task 377: составные правила ШАПКИ «сегодня + наведение/выбор» —
+       усиленный градиент НЕ гаснет при наведении/выборе сегодняшней
+       даты (классы ws-hover-col/ws-sel-col ставятся на th в DOM без
+       перерисовки; без этих правил поздние равные по специфичности
+       правила перекрыли бы 0.40 до 0.20/0.30). Выбранный — чуть
+       насыщеннее. */
+    .ws-grid thead th.ws-day-col.ws-today-col.ws-hover-col {
+        background-image: linear-gradient(rgba(74, 143, 199, 0.40), rgba(74, 143, 199, 0.40));
+        color: var(--accent-blue, #4a8fc7);
+    }
+    .ws-grid thead th.ws-day-col.ws-today-col.ws-sel-col {
+        background-image: linear-gradient(rgba(74, 143, 199, 0.44), rgba(74, 143, 199, 0.44));
+        color: var(--accent-blue, #4a8fc7);
+    }
+    /* Task 377: акцентная ПОЛОСА 2px под сегодняшней датой (внутри
+       th, на layout не влияет — высота шапки 37px по-плану Task 256).
+       ::after у th ДНЕЙ свободен (::after занят только у
+       th.ws-emp-col, Task 336); position:sticky — позиционированный
+       предок. Полоса НЕ конфликтует с рамкой выходных ws-wgrp
+       (inset box-shadow TOP — другое свойство): «сегодня-выходной»
+       несёт и красный верх, и синий низ. */
+    .ws-grid thead th.ws-day-col.ws-today-col::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 2px;
+        background: var(--accent-blue, #4a8fc7);
     }
     .ws-grid tbody td {
         border: 1px solid var(--card-border, rgba(255,255,255,0.06));
@@ -6730,10 +6764,11 @@
        Совпадение «сегодня + ручная запись»: обе тени составные (ниже),
        иначе box-shadow ws-source-manual затирался бы заливкой дня. */
     .ws-grid tbody td.ws-cell.ws-today {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.16);
+        /* Task 377: 0.16 → 0.30 — выделение заметнее */
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.30);
     }
     .ws-grid tbody td.ws-cell.ws-today.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.16),
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.30),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     /* Task 316: столбец НАВЕДЁННОЙ (ws-hover) / ВЫБРАННОЙ (ws-sel)
@@ -6772,10 +6807,11 @@
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.20);
+        /* Task 377: 0.20 → 0.32 — «сегодня» сильнее строки */
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.32);
     }
     .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.20),
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.32),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-hover {
@@ -6792,6 +6828,43 @@
     }
     .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-sel.ws-source-manual {
         box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.24),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    /* Task 377 (заявка: «выделение текущего дня — посильнее»):
+       составные правила «сегодня + наведение/выбор СТОЛБЦА» —
+       усиленная заливка НЕ гаснет, когда курсор над сегодняшней
+       датой в шапке или столбец выбран кликом (_dayHover/_daySelect
+       ставят ws-hover/ws-sel на td в DOM БЕЗ перерисовки; поздние
+       равные правила ws-hover/ws-sel перекрывали бы box-shadow
+       «сегодня», возвращая бледный уровень). Сегодня — не ниже
+       0.30; выбор столбца — чуть насыщеннее (0.34/0.36); в строке
+       наведения — 0.34/0.36. Принцип составных теней — Task 313/316. */
+    .ws-grid tbody td.ws-cell.ws-today.ws-hover {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.30);
+    }
+    .ws-grid tbody td.ws-cell.ws-today.ws-hover.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.30),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    .ws-grid tbody td.ws-cell.ws-today.ws-sel {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.34);
+    }
+    .ws-grid tbody td.ws-cell.ws-today.ws-sel.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.34),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-hover {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.34);
+    }
+    .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-hover.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.34),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-sel {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.36);
+    }
+    .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-sel.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.36),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     .ws-grid tbody tr.ws-hover-row td.ws-emp-col {
@@ -6868,6 +6941,21 @@
     }
     [data-theme="dark"] .ws-grid tbody td {
         border-color: rgba(105, 130, 160, 0.55);
+    }
+    /* Task 377 (заявка: «в светлой теме разделительные полосы ячеек
+       шахматки такого же цвета, как в тёмной теме»): в ТЁМНОЙ теме
+       полосы между ячейками рендерятся практически ЧЁРНЫМИ —
+       rgba(0,0,0,0.30) ложится на тёмный стол-фон (filter-изоляция
+       ячеек Task 319 не пускает их светлый фон под collapsed-границу)
+       → rgb(9,15,23); в СВЕТЛОЙ теме тот же rgba(0,0,0,0.30) ложился
+       на СВЕТЛЫЙ фон ячеек → бледно-серые rgb(167,166,160) полосы.
+       Светлой теме — непрозрачный цвет тёмной темы rgb(10,15,23):
+       результат одинаков в обеих темах независимо от подложки.
+       Специфичность (0,3,2) = тёмной паре; правило стоит ДО красной
+       рамки-группы ws-wgrp (Task 363) — красные 2px выходных
+       ПОБЕЖДАЮТ порядком, как в тёмной теме. */
+    [data-theme="light"] .ws-grid tbody td.ws-cell {
+        border-color: rgb(10, 15, 23);
     }
     /* пунктирный бейдж будущего мероприятия — тёмный текст/рамка
        (базовое правило красит var(--text-primary) светлым — на
@@ -7289,13 +7377,15 @@
        колонка ФИО и пустые ячейки) и сливалась с телом шахматки;
        теперь это отчётливая серо-синяя «крыша» (парная к тёмной
        #1e293b), текст шапки #333 читается на ней контрастно */
-    /* Task 355 (заявка: «так же в шапке шахматки, в днях месяца»):
-       светлая тема — линии шапки 30% чёрного, как у ячеек тела
-       шахматки (прежде — только нижняя линия 12% чёрного) */
+    /* Task 377 (заявка: «в светлой теме полосы — такого же цвета,
+       как в тёмной теме»): линии шапки — непрозрачный стале-голубой
+       rgb(83,96,117) = цвет тёмной темы (rgba(140,158,188,0.55) над
+       сине-серой шапкой #1e293b). Вертикали между днями шапки —
+       продолжение полос тела шахматки. Task 355 красил 30% чёрного */
     [data-theme="light"] .ws-grid thead th {
         background: #bfcad5;
         color: #333;
-        border-color: rgba(0, 0, 0, 0.30);
+        border-color: rgb(83, 96, 117);
     }
     /* Task 355: правая граница «Сотрудник +» в шапке остаётся
        ПРОЗРАЧНОЙ и в темах (Task 336: 2px-полоса ::after в одной
@@ -7309,13 +7399,17 @@
     [data-theme="light"] .ws-grid {
         color: #333;
     }
-    /* Task 355 (заявка: «разделительные линии оставить тонкими, но
-       сделать поярче (чернее)»): цвет линий ячеек шахматки 8% → 30%
-       чёрного — тонкие 1px, но отчётливо видны на фоне пустых #eef0f2
-       и пастельного розового выходных. Красные стыки Task 255 и
-       2px-разделители групп/ФИО специфичностью выше — не затронуты */
+    /* Task 377 (заявка: «в светлой теме полосы — такого же цвета,
+       как в тёмной теме»): правило Task 355 (30% чёрного) перекрашено
+       в НЕПРОЗРАЧНЫЙ стале-синий rgb(64,80,102) — тот же цвет, каким
+       колонка ФИО видна в ТЁМНОЙ теме (rgba(105,130,160,0.55) над
+       тёмным фоном). Горизонтальный разделитель строк непрерывен по
+       всей ширине: дни — rgb(10,15,23) (правило выше специфичнее),
+       ФИО — rgb(64,80,102) — в точности как в тёмной теме.
+       Специфичность (0,2,2): красная рамка ws-wgrp (0,3,2) и
+       2px-разделители групп/ФИО выше — не затронуты */
     [data-theme="light"] .ws-grid tbody td {
-        border-color: rgba(0, 0, 0, 0.30);
+        border-color: rgb(64, 80, 102);
     }
     /* Task 250: светлая тема — сплошной фон пустых ячеек шахматки
        (раньше transparent, просвечивал фон страницы) */
@@ -7364,14 +7458,17 @@
        ячейки столбца): тон мягче тёмной темы (белый фон «громче»
        показывает наложение), число — тёмно-синим акцентом */
     [data-theme="light"] .ws-grid thead th.ws-day-col.ws-today-col {
-        background-image: linear-gradient(rgba(42, 93, 143, 0.13), rgba(42, 93, 143, 0.13));
+        /* Task 377: 0.13 → 0.26 — выделение заметнее */
+        background-image: linear-gradient(rgba(42, 93, 143, 0.26), rgba(42, 93, 143, 0.26));
         color: #2a5d8f;
+        font-weight: 700;
     }
     [data-theme="light"] .ws-grid tbody td.ws-cell.ws-today {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.10);
+        /* Task 377: 0.10 → 0.22 — выделение заметнее */
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.22);
     }
     [data-theme="light"] .ws-grid tbody td.ws-cell.ws-today.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.10),
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.22),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     /* Task 316: светлая тема — столбец наведённой/выбранной даты
@@ -7410,10 +7507,11 @@
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.14);
+        /* Task 377: 0.14 → 0.24 — «сегодня» сильнее строки */
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.24);
     }
     [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.14),
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.24),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-hover {
@@ -7429,6 +7527,49 @@
     [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-sel.ws-source-manual {
         box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.15),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    /* Task 377: светлая тема — составные «сегодня + наведение/выбор
+       столбца» (не гаснет при ws-hover/ws-sel на td) и составные
+       правила ШАПКИ (градиент 0.26 держится при hover/sel даты);
+       полоса ::after под датой — тёмно-синий акцент светлой темы */
+    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-today.ws-hover {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.22);
+    }
+    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-today.ws-hover.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.22),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-today.ws-sel {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.26);
+    }
+    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-today.ws-sel.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.26),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-hover {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.26);
+    }
+    [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-hover.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.26),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-sel {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.28);
+    }
+    [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-sel.ws-source-manual {
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.28),
+                    inset 0 0 0 1.5px rgba(255,255,255,0.5);
+    }
+    [data-theme="light"] .ws-grid thead th.ws-day-col.ws-today-col.ws-hover-col {
+        background-image: linear-gradient(rgba(42, 93, 143, 0.26), rgba(42, 93, 143, 0.26));
+        color: #2a5d8f;
+    }
+    [data-theme="light"] .ws-grid thead th.ws-day-col.ws-today-col.ws-sel-col {
+        background-image: linear-gradient(rgba(42, 93, 143, 0.30), rgba(42, 93, 143, 0.30));
+        color: #2a5d8f;
+    }
+    [data-theme="light"] .ws-grid thead th.ws-day-col.ws-today-col::after {
+        background: #2a5d8f;
     }
     [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-emp-col {
         box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.06);
