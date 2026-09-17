@@ -4757,6 +4757,71 @@
         padding: 6px 10px;
     }
     .ws-events-panel[hidden] { display: none; }
+    /* Task 378 (заявка): боковая ПОЛОСА ПРОКРУТКИ окон «Мероприятия»
+       и «Нормы» бара УБРАТА (приём Task 331 — оба движка): скролл
+       остаётся КОЛЕСОМ/СВАЙПОМ/КЛАВИШАМИ ↑↓ (окна фокусируемы —
+       tabindex в разметке). ВМЕСТО полосы — ЗНАЧОК полного раскрытия
+       .ws-bar-exp в правом нижнем углу (создаёт/обновляет
+       _barExpSync): клик раскрывает окно на ВЕСЬ текст — низ
+       смещается вниз по количеству текста (инлайновая высота =
+       scrollHeight, плавный transition), повторный клик возвращает
+       95px. Значок НЕ активен (окно свёрнуто) — приглушён
+       контрастом (opacity 0.45); наведение/фокус/раскрытие — полная
+       контрастность; шеврон ПОВОРАЧИВАЕТСЯ на 180°. Виден значок
+       только когда текст НЕ влезает (или окно уже раскрыто) */
+    .ws-events-panel {
+        position: relative;          /* якорь значка .ws-bar-exp */
+        transition: height 0.18s ease;
+        scrollbar-width: none;       /* Firefox: полоса скрыта */
+        -ms-overflow-style: none;    /* IE/legacy Edge */
+    }
+    .ws-cal-panel {
+        position: relative;
+        transition: height 0.18s ease;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+    .ws-events-panel::-webkit-scrollbar,
+    .ws-cal-panel::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+        display: none;               /* Chromium: полоса скрыта */
+    }
+    .ws-events-panel:focus-visible,
+    .ws-cal-panel:focus-visible {
+        outline: 1px solid rgba(74, 143, 199, 0.55);
+        outline-offset: -1px;
+    }
+    .ws-bar-exp {
+        position: absolute;
+        right: 5px;
+        bottom: 5px;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border: 1px solid rgba(127, 127, 127, 0.45);
+        border-radius: 3px;
+        background: rgba(127, 127, 127, 0.25);
+        color: var(--text-primary, #e0e0e0);
+        cursor: pointer;
+        /* НЕ активен (свёрнуто) — приглушён контрастом (заявка) */
+        opacity: 0.45;
+        transition: opacity 0.15s ease;
+    }
+    .ws-bar-exp:hover,
+    .ws-bar-exp:focus-visible { opacity: 1; }
+    .ws-bar-exp.on { opacity: 1; }   /* раскрыто — контрастно */
+    .ws-bar-exp svg {
+        width: 13px;
+        height: 13px;
+        transition: transform 0.18s ease;
+    }
+    .ws-bar-exp.on svg { transform: rotate(180deg); }
+    [data-theme="light"] .ws-bar-exp { color: #222; }
     /* Заголовок окна — плашка в духе столбиков календаря (Task 270),
        зелёная — «мероприятия»; в заголовке месяц, год и счётчик
        записей; длинный заголовок переносится (normal) */
@@ -6007,9 +6072,12 @@
     .ws-tt-table th,
     .ws-tt-table td {
         padding: 4px 8px;
-        border-bottom: 1px solid rgba(255,255,255,0.07);
-        /* Task 325: тонкая вертикальная линия между ячейками */
-        border-right: 1px solid rgba(255,255,255,0.07);
+        /* Task 378 (заявка: «разделительные полосы ячеек — как в
+           основной шахматке»): базовый цвет линий — ЯЧЕЕК ДНЕЙ сетки
+           (Task 355/377): тёмная rgba(0,0,0,0.30); шапке и колонке
+           «Сотрудник» — свои стале-синие (правила Task 378 ниже) */
+        border-bottom: 1px solid rgba(0, 0, 0, 0.30);
+        border-right: 1px solid rgba(0, 0, 0, 0.30);
         /* Task 331 (заявка: «текст в ячейках значений — по центру»):
            прежде числа прижимались вправо; колонка «Сотрудник» —
            своими правилами слева */
@@ -6061,9 +6129,48 @@
     }
     [data-theme="light"] .ws-tt-table th,
     [data-theme="light"] .ws-tt-table td {
-        border-bottom-color: rgba(0, 0, 0, 0.08);
-        border-right-color: rgba(0, 0, 0, 0.08);
+        /* Task 378: непрозрачный цвет линий дней шахматки (Task 377) */
+        border-bottom-color: rgb(10, 15, 23);
+        border-right-color: rgb(10, 15, 23);
     }
+    /* Task 378 (заявка: «фон пустых ячеек — #FFFFFF; в ячейках итогов
+       учёта, где нуль — просто пусто; разделительные полосы — как в
+       основной шахматке»): ячейки ЗНАЧЕНИЙ таблиц итогов — непрозрачные
+       и СВЕТЛЫЕ, как поле дней шахматки: светлая тема — #FFFFFF
+       (заявка), тёмная — светлые цвета шахматки дней Task 319
+       (#eef0f2 под фильтром brightness(0.88), текст тёмный #141413).
+       ЗЕБРА строк (Task 322, ниже) УБРАТА — непрозрачные ячейки её не
+       просвечивают (зебра КОЛОНКИ ФИО сетки остаётся — своя фича).
+       Линии: значения — цвет дней сетки (базовое правило выше),
+       шапка — сталь как шапка сетки, «Сотрудник» — сталь как ФИО
+       сетки. Колонки «Часы»/«Переработка» в тёмной теме — палитра
+       светлой (ячейки-то светлые) */
+    .ws-tt-table thead th {
+        border-bottom-color: rgba(140, 158, 188, 0.55);
+        border-right-color: rgba(140, 158, 188, 0.55);
+    }
+    .ws-tt-table tbody td.ws-tt-emp {
+        border-bottom-color: rgba(105, 130, 160, 0.55);
+        border-right-color: rgba(105, 130, 160, 0.55);
+    }
+    [data-theme="light"] .ws-tt-table thead th {
+        border-bottom-color: rgb(83, 96, 117);
+        border-right-color: rgb(83, 96, 117);
+    }
+    [data-theme="light"] .ws-tt-table tbody td.ws-tt-emp {
+        border-bottom-color: rgb(64, 80, 102);
+        border-right-color: rgb(64, 80, 102);
+    }
+    [data-theme="light"] .ws-tt-table tbody td.ws-tt-num {
+        background: #FFFFFF;
+    }
+    [data-theme="dark"] .ws-tt-table tbody td.ws-tt-num {
+        background: #eef0f2;
+        color: #141413;
+        filter: brightness(0.88);
+    }
+    [data-theme="dark"] .ws-tt-table td.ws-tt-hours { color: #1d7a37; }
+    [data-theme="dark"] .ws-tt-table td.ws-tt-over { color: #a06a13; }
     [data-theme="light"] .ws-tt-table th {
         /* Task 333: шапка шторки = шапка шахматки (Task 330: #bfcad5) */
         background: #bfcad5;
@@ -6172,17 +6279,11 @@
        (как пометка «архив») — отличается от зелёных «Часов» */
     .ws-tt-table td.ws-tt-over { font-weight: 700; color: #e0a23c; }
     [data-theme="light"] .ws-tt-table td.ws-tt-over { color: #a06a13; }
-    /* Task 322 (заявка): ЗЕБРА строк таблицы итогов — чётные строки
-       заметно светлее фона панели (визуальное чередование как у
-       табеля Т-12; сила 9% — подобрана по VLM-проверке Task 322);
-       итоговая строка красится своей заливкой (правило ниже, её
-       td имеют собственный фон — зебра их не трогает) */
-    .ws-tt-table tbody tr:nth-child(even) {
-        background: rgba(255, 255, 255, 0.09);
-    }
-    [data-theme="light"] .ws-tt-table tbody tr:nth-child(even) {
-        background: rgba(0, 0, 0, 0.07);
-    }
+    /* Task 378 (заявка: «фон пустых ячеек #FFFFFF … как в основной
+       шахматке»): ЗЕБРА строк таблицы итогов (Task 322) УДАЛЕНА —
+       ячейки значений стали НЕПРОЗРАЧНЫМИ (#FFFFFF / #eef0f2×0.88,
+       правила Task 378 выше) и полосы зебры больше не просвечивают;
+       поле итогов — чистое белое с линиями шахматки, как заявлено */
     /* Task 333 (заявка): РАЗДЕЛИТЕЛЬ ГРУПП в таблице итогов —
        ГОРИЗОНТАЛЬНАЯ полоса между ячейками учёта сменных и дневных
        сотрудников, КАК В ШАХМАТКЕ (tr.ws-group-first td сетки,
@@ -6200,14 +6301,15 @@
     /* Task 333 (заявка): ПЕРЕКРЁСТНАЯ ПОДСВЕТКА распространяется и на
        СТРОКИ ШТОРКИ — класс ws-hover-row на <tr> таблицы итогов
        ставит _rowClass (вместе со строкой сетки, тот же индекс).
-       Заливка — тот же приём inset-«шторки», что у сетки (Task 319):
-       мягкий тинт поверх зебры и фона sticky-колонки «Сотрудник»;
-       тёмная 0.10 / светлая 0.06 — как строка сетки */
+       Заливка — тот же приём inset-«шторки», что у сетки (Task 319),
+       поверх непрозрачных ячеек Task 378; Task 378 (заявка: «подсветку
+       перекрестья — такой же яркости, как подсветку текущего дня»):
+       тёмная 0.10 → 0.30 / светлая 0.06 → 0.22 — уровень «сегодня» */
     .ws-tt-table tbody tr.ws-hover-row td {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.10);
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.30);
     }
     [data-theme="light"] .ws-tt-table tbody tr.ws-hover-row td {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.06);
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.22);
     }
     /* Task 327 (заявка: «убери строку общего количества»): итоговая
        строка tfoot «Итого» УДАЛЕНА из таблиц месяца и года —
@@ -6483,11 +6585,15 @@
         cursor: pointer;
     }
     .ws-grid thead th.ws-day-col.ws-hover-col {
-        background-image: linear-gradient(rgba(74, 143, 199, 0.20), rgba(74, 143, 199, 0.20));
+        /* Task 378: дата под курсором — 0.20 → 0.40 (= «сегодня»
+           Task 377): перекрестье той же яркости, что текущий день */
+        background-image: linear-gradient(rgba(74, 143, 199, 0.40), rgba(74, 143, 199, 0.40));
         color: var(--accent-blue, #4a8fc7);
     }
     .ws-grid thead th.ws-day-col.ws-sel-col {
-        background-image: linear-gradient(rgba(74, 143, 199, 0.30), rgba(74, 143, 199, 0.30));
+        /* Task 378: выбранная дата — 0.30 → 0.44 (выбранный НАСЫЩЕННЕЕ
+           наведённого, как «сегодня+выбор»; наведение = «сегодня» 0.40) */
+        background-image: linear-gradient(rgba(74, 143, 199, 0.44), rgba(74, 143, 199, 0.44));
         color: var(--accent-blue, #4a8fc7);
     }
     /* Task 377: составные правила ШАПКИ «сегодня + наведение/выбор» —
@@ -6777,17 +6883,21 @@
        наведения. Составные правила с ws-source-manual — рамка не
        затирается заливкой (принцип Task 313). */
     .ws-grid tbody td.ws-cell.ws-hover {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.16);
+        /* Task 378 (заявка: «подсветку перекрестья — такой же яркости,
+           как подсветку текущего дня»): 0.16 → 0.30 (= «сегодня») */
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.30);
     }
     .ws-grid tbody td.ws-cell.ws-hover.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.16),
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.30),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     .ws-grid tbody td.ws-cell.ws-sel {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.24);
+        /* Task 378: выбранный день — 0.24 → 0.30 (паритет с наведением
+           и «сегодня»; пересечения — насыщеннее, правила ниже) */
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.30);
     }
     .ws-grid tbody td.ws-cell.ws-sel.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.24),
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.30),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     /* Task 319: ПЕРЕКРЕСТЬЕ — СТРОКА ячейки под курсором (класс
@@ -6800,34 +6910,37 @@
        рамка и смысловые тинты НЕ затираются заливкой строки. ФИО
        ячейка строки — «начало» перекрестья (шапка строки). */
     .ws-grid tbody tr.ws-hover-row td.ws-cell {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.10);
+        /* Task 378: строка перекрестья 0.10 → 0.30 (= «сегодня») */
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.30);
     }
     .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.10),
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.30),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today {
-        /* Task 377: 0.20 → 0.32 — «сегодня» сильнее строки */
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.32);
+        /* Task 377 → 378: «сегодня» в строке — 0.32 → 0.34 (строка
+           теперь 0.30; пересечение чуть насыщеннее) */
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.34);
     }
     .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.32),
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.34),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-hover {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.24);
+        /* Task 378: пересечение строки и столбца — 0.24 → 0.34 */
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.34);
     }
     .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-hover.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.24),
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.34),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     /* выбранный кликом день в наведённой строке — выбор сильнее
        строки (как и без строки) */
     .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-sel {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.24);
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.34);
     }
     .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-sel.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.24),
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.34),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     /* Task 377 (заявка: «выделение текущего дня — посильнее»):
@@ -6840,10 +6953,10 @@
        0.30; выбор столбца — чуть насыщеннее (0.34/0.36); в строке
        наведения — 0.34/0.36. Принцип составных теней — Task 313/316. */
     .ws-grid tbody td.ws-cell.ws-today.ws-hover {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.30);
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.34);
     }
     .ws-grid tbody td.ws-cell.ws-today.ws-hover.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.30),
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.34),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     .ws-grid tbody td.ws-cell.ws-today.ws-sel {
@@ -6854,10 +6967,10 @@
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-hover {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.34);
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.36);
     }
     .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-hover.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.34),
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.36),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-sel {
@@ -6868,7 +6981,7 @@
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     .ws-grid tbody tr.ws-hover-row td.ws-emp-col {
-        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.10);
+        box-shadow: inset 0 0 0 999px rgba(74, 143, 199, 0.30);
     }
     .ws-grid tbody td.ws-cell.ws-status-empty {
         color: var(--text-secondary, rgba(255,255,255,0.25));
@@ -7474,25 +7587,27 @@
     /* Task 316: светлая тема — столбец наведённой/выбранной даты
        (тон мягче тёмной, выбранный — насыщеннее наведения) */
     [data-theme="light"] .ws-grid thead th.ws-day-col.ws-hover-col {
-        background-image: linear-gradient(rgba(42, 93, 143, 0.13), rgba(42, 93, 143, 0.13));
+        /* Task 378: дата под курсором — 0.13 → 0.26 (= «сегодня») */
+        background-image: linear-gradient(rgba(42, 93, 143, 0.26), rgba(42, 93, 143, 0.26));
         color: #2a5d8f;
     }
     [data-theme="light"] .ws-grid thead th.ws-day-col.ws-sel-col {
-        background-image: linear-gradient(rgba(42, 93, 143, 0.20), rgba(42, 93, 143, 0.20));
+        background-image: linear-gradient(rgba(42, 93, 143, 0.30), rgba(42, 93, 143, 0.30));
         color: #2a5d8f;
     }
     [data-theme="light"] .ws-grid tbody td.ws-cell.ws-hover {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.10);
+        /* Task 378: 0.10 → 0.22 (= «сегодня» светлой темы) */
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.22);
     }
     [data-theme="light"] .ws-grid tbody td.ws-cell.ws-hover.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.10),
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.22),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     [data-theme="light"] .ws-grid tbody td.ws-cell.ws-sel {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.15);
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.22);
     }
     [data-theme="light"] .ws-grid tbody td.ws-cell.ws-sel.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.15),
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.22),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     /* Task 319: светлая тема — перекрестье СТРОКИ (класс ws-hover-row
@@ -7500,32 +7615,33 @@
        выбранный день сильнее строки; принципы составных правил —
        как в тёмной (блок выше). */
     [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.06);
+        /* Task 378: строка перекрестья 0.06 → 0.22 (= «сегодня») */
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.22);
     }
     [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.06),
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.22),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today {
-        /* Task 377: 0.14 → 0.24 — «сегодня» сильнее строки */
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.24);
+        /* Task 377 → 378: 0.24 → 0.26 (строка теперь 0.22) */
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.26);
     }
     [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.24),
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.26),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-hover {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.16);
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.26);
     }
     [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-hover.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.16),
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.26),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-sel {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.15);
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.26);
     }
     [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-sel.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.15),
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.26),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     /* Task 377: светлая тема — составные «сегодня + наведение/выбор
@@ -7533,10 +7649,10 @@
        правила ШАПКИ (градиент 0.26 держится при hover/sel даты);
        полоса ::after под датой — тёмно-синий акцент светлой темы */
     [data-theme="light"] .ws-grid tbody td.ws-cell.ws-today.ws-hover {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.22);
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.26);
     }
     [data-theme="light"] .ws-grid tbody td.ws-cell.ws-today.ws-hover.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.22),
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.26),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     [data-theme="light"] .ws-grid tbody td.ws-cell.ws-today.ws-sel {
@@ -7547,10 +7663,10 @@
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-hover {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.26);
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.28);
     }
     [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-hover.ws-source-manual {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.26),
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.28),
                     inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
     [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-cell.ws-today.ws-sel {
@@ -7572,7 +7688,7 @@
         background: #2a5d8f;
     }
     [data-theme="light"] .ws-grid tbody tr.ws-hover-row td.ws-emp-col {
-        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.06);
+        box-shadow: inset 0 0 0 999px rgba(42, 93, 143, 0.22);
     }
     /* Task 254: светлая тема — должность под ФИО потемнее */
     [data-theme="light"] .ws-grid tbody td.ws-emp-col .ws-emp-pos {
@@ -14384,7 +14500,10 @@
                     <button type="button" id="wsChipEvents" class="ws-mob-chip" onclick="WorkSchedule.toggleMobPanel('events')" aria-pressed="false">Мероприятия</button>
                     <button type="button" id="wsChipNorms" class="ws-mob-chip" onclick="WorkSchedule.toggleMobPanel('norms')" aria-pressed="false">Нормы</button>
                 </div>
-                <div id="wsEventsPanel" class="ws-events-panel" hidden></div>
+                <!-- Task 378: tabindex — окно фокусируемо, скролл
+                     стрелками ↑↓ клавиатуры (полоса прокрутки убрана
+                     CSS; значок раскрытия добавляет _barExpSync) -->
+                <div id="wsEventsPanel" class="ws-events-panel" hidden tabindex="0"></div>
                 <!-- Task 264/266/269/272: окошко производственного календаря
                      в баре кнопок графика — группа норм (заголовок +
                      ДВА столбика: счётчики дней слева, часы справа) и
@@ -14393,7 +14512,8 @@
                      часть бара (1/3 ширины на десктопе), текст чипов
                      переносится на строку ниже, при нехватке места —
                      скролл внутри. Заполняет ProdCalendar.renderPanel() -->
-                <div id="wsCalPanel" class="ws-cal-panel" hidden></div>
+                <!-- Task 378: tabindex — клавиатурный скролл ↑↓ -->
+                <div id="wsCalPanel" class="ws-cal-panel" hidden tabindex="0"></div>
                 </div>
                 <!-- Task 317: ИНФОРМАЦИОННОЕ ОКНО кнопки «Обновить» —
                      возраст локальной копии «данные от 04.09, 14:22»
@@ -40417,29 +40537,79 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var td = null;
                     try {
                         if (e.target && e.target.closest) {
-                            td = e.target.closest('td.ws-cell');
+                            // Task 378 (заявка): наведение на ячейку
+                            // ФИО сотрудника ТОЖЕ подсвечивает СТРОКУ —
+                            // ловим и td.ws-emp-col (день не определён:
+                            // _dayHover(null) снимает подсветку столбца)
+                            td = e.target.closest('td.ws-cell, td.ws-emp-col');
                         }
                     } catch (err) {}
                     if (!td) return;
                     if (self._crossOn === false) return;   // Task 328
-                    var day = parseInt(td.getAttribute('data-day'), 10);
+                    var isDayCell = td.classList.contains('ws-cell');
+                    var day = isDayCell ? parseInt(td.getAttribute('data-day'), 10) : null;
                     var tr = (td.closest ? td.closest('tr') : null);
                     var ri = tr ? tr.sectionRowIndex : -1;
-                    if (isNaN(day) || ri < 0) return;
+                    if (ri < 0 || (isDayCell && isNaN(day))) return;
                     self._cellHover(ri, day);
                 });
                 gridWrapEl.addEventListener('mouseout', function(e) {
                     var td = null;
                     try {
                         if (e.target && e.target.closest) {
-                            td = e.target.closest('td.ws-cell');
+                            td = e.target.closest('td.ws-cell, td.ws-emp-col');
                         }
                     } catch (err) {}
                     if (!td) return;
                     var to = e.relatedTarget;
-                    if (to && to.closest && to.closest('td.ws-cell')) return;
+                    if (to && to.closest && to.closest('td.ws-cell, td.ws-emp-col')) return;
                     self._cellHover(null);
                 });
+            }
+
+            // Task 378 (заявка: «подсвечивание строк при наведении на
+            // ячейки итогов учёта»): таблицы шторки и мобильной
+            // страницы идут по строкам сетки (Task 333) — наведение
+            // на их ячейки подсвечивает СТРОКУ (_rowHover красит и
+            // сетку, и итоги); АРХИВНАЯ таблица года (.ws-tt-arch)
+            // пропускается — её строки не соответствуют строкам сетки.
+            // Гейт перекрестья тот же (_crossOn); уход с ячеек —
+            // _rowHover(null)
+            var ttBodies = [document.getElementById('wsTtBody'),
+                            document.getElementById('wsTtPageBody')];
+            for (var tb = 0; tb < ttBodies.length; tb++) {
+                (function(ttBody) {
+                    if (!ttBody || !ttBody.addEventListener) return;
+                    ttBody.addEventListener('mouseover', function(e) {
+                        if (self._crossOn === false) return;
+                        var td = null;
+                        try {
+                            if (e.target && e.target.closest) {
+                                td = e.target.closest('tbody td');
+                            }
+                        } catch (err) {}
+                        if (!td) return;
+                        var table = (td.closest ? td.closest('table') : null);
+                        if (table && table.classList
+                                && table.classList.contains('ws-tt-arch')) return;
+                        var tr = (td.closest ? td.closest('tr') : null);
+                        var ri = tr ? tr.sectionRowIndex : -1;
+                        if (ri < 0) return;
+                        self._rowHover(ri);
+                    });
+                    ttBody.addEventListener('mouseout', function(e) {
+                        var td = null;
+                        try {
+                            if (e.target && e.target.closest) {
+                                td = e.target.closest('tbody td');
+                            }
+                        } catch (err) {}
+                        if (!td) return;
+                        var to = e.relatedTarget;
+                        if (to && to.closest && to.closest('tbody td')) return;
+                        self._rowHover(null);
+                    });
+                })(ttBodies[tb]);
             }
 
             // Task 312: «+ Отпуск» из тулбара УБРАНА — её функцию
@@ -40470,6 +40640,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     // Task 336: суженная ширина (по сокращённому тексту)
                     // — тот же повторный замер после загрузки шрифта
                     try { if (self._measureEmpNarrowW) self._measureEmpNarrowW(); } catch (e) {}
+                    // Task 378: шрифт меняет перенос текста окон бара —
+                    // пересчёт значков раскрытия
+                    try { if (self._barExpSyncAll) self._barExpSyncAll(); } catch (e) {}
                 });
             }
 
@@ -42605,6 +42778,75 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // заявка), при большом объёме — скролл внутри окна (95px).
         // Сортировка — по дате начала, затем по таб. номеру. Пустой
         // месяц — строка «нет мероприятий в этом месяце».
+        // ============================================================
+        // Task 378 (заявка): ЗНАЧОК ПОЛНОГО РАСКРЫТИЯ окон бара
+        // («Мероприятия»/«Нормы»). Нативная полоса прокрутки окон
+        // УБРАНА (CSS: scrollbar-width:none + ::-webkit-scrollbar
+        // display:none — скролл остаётся колесом/свайпом/клавишами ↑↓,
+        // окна фокусируемы tabindex). ВМЕСТО полосы — значок-шеврон
+        // в правом нижнем углу: клик раскрывает окно на ВЕСЬ текст
+        // (низ смещается вниз по количеству текста — инлайновая
+        // высота = scrollHeight), повторный клик возвращает 95px.
+        // Значок виден, только когда текст НЕ влезает (или окно уже
+        // раскрыто); НЕ активен — приглушён контрастом (CSS opacity
+        // 0.45), наведение/фокус/раскрытие — полная контрастность.
+        // Рендеры окон заменяют innerHTML ЦЕЛИКОМ — значок (пере)-
+        // создаётся после каждого рендера; раскрытое состояние — класс
+        // ws-bar-open на самом окне (переживает перерисовки), высота
+        // пересчитывается под НОВЫЙ объём текста
+        // ============================================================
+        _barExpSync: function(el) {
+            if (!el) return;
+            var btn = el.querySelector('.ws-bar-exp');
+            if (!btn) {
+                btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'ws-bar-exp';
+                btn.setAttribute('aria-label', 'Раскрыть окно целиком');
+                btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                var self = this;
+                btn.onclick = function() { self._barExpToggle(el); };
+                el.appendChild(btn);
+            }
+            var open = el.classList.contains('ws-bar-open');
+            // 97 = компактная высота окон 95px (CSS) + допуск 2px:
+            // scrollHeight не зависит от текущей (анимируемой) высоты
+            var need = el.scrollHeight > 97;
+            if (open && !need) {
+                // текст перестал переполняться (смена месяца/дня) —
+                // свернуть, значок спрятать
+                el.classList.remove('ws-bar-open');
+                el.style.height = '';
+                open = false;
+            } else if (open) {
+                // остаёмся раскрытыми — низ окна следует за НОВЫМ
+                // объёмом текста (замер после перерисовки)
+                el.style.height = el.scrollHeight + 'px';
+            }
+            btn.classList.toggle('on', open);
+            btn.style.display = (need || open) ? '' : 'none';
+        },
+
+        // Task 378: клик по значку — раскрыть/свернуть окно бара
+        _barExpToggle: function(el) {
+            if (!el) return;
+            var open = el.classList.contains('ws-bar-open');
+            if (open) {
+                el.classList.remove('ws-bar-open');
+                el.style.height = '';
+            } else {
+                el.classList.add('ws-bar-open');
+                el.style.height = el.scrollHeight + 'px';
+            }
+            this._barExpSync(el);
+        },
+
+        // Task 378: пересчёт обоих окон бара (мероприятия + нормы)
+        _barExpSyncAll: function() {
+            this._barExpSync(document.getElementById('wsEventsPanel'));
+            this._barExpSync(document.getElementById('wsCalPanel'));
+        },
+
         _renderMonthEventsPanel: function() {
             var el = document.getElementById('wsEventsPanel');
             if (!el) return;
@@ -42692,6 +42934,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             el.innerHTML = html;
             el.hidden = false;
+            // Task 378: значок раскрытия — (пере)создать/пересчитать
+            // (innerHTML окна заменился целиком)
+            this._barExpSync(el);
         },
 
         // ============================================================
@@ -42926,6 +43171,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (on && typeof navigator !== 'undefined' && navigator.vibrate) {
                 navigator.vibrate(10);
             }
+            // Task 378: окно ПОКАЗАНО чипом — пересчёт значка раскрытия
+            // (скрытое окно меряется нулём, состояние могло устареть)
+            if (this._barExpSyncAll) this._barExpSyncAll();
         },
 
         // Открытие мобильной СТРАНИЦЫ «Итоги учёта» (вызов из navigateTo
@@ -43644,9 +43892,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     // (количество записей д/н = отработанных дней
                     // вых./праздн.), целое; ЧАСЫ — в подсказке ячейки
                     var v = (col.key === 'over') ? a.overDays : a[col.key];
-                    var txt = (col.key === 'hours')
-                        ? this._fmtTotalsNum(v)
-                        : String(v);
+                    // Task 378 (заявка: «в ячейках итогов учёта, где
+                    // нуль — просто пусто»): ноль (и отформатированные
+                    // «0» часы) — ПУСТАЯ ячейка; ненулевые — как прежде
+                    var txt = v
+                        ? ((col.key === 'hours')
+                            ? this._fmtTotalsNum(v)
+                            : String(v))
+                        : '';
                     html += '<td class="ws-tt-num' +
                             (col.cls ? ' ' + col.cls : '') + '"' +
                             (col.key === 'over'
@@ -44256,6 +44509,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     self._fitGrid();
                 });
             }
+            // Task 378: перенос текста окон бара зависит от ширины окна
+            // — пересчёт значков раскрытия при ресайзе (наблюдатель
+            // сетки не видит переразмещений текста внутри окон)
+            window.addEventListener('resize', function() {
+                try { self._barExpSyncAll(); } catch (e) {}
+            });
             // Переход через десктопный брейкпоинт: включить/выключить
             // подгонку, даже если размер области не изменился
             if (window.matchMedia) {
@@ -47585,6 +47844,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             el.innerHTML = html;
             el.hidden = false;
+            // Task 378: значок раскрытия окна норм — (пере)создать
+            // (метод WorkSchedule: у календаря своей копии нет)
+            if (typeof WorkSchedule !== 'undefined'
+                    && WorkSchedule._barExpSync) {
+                WorkSchedule._barExpSync(el);
+            }
         },
 
         // Task 272: обновление — принудительный запрос года
