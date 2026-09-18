@@ -5760,7 +5760,7 @@
            страница): класс .ws-narrow на .ws-tt-table; ширина —
            по сокращённому тексту (Task 336, переменная
            --ws-tt-emp-nw меряется JS; для МЕСЯЧНОЙ таблицы
-           срабатывает правило ПОСЛЕ 42%-й доли — см. ниже) */
+           срабатывает правило ПОСЛЕ базовой ширины — см. ниже) */
         .ws-tt-table.ws-narrow th.ws-tt-emp,
         .ws-tt-table.ws-narrow td.ws-tt-emp {
             width: var(--ws-tt-emp-nw, 48px);
@@ -6274,9 +6274,20 @@
     [data-theme="light"] .ws-tt-table thead th.ws-tt-emp {
         background: #bfcad5;
     }
+    /* Task 382 (заявка: «в мобильной версии, на странице итогов
+       учёта, в таблице вкладки месяц ИЗНАЧАЛЬНУЮ ширину столбца
+       с фамилиями — ПО ШИРИНЕ ТЕКСТА в ячейках, как на вкладке
+       год»): доля 42% заменена переменной --ws-tt-emp-w — её
+       меряет JS _measureTtEmpFullW (максимум «№ таб. + 5px маржи
+       + ФИО» строк и заголовка «Сотрудник» + паддинги ячейки
+       8+8 + 2 запас; годовая таблица — авто-раскладка, её колонка
+       и так по тексту — теперь месяц совпадает с ней). Фолбэк 42%
+       — прежняя доля (до замера/VM-моки/скрытый контейнер);
+       fixed-раскладка и равные столбцы данных остаются — делят
+       остаток ширины */
     .ws-tt-table:not(.ws-tt-year) th.ws-tt-emp,
     .ws-tt-table:not(.ws-tt-year) td.ws-tt-emp {
-        width: 42%;          /* мобайл: ФИО + равные столбцы данных */
+        width: var(--ws-tt-emp-w, 42%);   /* Task 382: по тексту («как в году»); фолбэк — прежняя доля */
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -6286,12 +6297,13 @@
        месяц и год»): суженная ширина колонки «Сотрудник» итогов —
        переменная --ws-tt-emp-nw (меряет JS _measureEmpNarrowW —
        максимум «Сотр»/4 букв фамилии + паддинги 16 + 2). Правило —
-       ОБЯЗАТЕЛЬНО ПОСЛЕ базовой 42%-й доли (специфичность
+       ОБЯЗАТЕЛЬНО ПОСЛЕ базового правила ширины (специфичность
        (0,3,1) равна — побеждает ПОЗДНИЙ): месячная таблица
-       (fixed-раскладка) раньше НЕ сужалась — 42% из базового
-       правила перекрывало узкую ширину из раннего Task 334-блока,
+       (fixed-раскладка) раньше НЕ сужалась — базовая ширина
+       перекрывала узкую ширину из раннего Task 334-блока,
        колонка оставалась широкой при прокрутке. Теперь явная
-       узкая ширина перебивает долю — сужается и месяц, и год */
+       узкая ширина перебивает базовую ширину (Task 382 —
+       var(--ws-tt-emp-w, 42%)) — сужается и месяц, и год */
     .ws-tt-table.ws-narrow th.ws-tt-emp,
     .ws-tt-table.ws-narrow td.ws-tt-emp {
         width: var(--ws-tt-emp-nw, 48px);
@@ -40752,6 +40764,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     // Task 378: шрифт меняет перенос текста окон бара —
                     // пересчёт значков раскрытия
                     try { if (self._barExpSyncAll) self._barExpSyncAll(); } catch (e) {}
+                    // Task 382: полная ширина колонки «Сотрудник»
+                    // итогов (месяц, мобайл) — тоже зависит от шрифта
+                    try { if (self._measureTtEmpFullW) self._measureTtEmpFullW(); } catch (e) {}
                 });
             }
 
@@ -42872,6 +42887,101 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (tw > 0) setVar('--ws-tt-emp-nw', Math.ceil(tw + 16 + 2) + 'px');
         },
 
+        // Task 382 (заявка: «в мобильной версии, на странице
+        // итогов учёта, в таблице вкладки месяц изначальную ширину
+        // столбца с фамилиями — ПО ШИРИНЕ ТЕКСТА в ячейках, как на
+        // вкладке год»): замер ПОЛНОЙ (изначальной) ширины колонки
+        // «Сотрудник» таблиц итогов. Годовая таблица — авто-раскладка
+        // (колонка и так по тексту); месячная — fixed, её колонка
+        // получает ту же «естественную» ширину через переменную
+        // --ws-tt-emp-w: максимум по строкам (№ таб. + 5px маржи +
+        // ФИО) и заголовку «Сотрудник» + паддинги ячейки 8+8 + 2px
+        // запас (границы border-collapse + субпиксельность).
+        // Приём — как у _measureEmpNarrowW: спаны inline, их rect =
+        // ширина текста (эллипсис/ширина колонки не искажают замер);
+        // при АКТИВНОМ сужении текст временно возвращается к
+        // data-full, скрытый таб. номер показывается на время замера
+        // (инлайн-стиль), один reflow — всё возвращается. Результат —
+        // на body (наследуют и шторка, и страница итогов);
+        // невидимый контейнер (rect = 0) пропускается. Вызывается из
+        // _reapplyEmpNarrow (после КАЖДОГО рендера итогов — месяц и
+        // год зовут его последними) и по document.fonts.ready
+        // (поздний шрифт меняет ширину текста)
+        _measureTtEmpFullW: function() {
+            if (typeof document === 'undefined' || !document.body
+                    || !document.body.style
+                    || !document.body.style.setProperty) return;
+            var setVar = function(name, wpx) {
+                if (wpx <= 0) return;
+                if (document.body.style.getPropertyValue(name) === wpx) return;
+                document.body.style.setProperty(name, wpx);
+            };
+            // ширина прямоугольника inline-спана = ширина его текста
+            var spanW = function(el) {
+                if (!el || !el.getBoundingClientRect) return 0;
+                try {
+                    var r = el.getBoundingClientRect();
+                    return r ? r.width : 0;
+                } catch (e) { return 0; }
+            };
+            // максимум «естественной» ширины содержимого колонки
+            var maxW = function(container) {
+                if (!container || !container.querySelectorAll) return 0;
+                try {
+                    if (container.getBoundingClientRect
+                            && container.getBoundingClientRect().width <= 0) return 0;
+                } catch (e) { return 0; }
+                var spans = container.querySelectorAll('[data-s4]');
+                var olds = [], tabnos = [], oldD = [], i;
+                // 1) временно: ПОЛНЫЙ текст спанов + видимый № таб.
+                for (i = 0; i < spans.length; i++) {
+                    var full = spans[i].getAttribute
+                        ? (spans[i].getAttribute('data-full') || '') : '';
+                    olds.push(spans[i].textContent);
+                    if (full) spans[i].textContent = full;
+                }
+                var tnos = container.querySelectorAll('.ws-tt-tabno');
+                for (i = 0; i < tnos.length; i++) {
+                    if (!tnos[i].style) continue;
+                    tabnos.push(tnos[i]);
+                    oldD.push(tnos[i].style.display);
+                    tnos[i].style.display = 'inline';
+                }
+                // 2) один reflow — строки (№ таб. + 5px маржи + ФИО)
+                // и заголовок «Сотрудник» (как в авто-раскладке года)
+                var w = 0;
+                var cells = container.querySelectorAll('td.ws-tt-emp');
+                for (i = 0; i < cells.length; i++) {
+                    var cw = 0;
+                    var tno = cells[i].querySelector
+                        ? cells[i].querySelector('.ws-tt-tabno') : null;
+                    var nm = cells[i].querySelector
+                        ? cells[i].querySelector('.ws-tt-name') : null;
+                    if (tno) cw += spanW(tno) + 5;
+                    if (nm) cw += spanW(nm);
+                    if (cw > w) w = cw;
+                }
+                var heads = container.querySelectorAll('.ws-tt-emp-head');
+                for (i = 0; i < heads.length; i++) {
+                    var hw = spanW(heads[i]);
+                    if (hw > w) w = hw;
+                }
+                // 3) вернуть текст и инлайн-стили № таб.
+                for (i = 0; i < spans.length; i++) {
+                    spans[i].textContent = olds[i];
+                }
+                for (i = 0; i < tabnos.length; i++) {
+                    tabnos[i].style.display = oldD[i];
+                }
+                return w;
+            };
+            // итоги: шторка ИЛИ страница (меряется видимая)
+            var tw = maxW(document.getElementById('wsTtBody'));
+            var pw = maxW(document.getElementById('wsTtPageBody'));
+            if (tw < pw) tw = pw;
+            if (tw > 0) setVar('--ws-tt-emp-w', Math.ceil(tw + 16 + 2) + 'px');
+        },
+
         // Task 315: окно 2 бара — данные ВСЕХ мероприятий открытого
         // месяца (заявка: «второе окно с данными всех мероприятий на
         // открытый месяц, между кнопками и окном времени и
@@ -43450,6 +43560,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // тексту (толерантно к VM-мокам без метода)
             if (typeof this._measureEmpNarrowW === 'function') {
                 try { this._measureEmpNarrowW(); } catch (e) {}
+            }
+            // Task 382: ПОЛНАЯ (изначальная) ширина колонки
+            // «Сотрудник» итогов — по тексту (толерантно к мокам)
+            if (typeof this._measureTtEmpFullW === 'function') {
+                try { this._measureTtEmpFullW(); } catch (e) {}
             }
             var ids = ['wsGridWrap', 'wsTtBody', 'wsTtPageBody'];
             for (var i = 0; i < ids.length; i++) {
