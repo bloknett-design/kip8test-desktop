@@ -17691,7 +17691,11 @@
      («Отпуска» — периоды года шахматки по частям) и мероприятия
      («Инструктажи» — события месяца с кнопками правки/удаления).
      Карточка прикреплена к клику: закрытие — фоновый кловер
-     и Esc. -->
+     и Esc. Task 384: карточка — ЦЕНТР ПРАВКИ по отдельности:
+     «Правка данных…» (профиль → updateEmployee), ✎/✕ у периодов
+     отпусков (updateVacation/deleteVacation), «+ Мероприятие…»
+     (openTrainingForm с префиллом) — редакторам; шахматка на
+     месяц и год строится из этих данных («Сформировать»). -->
 <div id="wsEmpPopupCloser" class="ws-popup-closer" onclick="WorkSchedule.closeEmpPopup()"></div>
 <div id="wsEmpPopup" class="ws-cell-popup ws-emp-popup" role="dialog" aria-label="Карточка сотрудника"></div>
 
@@ -17706,7 +17710,7 @@
 <div id="wsEmpOverlay" class="pin-sheet-overlay" onclick="WorkSchedule.closeEmployeeForm()"></div>
 <div id="wsEmpSheet" class="flow-input-sheet" style="max-height: 90vh; overflow-y: auto;">
     <div class="flow-input-sheet-handle"></div>
-    <div class="flow-input-sheet-title">Новый сотрудник</div>
+    <div class="flow-input-sheet-title" id="wsEmpSheetTitle">Новый сотрудник</div>
     <div class="flow-input-row">
         <div class="flow-input-group" style="flex:0 0 35%;">
             <label class="flow-input-label" for="wsEmpTabNo">Таб. №</label>
@@ -17771,7 +17775,7 @@
         </div>
     </div>
     <textarea id="wsEmpComment" class="flow-comment-field" rows="2" maxlength="500" placeholder="Комментарий (необязательно)" autocomplete="off"></textarea>
-    <button type="button" class="flow-input-submit" onclick="WorkSchedule.submitEmployeeForm()">Добавить</button>
+    <button type="button" class="flow-input-submit" id="wsEmpSubmitBtn" onclick="WorkSchedule.submitEmployeeForm()">Добавить</button>
     <button type="button" class="flow-input-cancel" onclick="WorkSchedule.closeEmployeeForm()">Отмена</button>
 </div>
 
@@ -17863,7 +17867,7 @@
 <div id="wsVacOverlay" class="pin-sheet-overlay" onclick="WorkSchedule.closeVacationForm()"></div>
 <div id="wsVacSheet" class="flow-input-sheet" style="max-height: 90vh; overflow-y: auto;">
     <div class="flow-input-sheet-handle"></div>
-    <div class="flow-input-sheet-title">Новый отпуск</div>
+    <div class="flow-input-sheet-title" id="wsVacSheetTitle">Новый отпуск</div>
     <div class="flow-input-row">
         <div class="flow-input-group" style="flex:0 0 35%;">
             <label class="flow-input-label" for="wsVacTabNo">Таб. №</label>
@@ -17894,7 +17898,7 @@
     <div class="ws-vac-form-info" id="wsVacYearInfo">—</div>
     <div class="ws-vac-form-hint">Отпуск делится на 2–3 части в год, одна из частей — не менее 14 календарных дней (ст. 125 ТК РФ). Праздничные нерабочие дни (ст. 112 ТК РФ) в число дней отпуска не включаются (ст. 120 ТК РФ); годовой лимит — 42 дня. Дни периода отметятся в шахматке кодом «О» после нажатия «Сформировать».</div>
     <textarea id="wsVacComment" class="flow-comment-field" rows="2" maxlength="500" placeholder="Комментарий (необязательно)" autocomplete="off"></textarea>
-    <button type="button" class="flow-input-submit" onclick="WorkSchedule.submitVacationForm()">Добавить</button>
+    <button type="button" class="flow-input-submit" id="wsVacSubmitBtn" onclick="WorkSchedule.submitVacationForm()">Добавить</button>
     <button type="button" class="flow-input-cancel" onclick="WorkSchedule.closeVacationForm()">Отмена</button>
 </div>
 
@@ -40223,11 +40227,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     //   workSchedule.setManualEntry      — upsert ручной правки
     //   workSchedule.deleteEntry         — удалить ручную запись
     //   workSchedule.addEmployee         — добавить сотрудника
+    //   workSchedule.updateEmployee      — правка данных сотрудника
+    //                                     (Task 384: таб_№ — PK,
+    //                                     не меняется; B..G, J..K)
     //   workSchedule.addTraining         — добавить мероприятие
     //   workSchedule.deleteTraining      — удалить мероприятие
     //   workSchedule.listVacations       — план отпусков года (Task 274,
     //                                      лист «Отпуска» табель_КИП_ИОС)
     //   workSchedule.addVacation         — добавить период (часть 1..3)
+    //   workSchedule.updateVacation      — правка периода отпуска
+    //                                     (Task 384: по id, проверки
+    //                                     исключают саму строку)
     //   workSchedule.deleteVacation      — удалить период
     //
     // Страницы:
@@ -40406,6 +40416,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // closeDismissForm; submitDismissForm отправляет пару
         // {таб_номер, дата_увольнения} → dismissEmployee
         _dismissTabNo: null,
+
+        // Task 384: режим ПРАВКИ шторки сотрудника — таб. №
+        // редактируемого (null — создание). Поле таб. № в правке
+        // readOnly (PK: на него ссылаются «Записи_графика»/
+        // «Инструктажи»/«Отпуска» — смена таб. № через правку
+        // запрещена); submitEmployeeForm уходит в
+        // workSchedule.updateEmployee
+        _empEditTab: null,
+
+        // Task 384: режим ПРАВКИ шторки отпуска — id редактируемого
+        // периода (null — создание). Подбор «части», пересечения и
+        // лимит года НЕ считают саму строку (период заменяется
+        // целиком); submitVacationForm уходит в
+        // workSchedule.updateVacation
+        _vacEditId: null,
 
         // Task 314: локальная копия данных графика (localStorage) —
         // график открывается МГНОВЕННО без сети; обновление — кнопкой
@@ -46028,6 +46053,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         this._esc(fields[fi][1]) + '</span></div>';
             }
 
+            // Task 384: «Правка данных…» — шторка сотрудника в режиме
+            // ПРАВКИ (профиль: ФИО/тип/смена/шаблон/старт/приём/
+            // должность/комментарий; таб. № — readonly, PK). Сервер:
+            // workSchedule.updateEmployee. Только редакторам — как
+            // «Уволить…» (двойная защита в openEmpEditForm)
+            if (this._canEdit) {
+                html += '<div class="ws-popup-row ws-popup-more ws-emp-editdata"' +
+                        ' title="Правка данных сотрудника: ФИО, режим, должность…"' +
+                        ' onclick="WorkSchedule.openEmpEditForm(\'' +
+                        this._esc(String(emp['таб_номер'] || '')) + '\')">Правка данных…</div>';
+            }
+
             // Task 318: «Уволить…» — форма увольнения (дата → таблица
             // «Сотрудники», строка сотрудника уходит из шахматки,
             // остаётся в архиве справочника). Только ролям с правом
@@ -46064,6 +46101,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var vNet = this._vacNetDaysInYear(vv, this._year);
                     var vCal = this._vacDaysInYear(vv, this._year);
                     var pNo = parseInt(vv.часть, 10);
+                    // Task 384: ✎ — правка периода (шторка «Правка
+                    // отпуска», сервер updateVacation), ✕ — удаление
+                    // (deleteVacation с подтверждением). Редакторам и
+                    // только записям с id (строки листа без id —
+                    // ручное заполнение — не правятся, как «Удалить»
+                    // из Task 279)
+                    var vActs = '';
+                    var vId = parseInt(vv.id, 10);
+                    if (this._canEdit && vId) {
+                        vActs = '<span class="ws-popup-act" title="Редактировать период"' +
+                                ' onclick="event.stopPropagation(); WorkSchedule.editVacation(' + vId + ')">✎</span>' +
+                                '<span class="ws-popup-act ws-popup-act-del" title="Удалить период"' +
+                                ' onclick="event.stopPropagation(); WorkSchedule.deleteVacation(' + vId + ')">✕</span>';
+                    }
                     html += '<div class="ws-emp-field"><span class="ws-emp-k">Часть ' +
                             (pNo ? pNo : '—') + '</span><span class="ws-emp-v">' +
                             this._fmtDateRu(vv.дата_начала) + ' — ' +
@@ -46072,7 +46123,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             (vCal > vNet ? ' (−' + (vCal - vNet) + ' праздн.)' : '') +
                             (String(vv.комментарий || '').trim()
                                 ? ' · «' + this._esc(vv.комментарий) + '»' : '') +
-                            '</span></div>';
+                            '</span>' + vActs + '</div>';
                 }
             }
             // Task 312: «+ Отпуск…» — функционал убранной из тулбара
@@ -46132,6 +46183,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             this._esc(t.тема || meta.name || t.тип) +
                             ' · ' + period + '</span>' + acts + '</div>';
                 }
+            }
+            // Task 384: «+ Мероприятие…» — шторка «Новое мероприятие»
+            // с УЖЕ ВЫБРАННЫМ сотрудником карточки (как «+ Отпуск…»,
+            // Task 312). Только редакторам (двойная защита —
+            // onEmpAddTraining → openTrainingForm)
+            if (this._canEdit) {
+                html += '<div class="ws-popup-row ws-popup-more ws-emp-addtr"' +
+                        ' title="Добавить мероприятие этому сотруднику"' +
+                        ' onclick="WorkSchedule.onEmpAddTraining(\'' +
+                        this._esc(String(emp['таб_номер'] || '')) + '\')">+ Мероприятие…</div>';
             }
             return html;
         },
@@ -46477,6 +46538,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         openEmployeeForm: function() {
             if (!this._canEdit) return;
+            // Task 384: сброс режима правки — шторка открывается на
+            // СОЗДАНИЕ (заголовок/кнопка/таб. № вводится; режим правки
+            // ставит openEmpEditForm поверх этих значений)
+            this._empEditTab = null;
+            var sheetTitle = document.getElementById('wsEmpSheetTitle');
+            var submitBtn = document.getElementById('wsEmpSubmitBtn');
+            if (sheetTitle) sheetTitle.textContent = 'Новый сотрудник';
+            if (submitBtn) submitBtn.textContent = 'Добавить';
+            var tabInput = document.getElementById('wsEmpTabNo');
+            if (tabInput) tabInput.readOnly = false;
             var patSel = document.getElementById('wsEmpPattern');
             if (patSel) {
                 var html = '<option value="">— выберите —</option>';
@@ -46511,6 +46582,92 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         closeEmployeeForm: function() {
             document.getElementById('wsEmpOverlay').classList.remove('active');
             document.getElementById('wsEmpSheet').classList.remove('active');
+            // Task 384: сброс режима правки (таб. № снова вводится)
+            this._empEditTab = null;
+            var tabInput = document.getElementById('wsEmpTabNo');
+            if (tabInput) tabInput.readOnly = false;
+        },
+
+        // Task 384: правка данных сотрудника из карточки (строка
+        // «Правка данных…») — шторка #wsEmpSheet в режиме ПРАВКИ:
+        // поля заполняются значениями сотрудника, заголовок/кнопка
+        // меняются («Правка сотрудника»/«Сохранить»), таб. № —
+        // READONLY (PK: смена таб. № сломала бы ссылки листов
+        // «Записи_графика»/«Инструктажи»/«Отпуска»). Карточка
+        // закрывается ДО шторки (z-уровень попапа 9401 выше шторки
+        // 201 — как openDismissForm/onEmpAddVacation)
+        openEmpEditForm: function(tabNo) {
+            if (!this._canEdit) return;
+            var emp = null;
+            for (var i = 0; i < (this._EMPLOYEES || []).length; i++) {
+                if (this._EMPLOYEES[i]['таб_номер'] === tabNo) {
+                    emp = this._EMPLOYEES[i];
+                    break;
+                }
+            }
+            if (!emp) {
+                if (typeof KipToast !== 'undefined') KipToast.show('Сотрудник не найден');
+                return;
+            }
+            this._empEditTab = String(emp['таб_номер']);
+
+            // Шаблоны ротации — как при создании (префилл значения)
+            var patSel = document.getElementById('wsEmpPattern');
+            if (patSel) {
+                var patHtml = '<option value="">— выберите —</option>';
+                for (var pi = 0; pi < this._PATTERNS.length; pi++) {
+                    patHtml += '<option value="' + this._PATTERNS[pi].id + '">' +
+                               this._esc(this._PATTERNS[pi].name) + ' (цикл ' +
+                               this._PATTERNS[pi].cycle + ' дн)</option>';
+                }
+                patSel.innerHTML = patHtml;
+                var empPat = parseInt(emp['шаблон_ротации'], 10);
+                if (empPat) patSel.value = String(empPat);
+            }
+
+            // Поля профиля из записи сотрудника (старт цикла обязателен
+            // на клиенте: пустой в записи → сегодня)
+            document.getElementById('wsEmpTabNo').value = String(emp['таб_номер'] || '');
+            document.getElementById('wsEmpTabNo').readOnly = true;
+            document.getElementById('wsEmpFio').value = String(emp['ФИО'] || '');
+            var tip = String(emp['тип'] || '').trim();
+            document.getElementById('wsEmpType').value =
+                (tip === 'сменный' || tip === 'дневной') ? tip : 'сменный';
+            var smena = parseInt(emp['смена'], 10);
+            document.getElementById('wsEmpShift').value =
+                (smena >= 1 && smena <= 5) ? String(smena) : '';
+            document.getElementById('wsEmpStart').value =
+                String(emp['старт_цикла'] || '') || this._isoDate(new Date());
+            document.getElementById('wsEmpHire').value = String(emp['дата_приёма'] || '');
+            // Должность: временная опция текущего значения — асинхронный
+            // _fillPositionSelect сохранит выбор (keep = sel.value,
+            // Task 318), полный список подгрузится поверх
+            var posSel = document.getElementById('wsEmpPosition');
+            var posVal = String(emp['должность'] || '').trim();
+            if (posSel && posVal) {
+                posSel.innerHTML = '<option value="' + this._escAttr(posVal) + '">' +
+                                   this._esc(posVal) + '</option>';
+                posSel.value = posVal;
+            } else if (posSel) {
+                posSel.innerHTML = '<option value="">— выберите —</option>';
+            }
+            this._fillPositionSelect();
+            document.getElementById('wsEmpComment').value = String(emp['комментарий'] || '');
+            this.onEmpTypeChange();
+
+            // Режим правки: заголовок и кнопка
+            var sheetTitle = document.getElementById('wsEmpSheetTitle');
+            var submitBtn = document.getElementById('wsEmpSubmitBtn');
+            if (sheetTitle) sheetTitle.textContent = 'Правка сотрудника';
+            if (submitBtn) submitBtn.textContent = 'Сохранить';
+
+            this.closeEmpPopup();
+            document.getElementById('wsEmpOverlay').classList.add('active');
+            document.getElementById('wsEmpSheet').classList.add('active');
+            setTimeout(function() {
+                var f = document.getElementById('wsEmpFio');
+                if (f) f.focus();
+            }, 350);
         },
 
         onEmpTypeChange: function() {
@@ -46679,6 +46836,37 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!tabNo) { if (typeof KipToast !== 'undefined') KipToast.show('Введите таб. №'); return; }
             if (!fio)   { if (typeof KipToast !== 'undefined') KipToast.show('Введите ФИО'); return; }
             if (!startCycle) { if (typeof KipToast !== 'undefined') KipToast.show('Укажите дату старта цикла'); return; }
+
+            // Task 384: РЕЖИМ ПРАВКИ — данные существующего сотрудника
+            // обновляются (workSchedule.updateEmployee; таб. № — из
+            // _empEditTab, поле в форме readonly/PK). Шторка закрывается
+            // только при успехе — при ошибке поля сохранены для повтора
+            if (this._empEditTab) {
+                var editTab = this._empEditTab;
+                this._api('workSchedule.updateEmployee', {
+                    'таб_номер': editTab, 'ФИО': fio, тип: type,
+                    смена: shift || null,
+                    шаблон_ротации: patId ? parseInt(patId, 10) : null,
+                    старт_цикла: startCycle,
+                    дата_приёма: hireDate || null,
+                    должность: position,
+                    комментарий: comment
+                }).then(function() {
+                    self._empEditTab = null;
+                    self.closeEmployeeForm();
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Данные сотрудника обновлены');
+                    }
+                    // как при добавлении: перезагружаем шахматку — строка
+                    // сотрудника перечитается из справочника
+                    self.loadGrid(true);
+                }).catch(function(err) {
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Ошибка: ' + self._apiErrText(err));
+                    }
+                });
+                return;
+            }
 
             this._api('workSchedule.addEmployee', {
                 'таб_номер': tabNo, 'ФИО': fio, тип: type,
@@ -46936,14 +47124,58 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this.openVacationForm(tabNo);
         },
 
+        // Task 384: «+ Мероприятие…» из карточки сотрудника — шторка
+        // «Новое мероприятие» с префиллом сотрудника (как «+ Отпуск…»,
+        // Task 312): карточка закрывается (z-уровень попапа выше
+        // шторки), openTrainingForm(tabNo) выбирает сотрудника в
+        // селекте ДО дефолтов даты
+        onEmpAddTraining: function(tabNo) {
+            this.closeEmpPopup();
+            this.openTrainingForm(tabNo);
+        },
+
+        // Task 384: правка периода отпуска из карточки сотрудника
+        // (кнопка ✎ у периода) — находит запись в _VACATIONS по id
+        // и открывает шторку в режиме ПРАВКИ (openVacationForm с
+        // 2-м аргументом — как openTrainingForm с editTraining).
+        // Попапы закрываются: шторка с оверлеем ниже попапа по
+        // z-index (как editTraining/onEmpAddVacation)
+        editVacation: function(id) {
+            if (!this._canEdit) return;
+            var vid = parseInt(id, 10);
+            var rec = null;
+            for (var i = 0; i < (this._VACATIONS || []).length; i++) {
+                if (parseInt(this._VACATIONS[i].id, 10) === vid) {
+                    rec = this._VACATIONS[i];
+                    break;
+                }
+            }
+            if (!rec) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Период отпуска не найден — обновите график');
+                }
+                return;
+            }
+            this.closeCellPopup();
+            this.closeEmpPopup();
+            this.openVacationForm(rec['таб_номер'], rec);
+        },
+
         // Task 312: tabNo (необяз.) — префилл сотрудника из карточки
         // (строка «+ Отпуск…» в блоке отпусков): выбирается в списке
         // ДО вызова onVacEmployeeChange, поэтому «часть» (первый
         // свободный номер) и строка лимита года сразу считаются для
         // НУЖНОГО сотрудника. Без аргумента (прочие вызовы) — как
         // раньше: «— выберите —»
-        openVacationForm: function(tabNo) {
+        // Task 384: 2-й аргумент editVacation — запись из _VACATIONS
+        // (кнопка ✎ в карточке): режим ПРАВКИ — поля заполняются
+        // значениями периода, id хранится в _vacEditId, submit
+        // уходит в updateVacation, проверки части/пересечения/лимита
+        // НЕ считают саму строку
+        openVacationForm: function(tabNo, editVacation) {
             if (!this._canEdit) return;
+            var sheetTitle = document.getElementById('wsVacSheetTitle');
+            var submitBtn = document.getElementById('wsVacSubmitBtn');
             var empSel = document.getElementById('wsVacTabNo');
             if (empSel) {
                 var html = '<option value="">— выберите —</option>';
@@ -46957,19 +47189,42 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     empSel.value = String(tabNo);
                 }
             }
-            // даты по умолчанию: сегодня + 14 дней (минимальная «большая»
-            // часть по ст. 125 ТК РФ), число дней пересчитается
-            var today = this._isoDate(new Date());
-            var startInput = document.getElementById('wsVacStart');
-            var endInput = document.getElementById('wsVacEnd');
-            if (startInput) startInput.value = today;
-            if (endInput) {
-                var dft = new Date();
-                dft.setDate(dft.getDate() + 13);
-                endInput.value = this._isoDate(dft);
+            // Task 384: два режима — создание (по умолчанию) и ПРАВКА
+            // существующего периода (editVacation: запись найдена в
+            // _VACATIONS по id — editVacation())
+            this._vacEditId = null;
+            if (editVacation && editVacation.id) {
+                this._vacEditId = parseInt(editVacation.id, 10);
+                if (empSel) empSel.value = String(editVacation['таб_номер'] || '');
+                var recPart = parseInt(editVacation.часть, 10);
+                document.getElementById('wsVacPart').value =
+                    (recPart >= 1 && recPart <= 3) ? String(recPart) : '1';
+                document.getElementById('wsVacStart').value =
+                    String(editVacation.дата_начала || '');
+                document.getElementById('wsVacEnd').value =
+                    String(editVacation.дата_окончания ||
+                           editVacation.дата_начала || '');
+                document.getElementById('wsVacComment').value =
+                    String(editVacation.комментарий || '');
+                if (sheetTitle) sheetTitle.textContent = 'Правка отпуска';
+                if (submitBtn) submitBtn.textContent = 'Сохранить';
+            } else {
+                // даты по умолчанию: сегодня + 14 дней (минимальная «большая»
+                // часть по ст. 125 ТК РФ), число дней пересчитается
+                var today = this._isoDate(new Date());
+                var startInput = document.getElementById('wsVacStart');
+                var endInput = document.getElementById('wsVacEnd');
+                if (startInput) startInput.value = today;
+                if (endInput) {
+                    var dft = new Date();
+                    dft.setDate(dft.getDate() + 13);
+                    endInput.value = this._isoDate(dft);
+                }
+                document.getElementById('wsVacPart').value = '1';
+                document.getElementById('wsVacComment').value = '';
+                if (sheetTitle) sheetTitle.textContent = 'Новый отпуск';
+                if (submitBtn) submitBtn.textContent = 'Добавить';
             }
-            document.getElementById('wsVacPart').value = '1';
-            document.getElementById('wsVacComment').value = '';
             this.onVacEmployeeChange();
             this.onVacDatesChange();
 
@@ -46984,10 +47239,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         closeVacationForm: function() {
             document.getElementById('wsVacOverlay').classList.remove('active');
             document.getElementById('wsVacSheet').classList.remove('active');
+            // Task 384: сброс режима правки (следующее открытие — создание)
+            this._vacEditId = null;
         },
 
         // Выбор сотрудника → «часть» подставляется первым свободным
-        // номером (1..3) этого сотрудника в выбранном году
+        // номером (1..3) этого сотрудника в выбранном году.
+        // Task 384: в режиме ПРАВКИ своя строка не занимает «часть»
+        // (период заменяется целиком); выбранная часть СОХРАНЯЕТСЯ,
+        // если свободна у других периодов — правим часть 2, не
+        // перетаскивая на 1; занята — первый свободный, как при
+        // создании
         onVacEmployeeChange: function() {
             var empSel = document.getElementById('wsVacTabNo');
             var partSel = document.getElementById('wsVacPart');
@@ -46996,14 +47258,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var used = {};
             for (var i = 0; i < (this._VAC_PAGE || []).length; i++) {
                 var v = this._VAC_PAGE[i];
+                // Task 384: правка — своя строка не считается
+                if (this._vacEditId && parseInt(v.id, 10) === this._vacEditId) continue;
                 if (v['таб_номер'] === tabNo &&
                     String(v.дата_начала).slice(0, 4) === String(this._vacYear)) {
                     used[parseInt(v.часть, 10)] = true;
                 }
             }
-            var free = 1;
-            while (free <= 3 && used[free]) free++;
-            if (free <= 3) partSel.value = String(free);
+            var cur = parseInt(partSel.value, 10);
+            if (this._vacEditId && cur >= 1 && cur <= 3 && !used[cur]) {
+                // выбранная часть свободна — сохраняем (режим правки)
+            } else {
+                var free = 1;
+                while (free <= 3 && used[free]) free++;
+                if (free <= 3) partSel.value = String(free);
+            }
             // все 3 части заняты — оставляем выбор пользователю,
             // сервер отклонит дубль (duplicate_часть) с пояснением
             // Task 310: смена сотрудника пересчитывает строку лимита
@@ -47030,6 +47299,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             for (var i = 0; i < (this._VAC_PAGE || []).length; i++) {
                 var v = this._VAC_PAGE[i];
                 if (v['таб_номер'] !== tabNo) continue;
+                // Task 384: правка — своя строка не в счёт «запланиро-
+                // вано» (период заменяется новым значением формы)
+                if (this._vacEditId && parseInt(v.id, 10) === this._vacEditId) continue;
                 used += this._vacNetDaysInYear(v, year);
             }
             var e = document.getElementById('wsVacEnd') ?
@@ -47098,6 +47370,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             for (var i = 0; i < (this._VAC_PAGE || []).length; i++) {
                 var v = this._VAC_PAGE[i];
                 if (v['таб_номер'] !== tabNo) continue;
+                // Task 384: правка — пересечение с САМОЙ СОБОЙ не
+                // считается (период заменяется целиком)
+                if (this._vacEditId && parseInt(v.id, 10) === this._vacEditId) continue;
                 if (startDate <= v.дата_окончания && endDate >= v.дата_начала) {
                     if (typeof KipToast !== 'undefined') KipToast.show(
                         'Период пересекается с отпуском ' +
@@ -47118,6 +47393,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             for (var li = 0; li < (this._VAC_PAGE || []).length; li++) {
                 var lv = this._VAC_PAGE[li];
                 if (lv['таб_номер'] !== tabNo) continue;
+                // Task 384: правка — своя строка не в счёт лимита
+                if (this._vacEditId && parseInt(lv.id, 10) === this._vacEditId) continue;
                 usedNet += this._vacNetDaysInYear(lv, vacYear);
             }
             var addNet = this._vacSplitDays(
@@ -47129,6 +47406,33 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     ' дн. (ТК РФ): уже запланировано ' + usedNet +
                     ', этот период добавит ' + addNet +
                     ' — всего ' + (usedNet + addNet) + ' дн.');
+                return;
+            }
+
+            // Task 384: РЕЖИМ ПРАВКИ — период обновляется НА МЕСТЕ
+            // (workSchedule.updateVacation, id из _vacEditId; проверки
+            // выше уже исключили саму строку из пересечений/лимита).
+            // Шторка закрывается только при успехе — при ошибке поля
+            // сохранены для повтора
+            if (this._vacEditId) {
+                var editVacId = this._vacEditId;
+                this._api('workSchedule.updateVacation', {
+                    id: editVacId,
+                    'таб_номер': tabNo, часть: part,
+                    дата_начала: startDate, дата_окончания: endDate,
+                    комментарий: comment
+                }).then(function() {
+                    self._vacEditId = null;
+                    self.closeVacationForm();
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Период отпуска обновлён. Нажмите «Сформировать» в шахматке — дни отметятся кодом «О»');
+                    }
+                    self.loadGrid(true);
+                }).catch(function(err) {
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Ошибка: ' + self._apiErrText(err));
+                    }
+                });
                 return;
             }
 
@@ -47159,6 +47463,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         deleteVacation: function(id) {
             if (!this._canEdit) return;
+            // Task 384: кнопки ✕ теперь и в карточке сотрудника —
+            // закрываем попапы ДО диалога подтверждения (как
+            // deleteTraining: карточка по z-уровню выше шторок)
+            this.closeCellPopup();
+            this.closeEmpPopup();
             var self = this;
             if (typeof kipConfirm === 'function') {
                 kipConfirm('Удалить период отпуска id=' + id + '?', { danger: true })
