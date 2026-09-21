@@ -5718,8 +5718,9 @@
        сжимается, дни прокручиваются под ней). Task 386 — ДВА
        ВИДА: выезжает в СОКРАЩЁННОМ виде (~190px: свотч + код, без
        наименований — .ws-lg-name скрыт), значок-шеврон #wsLgChv
-       на левом крае разворачивает ШИРОКУЮ панель (min(400px,
-       45vw): наименования кодов + пояснения вёрстки; класс
+       на левом крае разворачивает ШИРОКУЮ панель (Task 387,
+       заявка: «до 500px» — min(500px, 45vw): наименования кодов +
+       пояснения вёрстки; класс
        .ws-lg-wide на шторке, анимация width 0.28s у drawer и
        inner). inner — flex: none, НЕ сжимается: Task 385 мерил
        getBoundingClientRect при свёрнутом слоте — inner пригибался
@@ -5750,7 +5751,9 @@
         transition: width 0.28s ease;
     }
     .ws-legend-drawer.ws-lg-wide .ws-legend-inner {
-        width: min(400px, 45vw);  /* развёрнутый вид: с наименованиями */
+        /* Task 387 (заявка): развёрнутый вид — ДО 500px (было 400px);
+           на узких экранах капится 45vw; наименования + пояснения */
+        width: min(500px, 45vw);
     }
     [data-theme="light"] .ws-legend-inner {
         background: var(--bg-tertiary, #e9e7de);
@@ -5852,6 +5855,17 @@
         border-radius: 4px;
         border: 1px solid rgba(0,0,0,0.3);
         flex: none;
+    }
+    /* Task 387 (заявка: «я убрал точку — теперь просто пустая
+       ячейка белого цвета»): свотч строки «Выходной» — ПУСТАЯ
+       ячейка (как ws-swatch-dot попапа и ws-dot-code сетки):
+       код-символ больше не показывается, выходной представляет
+       сам свотч; inline-цвет листа НЕ ставится */
+    .ws-lg-swatch.ws-lg-swatch-dot {
+        background: var(--bg-primary, #1a2233);
+    }
+    [data-theme="light"] .ws-lg-swatch.ws-lg-swatch-dot {
+        background: #FFFFFF;
     }
     .ws-lg-code { font-weight: 700; min-width: 36px; flex: none; }
     /* Task 386: наименования кодов — ТОЛЬКО развёрнутый вид
@@ -15057,7 +15071,11 @@
                  _renderLegendSheet (_legendHtml): коды дней Т-12/Т-13
                  из справочника «Коды_статусов» (живые цвета), коды
                  мероприятий, обозначения вёрстки. Взаимоисключающая
-                 с «Итогами учёта» -->
+                 с «Итогами учёта». Task 387: развёрнутая панель —
+                 до 500px; справочник нормализован к канону (порядок
+                 по группам + полные наименования —
+                 _normalizeStatusCodes); «Выходной» — пустая белая
+                 ячейка без кода-точки -->
             <div id="wsLegendDrawer" class="ws-legend-drawer">
                 <div class="ws-lg-edge" aria-hidden="true"></div>
                 <!-- Task 386: значок-шеврон разворачивает панель ШИРЕ
@@ -40611,6 +40629,38 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // семейства отсутствий (документация/тесты).
         _EVENT_CODES: ['И', 'ОБ', 'ПЗ', 'ПР', '*'],
         _ABSENCE_CODES: ['ОТ', 'У', 'ОВ', 'Б', 'ПР'],
+        // Task 387 (заявка): КАНОН справочника «Коды_статусов» —
+        // порядок по группам и ПОЛНЫЕ наименования кодов для всех
+        // списков выбора (попап ячейки, select «Дополнительно…»,
+        // легенда «Обозначения», печать). Источник данных остаётся
+        // лист «Коды_статусов» (живые ЦВЕТА), но порядок строк и
+        // формулировки нормализуются клиентом (_normalizeStatusCodes)
+        // — независимо от порядка строк в листе. «Выходной» — код
+        // ПУСТОЙ: заявка «я убрал точку — теперь просто пустая
+        // ячейка белого цвета» (легаси-«.» в Записях_графика и в
+        // листе маппится в «»; ячейка и без того рендерится пустой
+        // белой — Task 356). Цвет «Выходного» справочный: свотч и
+        // ячейка красятся CSS-классом пустой ячейки (ws-swatch-dot/
+        // ws-dot-code), цвет из листа НЕ применяется. Цвета осталь-
+        // ных — фолбэк офлайна (= fallback _loadStatusCodes)
+        _STATUS_CODES_CANON: [
+            {code:'Д8',   name:'День, плановая дневная 8-часовая смена (с 7:30 до 16:30), в пятницу (предпраздничный день) на час короче', color:'#FFF9C4'},
+            {code:'Д7,2', name:'День, плановая дневная 7,2-часовая смена (с 7:30 до 15:48), в пятницу (предпраздничный день) на час короче', color:'#FFF9C4'},
+            {code:'Д',    name:'День, плановая дневная 12-часовая смена (с 7:30 до 19:30)', color:'#FFE082'},
+            {code:'Н',    name:'Ночь, плановая ночная 12-часовая смена (с 19:30 до 7:30)', color:'#B0BEC5'},
+            {code:'д',    name:'День, плановая продолжительность работы в выходные и нерабочие праздничные дни, для сменного персонала дневная 12-часовая смена (с 7:30 до 19:30), для дневного персонала — с указанием продолжительности (в часах) в комментарии', color:'#FFD54F'},
+            {code:'н',    name:'Ночь, плановая продолжительность работы в выходные и нерабочие праздничные дни, для сменного персонала ночная 12-часовая смена (с 19:30 до 7:30), для дневного персонала — с указанием продолжительности (в часах) в комментарии', color:'#78909C'},
+            {code:'ОТ',   name:'Отпуск, ежегодный основной оплачиваемый отпуск', color:'#ECEFF1'},
+            {code:'У',    name:'Учебный отпуск, дополнительный отпуск в связи с обучением с сохранением среднего заработка', color:'#80CBC4'},
+            {code:'ОВ',   name:'Отгул, выходные дни (оплачиваемые, за ранее отработанное время, без содержания — с указанием в комментарии)', color:'#C5E1A5'},
+            {code:'Б',    name:'Больничный, временная нетрудоспособность с назначением пособия', color:'#F8BBD0'},
+            {code:'',     name:'Выходной, плановый выходной день', color:'#EEF0F2'},
+            {code:'ПР',   name:'Прогул (отсутствие без уважительных причин)', color:'#EF5350'},
+            {code:'И',    name:'Инструктаж, проведение повторных инструктажей по охране труда и промышленной безопасности', color:'#B3E5FC'},
+            {code:'ОБ',   name:'Обучение, обучение по охране труда и промышленной безопасности', color:'#D1C4E9'},
+            {code:'ПЗ',   name:'Проверка знаний, по охране труда и промышленной безопасности, до 1000В, на допуск к самостоятельной работе', color:'#FFCDD2'},
+            {code:'*',    name:'Примечание, не плановые или не регламентированные случаи (аварийные работы, принят, уволен), с обязательным комментированием', color:'#FFAB91'}
+        ],
         // Task 305: «отпуск в приоритете, плановая смена — рядом».
         // Task 306: бейдж плановой смены — ТОЛЬКО у сотрудников типа
         // «сменный» (дневные Д8/Д7,2 его больше не показывают —
@@ -41220,6 +41270,64 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return String(err || 'ошибка');
         },
 
+        // Task 387 (заявка: «скорректируй в списках выбора кодов
+        // дней и мероприятий с правками в описании и в следующей
+        // последовательности по группам»): нормализация ЛЮБОГО
+        // списка кодов (сервер / кэш localStorage / фолбэк) к канону
+        // _STATUS_CODES_CANON:
+        //   • известные канону коды — в КАНОНИЧЕСКОМ ПОРЯДКЕ по
+        //     группам, наименования — канонические (полные форму-
+        //     лировки заявки), ЦВЕТА — живые из листа (свотчи);
+        //   • «Выходной» — слот с ПУСТЫМ кодом: строка листа с «»
+        //     ИЛИ легаси-«.» (пользователь убрал точку из листа —
+        //     оба варианта один и тот же выходной); отсутствует в
+        //     листе — добавляется (выходной = пустая ячейка сетки,
+        //     состояние существует всегда; цвет справочный);
+        //   • коды вне канона (пользователь расширил лист) — в
+        //     КОНЦЕ списка, в порядке листа, с живыми именами/цветами.
+        // Вызывается из _loadStatusCodes (обе ветки) и
+        // _restoreCachedView (кэш прошлых версий — донормализация)
+        _normalizeStatusCodes: function(list) {
+            if (!Array.isArray(list)) list = [];
+            var canon = this._STATUS_CODES_CANON || [];
+            var out = [], used = [];
+            for (var i = 0; i < list.length; i++) used.push(false);
+            for (var ci = 0; ci < canon.length; ci++) {
+                var entry = null;
+                for (var j = 0; j < list.length; j++) {
+                    if (!list[j] || used[j]) continue;
+                    var lj = String(list[j].code === undefined ? '' : list[j].code);
+                    // слот «Выходной»: «» или легаси-«.» (последний
+                    // листа выигрывает цвет — дубль обоих редкий край)
+                    if (lj === canon[ci].code ||
+                        (canon[ci].code === '' && lj === '.')) {
+                        entry = { code: canon[ci].code, name: canon[ci].name,
+                                  color: list[j].color || canon[ci].color };
+                        used[j] = true;
+                    }
+                }
+                // слот «Выходной» существует ВСЕГДА (выходной = пустая
+                // ячейка сетки — состояние есть при любом листе); ос-
+                // тальные канонические слоты — только если код есть в
+                // листе (пользователь мог удалить строку — «живой
+                // справочник»: удалённый код исчезает из списков)
+                if (!entry && canon[ci].code === '') {
+                    entry = { code: '', name: canon[ci].name,
+                              color: canon[ci].color };
+                }
+                if (entry) out.push(entry);
+            }
+            for (var k = 0; k < list.length; k++) {
+                if (used[k] || !list[k]) continue;
+                var kc = String(list[k].code === undefined ? '' : list[k].code).trim();
+                var kn = String(list[k].name || '').trim();
+                if (!kc && !kn) continue;
+                out.push({ code: kc, name: kn,
+                           color: String(list[k].color || '') });
+            }
+            return out;
+        },
+
         // Task 314: параметр quiet — при тихом обновлении (кнопка
         // «Обновить») сбой сети НЕ затирает уже известный справочник
         // кодов fallback-набором: живой _STATUS_CODES ценнее (цвета
@@ -41228,40 +41336,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var self = this;
             return this._api('workSchedule.getStatusCodes', {})
                 .then(function(data) {
-                    self._STATUS_CODES = data.codes || [];
+                    // Task 387: канонический порядок по группам +
+                    // полные наименования (живые цвета листа)
+                    self._STATUS_CODES = self._normalizeStatusCodes(data.codes || []);
                     self._fillStatusSelect();
                 })
                 .catch(function() {
                     if (quiet && self._STATUS_CODES && self._STATUS_CODES.length) return;
-                    // Task 298: fallback-набор = новый состав 16 кодов
-                    // (Т-12/Т-13 + строчные д/н + «.» плановый выходной).
+                    // Task 298 → 387: fallback = КАНОН
+                    // _STATUS_CODES_CANON (16 кодов Т-12/Т-13, порядок
+                    // по группам и полные наименования заявки Task 387).
                     // Используется только при недоступности сервера
                     // (офлайн/старый бэкенд) — чтобы попап и select не
-                    // пустовали; состав совпадает с листом «Коды_статусов».
-                    // Task 314: цвет «.» — фон ПУСТОЙ ячейки светлой
-                    // темы #EEF0F2 (Task 250, фон ячеек сетки; раньше
-                    // #FAF9F5 — цвет СТРАНИЦЫ, ячейки чуть темнее).
-                    // Значение справочное: «.»-ячейка красится CSS-
-                    // классом ws-dot-code (обе темы), цвет из листа
-                    // НЕ применяется к фону ячейки
-                    self._STATUS_CODES = [
-                        {code:'Д',    name:'День (12-час, 7:30–19:30)', color:'#FFE082'},
-                        {code:'Д8',   name:'День 8-час (7:30–16:30)', color:'#FFF9C4'},
-                        {code:'Д7,2', name:'День 7,2-час (пятн./предпраздн.)', color:'#FFF9C4'},
-                        {code:'Н',    name:'Ночь (12-час, 19:30–7:30)', color:'#B0BEC5'},
-                        {code:'д',    name:'День в вых./праздник', color:'#FFD54F'},
-                        {code:'н',    name:'Ночь в вых./праздник', color:'#78909C'},
-                        {code:'ОТ',   name:'Отпуск ежегодный основной', color:'#ECEFF1'},
-                        {code:'У',    name:'Учебный отпуск', color:'#80CBC4'},
-                        {code:'ОВ',   name:'Отгул (оплачиваемый)', color:'#C5E1A5'},
-                        {code:'Б',    name:'Больничный', color:'#F8BBD0'},
-                        {code:'ПР',   name:'Прогул', color:'#EF5350'},
-                        {code:'И',    name:'Инструктаж', color:'#B3E5FC'},
-                        {code:'ОБ',   name:'Обучение', color:'#D1C4E9'},
-                        {code:'ПЗ',   name:'Проверка знаний', color:'#FFCDD2'},
-                        {code:'*',    name:'Примечание (с комментарием)', color:'#FFAB91'},
-                        {code:'.',    name:'Плановый выходной день', color:'#EEF0F2'}
-                    ];
+                    // пустовали. Цвет «Выходного» (пустой код) —
+                    // справочный: ячейка красится CSS-классом
+                    // ws-dot-code (обе темы), цвет из листа к фону
+                    // ячейки НЕ применяется
+                    self._STATUS_CODES = self._normalizeStatusCodes(self._STATUS_CODES_CANON);
                     self._fillStatusSelect();
                 });
         },
@@ -41285,21 +41376,26 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!sel) return;
             var codes = this._STATUS_CODES || [];
             if (!codes.length) return; // коды ещё не загружены — опции не трогаем
+            // Task 387: «.» в данных и пустой код справочника — ОДИН
+            // и тот же «выходной» (пустая ячейка): select представляет
+            // опция «— выходной —» (value ""); легаси-«.» текущего
+            // значения маппится в неё
+            var cur = (current === '.') ? '' : current;
             var hasCurrent = false;
             var html = '<option value="">— выходной —</option>';
             for (var i = 0; i < codes.length; i++) {
                 var c = codes[i];
-                if (this._EVENT_CODES.indexOf(c.code) !== -1 && c.code !== current) continue;
-                if (current && current === c.code) hasCurrent = true;
-                // Task 314: «.» в списке — символ «·» (как в ячейке);
-                // value остаётся «.» (данные/сервер не меняются)
-                var label = (c.code === '.') ? '·' : c.code;
+                // Task 387: строка «Выходной» (код «»/«.») уже
+                // представлена опцией «— выходной —» — дубль не строим
+                if (c.code === '' || c.code === '.') continue;
+                if (this._EVENT_CODES.indexOf(c.code) !== -1 && c.code !== cur) continue;
+                if (cur && cur === c.code) hasCurrent = true;
                 html += '<option value="' + this._escAttr(c.code) + '">' +
-                        this._esc(label) + ' — ' + this._esc(c.name) + '</option>';
+                        this._esc(c.code) + ' — ' + this._esc(c.name) + '</option>';
             }
-            if (current && !hasCurrent) {
-                html += '<option value="' + this._escAttr(current) + '">' +
-                        this._esc(current) + ' — (нет в справочнике)</option>';
+            if (cur && !hasCurrent) {
+                html += '<option value="' + this._escAttr(cur) + '">' +
+                        this._esc(cur) + ' — (нет в справочнике)</option>';
             }
             sel.innerHTML = html;
         },
@@ -41412,7 +41508,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!Array.isArray(c.patterns)) return false;
             var vacs = c.vacations && c.vacations[String(this._year)];
             if (!Array.isArray(vacs)) return false;
-            this._STATUS_CODES = c.codes;
+            // Task 387: кэш мог быть записан прежней версией (порядок
+            // строк листа, старые формулировки, «.»-выходной) —
+            // донормализуем к канону (как после _loadStatusCodes)
+            this._STATUS_CODES = this._normalizeStatusCodes(c.codes);
             this._PATTERNS = c.patterns;
             this._EMPLOYEES = c.employees;
             this._ENTRIES = view.entries;
@@ -42397,7 +42496,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var codes = this._STATUS_CODES || [];
             html += '<div class="wsp-legend"><span class="wsp-legend-t">Коды:</span>';
             for (var ci = 0; ci < codes.length; ci++) {
-                if (!usedCodes[codes[ci].code]) continue;
+                // Task 387: «.» в данных = выходной — раскрывается
+                // строкой «Выходного» (пустой код) БЕЗ кода-символа
+                if (!usedCodes[codes[ci].code] &&
+                    !(codes[ci].code === '' && usedCodes['.'])) continue;
+                if (codes[ci].code === '') {
+                    html += '<span class="wsp-lg"><i style="background:' +
+                            (codes[ci].color || '#ffffff') + ';"></i>' +
+                            this._esc(codes[ci].name || 'Выходной') +
+                            '</span>';
+                    continue;
+                }
                 html += '<span class="wsp-lg"><i style="background:' +
                         (codes[ci].color || '#ffffff') + ';"></i>' +
                         this._esc(codes[ci].code) +
@@ -44114,13 +44223,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Task 386: целевая фикс-ширина шторки «Обозначения»:
         // узкий вид (коды без наименований) — 190px; широкий
-        // (наименования + пояснения) — min(400px, 45vw); согласо-
-        // вано с CSS-правилом .ws-legend-drawer.ws-lg-wide inner
+        // (наименования + пояснения) — Task 387 (заявка «до 500px»):
+        // min(500px, 45vw), было 400px; согласовано с CSS-правилом
+        // .ws-legend-drawer.ws-lg-wide inner
         _legendWidthPx: function() {
             var vw = (typeof window !== 'undefined' && window.innerWidth)
                 ? window.innerWidth : 1280;
             return this._legendWide
-                ? Math.max(190, Math.min(400, Math.floor(vw * 0.45)))
+                ? Math.max(190, Math.min(500, Math.floor(vw * 0.45)))
                 : 190;
         },
 
@@ -44197,9 +44307,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var dayHtml = '', evHtml = '';
             for (var i = 0; i < codes.length; i++) {
                 var c = codes[i];
-                var row = '<div class="ws-lg-item"><span class="ws-lg-swatch" style="background:' +
-                          this._esc(String(c.color || '#3a3a3a')) + '"></span><span class="ws-lg-code">' +
-                          this._esc(String(c.code || '')) + '</span><span class="ws-lg-name">' +
+                // Task 387: строка «Выходной» (код «»/«.») — ПУСТАЯ
+                // ячейка белого цвета: свотч ws-lg-swatch-dot (фон
+                // пустой ячейки, тема), код-символ НЕ показывается
+                // (точка «·» убрана заявкой)
+                var isDot = (c.code === '.' || c.code === '');
+                var row = '<div class="ws-lg-item"><span class="ws-lg-swatch' +
+                          (isDot ? ' ws-lg-swatch-dot' : '') + '"' +
+                          (isDot ? '' : ' style="background:' +
+                           this._esc(String(c.color || '#3a3a3a')) + '"') +
+                          '></span><span class="ws-lg-code">' +
+                          this._esc(isDot ? '' : String(c.code || '')) + '</span><span class="ws-lg-name">' +
                           this._esc(String(c.name || '')) + '</span></div>';
                 if (evSet[String(c.code)]) evHtml += row;
                 else dayHtml += row;
@@ -44211,15 +44329,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             html += evHtml ||
                 '<div class="ws-lg-note">Справочник кодов ещё не загружен — нажмите «Обновить».</div>';
             // Task 386: пояснения — в свёртываемом блоке .ws-lg-notesec
-            // (узкая шторка прячет его целиком — остаются коды)
+            // (узкая шторка прячет его целиком — остаются коды).
+            // Task 387 (заявка): три пояснения УДАЛЕНЫ («Код меро-
+            // приятия ставится в угол ячейки…», «В отпусках: "12
+            // дней (−2 праздн.)"…», «Зебра строк…»); «Рамка 2px…»
+            // переозвучена: «Красная рамка… (пример - 24*)»
             html += '<div class="ws-lg-notesec">';
-            html += '<div class="ws-lg-note">Код мероприятия ставится в угол ячейки ПОВЕРХ плановой смены (Д/Н); ручная правка дня сильнее.</div>';
             html += '<div class="ws-lg-sec">Обозначения в шахматке</div>';
             html += '<div class="ws-lg-note">Бейдж «Д»/«Н» в правом нижнем углу ячейки отпуска — плановая смена по циклу (только у сменных работников).</div>';
             html += '<div class="ws-lg-note">Подсветка числа и столбца — сегодняшняя дата.</div>';
-            html += '<div class="ws-lg-note">Рамка 2px вокруг группы ячеек — выходные и праздники; «*» у числа (24*) — сокращённый предпраздничный день.</div>';
-            html += '<div class="ws-lg-note">В отпусках: «12 дней (−2 праздн.)» — вычтены праздники (ст. 120 ТК РФ); годовой лимит — 42 дня (ст. 125 ТК РФ, до 3 частей).</div>';
-            html += '<div class="ws-lg-note">Зебра строк — чередование фона по работникам; перекрестье — подсветка строки и столбца при наведении (кнопка в ряду 3).</div>';
+            html += '<div class="ws-lg-note">Красная рамка вокруг группы ячеек — выходные и праздники; «*» у числа (пример - 24*) — сокращённый предпраздничный день.</div>';
             html += '</div>';
             return html;
         },
@@ -46061,11 +46180,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // день события без смены) — такой день в попапе не
                 // подсвечен строкой, событие видно в окне мероприятий
                 if (this._EVENT_CODES.indexOf(c.code) !== -1) continue;
-                // Task 314: код «.» в попапе — символ «·» (как в ячейке);
-                // свотч «.» — ws-swatch-dot (фон пустой ячейки, тема),
-                // inline-цвет листа не показываем: свотч предпросмотр
-                // ячейки, а «.»-ячейка = пустая
-                var isDot = (c.code === '.');
+                // Task 387 (заявка: «я убрал точку — теперь просто
+                // пустая ячейка белого цвета»): строка «Выходной» —
+                // БЕЗ кода-символа («·» убран), свотч ws-swatch-dot
+                // (фон пустой ячейки, тема), inline-цвет листа не
+                // показываем: свотч — предпросмотр ячейки, а выходной
+                // = пустая белая. Справочник несёт пустой код (канон)
+                // или легаси-«.» — детектируются оба (VM-тесты ставят
+                // _STATUS_CODES напрямую)
+                var isDot = (c.code === '.' || c.code === '');
                 // Task 322: у кода «д»/«н», стоящего в ячейке, — показ
                 // указанных часов («День в вых./праздник · 8 ч»);
                 // сменному часы не предлагаются (всегда 12)
@@ -46073,12 +46196,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                            (c.code === 'д' || c.code === 'н') &&
                            typeof eff['часы'] === 'number' && isFinite(eff['часы']) && eff['часы'] > 0)
                     ? ' · ' + this._fmtTotalsNum(eff['часы']) + ' ч' : '';
-                html += '<div class="ws-popup-row' + (current === c.code ? ' ws-popup-active' : '') + '"' +
+                // Task 387: активность — текущий код ИЛИ легаси-«.»
+                // у строки «Выходного» («.»-ячейка = выходной);
+                // клик по «Выходному» (пустой код) — очистка ячейки
+                // (onPopupStatus('') → путь шита, как «— выходной —»)
+                html += '<div class="ws-popup-row' +
+                        ((current === c.code || (isDot && current === '.')) ? ' ws-popup-active' : '') + '"' +
                         ' onclick="WorkSchedule.onPopupStatus(\'' + this._esc(c.code) + '\')">' +
                         (isDot
                             ? '<span class="ws-popup-swatch ws-swatch-dot"></span>'
                             : '<span class="ws-popup-swatch" style="background:' + (c.color || '#3a3a3a') + ';"></span>') +
-                        '<span class="ws-popup-code">' + this._esc(isDot ? '·' : c.code) + '</span>' +
+                        '<span class="ws-popup-code">' + this._esc(isDot ? '' : c.code) + '</span>' +
                         '<span class="ws-popup-name">' + this._esc(c.name) + this._esc(dnH) + '</span></div>';
             }
             // Task 313: секция «Мероприятия в этот день» УДАЛЕНА из
@@ -47019,6 +47147,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // текущее значение (даже легаси-код, удалённый из листа)
             // добавляется временной опцией — value не теряется.
             var curStatus = entry ? (entry.статус || '') : '';
+            // Task 387: «.» в данных = выходной (пустая ячейка) —
+            // select показывает «— выходной —» (value "")
+            if (curStatus === '.') curStatus = '';
             this._fillStatusSelect(curStatus);
             document.getElementById('wsCellStatus').value = curStatus;
             document.getElementById('wsCellOvertime').value = entry && entry.переработка === 1 ? '1' : '0';
