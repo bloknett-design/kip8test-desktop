@@ -4939,20 +4939,32 @@
        край цвета остаётся только на СТЫКЕ прошедших и идущих-будущих;
        вертикальный ритм сохранён (3px сверху/снизу строки; от
        заголовка и до значка — 3px, .ws-events-panel > * + *).
-       Окно «Нормы» (.ws-cal-panel) НЕ тронута — там свой gap */
+       Окно «Нормы» (.ws-cal-panel) НЕ тронута — там свой gap.
+       Task 389 (заявка: «в окне мероприятий, цвет общего фона за
+       мероприятиями с прошедшими датами сделай как раньше был
+       общий фон (как сейчас общий фон выше за оглавлением окна)»):
+       строки ПРОШЕДШИХ мероприятий — ПРОЗРАЧНЫЕ (background:
+       transparent, обе темы) — сквозь них виден ОБЩИЙ ФОН ОКНА
+       var(--bg-tertiary), тот же, что выше заголовка .ws-ep-cap
+       («как раньше», до Task 380); «светлее окна» Task 380/381 для
+       прошедших ОТМЕНЕНО. Текущие/будущие — ТЕМНЕЕ окна как прежде
+       (rgba-тинты не тронуты); класс .ws-ep-past, каскад
+       специфичностей (0,1,0 → 0,2,0 → 0,2,0 → 0,3,0) и склейка
+       строк сохранены — видимый край цвета остаётся только на
+       СТЫКЕ прошедших (общий фон) и идущих-будущих (тёмная зона) */
     .ws-ep-item {
         padding: 3px 10px;
         margin: 0 -10px;
         background: rgba(0, 0, 0, 0.45);
     }
     .ws-ep-item.ws-ep-past {
-        background: rgba(255, 255, 255, 0.12);
+        background: transparent;
     }
     [data-theme="light"] .ws-ep-item {
         background: rgba(0, 0, 0, 0.12);
     }
     [data-theme="light"] .ws-ep-item.ws-ep-past {
-        background: rgba(255, 255, 255, 0.55);
+        background: transparent;
     }
     /* Task 381 (заявка): склейка строк — ОБЩИЙ ФОН окна на уровне
        текста мероприятий (см. комментарий Task 381 выше). Правило
@@ -5922,8 +5934,9 @@
        «Работники» ряда 1 тулбара (редакторам; Task 386: заголовок
        шапки сетки — просто надпись). Карточка .ws-wcard — панель с
        внутренностями попапа шахматки (ws-popup-title/поля/секции
-       тех же классов); кнопка «Добавить работника» в шапке страницы
-       (Task 386: прежде значок «+») — шторка создания #wsEmpSheet
+       тех же классов); кнопка «Добавить работника» — на «Общей»
+       вкладке (Task 389: перенесена из шапки страницы; Task 386:
+       прежде значок «+» в шапке) — шторка создания #wsEmpSheet
        (openEmployeeForm). Task 388 (заявка): представление — ВКЛАДКИ,
        как ярлыки страниц открытых сайтов в классических браузерах,
        только СТОЛБИКОМ СЛЕВА: первая сверху — «Общая» (сводка по
@@ -5932,12 +5945,17 @@
     .ws-workers-body {
         padding: 10px 12px 24px;
         max-width: 1020px;   /* Task 388: вкладки слева + карточка справа */
-        margin: 0 auto;
+        /* Task 389 (заявка): ярлыки и окна вкладок — с ЛЕВОГО КРАЯ
+           (было авто-центрирование — блок стоял по центру на
+           широких экранах) */
+        margin: 0;
     }
     .ws-workers-count {
         font-size: 12px;
         opacity: 0.75;
-        margin: 2px 2px 10px;
+        /* Task 389: строка живёт в шапке сводки .ws-wgen-head —
+           внешние отступы ушли контейнеру */
+        margin: 0;
     }
     .ws-wcard {
         background: var(--bg-tertiary, #0e1621);
@@ -5977,7 +5995,15 @@
     /* Task 388 (заявка): ярлыки-вкладки СТОЛБИКОМ СЛЕВА (браузерный
        вид): активный ярлык подсвечен и «пристыкован» к телу
        (margin-right:-1px, правая рамка прозрачна); тело — карточка
-       выбранного работника / сводная таблица «Общей» вкладки */
+       выбранного работника / сводная таблица «Общей» вкладки.
+       Task 389 (заявка: «фон ярлыков и окон вкладок сделай не
+       прозрачным»): ярлыки — СПЛОШНОЙ цвет (были rgba-тинты —
+       фоновая сетка-«миллиметровка» страницы просвечивала):
+       неактивный — var(--bg-primary) / #E4E0D3 (тёмная/светлая),
+       hover — сплошной светлее; активный — как ОКНО вкладки
+       (var(--bg-tertiary), «пристыкован»). Окна вкладок: «Общая» —
+       панель .ws-wgen (сплошной var(--bg-tertiary)), работник —
+       .ws-wcard (уже сплошной) */
     .ws-workers-layout {
         display: flex;
         align-items: stretch;
@@ -5996,7 +6022,7 @@
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-left: 3px solid transparent;
         border-radius: 8px 0 0 8px;
-        background: rgba(255, 255, 255, 0.04);
+        background: var(--bg-primary, #1a2233);   /* Task 389: сплошной */
         color: var(--text-secondary, rgba(255,255,255,0.65));
         padding: 8px 10px;
         font-size: 12.5px;
@@ -6005,7 +6031,8 @@
         overflow-wrap: break-word;
     }
     .ws-wtab:hover {
-        background: rgba(255, 255, 255, 0.09);
+        /* Task 389: сплошной, светлее неактивного var(--bg-primary) */
+        background: #243048;
         color: var(--text-primary, #e0e0e0);
     }
     .ws-wtab.active {
@@ -6025,10 +6052,10 @@
     .ws-wtab-body .ws-wcard { margin-bottom: 0; }
     [data-theme="light"] .ws-wtab {
         border-color: rgba(0, 0, 0, 0.12);
-        background: rgba(0, 0, 0, 0.04);
+        background: #E4E0D3;   /* Task 389: сплошной */
         color: #444;
     }
-    [data-theme="light"] .ws-wtab:hover { background: rgba(0, 0, 0, 0.08); color: #111; }
+    [data-theme="light"] .ws-wtab:hover { background: #DBD6C8; color: #111; }
     [data-theme="light"] .ws-wtab.active {
         background: var(--bg-tertiary, #e9e7de);
         border-color: rgba(0, 0, 0, 0.16);
@@ -6037,8 +6064,42 @@
         color: #111;
     }
 
-    /* Task 388: «Общая» вкладка — сводная таблица по ВСЕМ работникам */
-    .ws-wgen-head { margin: 2px 2px 10px; }
+    /* Task 388: «Общая» вкладка — сводная таблица по ВСЕМ
+       работникам. Task 389 (заявка): ОКНО «Общей» вкладки — панель
+       .ws-wgen со СПЛОШНЫМ фоном (как карточка .ws-wcard —
+       сетка-«миллиметровка» страницы не просвечивает); шапка
+       сводки — flex: численность (текущая — автоматический подсчёт,
+       по штату — константа) слева, кнопка «Добавить работника»
+       (перенос из шапки страницы) справа */
+    .ws-wgen {
+        background: var(--bg-tertiary, #0e1621);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 10px;
+        padding: 12px 14px 10px;
+    }
+    [data-theme="light"] .ws-wgen {
+        background: var(--bg-tertiary, #e9e7de);
+        border-color: rgba(0,0,0,0.1);
+    }
+    .ws-wtab-body .ws-wgen { margin-bottom: 0; }
+    .ws-wgen-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 6px 12px;
+        margin: 2px 2px 10px;
+    }
+    .ws-wgen-info {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+    .ws-wgen-staff {
+        font-size: 12px;
+        opacity: 0.75;
+    }
     .ws-wgen-table {
         width: 100%;
         border-collapse: collapse;
@@ -14861,9 +14922,10 @@
                     <!-- Task 311: кнопка «+ Сотрудник» УДАЛЕНА из тулбара
                          (Task 307 приносил её сюда со страницы
                          «Сотрудники»). Task 386: добавление работника —
-                         кнопкой «Добавить работника» в шапке страницы
-                         «Работники» (заголовок шапки сетки — просто
-                         надпись, функции кнопки больше не несёт). -->
+                         кнопкой «Добавить работника» (Task 389: на
+                         «Общей» вкладке страницы «Работники»; Task 386:
+                         была в шапке страницы — заголовок шапки сетки
+                         просто надпись, функции кнопки не несёт). -->
                     <!-- Task 312: кнопка «+ Отпуск» УДАЛЕНА из тулбара
                          (пришла сюда в Task 308 с удалённой страницы
                          «Отпуска»). Её функцию теперь выполняет строка
@@ -15277,15 +15339,16 @@
              карточка выбранного работника справа);
              данные обновляются вместе с сеткой (loadGrid(true) →
              _renderGrid → _renderWorkersIfOpen); «Добавить
-             работника» в шапке (Task 386: прежде значок «+») —
-             шторка создания (openEmployeeForm) -->
+             работника» — на «Общей» вкладке (Task 389: перенесена
+             из шапки страницы; Task 386: прежде значок «+» в шапке)
+             — шторка создания (openEmployeeForm) -->
         <div id="page-ws-workers" class="page-content">
             <div class="page-inline-header">
                 <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
                 <div class="page-inline-header-title">Работники</div>
-                <!-- Task 386 (заявка): текстовая кнопка «Добавить
-                     работника» (прежде — значок «+») -->
-                <button type="button" id="wsWorkersAddBtn" class="ws-workers-add" onclick="WorkSchedule.openEmployeeForm()" aria-label="Добавить работника">Добавить работника</button>
+                <!-- Task 389 (заявка): кнопка «Добавить работника»
+                     ПЕРЕНЕСЕНА из шапки страницы на «Общую» вкладку
+                     — рендерит _renderWorkersGeneral (id сохранён) -->
             </div>
             <div id="wsWorkersBody" class="ws-workers-body"></div>
         </div>
@@ -47109,15 +47172,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _renderWorkersPage: function() {
             var body = document.getElementById('wsWorkersBody');
             if (!body) return;
-            if (!this._EMPLOYEES || !this._EMPLOYEES.length) {
-                body.innerHTML = '<div class="ws-tt-empty">Нет активных работников. ' +
-                                 'Добавьте первого кнопкой «Добавить работника» в шапке страницы.</div>';
-                return;
-            }
             var withEdit = !!this._canEdit;
             // ПО ФАМИЛЬНО ПО АЛФАВИТУ: сортировка по ФИО (фамилия —
-            // первое слово ФИО) — порядок ярлыков вкладок
-            var list = this._EMPLOYEES.slice().sort(function(a, b) {
+            // первое слово ФИО) — порядок ярлыков вкладок.
+            // Task 389: пустой список НЕ прерывает рендер — «Общая»
+            // вкладка (кнопка «Добавить работника», численность)
+            // показывается и без работников
+            var list = (this._EMPLOYEES || []).slice().sort(function(a, b) {
                 return String(a['ФИО'] || '').localeCompare(
                     String(b['ФИО'] || ''), 'ru');
             });
@@ -47149,10 +47210,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
 
             // тело вкладки: «Общая» — сводная таблица всех
-            // работников; работник — полная карточка (withEdit)
+            // работников (Task 389: ОКНО-панель .ws-wgen со сплошным
+            // фоном — как карточка работника); работник — полная
+            // карточка (withEdit)
             var contentHtml = '';
             if (tab === 'general') {
-                contentHtml = this._renderWorkersGeneral(list);
+                contentHtml = '<div class="ws-wgen">' +
+                    this._renderWorkersGeneral(list) + '</div>';
             } else {
                 var empTabNo = null;
                 for (var ei = 0; ei < list.length; ei++) {
@@ -47175,15 +47239,33 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // работникам (по фамильно по алфавиту): таб. №, ФИО, режим
         // работы (тип/смена), должность, дата приёма, отпуск года
         // («чистые» дни — праздники ст. 120 ТК РФ вычтены) и число
-        // мероприятий месяца шахматки
+        // мероприятий месяца шахматки.
+        // Task 389 (заявка): в шапке сводки — ЧИСЛЕННОСТЬ: «на
+        // текущий момент N …» (N — АВТОМАТИЧЕСКИЙ ПОДСЧЁТ по живому
+        // списку, склонение _plural) и «по штату 14, из которых
+        // 2 мастера, 5 сменных и 7 дневных» (штат — константа);
+        // кнопка «Добавить работника» ПЕРЕНЕСЕНА сюда из шапки
+        // страницы (id wsWorkersAddBtn сохранён; только у
+        // редакторов — _canEdit)
         _renderWorkersGeneral: function(list) {
             var monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь',
                               'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
             var shiftN = 0, dayN = 0;
-            var html = '<div class="ws-wgen-head"><span class="ws-workers-count">' +
+            var addBtn = this._canEdit
+                ? '<button type="button" id="wsWorkersAddBtn" class="ws-workers-add" onclick="WorkSchedule.openEmployeeForm()" aria-label="Добавить работника">Добавить работника</button>'
+                : '';
+            var html = '<div class="ws-wgen-head"><div class="ws-wgen-info">' +
+                       '<span class="ws-workers-count">На текущий момент: ' +
                        list.length + ' ' +
                        this._plural(list.length, ['работник', 'работника', 'работников']) +
-                       '</span></div>';
+                       ' (автоматический подсчёт).</span>' +
+                       '<span class="ws-wgen-staff">По штату: 14, из которых ' +
+                       '2 мастера, 5 сменных и 7 дневных.</span>' +
+                       '</div>' + addBtn + '</div>';
+            if (!list.length) {
+                html += '<div class="ws-tt-empty">Нет активных работников — добавьте первого кнопкой «Добавить работника».</div>';
+                return html;
+            }
             html += '<table class="ws-wgen-table"><thead><tr>' +
                     '<th>Таб. №</th><th>ФИО</th><th>Режим работы</th>' +
                     '<th>Должность</th><th>Дата приёма</th>' +
