@@ -4517,9 +4517,9 @@
         /* Task 361 (заявка: «сделай отображение на печати значков
            мероприятий в ячейках шахматки»): бейджи мероприятий в
            печати ВЕРНУТЫ (Task 343 их убирал; заявка 361 вернула).
-           Формат — как в экранной сетке (Task 314): сплошной
-           бейдж с inline-цветом кода — у сформированного дня,
-           пунктирный (план) — у пустой ячейки/плана отпуска.
+           Формат — как в экранной сетке (Task 314/388): бейдж
+           ВСЕГДА сплошной с inline-цветом кода (Task 388: пунктирные
+           wsp-ev-plan у пустой ячейки удалены — как в сетке).
            Правый НИЖНИЙ угол (точка переработки — правый
            верхний, конфликтов нет); цвет печатается принудительно */
         #wsPrintSheet .wsp-ev-wrap {
@@ -4542,7 +4542,8 @@
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
-        #wsPrintSheet .wsp-ev.wsp-ev-plan { border-style: dashed; }
+        /* Task 388: пунктирный бейдж-план печати удалён — бейдж
+           мероприятия всегда сплошной с цветом кода (как в сетке) */
         /* переработка — красная точка в правом верхнем углу
            (Task 361: 1.6→2.2mm — заметнее на печати) */
         #wsPrintSheet .wsp-over {
@@ -4761,8 +4762,11 @@
        и «Нормы» бара УБРАТА (приём Task 331 — оба движка): скролл
        остаётся КОЛЕСОМ/СВАЙПОМ/КЛАВИШАМИ ↑↓ (окна фокусируемы —
        tabindex в разметке). ВМЕСТО полосы — ЗНАЧОК полного раскрытия
-       .ws-bar-exp в правом нижнем углу (создаёт/обновляет
-       _barExpSync): клик раскрывает окно на ВЕСЬ текст — низ
+       .ws-bar-exp в правом ВЕРХНЕМ углу (создаёт/обновляет
+       _barExpSync; Task 388: прежде был в правом нижнем и уезжал
+       вместе с нижней гранью при раскрытии — верх при раскрытии
+       НЕ двигается, значок стоит на месте): клик раскрывает окно
+       на ВЕСЬ текст — низ
        смещается вниз по количеству текста (инлайновая высота =
        scrollHeight, плавный transition), повторный клик возвращает
        95px. Значок НЕ активен (окно свёрнуто) — приглушён
@@ -4819,7 +4823,7 @@
     .ws-bar-exp {
         position: absolute;
         right: 5px;
-        bottom: 5px;
+        top: 5px;
         z-index: 2;
         display: flex;
         align-items: center;
@@ -4846,6 +4850,11 @@
     }
     .ws-bar-exp.on svg { transform: rotate(180deg); }
     [data-theme="light"] .ws-bar-exp { color: #222; }
+    /* Task 388: значок раскрытия — в ПРАВОМ ВЕРХНЕМ углу; плашки-
+       заголовки окон (мероприятия/нормы) получают правый добор
+       паддинга — текст заголовка не прячется под значком */
+    .ws-events-panel .ws-ep-cap,
+    .ws-cal-panel .ws-cp-cap { padding-right: 26px; }
     /* Заголовок окна — плашка в духе столбиков календаря (Task 270),
        зелёная — «мероприятия»; в заголовке месяц, год и счётчик
        записей; длинный заголовок переносится (normal) */
@@ -5716,8 +5725,8 @@
        итогов учёта: кнопка-переключатель «Обозначения» (ряд 2);
        ДЕСКТОП — панель выезжает СПРАВА (margin-right 0.28s, сетка
        сжимается, дни прокручиваются под ней). Task 386 — ДВА
-       ВИДА: выезжает в СОКРАЩЁННОМ виде (~190px: свотч + код, без
-       наименований — .ws-lg-name скрыт), значок-шеврон #wsLgChv
+       ВИДА: выезжает в КРАТКОМ виде (~230px: свотч + код + краткое
+       обозначение кода — .ws-lg-name скрыт, Task 388), значок-шеврон #wsLgChv
        на левом крае разворачивает ШИРОКУЮ панель (Task 387,
        заявка: «до 500px» — min(500px, 45vw): наименования кодов +
        пояснения вёрстки; класс
@@ -5743,7 +5752,7 @@
     }
     .ws-legend-inner {
         flex: none;           /* НЕ сжимается flex-сжатием (Task 386) */
-        width: 190px;         /* сокращённый вид: только коды */
+        width: 230px;         /* Task 388: краткий вид — коды + краткие обозначения */
         display: flex;
         flex-direction: column;
         min-height: 0;
@@ -5868,6 +5877,12 @@
         background: #FFFFFF;
     }
     .ws-lg-code { font-weight: 700; min-width: 36px; flex: none; }
+    /* Task 388 (заявка: «в кратком виде укажи краткое обозначение
+       кодов, по порядку: Д8 - день 8ч … * - не плановый»): КРАТКОЕ
+       обозначение — в кратком (узком) виде шторки; развёрнутый вид
+       и мобильная страница показывают ПОЛНЫЕ наименования */
+    .ws-lg-short { font-size: 12px; line-height: 1.35; opacity: 0.92; }
+    .ws-legend-drawer.ws-lg-wide .ws-lg-short { display: none; }
     /* Task 386: наименования кодов — ТОЛЬКО развёрнутый вид
        (широкая шторка / мобильная страница); узкая шторка — коды */
     .ws-lg-name { font-size: 12.5px; line-height: 1.35; display: none; }
@@ -5898,20 +5913,25 @@
     }
     .ws-lg-page-body .ws-lg-name { display: block; }
     .ws-lg-page-body .ws-lg-notesec { display: block; }
+    .ws-lg-page-body .ws-lg-short { display: none; }
 
     /* ============================================================
-       Task 385 → 386 (заявка): СТРАНИЦА «РАБОТНИКИ» — полные
+       Task 385 → 386 → 388 (заявка): СТРАНИЦА «РАБОТНИКИ» — полные
        карточки (внесение/редактирование профиля, отпусков,
        мероприятий; добавление работника). Переход — ТОЛЬКО кнопка
        «Работники» ряда 1 тулбара (редакторам; Task 386: заголовок
        шапки сетки — просто надпись). Карточка .ws-wcard — панель с
        внутренностями попапа шахматки (ws-popup-title/поля/секции
-       тех же классов); счётчик сверху; кнопка «Добавить работника»
-       в шапке страницы (Task 386: прежде значок «+») — шторка
-       создания #wsEmpSheet (openEmployeeForm) */
+       тех же классов); кнопка «Добавить работника» в шапке страницы
+       (Task 386: прежде значок «+») — шторка создания #wsEmpSheet
+       (openEmployeeForm). Task 388 (заявка): представление — ВКЛАДКИ,
+       как ярлыки страниц открытых сайтов в классических браузерах,
+       только СТОЛБИКОМ СЛЕВА: первая сверху — «Общая» (сводка по
+       всем работникам), под ней — работники ПО ФАМИЛЬНО ПО
+       АЛФАВИТУ; клик по ярлыку открывает карточку справа */
     .ws-workers-body {
         padding: 10px 12px 24px;
-        max-width: 760px;
+        max-width: 1020px;   /* Task 388: вкладки слева + карточка справа */
         margin: 0 auto;
     }
     .ws-workers-count {
@@ -5953,6 +5973,137 @@
         background: rgba(0,0,0,0.05);
     }
     [data-theme="light"] .ws-workers-add:hover { background: rgba(0,0,0,0.1); }
+
+    /* Task 388 (заявка): ярлыки-вкладки СТОЛБИКОМ СЛЕВА (браузерный
+       вид): активный ярлык подсвечен и «пристыкован» к телу
+       (margin-right:-1px, правая рамка прозрачна); тело — карточка
+       выбранного работника / сводная таблица «Общей» вкладки */
+    .ws-workers-layout {
+        display: flex;
+        align-items: stretch;
+    }
+    .ws-wtabs {
+        flex: none;
+        width: 236px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        padding-right: 10px;
+    }
+    .ws-wtab {
+        display: block;
+        text-align: left;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-left: 3px solid transparent;
+        border-radius: 8px 0 0 8px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text-secondary, rgba(255,255,255,0.65));
+        padding: 8px 10px;
+        font-size: 12.5px;
+        line-height: 1.3;
+        cursor: pointer;
+        overflow-wrap: break-word;
+    }
+    .ws-wtab:hover {
+        background: rgba(255, 255, 255, 0.09);
+        color: var(--text-primary, #e0e0e0);
+    }
+    .ws-wtab.active {
+        background: var(--bg-tertiary, #0e1621);
+        border-color: rgba(255, 255, 255, 0.14);
+        border-left-color: var(--accent-blue, #4a8fc7);
+        border-right-color: transparent;
+        color: var(--text-primary, #e0e0e0);
+        font-weight: 600;
+        margin-right: -1px;
+    }
+    .ws-wtab-general { letter-spacing: 0.02em; }
+    .ws-wtab-body {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .ws-wtab-body .ws-wcard { margin-bottom: 0; }
+    [data-theme="light"] .ws-wtab {
+        border-color: rgba(0, 0, 0, 0.12);
+        background: rgba(0, 0, 0, 0.04);
+        color: #444;
+    }
+    [data-theme="light"] .ws-wtab:hover { background: rgba(0, 0, 0, 0.08); color: #111; }
+    [data-theme="light"] .ws-wtab.active {
+        background: var(--bg-tertiary, #e9e7de);
+        border-color: rgba(0, 0, 0, 0.16);
+        border-left-color: var(--accent-blue, #4a8fc7);
+        border-right-color: transparent;
+        color: #111;
+    }
+
+    /* Task 388: «Общая» вкладка — сводная таблица по ВСЕМ работникам */
+    .ws-wgen-head { margin: 2px 2px 10px; }
+    .ws-wgen-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12.5px;
+    }
+    .ws-wgen-table th {
+        text-align: left;
+        font-size: 10.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        opacity: 0.72;
+        padding: 6px 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+        white-space: nowrap;
+    }
+    .ws-wgen-table td {
+        padding: 7px 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        vertical-align: top;
+    }
+    .ws-wgen-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.04); }
+    .ws-wgen-table .ws-wgen-fio { font-weight: 600; white-space: nowrap; }
+    .ws-wgen-note {
+        font-size: 12px;
+        opacity: 0.8;
+        padding: 10px 2px 0;
+    }
+    [data-theme="light"] .ws-wgen-table th { border-bottom-color: rgba(0,0,0,0.2); }
+    [data-theme="light"] .ws-wgen-table td { border-bottom-color: rgba(0,0,0,0.1); }
+    [data-theme="light"] .ws-wgen-table tbody tr:nth-child(even) { background: rgba(0,0,0,0.045); }
+
+    /* Task 388: МОБАЙЛ (≤1023px) — ярлыки горизонтальной лентой со
+       скроллом СВЕРХУ (как таб-бар мобильного браузера), тело под
+       ней; широкий ярлык обрезается многоточием */
+    @media (max-width: 1023px) {
+        .ws-workers-layout { flex-direction: column; }
+        .ws-wtabs {
+            width: auto;
+            flex-direction: row;
+            overflow-x: auto;
+            padding-right: 0;
+            padding-bottom: 8px;
+            gap: 6px;
+            scrollbar-width: none;
+        }
+        .ws-wtabs::-webkit-scrollbar { display: none; }
+        .ws-wtab {
+            flex: none;
+            border-radius: 8px;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid transparent;
+            max-width: 46vw;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .ws-wtab.active {
+            margin-right: 0;
+            border-top-color: var(--accent-blue, #4a8fc7);
+            border-right-color: rgba(255,255,255,0.14);
+        }
+        .ws-wgen-table { font-size: 12px; }
+        .ws-wgen-table .ws-wgen-fio { white-space: normal; }
+    }
 
     /* ============================================================
        Task 334 (заявка: МОБИЛЬНАЯ ВЕРСИЯ ТАБЕЛЬНОГО УЧЁТА):
@@ -7077,9 +7228,9 @@
        верхнем, конфликтов нет). Контейнер .ws-ev-wrap позиционируется
        один раз, бейджи ложатся в ряд (обычно 1–3 на день). Цвет
        бейджа — цвет кода мероприятия из справочника, текст тёмный
-       (читается на любом пастельном фоне). Пунктирный .ws-ev-pending —
-       мероприятие в день БЕЗ смены: подсказка, что код появится при
-       «Сформировать» (аналог ws-vac-plan для отпусков). */
+       (читается на любом пастельном фоне). Task 388: бейдж ВСЕГДА
+       сплошной с цветом кода — и в дне БЕЗ смены (пунктирная
+       подсказка «появится при Сформировать» удалена заявкой). */
     .ws-grid tbody td.ws-cell .ws-ev-wrap {
         position: absolute;
         bottom: 1px;
@@ -7104,16 +7255,11 @@
         box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22);
         white-space: nowrap;
     }
-    .ws-grid tbody td.ws-cell .ws-ev-badge.ws-ev-pending {
-        background: transparent;
-        border: 1px dashed rgba(255, 255, 255, 0.7);
-        color: var(--text-primary, #e0e0e0);
-        box-shadow: none;
-    }
-    [data-theme="light"] .ws-grid tbody td.ws-cell .ws-ev-badge.ws-ev-pending {
-        border-color: rgba(0, 0, 0, 0.55);
-        color: var(--text-primary, #333);
-    }
+    /* Task 388 (заявка: «цвет фона миниатюр всегда должен
+       соответствовать установленному»): пунктирный прозрачный бейдж
+       НЕсформированного дня УДАЛЁН — бейдж мероприятия ВСЕГДА
+       сплошной, фон — цвет кода из справочника (пунктирный класс
+       бейджа больше не рендерится, правила удалены) */
     /* Task 305: бейдж плановой смены на днях отпуска (.ws-ev-shift) —
        переиспользует формат мероприятия (Task 303) один в один: тот же
        .ws-ev-badge, цвет — из справочника кода смены (Д/Н/Д8/Д7,2),
@@ -7405,13 +7551,8 @@
     [data-theme="light"] .ws-grid tbody td.ws-cell {
         border-color: rgb(10, 15, 23);
     }
-    /* пунктирный бейдж будущего мероприятия — тёмный текст/рамка
-       (базовое правило красит var(--text-primary) светлым — на
-       светлом фоне нечитаемо); значения — как в светлой теме */
-    [data-theme="dark"] .ws-grid tbody td.ws-cell .ws-ev-badge.ws-ev-pending {
-        border-color: rgba(0, 0, 0, 0.55);
-        color: #141413;
-    }
+    /* Task 388: правило тёмной темы пунктирного бейджа удалено —
+       пунктирных бейджей больше нет (фон миниатюр всегда цвет кода) */
     /* свотч «.» в попапе — предпросмотр ПУСТОЙ ячейки: в тёмной теме
        ячейка теперь светлая (#eef0f2), свотч показывает то же самое */
     [data-theme="dark"] .ws-popup-swatch.ws-swatch-dot {
@@ -14925,7 +15066,7 @@
                      роли — пояснение про «только сменный») -->
                 <div id="wsViewTip" class="ws-refresh-tip" hidden>
                     <div class="ws-rt-date" id="wsViewTipTitle">Вид табеля: полный</div>
-                    <div class="ws-rt-desc" id="wsViewTipDesc">Переключение вида табеля: полный — все работники, доступна шторка «Итоги учёта»; сменный — только сменные работники; дневной — только дневные. Клик по кнопке переключает вид по кругу.</div>
+                    <div class="ws-rt-desc" id="wsViewTipDesc">Переключение вида табеля: полный — все работники; сменный — только сменные; дневной — только дневные. Итоги учёта доступны в любом виде — строки по работникам текущего вида. Клик по кнопке переключает вид по кругу.</div>
                 </div>
             </div>
             <!-- Task 308: субнавигация модуля «График работы» УДАЛЕНА
@@ -15131,7 +15272,9 @@
              данных…» (шторка #wsEmpSheet, таб. № — readonly PK) и
              «Уволить…» — всё, что до Task 385 жило в карточке
              шахматки (попап стал чисто информационным). Рендер —
-             _renderWorkersPage (порядок — как строки шахматки);
+             _renderWorkersPage (Task 388: ВКЛАДКИ-ярлыки столбиком
+             слева — «Общая» + работники по фамильно по алфавиту,
+             карточка выбранного работника справа);
              данные обновляются вместе с сеткой (loadGrid(true) →
              _renderGrid → _renderWorkersIfOpen); «Добавить
              работника» в шапке (Task 386: прежде значок «+») —
@@ -40642,24 +40785,27 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // белой — Task 356). Цвет «Выходного» справочный: свотч и
         // ячейка красятся CSS-классом пустой ячейки (ws-swatch-dot/
         // ws-dot-code), цвет из листа НЕ применяется. Цвета осталь-
-        // ных — фолбэк офлайна (= fallback _loadStatusCodes)
+        // ных — фолбэк офлайна (= fallback _loadStatusCodes).
+        // Task 388 (заявка): short — КРАТКОЕ обозначение кода
+        // («Д8 — день 8ч»…) для КРАТКОГО вида панели «Обозначения»;
+        // подробное наименование (name) — развёрнутый вид
         _STATUS_CODES_CANON: [
-            {code:'Д8',   name:'День, плановая дневная 8-часовая смена (с 7:30 до 16:30), в пятницу (предпраздничный день) на час короче', color:'#FFF9C4'},
-            {code:'Д7,2', name:'День, плановая дневная 7,2-часовая смена (с 7:30 до 15:48), в пятницу (предпраздничный день) на час короче', color:'#FFF9C4'},
-            {code:'Д',    name:'День, плановая дневная 12-часовая смена (с 7:30 до 19:30)', color:'#FFE082'},
-            {code:'Н',    name:'Ночь, плановая ночная 12-часовая смена (с 19:30 до 7:30)', color:'#B0BEC5'},
-            {code:'д',    name:'День, плановая продолжительность работы в выходные и нерабочие праздничные дни, для сменного персонала дневная 12-часовая смена (с 7:30 до 19:30), для дневного персонала — с указанием продолжительности (в часах) в комментарии', color:'#FFD54F'},
-            {code:'н',    name:'Ночь, плановая продолжительность работы в выходные и нерабочие праздничные дни, для сменного персонала ночная 12-часовая смена (с 19:30 до 7:30), для дневного персонала — с указанием продолжительности (в часах) в комментарии', color:'#78909C'},
-            {code:'ОТ',   name:'Отпуск, ежегодный основной оплачиваемый отпуск', color:'#ECEFF1'},
-            {code:'У',    name:'Учебный отпуск, дополнительный отпуск в связи с обучением с сохранением среднего заработка', color:'#80CBC4'},
-            {code:'ОВ',   name:'Отгул, выходные дни (оплачиваемые, за ранее отработанное время, без содержания — с указанием в комментарии)', color:'#C5E1A5'},
-            {code:'Б',    name:'Больничный, временная нетрудоспособность с назначением пособия', color:'#F8BBD0'},
-            {code:'',     name:'Выходной, плановый выходной день', color:'#EEF0F2'},
-            {code:'ПР',   name:'Прогул (отсутствие без уважительных причин)', color:'#EF5350'},
-            {code:'И',    name:'Инструктаж, проведение повторных инструктажей по охране труда и промышленной безопасности', color:'#B3E5FC'},
-            {code:'ОБ',   name:'Обучение, обучение по охране труда и промышленной безопасности', color:'#D1C4E9'},
-            {code:'ПЗ',   name:'Проверка знаний, по охране труда и промышленной безопасности, до 1000В, на допуск к самостоятельной работе', color:'#FFCDD2'},
-            {code:'*',    name:'Примечание, не плановые или не регламентированные случаи (аварийные работы, принят, уволен), с обязательным комментированием', color:'#FFAB91'}
+            {code:'Д8',   short:'день 8ч', name:'День, плановая дневная 8-часовая смена (с 7:30 до 16:30), в пятницу (предпраздничный день) на час короче', color:'#FFF9C4'},
+            {code:'Д7,2', short:'день 7,2ч', name:'День, плановая дневная 7,2-часовая смена (с 7:30 до 15:48), в пятницу (предпраздничный день) на час короче', color:'#FFF9C4'},
+            {code:'Д',    short:'день 12ч', name:'День, плановая дневная 12-часовая смена (с 7:30 до 19:30)', color:'#FFE082'},
+            {code:'Н',    short:'ночь 12ч', name:'Ночь, плановая ночная 12-часовая смена (с 19:30 до 7:30)', color:'#B0BEC5'},
+            {code:'д',    short:'день в выходной', name:'День, плановая продолжительность работы в выходные и нерабочие праздничные дни, для сменного персонала дневная 12-часовая смена (с 7:30 до 19:30), для дневного персонала — с указанием продолжительности (в часах) в комментарии', color:'#FFD54F'},
+            {code:'н',    short:'ночь в выходной', name:'Ночь, плановая продолжительность работы в выходные и нерабочие праздничные дни, для сменного персонала ночная 12-часовая смена (с 19:30 до 7:30), для дневного персонала — с указанием продолжительности (в часах) в комментарии', color:'#78909C'},
+            {code:'ОТ',   short:'отпуск', name:'Отпуск, ежегодный основной оплачиваемый отпуск', color:'#ECEFF1'},
+            {code:'У',    short:'ученический', name:'Учебный отпуск, дополнительный отпуск в связи с обучением с сохранением среднего заработка', color:'#80CBC4'},
+            {code:'ОВ',   short:'отгул', name:'Отгул, выходные дни (оплачиваемые, за ранее отработанное время, без содержания — с указанием в комментарии)', color:'#C5E1A5'},
+            {code:'Б',    short:'больничный', name:'Больничный, временная нетрудоспособность с назначением пособия', color:'#F8BBD0'},
+            {code:'',     short:'выходной', name:'Выходной, плановый выходной день', color:'#EEF0F2'},
+            {code:'ПР',   short:'прогул', name:'Прогул (отсутствие без уважительных причин)', color:'#EF5350'},
+            {code:'И',    short:'инструктаж', name:'Инструктаж, проведение повторных инструктажей по охране труда и промышленной безопасности', color:'#B3E5FC'},
+            {code:'ОБ',   short:'обучение', name:'Обучение, обучение по охране труда и промышленной безопасности', color:'#D1C4E9'},
+            {code:'ПЗ',   short:'проверка знаний', name:'Проверка знаний, по охране труда и промышленной безопасности, до 1000В, на допуск к самостоятельной работе', color:'#FFCDD2'},
+            {code:'*',    short:'не плановый', name:'Примечание, не плановые или не регламентированные случаи (аварийные работы, принят, уволен), с обязательным комментированием', color:'#FFAB91'}
         ],
         // Task 305: «отпуск в приоритете, плановая смена — рядом».
         // Task 306: бейдж плановой смены — ТОЛЬКО у сотрудников типа
@@ -40778,10 +40924,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // переключает toggleCross.
         _crossOn: true,
 
-        // Task 332 (заявка): ВИД ТАБЕЛЯ — «full» (полный: все элементы,
-        // сменные + дневные, шторка итогов доступна) / «shift» (сменный:
-        // НЕдоступны шахматка дневных и шторка) / «day» (дневной:
-        // НЕдоступны шахматка сменных и шторка). Переключает кнопкой
+        // Task 332 (заявка): ВИД ТАБЕЛЯ — «full» (полный: все
+        // элементы, сменные + дневные) / «shift» (сменный: НЕдоступна
+        // шахматка дневных) / «day» (дневной: НЕдоступна шахматка
+        // сменных). Task 388 (заявка): шторка/страница «Итоги учёта»
+        // доступны во ВСЕХ видах — строки таблиц по работникам
+        // текущего вида. Переключает кнопкой
         // #wsViewBtn (cycleView, по кругу), сохраняется в localStorage
         // (kip8_ws_view_v1), применяется _applyView (фильтр строк в
         // _renderGrid — _viewEmployees). _viewLocked: роль «КИП ИОС
@@ -41301,7 +41449,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     // листа выигрывает цвет — дубль обоих редкий край)
                     if (lj === canon[ci].code ||
                         (canon[ci].code === '' && lj === '.')) {
+                        // Task 388: short — краткое обозначение кода
+                        // (краткий вид панели «Обозначения») — канон
                         entry = { code: canon[ci].code, name: canon[ci].name,
+                                  short: canon[ci].short,
                                   color: list[j].color || canon[ci].color };
                         used[j] = true;
                     }
@@ -41313,6 +41464,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // справочник»: удалённый код исчезает из списков)
                 if (!entry && canon[ci].code === '') {
                     entry = { code: '', name: canon[ci].name,
+                              short: canon[ci].short,
                               color: canon[ci].color };
                 }
                 if (entry) out.push(entry);
@@ -41778,15 +41930,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._applyView({ rerender: false });
         },
 
-        // Применение вида: полный — кнопка «Итоги учёта» (и шторка/
-        // вкладки) доступна; сменный/дневной — кнопка спрятана,
-        // ОТКРЫТАЯ шторка закрывается (toggleTotals: закрытие гейтом
-        // не блокируется), вкладки прячутся (_updateTtTabsVisible);
-        // иконка/aria кнопки вида актуализирует _updateViewBtn.
-        // Task 340: итоги недоступны и уровню «min» (право
-        // workschedule.view.min) — кнопка скрыта и в полном виде,
-        // ОТКРЫТАЯ шторка закрывается (та же ветка, что у сменного/
-        // дневного видов)
+        // Применение вида. Task 388 (заявка): итоги учёта доступны
+        // в ЛЮБОМ виде (кнопка/шторка/страница; строки таблиц — по
+        // работникам текущего вида); Task 340: уровню «min» (право
+        // workschedule.view.min) итоги недоступны — кнопка скрыта,
+        // ОТКРЫТАЯ шторка закрывается. Иконка/aria кнопки вида
+        // актуализирует _updateViewBtn; вкладки «Месяц»/«Год» —
+        // _updateTtTabsVisible.
         // rerender — перерисовать сетку (смены вида; при init сетки
         // ещё нет — false)
         _applyView: function(opts) {
@@ -41795,7 +41945,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var full = (v === 'full');
             var minNoTotals = (this._viewLevel === 'min');
             var totalsBtn = document.getElementById('wsTotalsBtn');
-            if (totalsBtn) totalsBtn.hidden = !full || minNoTotals;
+            // Task 388 (заявка: «в видах шахматки только сменный и
+            // только дневной сделай возможность показывать данные
+            // итогов учёта»): итоги доступны во ВСЕХ видах (строки
+            // таблиц — по работникам ТЕКУЩЕГО вида, см.
+            // _renderTotalsMonth/_renderTotalsYearTable); уровень
+            // «min» — по-прежнему без итогов (Task 340)
+            if (totalsBtn) totalsBtn.hidden = minNoTotals;
             // Task 335 (заявка: в видах «только сменные/только дневные»
             // шахматка НЕ растягивается до низа окна приложения):
             // класс-маркер на странице — десктоп-CSS собирает колонку
@@ -41806,11 +41962,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (viewPage && viewPage.classList && viewPage.classList.toggle) {
                 viewPage.classList.toggle('ws-view-filtered', !full);
             }
-            // шторка недоступна в сменном/дневном видах (и уровню «min»
-            // — Task 340): открытую — закрыть (анимация/уборка как
-            // обычно; закрытие гейтом не блокируется); закрытую —
-            // просто спрятать вкладки (кнопка «Итоги учёта» уже скрыта)
-            if ((!full || minNoTotals) && this._totalsOpen) {
+            // Task 388: открытая шторка при смене вида ОСТАЁТСЯ
+            // открытой — таблицы перерисует _renderGrid →
+            // _renderTotalsIfOpen (строки по работникам нового вида,
+            // синхронизация высот со строками сетки сохранна);
+            // уровню «min» (Task 340) итогов нет — открытую закрыть
+            if (minNoTotals && this._totalsOpen) {
                 this.toggleTotals();
             } else {
                 this._updateTtTabsVisible();
@@ -41863,9 +42020,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             try { localStorage.setItem('kip8_ws_view_v1', next); } catch (e) {}
             this._applyView({ rerender: true });
             var titles = {
+                // Task 388: итоги доступны в любом виде — строки
+                // таблиц по работникам текущего вида
                 full: 'Полный вид — все работники, итоги учёта доступны',
-                shift: 'Сменный вид — только сменные работники',
-                day: 'Дневной вид — только дневные работники'
+                shift: 'Сменный вид — только сменные работники, итоги учёта доступны',
+                day: 'Дневной вид — только дневные работники, итоги учёта доступны'
             };
             if (this._viewLevel === 'min') {
                 // Task 340: у «min» итогов нет — тост без обещания
@@ -42036,11 +42195,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (this._viewLocked) {
                     descEl.textContent = 'Роли «КИП ИОС дежурный» доступен ' +
                         'только сменный вид: шахматка сменных работников, ' +
-                        'шторка итогов и шахматка дневных недоступны.';
+                        'шахматка дневных недоступна.';
                 } else {
                     descEl.textContent = 'Переключение вида табеля: полный — ' +
-                        'все работники и шторка «Итоги учёта»; сменный — ' +
-                        'только сменные работники; дневной — только дневные. ' +
+                        'все работники; сменный — только сменные; дневной — ' +
+                        'только дневные. Итоги учёта доступны в любом виде — ' +
+                        'строки по работникам текущего вида. ' +
                         'Клик по кнопке переключает вид по кругу.';
                 }
             }
@@ -42531,8 +42691,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             html += '<div class="wsp-foot">* — сокращённый предпраздничный рабочий день; ' +
                     'пунктирная рамка ячейки — плановый отпуск (записи ещё нет); ' +
                     'красная точка — переработка; значок в углу ячейки — ' +
-                    'мероприятие дня (коды и цвета — в перечне выше; пунктирный ' +
-                    'значок — день ещё не сформирован); «Дни»/«Часы» — явки и рабочие часы ' +
+                    'мероприятие дня (коды и цвета — в перечне выше); ' +
+                    '«Дни»/«Часы» — явки и рабочие часы ' +
                     '(без переработки д/н); «Перераб.» — дни/часы переработки ' +
                     '(коды д/н — работа в выходные/праздники).</div>';
             return html;
@@ -42581,10 +42741,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Task 361 (заявка: «сделай отображение на печати
             // значков мероприятий в ячейках шахматки»): бейджи
             // мероприятий в печати ВЕРНУТЫ (Task 343 их убирал).
-            // Формат — как в экранной сетке (Task 314): события
-            // дня из листа «Инструктажи» (_eventsAt) — сплошные
-            // бейджи с inline-цветом кода у сформированного дня,
-            // пунктирные (план) — у пустой ячейки/плана отпуска;
+            // Формат — как в экранной сетке (Task 314/388): события
+            // дня из листа «Инструктажи» (_eventsAt) — ВСЕГДА сплошные
+            // бейджи с inline-цветом кода (Task 388: пунктирные
+            // wsp-ev-plan у пустой ячейки/плана отпуска удалены);
             // статус-мероприятие (И/ОБ/ПЗ/ПР/*) без строки в
             // «Инструктажах» — виртуальный бейдж, чтобы день не
             // «потерял» мероприятие. Точка переработки — правый
@@ -42602,12 +42762,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             var evHtml = '';
             if (events.length) {
-                var solid = !!status;
+                // Task 388: бейдж печати ВСЕГДА сплошной с цветом
+                // кода (как экранная сетка; прежде пустая/план
+                // ячейка давала пунктирный wsp-ev-plan без заливки)
                 var chips = '';
                 for (var evj = 0; evj < events.length; evj++) {
                     var evMeta = this._statusMeta(events[evj].code) || {};
-                    chips += '<span class="wsp-ev' + (solid ? '' : ' wsp-ev-plan') + '"' +
-                             (solid && evMeta.color ? ' style="background:' + evMeta.color + ';"' : '') +
+                    chips += '<span class="wsp-ev"' +
+                             (evMeta.color ? ' style="background:' + evMeta.color + ';"' : '') +
                              '>' + this._esc(events[evj].code) + '</span>';
                 }
                 evHtml = '<span class="wsp-ev-wrap">' + chips + '</span>';
@@ -43496,10 +43658,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // z-index 55 + тень) поверх ряда 2/3 бара и шахматки; height
         // и margin-bottom анимируются СИНХРОННО — сумма всегда 95px
         // Task 381 (заявка): при прокрутке текста в СВЁРНУТОМ окне
-        // значок раскрытия ОСТАЁТСЯ НА МЕСТЕ (правый нижний угол
-        // видимой грани): translateY(el.scrollTop) компенсирует уезд
-        // absolute-значка вместе с прокручиваемым слоем; слушатель
-        // scroll — ОДИН раз на элемент окна (флаг _barExpPin)
+        // значок раскрытия ОСТАЁТСЯ НА МЕСТЕ (Task 388: правый
+        // ВЕРХНИЙ угол видимой грани): translateY(el.scrollTop)
+        // компенсирует уезд absolute-значка вместе с прокручиваемым
+        // слоем; слушатель scroll — ОДИН раз на элемент окна
+        // (флаг _barExpPin)
         // ============================================================
         _barExpSync: function(el) {
             if (!el) return;
@@ -43518,10 +43681,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // окнах мероприятий и норм значки раскрытия должны
             // оставаться на месте»): значок — absolute ВНУТРИ
             // скроллера и БЕЗ компенсации уезжает вверх вместе с
-            // прокручиваемым слоем (упор bottom:5px — в padding-box
-            // на scrollTop=0). Компенсация translateY(scrollTop) на
-            // каждый scroll — значок висит в правом нижнем углу
-            // ВСЕГДА, сколько текста ни крути (колесо/свайп/↑↓).
+            // прокручиваемым слоем (упор top:5px — в padding-box
+            // на scrollTop=0, Task 388: верхний угол). Компенсация
+            // translateY(scrollTop) на каждый scroll — значок висит
+            // в правом ВЕРХНЕМ углу ВСЕГДА, сколько текста ни крути
+            // (колесо/свайп/↑↓).
             // Слушатель — ОДИН раз на элемент окна (флаг _barExpPin:
             // рендеры окон заменяют innerHTML, но не сам элемент —
             // слушатель переживает перерисовки); transform ставится
@@ -43938,12 +44102,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // шторки. Данные/вкладка — текущие (месяц/год сетки)
         onTotalsPageOpen: function() {
             // Task 338 (заявка: «кнопка "Итоги учёта"» уровню min не
-            // видна) + Task 340: итоги доступны только в полном виде И
-            // НЕ уровню «min» (workschedule.view.min) — редактор в
-            // сменном/дневном тоже без итогов (гейт как в toggleTotals
-            // — защита от прямого перехода/крошек: назад, на табель)
-            var vGate = this._view || 'full';
-            if (vGate !== 'full' || this._viewLevel === 'min') {
+            // видна) + Task 340: итоги НЕ уровню «min»
+            // (workschedule.view.min); Task 388: вид — ЛЮБОЙ (строки
+            // таблиц по работникам текущего вида), гейт только по
+            // уровню (защита от прямого перехода/крошек: назад)
+            if (this._viewLevel === 'min') {
                 if (typeof navigateTo === 'function') navigateTo('work-schedule');
                 return;
             }
@@ -44077,25 +44240,26 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (this._legendOpen && typeof this._setLegend === 'function') {
                 this._setLegend(false);
             }
-            // толерантный гейт: моки/старые состояния без _view = полный
-            var vGate = this._view || 'full';
-            // Task 340: итоги недоступны и уровню «min» (право
+            // Task 388 (заявка): итоги доступны в ЛЮБОМ виде шахматки
+            // (полный/сменный/дневной — строки таблиц по работникам
+            // вида, см. _renderTotalsMonth/_renderTotalsYearTable).
+            // Task 340: итоги недоступны уровню «min» (право
             // workschedule.view.min — заявка: «Все кнопки доступны,
             // кроме "Сформировать" и "Итоги учёта"»); ЗАКРЫТИЕ всегда
-            // разрешено (смена уровня/вида с открытой шторкой)
-            if ((vGate !== 'full' || this._viewLevel === 'min') &&
+            // разрешено (смена уровня с открытой шторкой)
+            if (this._viewLevel === 'min' &&
                     !this._totalsOpen && !this._ttPage) return;
             // Task 334 (заявка): на МОБИЛЬНОМ итоги учёта открываются
             // ОТДЕЛЬНОЙ СТРАНИЦЕЙ #page-ws-totals («Итоги учёта», шапка
             // с многострелочным шевроном), НЕ шторкой: кнопка тулбара
             // — просто переход. Гейт вида/уровня действует и здесь
-            // (в видах «сменный»/«дневной» и у «min» итоги недоступны).
+            // (у «min» итоги недоступны; вид — ЛЮБОЙ, Task 388).
             // Повторный тап кнопки на странице табеля невозможен
             // (кнопка на другой странице); «закрытие» — шеврон/
             // системный «назад»
             if (typeof window !== 'undefined' && window.matchMedia
                     && !window.matchMedia('(min-width: 1024px)').matches) {
-                if (vGate !== 'full' || this._viewLevel === 'min') return;
+                if (this._viewLevel === 'min') return;
                 if (typeof navigateTo === 'function') navigateTo('ws-totals');
                 return;
             }
@@ -44221,17 +44385,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
         },
 
-        // Task 386: целевая фикс-ширина шторки «Обозначения»:
-        // узкий вид (коды без наименований) — 190px; широкий
-        // (наименования + пояснения) — Task 387 (заявка «до 500px»):
-        // min(500px, 45vw), было 400px; согласовано с CSS-правилом
+        // Task 386: целевая фикс-ширина шторки «Обозначения»;
+        // Task 388 (заявка: краткие обозначения в кратком виде):
+        // краткий вид (коды + краткие обозначения) — 230px (было
+        // 190: «день в выходной»/«проверка знаний» не влезали);
+        // широкий (наименования + пояснения) — Task 387 (заявка
+        // «до 500px»): min(500px, 45vw); согласовано с CSS-правилом
         // .ws-legend-drawer.ws-lg-wide inner
         _legendWidthPx: function() {
             var vw = (typeof window !== 'undefined' && window.innerWidth)
                 ? window.innerWidth : 1280;
             return this._legendWide
-                ? Math.max(190, Math.min(500, Math.floor(vw * 0.45)))
-                : 190;
+                ? Math.max(230, Math.min(500, Math.floor(vw * 0.45)))
+                : 230;
         },
 
         // Task 386 (заявка): значок-ШЕВРОН на левом крае шторки —
@@ -44312,12 +44478,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // пустой ячейки, тема), код-символ НЕ показывается
                 // (точка «·» убрана заявкой)
                 var isDot = (c.code === '.' || c.code === '');
+                // Task 388 (заявка: «в кратком виде укажи краткое
+                // обозначение кодов»): .ws-lg-short — краткое
+                // обозначение («Д8 — день 8ч»), видно в КРАТКОМ
+                // (узком) виде шторки; .ws-lg-name — подробное
+                // наименование (развёрнутый вид / мобильная страница)
                 var row = '<div class="ws-lg-item"><span class="ws-lg-swatch' +
                           (isDot ? ' ws-lg-swatch-dot' : '') + '"' +
                           (isDot ? '' : ' style="background:' +
                            this._esc(String(c.color || '#3a3a3a')) + '"') +
                           '></span><span class="ws-lg-code">' +
-                          this._esc(isDot ? '' : String(c.code || '')) + '</span><span class="ws-lg-name">' +
+                          this._esc(isDot ? '' : String(c.code || '')) + '</span>' +
+                          (c.short ? '<span class="ws-lg-short">— ' +
+                           this._esc(String(c.short)) + '</span>' : '') +
+                          '<span class="ws-lg-name">' +
                           this._esc(String(c.name || '')) + '</span></div>';
                 if (evSet[String(c.code)]) evHtml += row;
                 else dayHtml += row;
@@ -44744,11 +44918,24 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // дневной — часы правки ячейки)
             var agg = this._totalsAgg(entries, this._empTypeMap(this._EMPLOYEES));
             var z = this._totalsZero();
+            // Task 388: строки таблицы — по работникам ТЕКУЩЕГО вида
+            // (полный — все; сменный/дневной — только они): шторка
+            // стоит рядом с сеткой и синхронизируется по строкам
+            // (_syncTotalsRows — 1:1 со строками сетки вида);
+            // толерантно к VM-мокам без метода
+            var viewList = (typeof this._viewEmployees === 'function')
+                ? this._viewEmployees() : this._EMPLOYEES;
 
             if (!this._EMPLOYEES.length) {
                 body.innerHTML = '<div class="ws-tt-empty">Нет активных работников.</div>';
                 // Task 329: ширина шторки — и для пустого состояния
                 // (_fitTtDrawer: нет таблицы → минимум 240px)
+                if (this._fitTtDrawer) this._fitTtDrawer();
+                if (this._applyTtHeadVar()) this._fitGrid();
+                return;
+            }
+            if (!viewList.length) {
+                body.innerHTML = '<div class="ws-tt-empty">Нет работников в текущем виде.</div>';
                 if (this._fitTtDrawer) this._fitTtDrawer();
                 if (this._applyTtHeadVar()) this._fitGrid();
                 return;
@@ -44815,8 +45002,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // CSS выше). Список _EMPLOYEES уже отсортирован
             // _sortEmployees: сменные по сменам, затем дневные
             var prevTier = -1;
-            for (var i = 0; i < this._EMPLOYEES.length; i++) {
-                var emp = this._EMPLOYEES[i];
+            for (var i = 0; i < viewList.length; i++) {
+                var emp = viewList[i];
                 var a = agg.byTab[String(emp['таб_номер'])] || z;
                 var empTip = String(emp['тип'] || '').trim();
                 var empTier = (empTip === 'сменный') ? 0
@@ -45018,8 +45205,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                               'июл','авг','сен','окт','ноя','дек'];
             // Task 332: строки — АКТИВНЫЕ сотрудники справочника вида
             // (ровно по строкам сетки, как у месяца); Task 333: годовой
-            // справочник (md.employees, вкл. архив) — ещё и для АРХИВА
-            var employees = this._EMPLOYEES;
+            // справочник (md.employees, вкл. архив) — ещё и для АРХИВА;
+            // Task 388: вид «сменный»/«дневной» — только работники
+            // ТЕКУЩЕГО вида (как строки сетки и месяца); архив — весь
+            var employees = (typeof this._viewEmployees === 'function')
+                ? this._viewEmployees() : this._EMPLOYEES;
             // Task 333: АРХИВ — годовой справочник БЕЗ активных,
             // своим порядком (_sortEmployees)
             var yearEmps = (md.employees && md.employees.length)
@@ -45787,9 +45977,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             //     скрывались по правилу Task 303, событие жило только
             //     в окне «Мероприятия в этот день») — сплошные: день
             //     сформирован;
-            //   • пустая ячейка (в т.ч. план отпуска) — пунктирный бейдж
-            //     («заполнится при Сформировать»; план закроется кодом
-            //     отпуска — бейдж станет сплошным);
+            //   • пустая ячейка (в т.ч. план отпуска) — бейдж тоже
+            //     СПЛОШНОЙ с цветом кода (Task 388: пунктирные
+            //     удалены — фон миниатюр всегда цвет установленного
+            //     кода);
             //   • смена остаётся основным кодом, мероприятие — мини-чип
             //     в правом нижнем углу (точка переработки — в правом
             //     верхнем, конфликтов нет).
@@ -45805,15 +45996,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             var evHtml = '';
             if (events.length) {
-                // сплошные — день сформирован (любой статус, вкл.
-                // статус-мероприятие); пунктирные — пустая/план ячейка
-                var solidBadges = !!status;
+                // Task 388 (заявка: «цвет фона миниатюр всегда должен
+                // соответствовать установленному»): бейдж мероприятия
+                // ВСЕГДА сплошной, фон — цвет кода из справочника.
+                // Прежде пустая ячейка (в т.ч. дополнительно уста-
+                // новленный «Выходной» — код «») давала пунктирный
+                // прозрачный бейдж — «*» на выходном терял цвет;
+                // пунктирный класс бейджа удалён
                 classes.push('ws-has-events');
                 var evChips = '';
                 for (var evj = 0; evj < events.length; evj++) {
                     var evMeta = this._statusMeta(events[evj].code) || {};
-                    evChips += '<span class="ws-ev-badge' + (solidBadges ? '' : ' ws-ev-pending') + '"' +
-                               (solidBadges && evMeta.color ? ' style="background:' + evMeta.color + ';"' : '') +
+                    evChips += '<span class="ws-ev-badge"' +
+                               (evMeta.color ? ' style="background:' + evMeta.color + ';"' : '') +
                                '>' + this._esc(events[evj].code) + '</span>';
                 }
                 evHtml = '<span class="ws-ev-wrap">' + evChips + '</span>';
@@ -46890,10 +47085,27 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
         },
 
-        // полные карточки: порядок — как строки шахматки
-        // (_sortEmployees, Task 259: сменные по сменам 1..5, затем
-        // дневные, внутри — по алфавиту); с правом записи — кнопки
-        // правки в каждой карточке (_renderWorkerCard withEdit)
+        // Task 388 (заявка): представление страницы — ВКЛАДКИ, как
+        // ярлыки страниц открытых сайтов в классических браузерах,
+        // только СТОЛБИКОМ СЛЕВА (вертикальная колонка ярлыков):
+        // первая сверху — ОБЩАЯ вкладка (сводная информация по всем
+        // работникам), под ней — работники ПО ФАМИЛЬНО ПО АЛФАВИТУ
+        // (сортировка по ФИО: фамилия — первое слово). Клик по ярлыку
+        // открывает справа карточку выбранного работника (полная
+        // карточка — _renderWorkerCard withEdit, как прежде).
+        // Выбранная вкладка — _workersTab ('general' | таб. №),
+        // живёт между перерисовками (данные обновляются вместе с
+        // сеткой — _renderWorkersIfOpen)
+        _workersTab: 'general',
+
+        // клик по ярлыку вкладки (inline onclick ярлыка): выбор
+        // вкладки + перерисовка страницы
+        selectWorkersTab: function(key) {
+            this._workersTab = String(key === undefined || key === null
+                ? 'general' : key);
+            this._renderWorkersPage();
+        },
+
         _renderWorkersPage: function() {
             var body = document.getElementById('wsWorkersBody');
             if (!body) return;
@@ -46903,16 +47115,114 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 return;
             }
             var withEdit = !!this._canEdit;
-            var list = this._sortEmployees(this._EMPLOYEES);
-            var html = '<div class="ws-workers-count">' + list.length + ' ' +
-                       this._plural(list.length, ['работник', 'работника', 'работников']) +
-                       '</div>';
-            for (var i = 0; i < list.length; i++) {
-                var tabNo = list[i]['таб_номер'];
-                html += '<div class="ws-wcard">' +
-                        this._renderWorkerCard(tabNo, withEdit) + '</div>';
+            // ПО ФАМИЛЬНО ПО АЛФАВИТУ: сортировка по ФИО (фамилия —
+            // первое слово ФИО) — порядок ярлыков вкладок
+            var list = this._EMPLOYEES.slice().sort(function(a, b) {
+                return String(a['ФИО'] || '').localeCompare(
+                    String(b['ФИО'] || ''), 'ru');
+            });
+            // валидация выбранной вкладки (работник мог уйти)
+            var tab = String(this._workersTab || 'general');
+            var found = (tab === 'general');
+            if (!found) {
+                for (var ci = 0; ci < list.length; ci++) {
+                    if (String(list[ci]['таб_номер']) === tab) { found = true; break; }
+                }
             }
-            body.innerHTML = html;
+            if (!found) { tab = 'general'; this._workersTab = 'general'; }
+
+            // ярлыки-вкладки: «Общая» + работники по фамильно
+            var tabsHtml = '<button type="button" class="ws-wtab ws-wtab-general' +
+                           (tab === 'general' ? ' active' : '') + '"' +
+                           ' role="tab" aria-selected="' + (tab === 'general') + '"' +
+                           ' title="Общая информация по всем работникам"' +
+                           ' onclick="WorkSchedule.selectWorkersTab(\'general\')">Общая</button>';
+            for (var i = 0; i < list.length; i++) {
+                var tno = String(list[i]['таб_номер']);
+                tabsHtml += '<button type="button" class="ws-wtab' +
+                            (tab === tno ? ' active' : '') + '"' +
+                            ' role="tab" aria-selected="' + (tab === tno) + '"' +
+                            ' title="' + this._escAttr(String(list[i]['ФИО'] || '')) + '"' +
+                            ' onclick="WorkSchedule.selectWorkersTab(\'' +
+                            this._escAttr(tno) + '\')">' +
+                            this._esc(String(list[i]['ФИО'] || '')) + '</button>';
+            }
+
+            // тело вкладки: «Общая» — сводная таблица всех
+            // работников; работник — полная карточка (withEdit)
+            var contentHtml = '';
+            if (tab === 'general') {
+                contentHtml = this._renderWorkersGeneral(list);
+            } else {
+                var empTabNo = null;
+                for (var ei = 0; ei < list.length; ei++) {
+                    if (String(list[ei]['таб_номер']) === tab) {
+                        empTabNo = list[ei]['таб_номер'];
+                        break;
+                    }
+                }
+                contentHtml = '<div class="ws-wcard">' +
+                              this._renderWorkerCard(empTabNo, withEdit) + '</div>';
+            }
+            body.innerHTML = '<div class="ws-workers-layout">' +
+                '<div class="ws-wtabs" role="tablist" aria-label="Работники — вкладки">' +
+                tabsHtml + '</div>' +
+                '<div class="ws-wtab-body">' + contentHtml + '</div>' +
+                '</div>';
+        },
+
+        // Task 388: ОБЩАЯ вкладка — сводная информация по ВСЕМ
+        // работникам (по фамильно по алфавиту): таб. №, ФИО, режим
+        // работы (тип/смена), должность, дата приёма, отпуск года
+        // («чистые» дни — праздники ст. 120 ТК РФ вычтены) и число
+        // мероприятий месяца шахматки
+        _renderWorkersGeneral: function(list) {
+            var monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                              'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            var shiftN = 0, dayN = 0;
+            var html = '<div class="ws-wgen-head"><span class="ws-workers-count">' +
+                       list.length + ' ' +
+                       this._plural(list.length, ['работник', 'работника', 'работников']) +
+                       '</span></div>';
+            html += '<table class="ws-wgen-table"><thead><tr>' +
+                    '<th>Таб. №</th><th>ФИО</th><th>Режим работы</th>' +
+                    '<th>Должность</th><th>Дата приёма</th>' +
+                    '<th>Отпуск · ' + this._year + '</th>' +
+                    '<th>Мероприятия · ' + monthNames[this._month - 1] + '</th>' +
+                    '</tr></thead><tbody>';
+            for (var i = 0; i < list.length; i++) {
+                var emp = list[i];
+                var tip = String(emp['тип'] || '').trim();
+                var smena = parseInt(emp['смена'], 10);
+                if (tip === 'сменный') shiftN++;
+                else if (tip === 'дневной') dayN++;
+                var tipVal = tip === 'сменный'
+                    ? ('сменный' + (smena >= 1 && smena <= 5 ? ', смена №' + smena : ''))
+                    : (tip || '—');
+                var vacDays = 0;
+                for (var vi = 0; vi < (this._VACATIONS || []).length; vi++) {
+                    var v = this._VACATIONS[vi];
+                    if (v['таб_номер'] !== emp['таб_номер']) continue;
+                    vacDays += this._vacNetDaysInYear(v, this._year);
+                }
+                var trN = 0;
+                for (var ti = 0; ti < (this._TRAININGS || []).length; ti++) {
+                    if (this._TRAININGS[ti]['таб_номер'] === emp['таб_номер']) trN++;
+                }
+                html += '<tr><td>' + this._esc(emp['таб_номер']) + '</td>' +
+                        '<td class="ws-wgen-fio">' + this._esc(emp['ФИО']) + '</td>' +
+                        '<td>' + this._esc(tipVal) + '</td>' +
+                        '<td>' + this._esc(String(emp['должность'] || '').trim() || '—') + '</td>' +
+                        '<td>' + (emp['дата_приёма'] ? this._fmtDateRu(emp['дата_приёма']) : '—') + '</td>' +
+                        '<td>' + (vacDays ? vacDays + ' ' +
+                            this._plural(vacDays, ['день', 'дня', 'дней']) : '—') + '</td>' +
+                        '<td>' + (trN || '—') + '</td></tr>';
+            }
+            html += '</tbody></table>';
+            html += '<div class="ws-wgen-note">Сводка по всем работникам: сменных — ' +
+                    shiftN + ', дневных — ' + dayN + '. Полная карточка каждого ' +
+                    'работника — на его вкладке.</div>';
+            return html;
         },
 
         // Серверная запись по ключу (без pending-наложения)
