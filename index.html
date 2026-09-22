@@ -5422,6 +5422,45 @@
     [data-theme="light"] .ws-emp-field .ws-emp-k { color: #777; }
     [data-theme="light"] .ws-emp-field .ws-emp-v { color: #222; }
     [data-theme="light"] .ws-emp-empty { color: #999; }
+    /* Task 392: СИЗ — записи средств индивидуальной защиты в
+       карточке работника (лист «СИЗ» табель_КИП_ИОС). Наименование
+       бывает длинным («Костюм для защиты от растворов кислот и
+       щелочей») — двухстрочная компоновка: имя (переносится),
+       под ним мета-строка (выдано / срок / до / примечание);
+       кнопки ✎/✕ у редакторов — как у отпусков и мероприятий */
+    .ws-ppe-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        padding: 4px 10px 4px 8px;
+        font-size: 12px;
+        line-height: 1.35;
+    }
+    .ws-ppe-item .ws-ppe-body {
+        min-width: 0;
+        flex: 1;
+    }
+    .ws-ppe-name {
+        color: var(--text-primary, #e0e0e0);
+        font-weight: 600;
+        overflow-wrap: break-word;
+    }
+    .ws-ppe-meta {
+        font-size: 10.5px;
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+        margin-top: 1px;
+    }
+    [data-theme="light"] .ws-ppe-name { color: #222; }
+    [data-theme="light"] .ws-ppe-meta { color: #777; }
+    /* Task 392: строка АВТО-даты окончания срока годности в шторке
+       СИЗ (дата выдачи + срок; стиль — как .ws-vac-form-info) */
+    .ws-ppe-form-info {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary, #e0e0e0);
+        padding: 2px 2px 8px;
+    }
+    [data-theme="light"] .ws-ppe-form-info { color: #333; }
 
     /* Task 251: маркер несохранённой ячейки — янтарная пунктирная рамка
        (отличима от hover-подсветки — сплошной синий outline) */
@@ -18455,6 +18494,69 @@
     <textarea id="wsVacComment" class="flow-comment-field" rows="2" maxlength="500" placeholder="Комментарий (необязательно)" autocomplete="off"></textarea>
     <button type="button" class="flow-input-submit" id="wsVacSubmitBtn" onclick="WorkSchedule.submitVacationForm()">Добавить</button>
     <button type="button" class="flow-input-cancel" onclick="WorkSchedule.closeVacationForm()">Отмена</button>
+</div>
+
+<!-- ===== Task 392: Bottom sheet — СИЗ работника (workSchedule) =====
+     Средства индивидуальной защиты (лист «СИЗ» табель_КИП_ИОС;
+     перечень — на основании Приказа Минтруда России от 29.10.2021
+     N767н, образец — файл «Таблица СИЗ работникам КИП ИОС.xlsx»).
+     «Дата окончания срока годности» НЕ вводится — считается
+     автоматически (дата выдачи + срок годности) и показывается
+     строкой под полями (wsPpeExpiryInfo). Наименование — ввод со
+     списком стандартных позиций (datalist) или свободный текст. -->
+<div id="wsPpeOverlay" class="pin-sheet-overlay" onclick="WorkSchedule.closePpeForm()"></div>
+<div id="wsPpeSheet" class="flow-input-sheet" style="max-height: 90vh; overflow-y: auto;">
+    <div class="flow-input-sheet-handle"></div>
+    <!-- режимы: создание («Новое СИЗ» / «Добавить») и правка
+         (editPpe → «Правка СИЗ» / «Сохранить») -->
+    <div class="flow-input-sheet-title" id="wsPpeSheetTitle">Новое СИЗ</div>
+    <div class="flow-input-row">
+        <div class="flow-input-group" style="flex:0 0 35%;">
+            <label class="flow-input-label" for="wsPpeTabNo">Таб. №</label>
+            <select id="wsPpeTabNo" class="flow-input-field-small"></select>
+        </div>
+        <div class="flow-input-group" style="flex:1 1 65%;">
+            <label class="flow-input-label" for="wsPpeName">Наименование СИЗ</label>
+            <input type="text" id="wsPpeName" class="flow-input-field-small" list="wsPpeNameList" placeholder="Костюм для защиты от растворов кислот и щелочей" maxlength="300" autocomplete="off">
+            <!-- стандартный перечень (образец файла): подсказки
+                 ввода, свободный текст не запрещён -->
+            <datalist id="wsPpeNameList">
+                <option value="Костюм для защиты от растворов кислот и щелочей"></option>
+                <option value="Ботинки"></option>
+                <option value="Белье нательное"></option>
+                <option value="Куртка утеплённая"></option>
+                <option value="Каска защитная"></option>
+                <option value="Подшлемник"></option>
+                <option value="Противогаз"></option>
+                <option value="Очки закрытые"></option>
+            </datalist>
+        </div>
+    </div>
+    <div class="flow-input-row">
+        <div class="flow-input-group">
+            <label class="flow-input-label" for="wsPpeIssued">Дата выдачи</label>
+            <input type="date" id="wsPpeIssued" class="flow-input-field-small" onchange="WorkSchedule.onPpeFormInput()">
+        </div>
+        <div class="flow-input-group">
+            <label class="flow-input-label" for="wsPpeTerm">Срок годности</label>
+            <select id="wsPpeTerm" class="flow-input-field-small" onchange="WorkSchedule.onPpeFormInput()">
+                <option value="">— не указан —</option>
+                <option value="6 мес.">6 мес.</option>
+                <option value="1 год">1 год</option>
+                <option value="1,5 года">1,5 года</option>
+                <option value="2 года">2 года</option>
+                <option value="3 года">3 года</option>
+                <option value="До износа">До износа</option>
+            </select>
+        </div>
+    </div>
+    <!-- авто-дата окончания: «заполняется автоматически в
+         зависимости от даты выдачи плюс срок годности» (образец) -->
+    <div class="ws-ppe-form-info" id="wsPpeExpiryInfo">Дата окончания срока годности: —</div>
+    <div class="ws-vac-form-hint">Дата окончания срока годности заполняется автоматически: дата выдачи плюс срок годности («До износа» — без даты). Перечень СИЗ — на основании Приказа Минтруда России от 29.10.2021 N767н.</div>
+    <textarea id="wsPpeComment" class="flow-comment-field" rows="2" maxlength="200" placeholder="Примечание (необязательно)" autocomplete="off"></textarea>
+    <button type="button" class="flow-input-submit" id="wsPpeSubmitBtn" onclick="WorkSchedule.submitPpeForm()">Добавить</button>
+    <button type="button" class="flow-input-cancel" onclick="WorkSchedule.closePpeForm()">Отмена</button>
 </div>
 
 <script>
@@ -40917,6 +41019,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _VACATIONS: [],
         _VAC_PAGE: [],
         _vacYear: null,
+        // Task 392: СИЗ — средства индивидуальной защиты работников
+        // (лист «СИЗ» табель_КИП_ИОС: наименование, дата выдачи,
+        // срок годности, АВТО-дата окончания = выдача + срок,
+        // примечание). Грузится в loadGrid вместе со справочниками;
+        // карточка работника показывает его записи с правкой (✎),
+        // удалением (✕) и добавлением («+ СИЗ…», шторка #wsPpeSheet)
+        _PPE: [],
 
         // Task 310: годовой ЛИМИТ отпуска — 42 календарных дня
         // (химическое производство, ТК РФ: 28 дней основного отпуска
@@ -41702,6 +41811,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 });
         },
 
+        // Task 392: СИЗ работников (лист «СИЗ» табель_КИП_ИОС) —
+        // единый список (не по годам/месяцам: карточка показывает
+        // всё выданное). Ошибка (лист/эндпоинт ещё нет — до
+        // серверного деплоя) НЕ ломает шахматку: пустой список
+        _loadPpe: function() {
+            var self = this;
+            return this._api('workSchedule.listPpe', {})
+                .then(function(data) {
+                    self._PPE = data.ppe || [];
+                })
+                .catch(function() {
+                    self._PPE = [];
+                });
+        },
+
         // ============================================================
         // Task 314: локальная копия данных графика (localStorage)
         // ============================================================
@@ -41761,6 +41885,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._VACATIONS = vacs;
             this._VAC_PAGE = vacs;
             this._vacYear = this._year;
+            // Task 392: СИЗ — в кэше прошлых версий поля ppe могло
+            // не быть (до Task 392) — пустой список, до серверного
+            // деплоя он и будет пустым
+            this._PPE = Array.isArray(c.ppe) ? c.ppe : [];
             this._cacheTs = view.ts || 0;
             // select «Статус» шита «Дополнительно…» — из восстановленных
             // кодов (как после _loadStatusCodes)
@@ -41783,6 +41911,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 c.employees = this._EMPLOYEES;
                 if (!c.vacations || typeof c.vacations !== 'object') c.vacations = {};
                 c.vacations[String(this._year)] = this._VACATIONS;
+                // Task 392: СИЗ — единый список (не по годам)
+                c.ppe = this._PPE;
                 if (!c.views || typeof c.views !== 'object') c.views = {};
                 var ym = this._ymKey();
                 c.views[ym] = { entries: this._ENTRIES, trainings: this._TRAININGS, ts: Date.now() };
@@ -42918,7 +43048,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 this._loadPatterns(),
                 // Task 274: план отпусков — с собственным catch, сбой
                 // не блокирует рендер сетки
-                this._loadVacations()
+                this._loadVacations(),
+                // Task 392: СИЗ — с собственным catch, сбой не
+                // блокирует рендер сетки
+                this._loadPpe()
             ]).then(function() {
                 self._renderGrid();
                 // Task 260: чип норм месяца в тулбаре
@@ -47146,6 +47279,63 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         ' onclick="WorkSchedule.onEmpAddTraining(\'' +
                         this._esc(String(emp['таб_номер'] || '')) + '\')">+ Мероприятие…</div>';
             }
+
+            // --- Секция 4: СИЗ — средства индивидуальной защиты
+            //     работника (Task 392, лист «СИЗ» табель_КИП_ИОС).
+            //     Каждая запись: наименование, дата выдачи, срок
+            //     годности, дата окончания (АВТО: выдача + срок,
+            //     «До износа» — без даты), примечание. ✎/✕ —
+            //     редакторам и записям с id (строки ручного
+            //     заполнения листа без id не правятся — как у
+            //     отпусков, Tasks 279/384) ---
+            var ppes = [];
+            for (var ppi = 0; ppi < (this._PPE || []).length; ppi++) {
+                if (this._PPE[ppi]['таб_номер'] === tabNo) ppes.push(this._PPE[ppi]);
+            }
+            html += '<div class="ws-popup-sec">СИЗ · средства индивидуальной защиты</div>';
+            if (!ppes.length) {
+                html += '<div class="ws-emp-empty">нет выданных СИЗ</div>';
+            } else {
+                for (var pk = 0; pk < ppes.length; pk++) {
+                    var pz = ppes[pk];
+                    var pId = parseInt(pz.id, 10);
+                    var pActs = '';
+                    if (withEdit && pId) {
+                        pActs = '<span class="ws-popup-act" title="Редактировать запись СИЗ"' +
+                                ' onclick="event.stopPropagation(); WorkSchedule.editPpe(' + pId + ')">✎</span>' +
+                                '<span class="ws-popup-act ws-popup-act-del" title="Удалить запись СИЗ"' +
+                                ' onclick="event.stopPropagation(); WorkSchedule.deletePpe(' + pId + ')">✕</span>';
+                    }
+                    var pMeta = [];
+                    pMeta.push(pz.дата_выдачи
+                        ? ('выдано ' + this._fmtDateRu(pz.дата_выдачи))
+                        : 'не выдано');
+                    var pTerm = String(pz.срок_годности || '').trim();
+                    if (pTerm) pMeta.push('срок ' + pTerm);
+                    var pExp = String(pz.дата_окончания || '').trim();
+                    if (pExp && pExp !== 'До износа') {
+                        pMeta.push('до ' + this._fmtDateRu(pExp));
+                    }
+                    if (String(pz.примечание || '').trim()) {
+                        pMeta.push('«' + this._esc(String(pz.примечание).trim()) + '»');
+                    }
+                    html += '<div class="ws-ppe-item">' +
+                            '<div class="ws-ppe-body">' +
+                            '<div class="ws-ppe-name">' +
+                            this._esc(String(pz.наименование || '')) + '</div>' +
+                            '<div class="ws-ppe-meta">' + pMeta.join(' · ') + '</div>' +
+                            '</div>' + pActs + '</div>';
+                }
+            }
+            // «+ СИЗ…» — шторка «Новое СИЗ» с УЖЕ ВЫБРАННЫМ
+            // работником карточки (как «+ Отпуск…»/«+ Мероприятие…»,
+            // Tasks 312/384). Двойная защита — в openPpeForm
+            if (withEdit) {
+                html += '<div class="ws-popup-row ws-popup-more ws-emp-addppe"' +
+                        ' title="Добавить СИЗ этому работнику"' +
+                        ' onclick="WorkSchedule.onEmpAddPpe(\'' +
+                        this._esc(String(emp['таб_номер'] || '')) + '\')">+ СИЗ…</div>';
+            }
             return html;
         },
 
@@ -47298,8 +47488,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 else if (cTip === 'сменный') shiftN++;
                 else if (cTip === 'дневной') dayN++;
             }
-            // Task 391: ведущее число в скобках — СУММА категорий
-            // (сходится с разбивкой в скобках той же строки)
+            // Task 391: ведущее число — СУММА категорий (сходится
+            // с разбивкой в скобках той же строки). Task 392: БЕЗ
+            // СКОБОК — «Работников на текущий момент 12 (2 мастера,
+            // 5 дневных, 5 сменных).» (заявка: «12 без скобок»)
             var totalN = masterN + dayN + shiftN;
             var addBtn = this._canEdit
                 ? '<button type="button" id="wsWorkersAddBtn" class="ws-workers-add" onclick="WorkSchedule.openEmployeeForm()" aria-label="Добавить работника">Добавить работника</button>'
@@ -47308,7 +47500,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                        '<span class="ws-wgen-staff">Работников по штату 14 ' +
                        '(2 мастера, 7 дневных, 5 сменных).</span>' +
                        '<span class="ws-workers-count">Работников на текущий момент ' +
-                       '(' + totalN + ') (' +
+                       totalN + ' (' +
                        masterN + ' ' + this._plural(masterN, ['мастер', 'мастера', 'мастеров']) + ', ' +
                        dayN + ' ' + this._plural(dayN, ['дневной', 'дневных', 'дневных']) + ', ' +
                        shiftN + ' ' + this._plural(shiftN, ['сменный', 'сменных', 'сменных']) +
@@ -48650,6 +48842,270 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     // Task 309: регресс-фикс Task 308 — удалённый
                     // loadVacations() (страница «Отпуска») заменили на
                     // loadGrid(): перезагружаются и план «ОТ», и сетка
+                    self.loadGrid(true);
+                })
+                .catch(function(err) {
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Ошибка: ' + self._apiErrText(err));
+                    }
+                });
+        },
+
+        // ============================================================
+        // Task 392: СИЗ — средства индивидуальной защиты работника
+        // (лист «СИЗ» табель_КИП_ИОС). Карточка работника: секция с
+        // записями, ✎/✕, «+ СИЗ…»; шторка #wsPpeSheet; сервер —
+        // workSchedule.listPpe/addPpe/updatePpe/deletePpe
+        // ============================================================
+
+        // «+ СИЗ…» из карточки работника — шторка с ПРЕФИЛЛОМ
+        // сотрудника (как «+ Отпуск…»/«+ Мероприятие…»): карточка
+        // закрывается (z-уровень попапа выше шторки)
+        onEmpAddPpe: function(tabNo) {
+            this.closeEmpPopup();
+            this.openPpeForm(tabNo);
+        },
+
+        // правка записи СИЗ из карточки (кнопка ✎): запись ищется в
+        // _PPE по id, шторка открывается в режиме ПРАВКИ (2-й
+        // аргумент openPpeForm — как editVacation/editTraining)
+        editPpe: function(id) {
+            if (!this._canEdit) return;
+            var pid = parseInt(id, 10);
+            var rec = null;
+            for (var i = 0; i < (this._PPE || []).length; i++) {
+                if (parseInt(this._PPE[i].id, 10) === pid) {
+                    rec = this._PPE[i];
+                    break;
+                }
+            }
+            if (!rec) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Запись СИЗ не найдена — обновите график');
+                }
+                return;
+            }
+            this.closeCellPopup();
+            this.closeEmpPopup();
+            this.openPpeForm(rec['таб_номер'], rec);
+        },
+
+        // шторка «Новое СИЗ» / «Правка СИЗ». tabNo (необяз.) —
+        // префилл работника из карточки; editPpe (необяз.) — запись
+        // из _PPE: режим ПРАВКИ (id в _ppeEditId, submit уходит в
+        // updatePpe). Дата окончания НЕ вводится — считается
+        // автоматически (дата выдачи + срок годности) и показывается
+        // строкой под полями (onPpeFormInput → wsPpeExpiryInfo)
+        openPpeForm: function(tabNo, editPpe) {
+            if (!this._canEdit) return;
+            var sheetTitle = document.getElementById('wsPpeSheetTitle');
+            var submitBtn = document.getElementById('wsPpeSubmitBtn');
+            var empSel = document.getElementById('wsPpeTabNo');
+            if (empSel) {
+                var html = '<option value="">— выберите —</option>';
+                for (var i = 0; i < this._EMPLOYEES.length; i++) {
+                    html += '<option value="' + this._esc(this._EMPLOYEES[i]['таб_номер']) + '">' +
+                            this._esc(this._EMPLOYEES[i]['таб_номер']) + ' — ' +
+                            this._esc(this._EMPLOYEES[i]['ФИО']) + '</option>';
+                }
+                empSel.innerHTML = html;
+                if (tabNo !== undefined && tabNo !== null && String(tabNo) !== '') {
+                    empSel.value = String(tabNo);
+                }
+            }
+            // список сроков: стандартный набор; в режиме ПРАВКИ
+            // незнакомый срок записи (ручная строка листа) добавляется
+            // опцией — значение не теряется при открытии шторки
+            var termSel = document.getElementById('wsPpeTerm');
+            if (termSel) {
+                var terms = ['', '6 мес.', '1 год', '1,5 года', '2 года', '3 года', 'До износа'];
+                var curTerm = editPpe ? String(editPpe.срок_годности || '').trim() : '';
+                if (curTerm && terms.indexOf(curTerm) === -1) terms.push(curTerm);
+                var tHtml = '';
+                for (var ti2 = 0; ti2 < terms.length; ti2++) {
+                    tHtml += '<option value="' + this._escAttr(terms[ti2]) + '">' +
+                             (terms[ti2] === '' ? '— не указан —' : this._esc(terms[ti2])) +
+                             '</option>';
+                }
+                termSel.innerHTML = tHtml;
+                termSel.value = curTerm;
+            }
+            this._ppeEditId = null;
+            if (editPpe && editPpe.id) {
+                this._ppeEditId = parseInt(editPpe.id, 10);
+                if (empSel) empSel.value = String(editPpe['таб_номер'] || '');
+                document.getElementById('wsPpeName').value =
+                    String(editPpe.наименование || '');
+                document.getElementById('wsPpeIssued').value =
+                    String(editPpe.дата_выдачи || '');
+                document.getElementById('wsPpeComment').value =
+                    String(editPpe.примечание || '');
+                if (sheetTitle) sheetTitle.textContent = 'Правка СИЗ';
+                if (submitBtn) submitBtn.textContent = 'Сохранить';
+            } else {
+                document.getElementById('wsPpeName').value = '';
+                document.getElementById('wsPpeIssued').value = '';
+                document.getElementById('wsPpeComment').value = '';
+                if (sheetTitle) sheetTitle.textContent = 'Новое СИЗ';
+                if (submitBtn) submitBtn.textContent = 'Добавить';
+            }
+            this.onPpeFormInput();
+
+            document.getElementById('wsPpeOverlay').classList.add('active');
+            document.getElementById('wsPpeSheet').classList.add('active');
+            setTimeout(function() {
+                var f = document.getElementById('wsPpeName');
+                if (f && f.focus) f.focus();
+            }, 350);
+        },
+
+        closePpeForm: function() {
+            document.getElementById('wsPpeOverlay').classList.remove('active');
+            document.getElementById('wsPpeSheet').classList.remove('active');
+            // сброс режима правки (следующее открытие — создание)
+            this._ppeEditId = null;
+        },
+
+        // срок годности текстом → месяцы (образец «Таблица СИЗ»):
+        // «1 год» → 12, «1,5 года» → 18, «2 года» → 24, «3 года» →
+        // 36, «6 мес.» → 6; «До износа» → маркер -1; незнакомый
+        // или пустой → null (дата окончания не считается)
+        _ppeTermMonths: function(term) {
+            var s = String(term || '').trim().toLowerCase()
+                .replace(',', '.').replace(/\u00a0/g, ' ');
+            if (!s) return null;
+            if (s.indexOf('до износа') !== -1) return -1;
+            var m = s.match(/^(\d+(?:\.\d+)?)\s*(мес|год|л)/);
+            if (!m) return null;
+            var n = parseFloat(m[1]);
+            if (isNaN(n) || n <= 0) return null;
+            if (m[2] === 'мес') {
+                var mo = Math.round(n);
+                return (mo >= 1 && mo <= 120) ? mo : null;
+            }
+            var mm = Math.round(n * 12);
+            return (mm >= 1 && mm <= 600) ? mm : null;
+        },
+
+        // дата окончания срока годности = дата выдачи + срок
+        // (кламп дня к длине целевого месяца: 31.08 + 6 мес →
+        // 28/29.02, не «3 марта»); «До износа» → строка «До
+        // износа»; без даты/срока (или срок не распознан) → null
+        _ppeExpiry: function(isoIssued, term) {
+            var months = this._ppeTermMonths(term);
+            if (months === -1) return 'До износа';
+            if (!months) return null;
+            var d = this._parseIsoLocal(String(isoIssued || ''));
+            if (!d) return null;
+            var y = d.getFullYear();
+            var mo = d.getMonth() + months;
+            var day = d.getDate();
+            var last = new Date(y, mo + 1, 0).getDate();
+            if (day > last) day = last;
+            return this._isoDate(new Date(y, mo, day));
+        },
+
+        // подсказка авто-даты окончания в шторке СИЗ — на каждое
+        // изменение даты выдачи/срока (onchange/oninput полей)
+        onPpeFormInput: function() {
+            var info = document.getElementById('wsPpeExpiryInfo');
+            if (!info) return;
+            var issued = document.getElementById('wsPpeIssued') ?
+                document.getElementById('wsPpeIssued').value : '';
+            var term = document.getElementById('wsPpeTerm') ?
+                document.getElementById('wsPpeTerm').value : '';
+            var exp = this._ppeExpiry(issued, term);
+            var txt;
+            if (exp === 'До износа') {
+                txt = 'Дата окончания срока годности: До износа';
+            } else if (exp) {
+                txt = 'Дата окончания срока годности: ' + this._fmtDateRu(exp) +
+                      ' (заполнится автоматически)';
+            } else if (issued && term && this._ppeTermMonths(term) === null) {
+                txt = 'Дата окончания срока годности: срок не распознан — заполните вручную в таблице';
+            } else {
+                txt = 'Дата окончания срока годности: —';
+            }
+            info.textContent = txt;
+        },
+
+        submitPpeForm: function() {
+            var tabNo = document.getElementById('wsPpeTabNo').value.trim();
+            var name = document.getElementById('wsPpeName').value.trim().slice(0, 300);
+            var issued = document.getElementById('wsPpeIssued').value;
+            var term = document.getElementById('wsPpeTerm').value;
+            var comment = document.getElementById('wsPpeComment').value.slice(0, 200);
+            var self = this;
+
+            if (!tabNo) { if (typeof KipToast !== 'undefined') KipToast.show('Выберите работника'); return; }
+            if (!name) { if (typeof KipToast !== 'undefined') KipToast.show('Укажите наименование СИЗ'); return; }
+
+            var payload = {
+                'таб_номер': tabNo,
+                наименование: name,
+                дата_выдачи: issued || '',
+                срок_годности: term || '',
+                примечание: comment
+            };
+
+            // режим ПРАВКИ — запись обновляется на месте
+            // (updatePpe по id); шторка закрывается только при
+            // успехе — при ошибке поля сохранены для повтора
+            if (this._ppeEditId) {
+                var editPpeId = this._ppeEditId;
+                payload.id = editPpeId;
+                this._api('workSchedule.updatePpe', payload).then(function() {
+                    self._ppeEditId = null;
+                    self.closePpeForm();
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Запись СИЗ обновлена');
+                    }
+                    self.loadGrid(true);
+                }).catch(function(err) {
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Ошибка: ' + self._apiErrText(err));
+                    }
+                });
+                return;
+            }
+
+            this._api('workSchedule.addPpe', payload).then(function() {
+                self.closePpeForm();
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('СИЗ добавлено работнику');
+                }
+                // карточка перерисуется вместе с сеткой
+                // (_renderWorkersIfOpen) — новая запись видна сразу
+                self.loadGrid(true);
+            }).catch(function(err) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Ошибка: ' + self._apiErrText(err));
+                }
+            });
+        },
+
+        deletePpe: function(id) {
+            if (!this._canEdit) return;
+            // карточка по z-уровню выше шторок — закрываем попапы ДО
+            // диалога подтверждения (как deleteVacation/deleteTraining)
+            this.closeCellPopup();
+            this.closeEmpPopup();
+            var self = this;
+            if (typeof kipConfirm === 'function') {
+                kipConfirm('Удалить запись СИЗ id=' + id + '?', { danger: true })
+                    .then(function(ok) { if (ok) self._doDeletePpe(id); });
+            } else {
+                if (confirm('Удалить запись СИЗ id=' + id + '?')) self._doDeletePpe(id);
+            }
+        },
+
+        _doDeletePpe: function(id) {
+            var self = this;
+            this._api('workSchedule.deletePpe', { id: id })
+                .then(function() {
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Запись СИЗ удалена');
+                    }
                     self.loadGrid(true);
                 })
                 .catch(function(err) {
