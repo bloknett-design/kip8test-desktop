@@ -5951,8 +5951,11 @@
         margin: 0;
     }
     .ws-workers-count {
-        font-size: 12px;
-        opacity: 0.75;
+        /* Task 391 (заявка): шрифт строки — немного БОЛЬШЕ и
+           ЯРЧЕ (было 12px / 0.75) */
+        font-size: 14px;
+        font-weight: 600;
+        opacity: 0.95;
         /* Task 389: строка живёт в шапке сводки .ws-wgen-head —
            внешние отступы ушли контейнеру */
         margin: 0;
@@ -5969,15 +5972,20 @@
         border-color: rgba(0,0,0,0.1);
     }
     /* Task 386 (заявка): «Добавить работника» — ТЕКСТОВАЯ кнопка
-       (прежде значок «+» 34×34): та же высота 34px, авто-ширина,
-       нейтральный стиль в духе кнопок тулбара */
+       (прежде значок «+» 34×34): та же высота 34px, авто-ширина.
+       Task 391 (заявка): кнопка — В СТИЛЕ САЙТА, акцентная:
+       тёмная тема — СИНИЙ (var(--accent-blue) #4a8fc7), светлая —
+       ОРАНЖЕВЫЙ (#C6613F, акцент светлой темы сайта), текст
+       белый; hover/active — фильтром яркости (тема сама меняет
+       акцент через переменную, отдельные светлые оверрайды
+       не нужны) */
     .ws-workers-add {
         height: 34px;
-        padding: 0 12px;
+        padding: 0 14px;
         border-radius: 8px;
-        border: 1px solid rgba(255,255,255,0.14);
-        background: rgba(255,255,255,0.06);
-        color: inherit;
+        border: 1px solid transparent;
+        background: var(--accent-blue, #4a8fc7);
+        color: #fff;
         font-size: 13px;
         line-height: 1;
         font-weight: 600;
@@ -5985,12 +5993,8 @@
         cursor: pointer;
         flex: none;
     }
-    .ws-workers-add:hover { background: rgba(255,255,255,0.12); }
-    [data-theme="light"] .ws-workers-add {
-        border-color: rgba(0,0,0,0.18);
-        background: rgba(0,0,0,0.05);
-    }
-    [data-theme="light"] .ws-workers-add:hover { background: rgba(0,0,0,0.1); }
+    .ws-workers-add:hover { filter: brightness(1.12); }
+    .ws-workers-add:active { filter: brightness(0.9); }
 
     /* Task 388 (заявка): ярлыки-вкладки СТОЛБИКОМ СЛЕВА (браузерный
        вид): активный ярлык подсвечен и «пристыкован» к телу
@@ -6120,8 +6124,11 @@
         gap: 3px;
     }
     .ws-wgen-staff {
-        font-size: 12px;
-        opacity: 0.75;
+        /* Task 391 (заявка): шрифт строки — немного БОЛЬШЕ и
+           ЯРЧЕ (было 12px / 0.75) */
+        font-size: 14px;
+        font-weight: 600;
+        opacity: 0.95;
     }
     .ws-wgen-table {
         width: 100%;
@@ -47263,15 +47270,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 389 (заявка): кнопка «Добавить работника» ПЕРЕНЕСЕНА
         // сюда из шапки страницы (id wsWorkersAddBtn сохранён;
         // только у редакторов — _canEdit).
-        // Task 390 (заявка): шапка — ДВЕ строки: «Работников по
-        // штату 14: 2 мастера; 7 дневных; 5 сменных.» (константа) и
-        // НИЖЕ строчкой «Работников на текущий момент: …» —
+        // Task 390 (заявка): шапка — ДВЕ строки: штат (константа)
+        // и НИЖЕ строчкой строка текущего момента —
         // АВТОМАТИЧЕСКИЙ ПОДСЧЁТ ПО КАТЕГОРИЯМ: мастера — по
         // должности «Мастер КИПиА» (_isMasterKipia, как фильтр
         // шахматки минимального вида), дневные/сменные — по типу
         // БЕЗ мастеров (категории не пересекаются — как структура
         // штата 2+7+5); сноска «Сводка по всем работникам…»
-        // УДАЛЕНА; фон шапки ВЫДЕЛЕН (.ws-wgen-head)
+        // УДАЛЕНА; фон шапки ВЫДЕЛЕН (.ws-wgen-head).
+        // Task 391 (заявка): формулировки — В СКОБКАХ: штат
+        // «Работников по штату 14 (2 мастера, 7 дневных,
+        // 5 сменных).», текущий момент — ведущее число в скобках
+        // = СУММА категорий, рядом в скобках разбивка по категориям
+        // (запятые, не точки с запятой); шрифт строк — крупнее и
+        // ярче; кнопка — акцентная в стиле сайта (см. CSS)
         _renderWorkersGeneral: function(list) {
             var monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь',
                               'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
@@ -47286,17 +47298,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 else if (cTip === 'сменный') shiftN++;
                 else if (cTip === 'дневной') dayN++;
             }
+            // Task 391: ведущее число в скобках — СУММА категорий
+            // (сходится с разбивкой в скобках той же строки)
+            var totalN = masterN + dayN + shiftN;
             var addBtn = this._canEdit
                 ? '<button type="button" id="wsWorkersAddBtn" class="ws-workers-add" onclick="WorkSchedule.openEmployeeForm()" aria-label="Добавить работника">Добавить работника</button>'
                 : '';
             var html = '<div class="ws-wgen-head"><div class="ws-wgen-info">' +
-                       '<span class="ws-wgen-staff">Работников по штату 14: ' +
-                       '2 мастера; 7 дневных; 5 сменных.</span>' +
-                       '<span class="ws-workers-count">Работников на текущий момент: ' +
-                       masterN + ' ' + this._plural(masterN, ['мастер', 'мастера', 'мастеров']) + '; ' +
-                       dayN + ' ' + this._plural(dayN, ['дневной', 'дневных', 'дневных']) + '; ' +
+                       '<span class="ws-wgen-staff">Работников по штату 14 ' +
+                       '(2 мастера, 7 дневных, 5 сменных).</span>' +
+                       '<span class="ws-workers-count">Работников на текущий момент ' +
+                       '(' + totalN + ') (' +
+                       masterN + ' ' + this._plural(masterN, ['мастер', 'мастера', 'мастеров']) + ', ' +
+                       dayN + ' ' + this._plural(dayN, ['дневной', 'дневных', 'дневных']) + ', ' +
                        shiftN + ' ' + this._plural(shiftN, ['сменный', 'сменных', 'сменных']) +
-                       '.</span>' +
+                       ').</span>' +
                        '</div>' + addBtn + '</div>';
             if (!list.length) {
                 html += '<div class="ws-tt-empty">Нет активных работников — добавьте первого кнопкой «Добавить работника».</div>';
