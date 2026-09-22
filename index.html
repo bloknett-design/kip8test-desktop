@@ -4871,6 +4871,29 @@
            красный/серый — на светлом фоне читались слабо) */
         color: #000;
     }
+    /* Task 394 (заявка): окно «Мероприятия» месяца — СЕКЦИИ «Отпуска»
+       и «СИЗ» (заполняет _renderMonthEventsPanel): заголовки — те же
+       плашки .ws-ep-cap своих цветов (мероприятия — зелёная, как
+       прежде; отпуска — серо-синяя, СИЗ — янтарная). Точки строк —
+       фиксированные читаемые тона для ОБОИХ тем: цвет «ОТ» #ECEFF1
+       (фон клеток плана отпуска) слишком светел для точки 8×8 — в
+       светлой теме почти невидим; точка отпуска — нейтральный
+       #90a4ae, точка СИЗ — янтарная #f0a830 */
+    .ws-ep-cap-vac {
+        background: rgba(144, 164, 174, 0.22);
+        color: #b0bec5;
+    }
+    .ws-ep-cap-ppe {
+        background: rgba(240, 168, 48, 0.2);
+        color: #f0a830;
+    }
+    [data-theme="light"] .ws-ep-cap-vac,
+    [data-theme="light"] .ws-ep-cap-ppe {
+        /* Task 330: весь текст окон бара — ЧЁРНЫЙ в светлой теме */
+        color: #000;
+    }
+    .ws-ep-dot-vac { background: #90a4ae; }
+    .ws-ep-dot-ppe { background: #f0a830; }
     .ws-ep-item {
         display: flex;
         align-items: flex-start;
@@ -5983,7 +6006,8 @@
        АЛФАВИТУ; клик по ярлыку открывает карточку справа */
     .ws-workers-body {
         padding: 10px 12px 24px;
-        max-width: 1020px;   /* Task 388: вкладки слева + карточка справа */
+        /* Task 394 (заявка): четыре блока карточки — РАВНОМЕРНО по
+           горизонтали НА ВЕСЬ ЭКРАН: кап 1020px (Task 388) снят */
         /* Task 389 (заявка): ярлыки и окна вкладок — с ЛЕВОГО КРАЯ
            (было авто-центрирование — блок стоял по центру на
            широких экранах) */
@@ -6151,9 +6175,28 @@
         min-width: 0;
     }
     /* Task 393: в теле вкладки карточка — ЧЕТЫРЕ блока-окна: зазор
-       между ними — margin-bottom, у последнего — 0 */
+       между ними — margin-bottom, у последнего — 0 (мобильный стек;
+       на десктопе зазор задаёт сетка Task 394 ниже) */
     .ws-wtab-body .ws-wcard { margin-bottom: 12px; }
     .ws-wtab-body .ws-wcard:last-child { margin-bottom: 0; }
+    /* Task 394 (заявка): ДЕСКТОП (≥1024px) — четыре блока карточки
+       СЕТКОЙ 2×2, РАВНЫЕ колонки НА ВСЮ ШИРИНУ окна вкладок:
+       профиль — слева сверху, ОТПУСКА — СПРАВА от профиля,
+       МЕРОПРИЯТИЯ — под профилем, СИЗ — ПОД ОТПУСКАМИ (порядок
+       блоков b1–b4 раскладывается сеткой сам). Обёртка .ws-wgrid2 —
+       _renderWorkersPage (только вкладка работника; «Общая» — без
+       сетки). Окна НЕ тянутся по высоте чужих строк (align-items:
+       start); зазор — gap 12px, margin-bottom обнулён (базовые
+       правила Task 393 остаются для мобильного стека ≤1023px) */
+    @media (min-width: 1024px) {
+        .ws-wgrid2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            align-items: start;
+        }
+        .ws-wgrid2 .ws-wcard { margin-bottom: 0; }
+    }
     [data-theme="light"] .ws-wtab {
         border-color: rgba(0, 0, 0, 0.12);
         background: #E4E0D3;   /* Task 389: сплошной */
@@ -41833,9 +41876,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 });
         },
 
+        // Task 394 (заявка): мероприятия грузятся на ВЕСЬ ГОД
+        // шахматки — month НЕ указан (сервер listTrainings без
+        // месяца отдаёт все записи, ПЕРЕСЕКАЮЩИЕ год): карточки
+        // работников показывают мероприятия ЗА ГОД, а окно
+        // мероприятий месяца, печать и бейджи ячеек фильтруют
+        // список сами (месяц/даты). Локальная копия (Task 314),
+        // записанная прежними версиями с месячным срезом, после
+        // «Обновить» перезаписывается годовым списком
         _loadTrainings: function() {
             var self = this;
-            return this._api('workSchedule.listTrainings', { year: this._year, month: this._month })
+            return this._api('workSchedule.listTrainings', { year: this._year })
                 .then(function(data) {
                     self._TRAININGS = data.trainings || [];
                 });
@@ -44125,6 +44176,85 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         '<i class="ws-ep-dot" style="background:' + (meta.color || '#3a3a3a') + ';"></i>' +
                         '<b class="ws-ep-date">' + this._esc(range) + '</b>' +
                         '<span class="ws-ep-text">' + this._esc(text) + '</span></span>';
+            }
+            // Task 394 (заявка): в окне мероприятий месяца — ТАК ЖЕ
+            // ОТПУСКА и СИЗ. Отпуска — периоды листа «Отпуска»,
+            // ПЕРЕСЕКАЮЩИЕ открытый месяц (частично попадающие на
+            // два месяца показываются в окнах ОБЕИХ месяцев — фильтр
+            // пересечения тот же, что у мероприятий); выбранный день
+            // (Task 316) — только накрывающие день. СИЗ — записи, чей
+            // срок годности ИСТЕКАЕТ в этом месяце (дата_окончания
+            // внутри месяца; «До износа»/без даты — не показываются);
+            // в режиме дня — истекающие ровно в выбранный день.
+            // ПУСТЫЕ секции скрыты (окно не шумит зря); заголовки —
+            // те же плашки со счётчиком, строки — формат «точка ·
+            // даты · текст»; ПРОШЕДШИЕ (дата раньше «сегодня») —
+            // прозрачный фон .ws-ep-past (Tasks 380/389)
+            var vacList = [];
+            var vacsAll = this._VACATIONS || [];
+            for (var vI = 0; vI < vacsAll.length; vI++) {
+                var vRec = vacsAll[vI];
+                var vS = vRec['дата_начала'];
+                if (!vS) continue;
+                var vE = vRec['дата_окончания'] || vS;
+                if (vE < mStart || vS > mEnd) continue;
+                if (selIso && (vS > selIso || vE < selIso)) continue;
+                vacList.push(vRec);
+            }
+            vacList.sort(function(a, b) {
+                return String(a['дата_начала']).localeCompare(String(b['дата_начала'])) ||
+                       String(a['таб_номер']).localeCompare(String(b['таб_номер']));
+            });
+            if (vacList.length) {
+                html += '<span class="ws-cp-cap ws-ep-cap ws-ep-cap-vac">Отпуска · ' +
+                        (selIso ? this._esc(fmtDay(selIso))
+                                : this._esc(monthsNom[m - 1]) + ' ' + y) +
+                        ' · ' + vacList.length + '</span>';
+                for (var vk = 0; vk < vacList.length; vk++) {
+                    var vac = vacList[vk];
+                    var vFio = fioIdx[vac['таб_номер']] || ('таб. №' + vac['таб_номер']);
+                    var vRange = fmtRange(vac['дата_начала'], vac['дата_окончания']);
+                    var vEndIso = String(vac['дата_окончания'] || vac['дата_начала'] || '');
+                    var vPast = (vEndIso && vEndIso < todayIso) ? ' ws-ep-past' : '';
+                    html += '<span class="ws-ep-item' + vPast + '">' +
+                            '<i class="ws-ep-dot ws-ep-dot-vac"></i>' +
+                            '<b class="ws-ep-date">' + this._esc(vRange) + '</b>' +
+                            '<span class="ws-ep-text">' +
+                            this._esc('Отпуск · ' + vFio) + '</span></span>';
+                }
+            }
+            var ppeList = [];
+            var ppeAll = this._PPE || [];
+            for (var pzI = 0; pzI < ppeAll.length; pzI++) {
+                var pRec = ppeAll[pzI];
+                var pExpIso = String(pRec['дата_окончания'] || '').trim();
+                if (!pExpIso || pExpIso === 'До износа') continue;
+                if (pExpIso < mStart || pExpIso > mEnd) continue;
+                if (selIso && pExpIso !== selIso) continue;
+                ppeList.push(pRec);
+            }
+            ppeList.sort(function(a, b) {
+                return String(a['дата_окончания']).localeCompare(String(b['дата_окончания'])) ||
+                       String(a['таб_номер']).localeCompare(String(b['таб_номер']));
+            });
+            if (ppeList.length) {
+                html += '<span class="ws-cp-cap ws-ep-cap ws-ep-cap-ppe">СИЗ · ' +
+                        (selIso ? this._esc(fmtDay(selIso))
+                                : this._esc(monthsNom[m - 1]) + ' ' + y) +
+                        ' · ' + ppeList.length + '</span>';
+                for (var pk2 = 0; pk2 < ppeList.length; pk2++) {
+                    var ppz = ppeList[pk2];
+                    var pFio = fioIdx[ppz['таб_номер']] || ('таб. №' + ppz['таб_номер']);
+                    var pPast = (String(ppz['дата_окончания'] || '') < todayIso)
+                        ? ' ws-ep-past' : '';
+                    html += '<span class="ws-ep-item' + pPast + '">' +
+                            '<i class="ws-ep-dot ws-ep-dot-ppe"></i>' +
+                            '<b class="ws-ep-date">до ' +
+                            this._esc(fmtDay(ppz['дата_окончания'])) + '</b>' +
+                            '<span class="ws-ep-text">' +
+                            this._esc('СИЗ · ' + String(ppz['наименование'] || '') +
+                                      ' · ' + pFio) + '</span></span>';
+                }
             }
             el.innerHTML = html;
             el.hidden = false;
@@ -47162,8 +47292,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // Task 393: asBlocks — массив и для «не найден» (1 блок)
                 return asBlocks ? [miss] : miss;
             }
-            var monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь',
-                              'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            // Task 394: monthNames карточке больше не нужен —
+            // заголовок блока мероприятий теперь ГОД, не месяц
 
             // Task 393: карточка собирается ЧЕТЫРЬМЯ блоками — b1
             // профиль+действия, b2 отпуска, b3 мероприятия, b4 СИЗ;
@@ -47287,22 +47417,31 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                       this._esc(String(emp['таб_номер'] || '')) + '\')">+ Отпуск…</div>';
             }
 
-            // --- Секция 3: мероприятия месяца (бывшая вкладка
-            //     «Инструктажи»; _TRAININGS загружены listTrainings
-            //     для года/месяца шахматки) ---
+            // --- Секция 3: мероприятия ГОДА (бывшая вкладка
+            //     «Инструктажи»; Task 394 — заявка: в карточках
+            //     работников мероприятия указываются НА ВЕСЬ ГОД).
+            //     _TRAININGS — ГОДОВОЙ список (listTrainings без
+            //     месяца); сверка пересечения с годом шахматки —
+            //     защита от смешанных/устаревших данных (кэш
+            //     прежних версий мог лежать месячным срезом) ---
             var trs = [];
+            var trYStart = this._year + '-01-01', trYEnd = this._year + '-12-31';
             for (var ti = 0; ti < (this._TRAININGS || []).length; ti++) {
-                if (this._TRAININGS[ti]['таб_номер'] === tabNo) {
-                    trs.push(this._TRAININGS[ti]);
-                }
+                var tRec = this._TRAININGS[ti];
+                if (tRec['таб_номер'] !== tabNo) continue;
+                var tS = String(tRec['дата_начала'] || '');
+                if (!tS) continue;
+                var tE = String(tRec['дата_окончания'] || tS);
+                if (tE < trYStart || tS > trYEnd) continue;
+                trs.push(tRec);
             }
             trs.sort(function(a, b) {
                 return String(a.дата_начала).localeCompare(String(b.дата_начала));
             });
             var b3 = '<div class="ws-popup-sec">Мероприятия · ' +
-                     monthNames[this._month - 1] + ' ' + this._year + '</div>';
+                     this._year + '</div>';
             if (!trs.length) {
-                b3 += '<div class="ws-emp-empty">нет мероприятий в месяце</div>';
+                b3 += '<div class="ws-emp-empty">нет мероприятий за год</div>';
             } else {
                 for (var tk = 0; tk < trs.length; tk++) {
                     var t = trs[tk];
@@ -47521,7 +47660,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         break;
                     }
                 }
-                contentHtml = this._renderWorkerCardPanels(empTabNo, withEdit);
+                // Task 394 (заявка): четыре блока-окна — в обёртке
+                // .ws-wgrid2: десктоп ≥1024px — СЕТКА 2×2 на всю
+                // ширину (профиль слева сверху / отпуска справа от
+                // профиля / мероприятия под профилем / СИЗ под
+                // отпусками); мобайл — прежний вертикальный стек
+                // (обёртка без правил сетки)
+                contentHtml = '<div class="ws-wgrid2">' +
+                    this._renderWorkerCardPanels(empTabNo, withEdit) + '</div>';
             }
             body.innerHTML = '<div class="ws-workers-layout">' +
                 '<div class="ws-wtabs" role="tablist" aria-label="Работники — вкладки">' +
@@ -47534,7 +47680,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // работникам (по фамильно по алфавиту): таб. №, ФИО, режим
         // работы (тип/смена), должность, дата приёма, отпуск года
         // («чистые» дни — праздники ст. 120 ТК РФ вычтены) и число
-        // мероприятий месяца шахматки.
+        // мероприятий ГОДА (Task 394: годовой список listTrainings).
         // Task 389 (заявка): кнопка «Добавить работника» ПЕРЕНЕСЕНА
         // сюда из шапки страницы (id wsWorkersAddBtn сохранён;
         // только у редакторов — _canEdit).
@@ -47553,8 +47699,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // (запятые, не точки с запятой); шрифт строк — крупнее и
         // ярче; кнопка — акцентная в стиле сайта (см. CSS)
         _renderWorkersGeneral: function(list) {
-            var monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь',
-                              'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            // Task 394: monthNames не нужен — колонка мероприятий
+            // теперь «Мероприятия · ГОД» (не месяц шахматки)
             // Task 390: подсчёт по категориям ДО шапки — мастера по
             // должности исключаются из сменных/дневных (штат:
             // 2 мастера + 7 дневных + 5 сменных = 14, без пересечений)
@@ -47592,7 +47738,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     '<th>Таб. №</th><th>ФИО</th><th>Режим работы</th>' +
                     '<th>Должность</th><th>Дата приёма</th>' +
                     '<th>Отпуск · ' + this._year + '</th>' +
-                    '<th>Мероприятия · ' + monthNames[this._month - 1] + '</th>' +
+                    '<th>Мероприятия · ' + this._year + '</th>' +
                     '</tr></thead><tbody>';
             for (var i = 0; i < list.length; i++) {
                 var emp = list[i];
