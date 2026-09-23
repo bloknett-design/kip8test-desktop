@@ -6024,8 +6024,18 @@
         margin: 0;
     }
     .ws-wcard {
-        background: var(--bg-tertiary, #0e1621);
-        border: 1px solid rgba(255,255,255,0.08);
+        /* Task 395 (заявка): фон блоков — НЕ сливается с общим фоном
+           окна: тёмная тема — СВЕТЛЕЕ фона страницы #1a2233 (панель
+           визуально «поднята» над страницей; прежний
+           var(--bg-tertiary) #0e1621 был ТЕМНЕЕ фона и сливался).
+           Рамка — ТОЛЩЕ (2px, было 1px) и ЯРЧЕ, стиль «выступающего
+           вверх бордюрчика»: верхняя кромка — СВЕТЛАЯ (блик «света
+           сверху»), бока — синее и ярче прежней, снизу — тень
+           (окно приподнято над страницей) */
+        background: #243349;
+        border: 2px solid rgba(116, 162, 214, 0.42);
+        border-top-color: rgba(152, 196, 240, 0.7);
+        box-shadow: 0 3px 0 rgba(0, 0, 0, 0.24);
         border-radius: 10px;
         /* Task 393: карточка — ЧЕТЫРЕ блока-окна, текст крупнее
            (правила ниже) — паддинг чуть шире прежнего */
@@ -6033,8 +6043,14 @@
         margin-bottom: 12px;
     }
     [data-theme="light"] .ws-wcard {
-        background: var(--bg-tertiary, #e9e7de);
-        border-color: rgba(0,0,0,0.1);
+        /* Task 395: светлая — БЕЛАЯ панель поверх кремового фона
+           страницы #FAF9F5 (не сливается); рамка 2px темнее + светлая
+           верхняя кромка (блик) + тень снизу — тот же «приподнятый»
+           стиль, что и в тёмной теме (правило выше) */
+        background: #ffffff;
+        border-color: rgba(20, 20, 19, 0.42);
+        border-top-color: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 3px 0 rgba(20, 20, 19, 0.14);
     }
     /* Task 393 (заявка): карточка работника на странице «Работники» —
        ШРИФТ ТЕКСТА КРУПНЕЕ + ЧЕТЫРЕ ОТДЕЛЬНЫХ БЛОКА-ОКНА (профиль с
@@ -6175,27 +6191,39 @@
         min-width: 0;
     }
     /* Task 393: в теле вкладки карточка — ЧЕТЫРЕ блока-окна: зазор
-       между ними — margin-bottom, у последнего — 0 (мобильный стек;
-       на десктопе зазор задаёт сетка Task 394 ниже) */
+       между ними — margin-bottom, у последнего — 0 (стек ВНУТРИ
+       колонок Task 395 — и мобайл, и десктоп) */
     .ws-wtab-body .ws-wcard { margin-bottom: 12px; }
     .ws-wtab-body .ws-wcard:last-child { margin-bottom: 0; }
-    /* Task 394 (заявка): ДЕСКТОП (≥1024px) — четыре блока карточки
-       СЕТКОЙ 2×2, РАВНЫЕ колонки НА ВСЮ ШИРИНУ окна вкладок:
-       профиль — слева сверху, ОТПУСКА — СПРАВА от профиля,
-       МЕРОПРИЯТИЯ — под профилем, СИЗ — ПОД ОТПУСКАМИ (порядок
-       блоков b1–b4 раскладывается сеткой сам). Обёртка .ws-wgrid2 —
-       _renderWorkersPage (только вкладка работника; «Общая» — без
-       сетки). Окна НЕ тянутся по высоте чужих строк (align-items:
-       start); зазор — gap 12px, margin-bottom обнулён (базовые
-       правила Task 393 остаются для мобильного стека ≤1023px) */
+    /* Task 395 (заявка): КОЛОНКИ-обёртки .ws-wcol (сборка —
+       _renderWorkerCardPanels: левая — профиль + отпуска +
+       мероприятия, правая .ws-wcol-ppe — СИЗ). Мобайл ≤1023px —
+       колонки БЕЗ правил раскладки = блоки друг под другом; зазор
+       между колонками — margin-bottom, у последней — 0 (внутри
+       колонок панелям — базовые правила Task 393 выше) */
+    .ws-wgrid2 .ws-wcol { margin-bottom: 12px; }
+    .ws-wgrid2 .ws-wcol:last-child { margin-bottom: 0; }
+    /* Task 394 → 395 (заявка): ДЕСКТОП (≥1024px) — ДВЕ РАВНЫЕ
+       колонки НА ВСЮ ШИРИНУ окна вкладок (flex, обёртка .ws-wgrid2
+       — _renderWorkersPage, только вкладка работника; «Общая» — без
+       колонок): ЛЕВАЯ — профиль, ПОД ним ОТПУСКА, под отпусками
+       МЕРОПРИЯТИЯ (вертикальный стек окон); ПРАВАЯ — блок СИЗ в
+       ВЕРХНЕЙ ПРАВОЙ части экрана (align-items: flex-start —
+       правая колонка НЕ тянется по высоте левой). Зазоры: между
+       колонками — gap 12px; между окнами левой колонки —
+       margin-bottom панелей (базовые правила Task 393) */
     @media (min-width: 1024px) {
         .ws-wgrid2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+            display: flex;
+            flex-wrap: nowrap;
             gap: 12px;
-            align-items: start;
+            align-items: flex-start;
         }
-        .ws-wgrid2 .ws-wcard { margin-bottom: 0; }
+        .ws-wgrid2 .ws-wcol {
+            flex: 1 1 0;
+            min-width: 0;
+            margin-bottom: 0;
+        }
     }
     [data-theme="light"] .ws-wtab {
         border-color: rgba(0, 0, 0, 0.12);
@@ -41352,11 +41380,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             var genBtn = document.getElementById('wsGenerateBtn');
             if (genBtn) genBtn.hidden = !this._canEdit;
-            // Task 385: «Работники» (ряд 1) — страница полных карточек;
-            // видна только редакторам (как «Сформировать»; повтор —
-            // и в _onRoleUpdate: роль может прийти позже init)
+            // Task 385 → 395: «Работники» (ряд 1) — страница карточек.
+            // Task 395 (заявка): кнопка НЕ отображается пользователям
+            // БЕЗ доступа к разделу (уровень null) и с ОГРАНИЧЕННЫМ
+            // просмотром (min) — по матрице доступа ролей; редакторам
+            // и зрителям (edit/view) — видна, у зрителей карточки без
+            // правки (withEdit = _canEdit). Повтор — и в
+            // _onRoleUpdate: роль может прийти позже init
             var workersBtnInit = document.getElementById('wsWorkersBtn');
-            if (workersBtnInit) workersBtnInit.hidden = !this._canEdit;
+            if (workersBtnInit) workersBtnInit.hidden =
+                (this._viewLevel === null || this._viewLevel === 'min');
             // Task 337→340: кнопка ВИДА ТАБЕЛЯ #wsViewBtn — инструмент
             // ПРОСМОТРА (заявка: «Все кнопки доступны, кроме
             // "Сформировать"»): видна уровням edit/view/min, скрыта
@@ -42423,10 +42456,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var newCanEdit = (newLevel === 'edit');
             var genBtn = document.getElementById('wsGenerateBtn');
             if (genBtn) genBtn.hidden = !newCanEdit;
-            // Task 385: «Работники» (ряд 1) — страница полных
-            // карточек; видна только редакторам (workschedule.edit)
+            // Task 385 → 395: «Работники» (ряд 1) — страница
+            // карточек. Task 395 (заявка): кнопка скрыта уровням null
+            // (нет доступа к разделу) и min (ограниченный просмотр) —
+            // по матрице доступа; edit/view — видна (у view карточки
+            // без правки, withEdit = _canEdit)
             var workersBtn = document.getElementById('wsWorkersBtn');
-            if (workersBtn) workersBtn.hidden = !newCanEdit;
+            if (workersBtn) workersBtn.hidden =
+                (newLevel === null || newLevel === 'min');
             // Task 340: «Вид» — доступен всем уровням (просмотр);
             // скрыт только при полном отсутствии прав
             var roleViewBtn = document.getElementById('wsViewBtn');
@@ -47544,26 +47581,40 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 393 (заявка): ЧЕТЫРЕ БЛОКА карточки работника на
         // странице «Работники»: профиль с действиями / отпуска /
         // мероприятия / СИЗ — КАЖДЫЙ блок отдельным окном-панелью
-        // .ws-wcard (вертикальный стек; зазор — margin-bottom, у
-        // последнего — 0). Попап шахматки — прежний сплошной вид
+        // .ws-wcard. Попап шахматки — прежний сплошной вид
         // (_renderWorkerCard без asBlocks)
+        // Task 395 (заявка, ДЕСКТОП): ОТПУСКА — ПОД блоком профиля,
+        // МЕРОПРИЯТИЯ — ПОД блоком отпуска (ЛЕВАЯ колонка-обёртка
+        // .ws-wcol), СИЗ — ВЕРХНЯЯ ПРАВАЯ часть экрана (ПРАВАЯ
+        // колонка .ws-wcol-ppe; раскладка — CSS @media ≥1024px).
+        // Мобайл ≤1023px — прежний вертикальный СТЕК: колонки без
+        // правил раскладки = блоки друг под другом в прежнем
+        // порядке (профиль → отпуска → мероприятия → СИЗ); зазоры —
+        // margin-bottom панелей (Task 393) + межколоночный (CSS)
         _renderWorkerCardPanels: function(tabNo, withEdit) {
             var blocks = this._renderWorkerCard(tabNo, withEdit, true);
-            var html = '';
+            var left = '', right = '';
             for (var bi = 0; bi < blocks.length; bi++) {
-                html += '<div class="ws-wcard">' + blocks[bi] + '</div>';
+                var panel = '<div class="ws-wcard">' + blocks[bi] + '</div>';
+                if (bi < 3) left += panel; else right += panel;
             }
-            return html;
+            return '<div class="ws-wcol">' + left + '</div>' +
+                   '<div class="ws-wcol ws-wcol-ppe">' + right + '</div>';
         },
 
-        // Task 385 → 386: СТРАНИЦА «РАБОТНИКИ» — переход (кнопка
-        // тулбара «Работники» в ряду 1 — ЕДИНСТВЕННЫЙ вход: Task 386
-        // снял функцию кнопки с заголовка шапки сетки). Гейт
-        // _canEdit — двойная защита (кнопка видна только
-        // редакторам); страница — полные карточки всех активных
-        // работников с внесением/редактированием данных
+        // Task 385 → 386 → 395: СТРАНИЦА «РАБОТНИКИ» — переход
+        // (кнопка тулбара «Работники» в ряду 1 — ЕДИНСТВЕННЫЙ вход:
+        // Task 386 снял функцию кнопки с заголовка шапки сетки).
+        // Task 395 (заявка): кнопка видна уровням edit/view (скрыта
+        // для null — нет доступа к разделу — и min — ограниченный
+        // просмотр); гейт перехода ЗЕРКАЛЕН кнопке — двойная защита.
+        // Легаси-запас: уровень ещё не посчитан (undefined) —
+        // производная от _canEdit (как до трёхуровневой схемы)
         openWorkersPage: function() {
-            if (!this._canEdit) return;
+            var lvl = (this._viewLevel === undefined)
+                ? (this._canEdit ? 'edit' : 'view')
+                : this._viewLevel;
+            if (lvl !== 'edit' && lvl !== 'view') return;
             if (typeof navigateTo === 'function') navigateTo('ws-workers');
             this._renderWorkersPage();
         },
@@ -47606,6 +47657,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _renderWorkersPage: function() {
             var body = document.getElementById('wsWorkersBody');
             if (!body) return;
+            // Task 395 (заявка): страница — уровням edit/view (как
+            // кнопка «Работники» и карточка сетки); null (нет
+            // доступа) и min (ограниченный просмотр) карточек НЕ
+            // видят: прямой заход по URL — пустое тело (кнопка у них
+            // скрыта — единственный вход недоступен). Легаси-запас:
+            // уровень не посчитан — производная от _canEdit
+            var lvl = (this._viewLevel === undefined)
+                ? (this._canEdit ? 'edit' : 'view')
+                : this._viewLevel;
+            if (lvl !== 'edit' && lvl !== 'view') { body.innerHTML = ''; return; }
             var withEdit = !!this._canEdit;
             // ПО ФАМИЛЬНО ПО АЛФАВИТУ: сортировка по ФИО (фамилия —
             // первое слово ФИО) — порядок ярлыков вкладок.
