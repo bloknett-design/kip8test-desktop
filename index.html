@@ -44329,11 +44329,39 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var cand = y + '-' + pad(m) + '-' + pad(selDay);
                 if (cand >= mStart && cand <= mEnd) selIso = cand;
             }
+            // Task 399 (заявка): уровню «min» (ограниченный просмотр,
+            // workschedule.view.min) работники «Мастер КИПиА» в
+            // шахматке СКРЫТЫ (_viewEmployees, Task 340) — «нет
+            // доступа к информации мастеров» значит и в ОКНЕ
+            // МЕРОПРИЯТИЙ их записей НЕ должно быть: мероприятия/
+            // отпуска/СИЗ мастеров исключаются из ВСЕХ трёх секций
+            // тем же признаком _isMasterKipia, что и фильтр сетки.
+            // Индекс таб. номеров — по ПОЛНОМУ списку _EMPLOYEES
+            // (мастера есть в данных: фильтр сетки — про отображение
+            // строк, не про данные; здесь emps общий и с fioIdx ниже);
+            // записи с таб. номером БЕЗ сотрудника в справочнике
+            // мастером не считаются — показываются (как прежде).
+            // Уровни edit/view видят мастеров в сетке — окно полное;
+            // null — раздел целиком недоступен, окно не рендерится.
+            // Блок — ДО первого цикла записей: фильтр мероприятий
+            // читает индекс сразу
+            var hideMasters = (this._viewLevel === 'min');
+            var emps = this._EMPLOYEES || [];
+            var masterTabs = {};
+            if (hideMasters) {
+                for (var mI = 0; mI < emps.length; mI++) {
+                    if (this._isMasterKipia(emps[mI])) {
+                        masterTabs[emps[mI]['таб_номер']] = true;
+                    }
+                }
+            }
             // Мероприятия, пересекающие открытый месяц
             var list = [];
             var trs = this._TRAININGS || [];
             for (var i = 0; i < trs.length; i++) {
                 var t = trs[i];
+                // Task 399: min — мероприятия мастеров не показываются
+                if (hideMasters && masterTabs[t['таб_номер']]) continue;
                 var s = t['дата_начала'];
                 if (!s) continue;
                 var e = t['дата_окончания'] || s;
@@ -44346,9 +44374,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 return String(a['дата_начала']).localeCompare(String(b['дата_начала'])) ||
                        String(a['таб_номер']).localeCompare(String(b['таб_номер']));
             });
-            // ФИО по таб. номеру
+            // ФИО по таб. номеру (emps — объявлен выше, у индекса
+            // мастеров Task 399)
             var fioIdx = {};
-            var emps = this._EMPLOYEES || [];
             for (var ei = 0; ei < emps.length; ei++) {
                 fioIdx[emps[ei]['таб_номер']] = emps[ei]['ФИО'];
             }
@@ -44422,6 +44450,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var vacsAll = this._VACATIONS || [];
             for (var vI = 0; vI < vacsAll.length; vI++) {
                 var vRec = vacsAll[vI];
+                // Task 399: min — отпуска мастеров не показываются
+                if (hideMasters && masterTabs[vRec['таб_номер']]) continue;
                 var vS = vRec['дата_начала'];
                 if (!vS) continue;
                 var vE = vRec['дата_окончания'] || vS;
@@ -44455,6 +44485,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var ppeAll = this._PPE || [];
             for (var pzI = 0; pzI < ppeAll.length; pzI++) {
                 var pRec = ppeAll[pzI];
+                // Task 399: min — СИЗ мастеров не показываются
+                if (hideMasters && masterTabs[pRec['таб_номер']]) continue;
                 var pExpIso = String(pRec['дата_окончания'] || '').trim();
                 if (!pExpIso || pExpIso === 'До износа') continue;
                 if (pExpIso < mStart || pExpIso > mEnd) continue;
