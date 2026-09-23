@@ -17,6 +17,20 @@
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Jura:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Jura:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 <style>
+    /* Task 398 (заявка: «почему в роли КИП ИОС видна кнопка "Работники"
+       в разделе Табель, хотя доступа и перехода по ней нет?»): атрибут
+       hidden БЫЛ бессильным против авторских display-правил — UA-стиль
+       [hidden]{display:none} проигрывает ЛЮБОМУ авторскому правилу
+       с display (пример: .ws-refresh-btn{display:inline-flex} — кнопка
+       «Работники» #wsWorkersBtn: JS-гейт Task 395 ставит hidden=true
+       уровням null/min, но кнопка ОСТАВАЛАСЬ на экране (107×30), клик
+       молча отсекался openWorkersPage). Правило с !important ниже
+       ВОССТАНАВЛИВАЕТ семантику hidden по всему приложению: элемент
+       с атрибутом НЕ отображается, какой бы display ни задавал CSS.
+       Показ элемента — всегда снятием атрибута (el.hidden=false),
+       как и делает весь JS приложения. */
+    [hidden] { display: none !important; }
+
     :root {
         --bg-primary: #1a2233;
         --bg-tertiary: #0e1621;
