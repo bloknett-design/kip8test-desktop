@@ -5785,6 +5785,27 @@
             transition: margin-right 0.28s ease;
         }
     }
+    /* Task 401 (заявка): вкладка «Год» — шторка итогов РАСКРЫВАЕТСЯ
+       НА ВСЮ ШИРИНУ рабочей области ПРАВЕЕ столбца ФИО шахматки,
+       полностью закрывая собой дни (ширину ставит JS _fitTtDrawer:
+       #wsWsBody − --ws-emp-w; класс ws-tt-yearfull на странице —
+       ставит/снимает тот же _fitTtDrawer):
+       · кап 60% снят — шторке разрешена полная ширина;
+       · таблица года — width: 100% (растягивается по шторке; колонка
+         ФИО не растёт — авто-раскладка делит меж месяцев/итогов;
+         мобильная СТРАНИЦА итогов и прямой заход по #hash не
+         тронуты — селектор только #wsTotalsPanel шторки).
+       Правила скрытия полосы ФИО сетки (::after) и ползунка
+       шахматки — НИЖЕ базовых правил ::after (Task 333/336),
+       в блоке Task 401 рядом с ними */
+    @media (min-width: 1024px) {
+        #page-work-schedule.ws-tt-yearfull .ws-tt-drawer {
+            max-width: none;
+        }
+        #page-work-schedule.ws-tt-yearfull #wsTotalsPanel .ws-tt-table.ws-tt-year {
+            width: 100%;
+        }
+    }
     /* МОБАЙЛ: шторка — fixed-оверлей (у сетки место не отбирает):
       панель ~86vw со своим скроллом; закрытие — кнопкой «Итоги
        учёта» тулбара (бар-ручки и ✕ больше нет, Tasks 324/325);
@@ -6969,6 +6990,51 @@
         hyphens: manual;
         text-align: center;
     }
+    /* Task 401 (заявка): ПОДСТРОКА шапки годовой таблицы — пояснение
+       формата данных в ячейках месяцев «дней/часов» (ячейка вида
+       «11/132»: слева ДНИ, справа ЧАСЫ); одна на все 12 месяцев
+       (colspan=12), под месяцами шапки. Компактная — высота auto
+       (не 38px базовой шапки), приглушённый цвет */
+    .ws-tt-table.ws-tt-year th.ws-tt-sub {
+        height: auto;
+        padding: 1px 4px 3px;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 1.2;
+        color: var(--text-secondary, rgba(255, 255, 255, 0.5));
+    }
+    [data-theme="light"] .ws-tt-table.ws-tt-year th.ws-tt-sub {
+        color: #5b6774;
+    }
+    /* Task 401 (заявка): ТРИ ИТОГОВЫХ СТОЛБЦА (Дней/Часов/Перераб.
+       (дни)) — фон НЕМНОГО ДРУГОГО ОТТЕНКА от столбцов месяцев:
+       шапка — светлее стальной (тёмная #243048 против #1e293b) /
+       чуть темнее (светлая #b4c1cd против #bfcad5); ячейки —
+       полупрозрачная тонировка ПОВЕРХ зебры строк (зебра видна);
+       слева от блока — РАЗДЕЛИТЕЛЬ 2px, та же линия, что левый
+       край окна итогов .ws-tt-edge (#4a8fc7 тёмная / #6e8ba4
+       светлая; в border-collapse стык 2px побеждает 1px границы
+       «дек» — линия непрерывна, включая подстроку шапки) */
+    .ws-tt-table.ws-tt-year th.ws-tt-sum {
+        background: #243048;
+    }
+    [data-theme="light"] .ws-tt-table.ws-tt-year th.ws-tt-sum {
+        background: #b4c1cd;
+    }
+    .ws-tt-table.ws-tt-year td.ws-tt-sum {
+        background: rgba(255, 255, 255, 0.05);
+    }
+    [data-theme="light"] .ws-tt-table.ws-tt-year td.ws-tt-sum {
+        background: rgba(0, 0, 0, 0.05);
+    }
+    .ws-tt-table.ws-tt-year th.ws-tt-sum-edge,
+    .ws-tt-table.ws-tt-year td.ws-tt-sum-edge {
+        border-left: 2px solid #4a8fc7;
+    }
+    [data-theme="light"] .ws-tt-table.ws-tt-year th.ws-tt-sum-edge,
+    [data-theme="light"] .ws-tt-table.ws-tt-year td.ws-tt-sum-edge {
+        border-left-color: #6e8ba4;
+    }
     [data-theme="light"] .ws-tt-table th,
     [data-theme="light"] .ws-tt-table td {
         /* Task 378: непрозрачный цвет линий дней шахматки (Task 377) */
@@ -7302,6 +7368,29 @@
     [data-theme="light"] .ws-grid thead th.ws-emp-col::after,
     [data-theme="light"] .ws-grid tbody td.ws-emp-col::after {
         background: #6e8ba4;
+    }
+    /* Task 401 (заявка): полная ширина «Года» — правила стоят ЗДЕСЬ,
+       ПОСЛЕ базовых ::after-полос ФИО сетки (Task 333/336), чтобы
+       первое вхождение селектора оставалось базовым:
+       · полоса-разделитель ФИО шахматки СКРЫТА — у левого края окна
+         итогов остаётся ЕДИНСТВЕННАЯ линия .ws-tt-edge (шторка
+         примыкает вплотную — иначе на стыке ДВЕ линии 2px + 2px);
+       · ползунок прокрутки шахматки (.ws-grid-hbar) погашен — дни
+         полностью закрыты шторкой, скроллить нечего (мертвый UI);
+         12px-зона остаётся — бордюры сетки и шторки на одном
+         уровне (Task 331) */
+    @media (min-width: 1024px) {
+        #page-work-schedule.ws-tt-yearfull .ws-grid thead th.ws-emp-col::after,
+        #page-work-schedule.ws-tt-yearfull .ws-grid tbody td.ws-emp-col::after {
+            display: none;
+        }
+        #page-work-schedule.ws-tt-yearfull .ws-grid-hbar.on {
+            background: none;
+            border-radius: 0;
+        }
+        #page-work-schedule.ws-tt-yearfull .ws-grid-hbar .ws-hbar-thumb {
+            display: none !important;
+        }
     }
     .ws-grid {
         border-collapse: collapse;
@@ -45269,6 +45358,46 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 drawer.style.marginRight = '';
                 return;
             }
+            // Task 401 (заявка): вкладка «Год» — шторка РАСКРЫВАЕТСЯ
+            // НА ВСЮ ШИРИНУ рабочей области правее столбца ФИО
+            // шахматки, ПОЛНОСТЬЮ закрывая собой дни. Ширина =
+            // #wsWsBody.clientWidth − --ws-emp-w (натуральная ширина
+            // колонки ФИО по тексту — её мерит _measureEmpCol; на
+            // десктопе сужения ФИО не бывает: _narrowApply гасит
+            // его при ≥1024px, поэтому --ws-emp-nw здесь не нужна).
+            // Класс ws-tt-yearfull на странице: снимает кап 60%,
+            // растягивает таблицу года на 100% шторки, прячет
+            // полосу ФИО сетки (у края окна — ЕДИНСТВЕННАЯ линия
+            // .ws-tt-edge) и гасит ползунок шахматки (дни закрыты).
+            // «Месяц»/закрытие — класс снят, ширина по столбцам
+            // таблицы (прежнее поведение Task 329)
+            var full = false;
+            var page = document.getElementById('page-work-schedule');
+            if (this._totalsTab === 'year' && !this._ttPage && page) {
+                var wBody = document.getElementById('wsWsBody');
+                var empW = 180;   // фолбэк ширины ФИО (как в CSS)
+                if (window.getComputedStyle) {
+                    try {
+                        var ev = parseFloat(window.getComputedStyle(page)
+                                    .getPropertyValue('--ws-emp-w'));
+                        if (ev > 0) empW = ev;
+                    } catch (e) {}
+                }
+                if (wBody && wBody.clientWidth) {
+                    var wFull = Math.floor(wBody.clientWidth - empW);
+                    if (wFull < 240) wFull = 240;   // минимум (как пустое состояние)
+                    drawer.style.width = wFull + 'px';
+                    full = true;
+                }
+            }
+            if (page && page.classList) {
+                if (full && page.classList.add) {
+                    page.classList.add('ws-tt-yearfull');
+                } else if (!full && page.classList.remove) {
+                    page.classList.remove('ws-tt-yearfull');
+                }
+            }
+            if (full) return;
             var body = document.getElementById('wsTtBody');
             var table = body ? body.querySelector('.ws-tt-table') : null;
             var w = table ? Math.ceil(table.getBoundingClientRect().width) : 0;
@@ -45290,6 +45419,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var page = document.getElementById('page-work-schedule');
             if (page && page.classList && page.classList.remove) {
                 page.classList.remove('ws-tt-gridwide');
+                // Task 401: полноширинный «Год» закрыт — класс снять
+                // (полоса ФИО сетки и ползунок возвращаются)
+                page.classList.remove('ws-tt-yearfull');
             }
             if (page && page.style && page.style.removeProperty) {
                 page.style.removeProperty('--ws-tt-head-h');
@@ -45955,10 +46087,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     out += '<td class="ws-tt-num">' +
                         (w ? w + '/' + self._fmtTotalsNum(hh) : '—') + '</td>';
                 }
-                out += '<td class="ws-tt-num">' + (sumWork || '—') + '</td>' +
-                        '<td class="ws-tt-num ws-tt-hours">' +
+                // Task 401 (заявка): три итоговых столбца — классы
+                // ws-tt-sum (фон другого оттенка) + ws-tt-sum-edge
+                // («Дней»: разделитель 2px слева — как левый край
+                // окна итогов)
+                out += '<td class="ws-tt-num ws-tt-sum ws-tt-sum-edge">' +
+                        (sumWork || '—') + '</td>' +
+                        '<td class="ws-tt-num ws-tt-hours ws-tt-sum">' +
                         (sumHours ? self._fmtTotalsNum(sumHours) : '—') + '</td>' +
-                        '<td class="ws-tt-num ws-tt-over" title="часов переработки: ' +
+                        '<td class="ws-tt-num ws-tt-over ws-tt-sum" title="часов переработки: ' +
                             self._fmtTotalsNum(sumOver) + ' (коды д/н)">' +
                         (sumOverDays || '—') + '</td></tr>';
                 return out;
@@ -45973,14 +46110,24 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var html = '';
             if (employees.length) {
                 html = '<table class="ws-tt-table ws-tt-year">' +
-                    // Task 335: «Сотрудник» → «Сотр» при сужении
-                    '<thead><tr><th class="ws-tt-emp"><span class="ws-tt-emp-head" data-full="Работник" data-s4="Рабо">Работник</span></th>';
+                    // Task 335: «Сотрудник» → «Сотр» при сужении;
+                    // Task 401: rowspan="2" — шапка ДВУХСТРОЧНАЯ
+                    // (подстрока «дней/часов» под месяцами)
+                    '<thead><tr><th class="ws-tt-emp" rowspan="2"><span class="ws-tt-emp-head" data-full="Работник" data-s4="Рабо">Работник</span></th>';
                 for (var h = 1; h <= 12; h++) {
                     html += '<th>' + monthsAbbr[h - 1] + '</th>';
                 }
-                html += '<th>Дней</th><th>Часов</th>' +
-                    '<th title="дни переработки за год — коды д/н">Перераб. (дни)</th>' +
-                    '</tr></thead><tbody>';
+                // Task 401 (заявка): итоговые столбцы — rowspan="2"
+                // (шапка двухстрочная) + классы ws-tt-sum (фон) и
+                // ws-tt-sum-edge («Дней»: разделитель 2px слева)
+                html += '<th class="ws-tt-sum ws-tt-sum-edge" rowspan="2">Дней</th>' +
+                    '<th class="ws-tt-sum" rowspan="2">Часов</th>' +
+                    '<th class="ws-tt-sum" rowspan="2" title="дни переработки за год — коды д/н">Перераб. (дни)</th>' +
+                    // Task 401 (заявка): ПОДСТРОКА-пояснение формата
+                    // ячеек месяцев «дней/часов» («11/132»: слева дни,
+                    // справа часы) — под месяцами шапки
+                    '</tr><tr><th class="ws-tt-sub" colspan="12">дней/часов</th></tr>' +
+                    '</thead><tbody>';
                 // Task 333: разделитель сменных/дневных — как в сетке
                 // (первая дневная после сменных) + штамп подсветки из
                 // _hoverRow (строка шторки = строка сетки)
@@ -46009,14 +46156,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (archived.length) {
                 html += '<div class="ws-tt-arch-cap">Архив</div>' +
                     '<table class="ws-tt-table ws-tt-year ws-tt-arch">' +
-                    // Task 335: «Сотрудник» → «Сотр» при сужении
-                    '<thead><tr><th class="ws-tt-emp"><span class="ws-tt-emp-head" data-full="Работник" data-s4="Рабо">Работник</span></th>';
+                    // Task 335: «Сотрудник» → «Сотр» при сужении;
+                    // Task 401: rowspan="2" + подстрока «дней/часов» —
+                    // шапка двухстрочная, как у главной (Task 401)
+                    '<thead><tr><th class="ws-tt-emp" rowspan="2"><span class="ws-tt-emp-head" data-full="Работник" data-s4="Рабо">Работник</span></th>';
                 for (var h2 = 1; h2 <= 12; h2++) {
                     html += '<th>' + monthsAbbr[h2 - 1] + '</th>';
                 }
-                html += '<th>Дней</th><th>Часов</th>' +
-                    '<th title="дни переработки за год — коды д/н">Перераб. (дни)</th>' +
-                    '</tr></thead><tbody>';
+                html += '<th class="ws-tt-sum ws-tt-sum-edge" rowspan="2">Дней</th>' +
+                    '<th class="ws-tt-sum" rowspan="2">Часов</th>' +
+                    '<th class="ws-tt-sum" rowspan="2" title="дни переработки за год — коды д/н">Перераб. (дни)</th>' +
+                    '</tr><tr><th class="ws-tt-sub" colspan="12">дней/часов</th></tr>' +
+                    '</thead><tbody>';
                 var prevTierA = -1;
                 for (var ar = 0; ar < archived.length; ar++) {
                     var aemp = archived[ar];
@@ -46309,12 +46460,29 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (wrap && typeof ResizeObserver !== 'undefined') {
                 this._fitObserver = new ResizeObserver(function() {
                     self._fitGrid();
+                    // Task 401 (заявка): годовая шторка «на всю ширину» —
+                    // при изменении размера окна/области ширина
+                    // пересчитывается (иначе шахматка выглядывает
+                    // из-под закрывающего её окна). Сходится: повторный
+                    // вызов с теми же входными не меняет ширину —
+                    // ResizeObserver больше не срабатывает
+                    if (self._totalsOpen && self._totalsTab === 'year'
+                            && !self._ttPage
+                            && typeof self._fitTtDrawer === 'function') {
+                        try { self._fitTtDrawer(); } catch (e) {}
+                    }
                 });
                 this._fitObserver.observe(wrap);
             } else if (wrap) {
                 // запасной вариант для старых браузеров без ResizeObserver
                 window.addEventListener('resize', function() {
                     self._fitGrid();
+                    // Task 401: годовая шторка — пересчёт и на ресайзе
+                    if (self._totalsOpen && self._totalsTab === 'year'
+                            && !self._ttPage
+                            && typeof self._fitTtDrawer === 'function') {
+                        try { self._fitTtDrawer(); } catch (e) {}
+                    }
                 });
             }
             // Task 378: перенос текста окон бара зависит от ширины окна
