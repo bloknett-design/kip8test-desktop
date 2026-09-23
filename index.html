@@ -6067,12 +6067,14 @@
     }
     .ws-wcard .ws-emp-field {
         font-size: 14px;
-        padding: 4px 0;
+        /* Task 396: боковой паддинг — полосы-«пилюли» ЗЕБРЫ строк */
+        padding: 4px 10px;
     }
     .ws-wcard .ws-emp-field .ws-emp-k { min-width: 128px; }
     .ws-wcard .ws-emp-empty {
         font-size: 13px;
-        padding: 4px 0 6px;
+        /* Task 396: отступ — вровень с текстом строк зебры */
+        padding: 4px 10px 6px;
     }
     .ws-wcard .ws-popup-sec {
         font-size: 12px;
@@ -6084,12 +6086,14 @@
     }
     .ws-wcard .ws-popup-row {
         font-size: 14px;
-        padding: 8px 0;
+        /* Task 396: боковой паддинг — полосы-«пилюли» ЗЕБРЫ строк */
+        padding: 8px 10px;
     }
     .ws-wcard .ws-popup-more { margin-top: 4px; }
     .ws-wcard .ws-ppe-item {
         font-size: 14px;
-        padding: 6px 0;
+        /* Task 396: боковой паддинг — полосы-«пилюли» ЗЕБРЫ строк */
+        padding: 6px 10px;
     }
     .ws-wcard .ws-ppe-name { font-size: 14px; }
     .ws-wcard .ws-ppe-meta { font-size: 12.5px; }
@@ -6097,6 +6101,109 @@
         width: 26px;
         height: 26px;
         font-size: 13px;
+    }
+    /* Task 396 (заявка): ШАПКА-«ОГЛАВЛЕНИЕ» блока-окна .ws-whead —
+       полоса НА ВСЮ ШИРИНУ окна (отрицательные поля гасят паддинг
+       панели 14px 16px 12px, свой паддинг 9px 16px; скругление
+       верхних углов 8px — внутренний радиус панели 10−2px рамки).
+       Фон — ДРУГОЙ, как выделенная шапка сводки «Общей» вкладки
+       (.ws-wgen-head, Task 390): тёмная #1E2B42, светлая #E4E0D3.
+       Заголовок — ШРИФТ КРУПНЕЕ и ЯРЧЕ (Task 393: было 15px/600
+       вторичный у ФИО и 12px/600 вторичный у секций): ФИО —
+       16px/700/первичный цвет (ws-whead-name, без капса), секции
+       — 13px/700/первичный (капс сохранён). Справа — компактные
+       кнопки действий (ws-whead-a; margin-left:auto — при узком
+       экране переносятся ниже, оставаясь ПРАВЕЕ). Попап шахматки
+       — прежние .ws-popup-title/.ws-popup-sec (НЕ в .ws-wcard) */
+    .ws-wcard .ws-whead {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 6px 10px;
+        margin: -14px -16px 10px;
+        padding: 9px 16px;
+        background: #1E2B42;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px 8px 0 0;
+    }
+    [data-theme="light"] .ws-wcard .ws-whead {
+        background: #E4E0D3;
+        border-bottom-color: rgba(0, 0, 0, 0.14);
+    }
+    .ws-wcard .ws-whead-t {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+        color: var(--text-primary, #e0e0e0);
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .ws-wcard .ws-whead-t.ws-whead-name {
+        /* ФИО · таб. № — крупнее секций, без капса */
+        font-size: 16px;
+        letter-spacing: 0.2px;
+        text-transform: none;
+    }
+    .ws-wcard .ws-whead-a {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: auto;
+        flex: none;
+    }
+    /* Task 396 (заявка): КОМПАКТНЫЕ кнопки действий шапки — стиль
+       сайта (как «Добавить работника», Task 391): тёмная — СИНИЙ
+       var(--accent-blue) #4a8fc7, светлая — ОРАНЖЕВЫЙ #C6613F,
+       текст белый, hover/active — фильтром яркости. «Уволить…» —
+       опасное действие КРАСНЫМ (#ef5350 / #c62828 — как ✕
+       удалений). Контракты классов-маркеров (ws-emp-editdata/
+       ws-emp-dismiss/ws-emp-addvac/ws-emp-addtr/ws-emp-addppe)
+       и onclick — прежние */
+    .ws-wbtn {
+        height: 26px;
+        padding: 0 11px;
+        border-radius: 7px;
+        border: 1px solid transparent;
+        background: var(--accent-blue, #4a8fc7);
+        color: #fff;
+        font-size: 12px;
+        line-height: 1;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+        flex: none;
+    }
+    .ws-wbtn:hover { filter: brightness(1.12); }
+    .ws-wbtn:active { filter: brightness(0.9); }
+    .ws-wbtn.ws-wbtn-danger { background: #ef5350; }
+    [data-theme="light"] .ws-wbtn.ws-wbtn-danger { background: #c62828; }
+    /* Task 396 (заявка): ЗЕБРА строк — чередующийся фон вторых
+       строк каждого блока (класс ws-row-alt ставит
+       _renderWorkerCard при asBlocks; попап шахматки — БЕЗ зебры).
+       Оттенок — как зебра сводной таблицы «Общей» вкладки
+       (Task 388); строки — «пилюли» со скруглением 6px */
+    .ws-wcard .ws-emp-field,
+    .ws-wcard .ws-popup-row,
+    .ws-wcard .ws-ppe-item {
+        border-radius: 6px;
+    }
+    .ws-wcard .ws-emp-field.ws-row-alt,
+    .ws-wcard .ws-popup-row.ws-row-alt,
+    .ws-wcard .ws-ppe-item.ws-row-alt {
+        background: rgba(255, 255, 255, 0.045);
+    }
+    [data-theme="light"] .ws-wcard .ws-emp-field.ws-row-alt,
+    [data-theme="light"] .ws-wcard .ws-popup-row.ws-row-alt,
+    [data-theme="light"] .ws-wcard .ws-ppe-item.ws-row-alt {
+        background: rgba(0, 0, 0, 0.05);
     }
     /* Task 386 (заявка): «Добавить работника» — ТЕКСТОВАЯ кнопка
        (прежде значок «+» 34×34): та же высота 34px, авто-ширина.
@@ -47335,8 +47442,31 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Task 393: карточка собирается ЧЕТЫРЬМЯ блоками — b1
             // профиль+действия, b2 отпуска, b3 мероприятия, b4 СИЗ;
             // склейка/массив — в возврате метода (см. ниже)
-            var b1 = '<div class="ws-popup-title">' + this._esc(emp['ФИО']) +
-                     ' · таб. №' + this._esc(emp['таб_номер']) + '</div>';
+            // Task 396 (заявка): у блоков-окон (asBlocks, страница
+            // «Работники») шапка — ВЫДЕЛЕННАЯ ПОЛОСА .ws-whead с
+            // КОМПАКТНЫМИ кнопками действий в ВЕРХНЕМ ПРАВОМ углу
+            // («Правка данных…» + «Уволить…» — шапка блока профиля;
+            // контракты onclick и классы-маркеры прежние). Вид без
+            // asBlocks (попап шахматки) — прежний .ws-popup-title,
+            // строки действий — внизу блока (гейт ниже)
+            var b1Acts = '';
+            if (withEdit) {
+                b1Acts = '<button type="button" class="ws-wbtn ws-emp-editdata"' +
+                         ' title="Правка данных работника: ФИО, режим, должность…"' +
+                         ' onclick="WorkSchedule.openEmpEditForm(\'' +
+                         this._esc(String(emp['таб_номер'] || '')) + '\')">Правка данных…</button>' +
+                         '<button type="button" class="ws-wbtn ws-wbtn-danger ws-emp-dismiss"' +
+                         ' title="Увольнение: записать дату, убрать из графика"' +
+                         ' onclick="WorkSchedule.openDismissForm(\'' +
+                         this._esc(String(emp['таб_номер'] || '')) + '\')">Уволить…</button>';
+            }
+            var b1 = asBlocks
+                ? '<div class="ws-whead"><div class="ws-whead-t ws-whead-name">' +
+                  this._esc(emp['ФИО']) + ' · таб. №' +
+                  this._esc(emp['таб_номер']) +
+                  '</div><div class="ws-whead-a">' + b1Acts + '</div></div>'
+                : '<div class="ws-popup-title">' + this._esc(emp['ФИО']) +
+                  ' · таб. №' + this._esc(emp['таб_номер']) + '</div>';
 
             // --- Блок 1: профиль (бывшая вкладка «Сотрудники») ---
             var tip = String(emp['тип'] || '').trim();
@@ -47355,14 +47485,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 ['Дата приёма', emp['дата_приёма'] ? this._fmtDateRu(emp['дата_приёма']) : '—'],
                 ['Комментарий', String(emp['комментарий'] || '').trim()]
             ];
+            // Task 396 (заявка): ЗЕБРА — чередующийся фон вторых
+            // строк блока (класс ws-row-alt — только asBlocks;
+            // попап шахматки без зебры)
+            var fRow = 0;
             for (var fi = 0; fi < fields.length; fi++) {
                 if (!fields[fi][1] || fields[fi][1] === '—') {
                     // пустые значения (кроме явных «—») не показываем
                     if (!fields[fi][1]) continue;
                 }
-                b1 += '<div class="ws-emp-field"><span class="ws-emp-k">' +
+                b1 += '<div class="ws-emp-field' +
+                      ((asBlocks && fRow % 2 === 1) ? ' ws-row-alt' : '') +
+                      '"><span class="ws-emp-k">' +
                       this._esc(fields[fi][0]) + '</span><span class="ws-emp-v">' +
                       this._esc(fields[fi][1]) + '</span></div>';
+                fRow++;
             }
 
             // Task 384 → 385: «Правка данных…» — шторка работника в
@@ -47371,7 +47508,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Сервер: workSchedule.updateEmployee. Со страницы
             // «Работники» (withEdit; до Task 385 — из карточки
             // шахматки; двойная защита в openEmpEditForm)
-            if (withEdit) {
+            if (withEdit && !asBlocks) {
                 b1 += '<div class="ws-popup-row ws-popup-more ws-emp-editdata"' +
                       ' title="Правка данных работника: ФИО, режим, должность…"' +
                       ' onclick="WorkSchedule.openEmpEditForm(\'' +
@@ -47383,7 +47520,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // шахматки, остаётся в архиве справочника). Со страницы
             // «Работники» (withEdit; двойная защита в
             // openDismissForm); красная строка — опасное действие
-            if (withEdit) {
+            if (withEdit && !asBlocks) {
                 b1 += '<div class="ws-popup-row ws-popup-more ws-emp-dismiss"' +
                       ' title="Увольнение: записать дату, убрать из графика"' +
                       ' onclick="WorkSchedule.openDismissForm(\'' +
@@ -47405,7 +47542,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             vacs.sort(function(a, b) {
                 return String(a.дата_начала).localeCompare(String(b.дата_начала));
             });
-            var b2 = '<div class="ws-popup-sec">Отпуска · ' + this._year + '</div>';
+            // Task 396: шапка блока отпусков — полоса .ws-whead,
+            // кнопка «+ Отпуск…» — КОМПАКТНАЯ, в правом углу шапки
+            // (asBlocks); легаси-вид попапа — прежняя секция
+            // .ws-popup-sec, строка добавления — внизу блока
+            var b2 = asBlocks
+                ? '<div class="ws-whead"><div class="ws-whead-t">Отпуска · ' +
+                  this._year + '</div><div class="ws-whead-a">' +
+                  (withEdit ? '<button type="button" class="ws-wbtn ws-emp-addvac"' +
+                  ' title="Добавить период отпуска этому работнику"' +
+                  ' onclick="WorkSchedule.onEmpAddVacation(\'' +
+                  this._esc(String(emp['таб_номер'] || '')) + '\')">+ Отпуск…</button>' : '') +
+                  '</div></div>'
+                : '<div class="ws-popup-sec">Отпуска · ' + this._year + '</div>';
             if (!vacs.length) {
                 b2 += '<div class="ws-emp-empty">нет запланированных периодов</div>';
             } else {
@@ -47428,7 +47577,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                 '<span class="ws-popup-act ws-popup-act-del" title="Удалить период"' +
                                 ' onclick="event.stopPropagation(); WorkSchedule.deleteVacation(' + vId + ')">✕</span>';
                     }
-                    b2 += '<div class="ws-emp-field"><span class="ws-emp-k">Часть ' +
+                    b2 += '<div class="ws-emp-field' +
+                          ((asBlocks && vk % 2 === 1) ? ' ws-row-alt' : '') +
+                          '"><span class="ws-emp-k">Часть ' +
                           (pNo ? pNo : '—') + '</span><span class="ws-emp-v">' +
                           this._fmtDateRu(vv.дата_начала) + ' — ' +
                           this._fmtDateRu(vv.дата_окончания) + ' · ' +
@@ -47447,7 +47598,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // праздники ст. 112 ТК РФ, ст. 120) с пометкой о
             // вычтенных (Task 310); итог года с лимитом — в шторке
             // (Task 311)
-            if (withEdit) {
+            if (withEdit && !asBlocks) {
                 b2 += '<div class="ws-popup-row ws-popup-more ws-emp-addvac"' +
                       ' title="Добавить период отпуска этому работнику"' +
                       ' onclick="WorkSchedule.onEmpAddVacation(\'' +
@@ -47475,7 +47626,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             trs.sort(function(a, b) {
                 return String(a.дата_начала).localeCompare(String(b.дата_начала));
             });
-            var b3 = '<div class="ws-popup-sec">Мероприятия · ' +
+            // Task 396: шапка блока мероприятий — полоса .ws-whead,
+            // кнопка «+ Мероприятие…» — КОМПАКТНАЯ, в правом углу
+            var b3 = asBlocks
+                ? '<div class="ws-whead"><div class="ws-whead-t">Мероприятия · ' +
+                  this._year + '</div><div class="ws-whead-a">' +
+                  (withEdit ? '<button type="button" class="ws-wbtn ws-emp-addtr"' +
+                  ' title="Добавить мероприятие этому работнику"' +
+                  ' onclick="WorkSchedule.onEmpAddTraining(\'' +
+                  this._esc(String(emp['таб_номер'] || '')) + '\')">+ Мероприятие…</button>' : '') +
+                  '</div></div>'
+                : '<div class="ws-popup-sec">Мероприятия · ' +
                      this._year + '</div>';
             if (!trs.length) {
                 b3 += '<div class="ws-emp-empty">нет мероприятий за год</div>';
@@ -47496,7 +47657,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         ? this._fmtDateRu(t.дата_начала)
                         : (this._fmtDateRu(t.дата_начала) + ' — ' +
                            this._fmtDateRu(t.дата_окончания));
-                    b3 += '<div class="ws-popup-row ws-popup-event">' +
+                    b3 += '<div class="ws-popup-row ws-popup-event' +
+                          ((asBlocks && tk % 2 === 1) ? ' ws-row-alt' : '') + '">' +
                           '<span class="ws-popup-swatch" style="background:' +
                           (meta.color || '#3a3a3a') + ';"></span>' +
                           '<span class="ws-popup-code">' + this._esc(code || '—') + '</span>' +
@@ -47510,7 +47672,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // «+ Отпуск…», Task 312). Со страницы «Работники»
             // (withEdit; двойная защита — onEmpAddTraining →
             // openTrainingForm)
-            if (withEdit) {
+            if (withEdit && !asBlocks) {
                 b3 += '<div class="ws-popup-row ws-popup-more ws-emp-addtr"' +
                       ' title="Добавить мероприятие этому работнику"' +
                       ' onclick="WorkSchedule.onEmpAddTraining(\'' +
@@ -47529,7 +47691,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             for (var ppi = 0; ppi < (this._PPE || []).length; ppi++) {
                 if (this._PPE[ppi]['таб_номер'] === tabNo) ppes.push(this._PPE[ppi]);
             }
-            var b4 = '<div class="ws-popup-sec">СИЗ · средства индивидуальной защиты</div>';
+            // Task 396: шапка блока СИЗ — полоса .ws-whead,
+            // кнопка «+ СИЗ…» — КОМПАКТНАЯ, в правом углу шапки
+            var b4 = asBlocks
+                ? '<div class="ws-whead"><div class="ws-whead-t">СИЗ · средства индивидуальной защиты</div><div class="ws-whead-a">' +
+                  (withEdit ? '<button type="button" class="ws-wbtn ws-emp-addppe"' +
+                  ' title="Добавить СИЗ этому работнику"' +
+                  ' onclick="WorkSchedule.onEmpAddPpe(\'' +
+                  this._esc(String(emp['таб_номер'] || '')) + '\')">+ СИЗ…</button>' : '') +
+                  '</div></div>'
+                : '<div class="ws-popup-sec">СИЗ · средства индивидуальной защиты</div>';
             if (!ppes.length) {
                 b4 += '<div class="ws-emp-empty">нет выданных СИЗ</div>';
             } else {
@@ -47556,7 +47727,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     if (String(pz.примечание || '').trim()) {
                         pMeta.push('«' + this._esc(String(pz.примечание).trim()) + '»');
                     }
-                    b4 += '<div class="ws-ppe-item">' +
+                    b4 += '<div class="ws-ppe-item' +
+                          ((asBlocks && pk % 2 === 1) ? ' ws-row-alt' : '') + '">' +
                           '<div class="ws-ppe-body">' +
                           '<div class="ws-ppe-name">' +
                           this._esc(String(pz.наименование || '')) + '</div>' +
@@ -47567,7 +47739,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // «+ СИЗ…» — шторка «Новое СИЗ» с УЖЕ ВЫБРАННЫМ
             // работником карточки (как «+ Отпуск…»/«+ Мероприятие…»,
             // Tasks 312/384). Двойная защита — в openPpeForm
-            if (withEdit) {
+            if (withEdit && !asBlocks) {
                 b4 += '<div class="ws-popup-row ws-popup-more ws-emp-addppe"' +
                       ' title="Добавить СИЗ этому работнику"' +
                       ' onclick="WorkSchedule.onEmpAddPpe(\'' +
