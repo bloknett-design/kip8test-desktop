@@ -6189,6 +6189,15 @@
         letter-spacing: 0.2px;
         text-transform: none;
     }
+    .ws-wcard .ws-whead-t.ws-whead-wrap {
+        /* Task 405: длинный заголовок блока инструктажей («Повторные
+           инструктажи и периодическая проверка знаний · год») —
+           ПЕРЕНОС строками в узкой колонке карточки, не эллипсис */
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        line-height: 1.3;
+    }
     .ws-wcard .ws-whead-a {
         display: flex;
         align-items: center;
@@ -15855,7 +15864,11 @@
              • мероприятия (инструктажи/обучения/проверки/прогул/
                примечание) — бейджи в ячейках шахматки, добавление —
                «+ Мероприятие…» в попапе ячейки (Task 303, шторка
-               #wsTrSheet / openTrainingForm);
+               #wsTrSheet / openTrainingForm); Task 405: таблица
+               инструктажей РАЗДЕЛЕНА — таблица «Инструктажи»
+               (инструктаж/проверка_знаний) + таблица «Мероприятия»
+               (обучение/прогул/примечание), клиенту список —
+               объединённый;
              • серверные эндпоинты listTrainings/listVacations/
                addTraining/deleteTraining/addVacation/deleteVacation —
                без изменений (клиент дергает их из шахматки). -->
@@ -41362,7 +41375,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     // Эндпоинты (через KipAuth.api):
     //   workSchedule.listEmployees      — список сотрудников
     //   workSchedule.listEntries        — записи графика за месяц
-    //   workSchedule.listTrainings      — плановые инструктажи
+    //   workSchedule.listTrainings      — мероприятия года (Task 405:
+    //                                      ОБЪЕДИНЁННЫЙ список таблиц
+    //                                      «Инструктажи» + «Мероприятия»)
     //   workSchedule.getStatusCodes     — легенда
     //   workSchedule.getPatterns        — шаблоны ротации
     //   workSchedule.generateMonth      — СФОРМИРОВАТЬ шахматку
@@ -41415,7 +41430,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _PATTERNS: [],
         _STATUS_CODES: [],
         // Task 303: слой мероприятий в ячейке («два значения»):
-        // _EVENT_CODES — коды мероприятий (из листа «Инструктажи»).
+        // _EVENT_CODES — коды мероприятий (таблицы «Инструктажи» +
+        // «Мероприятия» — Task 405, список объединённый).
         // Task 306: к И/ОБ/ПЗ добавлены ПР (прогул) и * (примечание)
         // — типы «прогул»/«примечание» в форме «Новое мероприятие»
         // (сервер: TRAINING_TYPE_TO_STATUS/_isEventStatusCode).
@@ -42255,7 +42271,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Task 394 (заявка): мероприятия грузятся на ВЕСЬ ГОД
         // шахматки — month НЕ указан (сервер listTrainings без
-        // месяца отдаёт все записи, ПЕРЕСЕКАЮЩИЕ год): карточки
+        // месяца отдаёт все записи, ПЕРЕСЕКАЮЩИЕ год; Task 405 —
+        // ОБЪЕДИНЁННЫЙ список таблиц «Инструктажи» + «Мероприятия»):
+        // карточки
         // работников показывают мероприятия ЗА ГОД, а окно
         // мероприятий месяца, печать и бейджи ячеек фильтруют
         // список сами (месяц/даты). Локальная копия (Task 314),
@@ -43678,8 +43696,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // ============================================================
-        // Task 303: слой мероприятий (лист «Инструктажи»)
+        // Task 303: слой мероприятий («Инструктажи» + «Мероприятия» —
+        // Task 405: разделённая таблица; listTrainings отдаёт оба
+        // листа одним списком, тип записи — источник истины)
         // ============================================================
+
+        // Task 405: «инструктажный» тип — инструктаж/проверка_знаний
+        // (лист «Инструктажи» после разделения таблицы; всё
+        // остальное — обучение/примечание/прогул — лист
+        // «Мероприятия»). Карточка работника фильтрует по ТИПУ —
+        // блоки верны и до серверного переноса старых строк.
+        // Толерантно к регистру/пробелам (ручное заполнение листа)
+        _isInstrType: function(тип) {
+            var t = String(тип || '').trim().toLowerCase()
+                       .replace(/\s+/g, '_');
+            return t === 'инструктаж' || t === 'проверка_знаний';
+        },
 
         // Тип мероприятия → код статуса (как TRAINING_TYPE_TO_STATUS
         // на сервере; _renderTrainings использует ту же карту inline).
@@ -47943,7 +47975,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             //     _TRAININGS — ГОДОВОЙ список (listTrainings без
             //     месяца); сверка пересечения с годом шахматки —
             //     защита от смешанных/устаревших данных (кэш
-            //     прежних версий мог лежать месячным срезом) ---
+            //     прежних версий мог лежать месячным срезом).
+            //     Task 405 (заявка: разделение таблицы): записи
+            //     делятся ПО ТИПУ на два блока — «Мероприятия»
+            //     (обучение/примечание/прогул) и «Повторные
+            //     инструктажи и периодическая проверка знаний»
+            //     (инструктаж/проверка_знаний; см. b5 ниже) ---
             var trs = [];
             var trYStart = this._year + '-01-01', trYEnd = this._year + '-12-31';
             for (var ti = 0; ti < (this._TRAININGS || []).length; ti++) {
@@ -47958,6 +47995,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             trs.sort(function(a, b) {
                 return String(a.дата_начала).localeCompare(String(b.дата_начала));
             });
+            // Task 405: деление годовых записей по типу — блок
+            // «Мероприятия» (evs: обучение/примечание/прогул) и блок
+            // «Повторные инструктажи…» (ins: инструктаж/проверка_знаний)
+            var evs = [], ins = [];
+            for (var si = 0; si < trs.length; si++) {
+                if (this._isInstrType(trs[si].тип)) ins.push(trs[si]);
+                else evs.push(trs[si]);
+            }
             // Task 396: шапка блока мероприятий — полоса .ws-whead,
             // кнопка «+ Мероприятие…» — КОМПАКТНАЯ, в правом углу
             var b3 = asBlocks
@@ -47970,11 +48015,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                   '</div></div>'
                 : '<div class="ws-popup-sec">Мероприятия · ' +
                      this._year + '</div>';
-            if (!trs.length) {
+            if (!evs.length) {
                 b3 += '<div class="ws-emp-empty">нет мероприятий за год</div>';
             } else {
-                for (var tk = 0; tk < trs.length; tk++) {
-                    var t = trs[tk];
+                for (var tk = 0; tk < evs.length; tk++) {
+                    var t = evs[tk];
                     var code = this._trainingCodeOf(t.тип);
                     var meta = this._statusMeta(code) || {};
                     var trId = parseInt(t.id, 10);
@@ -48009,6 +48054,63 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                       ' title="Добавить мероприятие этому работнику"' +
                       ' onclick="WorkSchedule.onEmpAddTraining(\'' +
                       this._esc(String(emp['таб_номер'] || '')) + '\')">+ Мероприятие…</div>';
+            }
+
+            // --- Секция 5 (Task 405, заявка: разделение таблицы
+            //     инструктажей): ПОВТОРНЫЕ ИНСТРУКТАЖИ И ПЕРИОДИЧЕСКАЯ
+            //     ПРОВЕРКА ЗНАНИЙ текущего года — данные таблицы
+            //     «Инструктажи» (типы инструктаж/проверка_знаний).
+            //     Строки — формат мероприятий (код И/ПЗ + тема +
+            //     период, ✎/✕ редакторам по id); кнопка
+            //     «+ Инструктаж…» открывает шторку с типом
+            //     «инструктаж» ---
+            var b5 = asBlocks
+                ? '<div class="ws-whead"><div class="ws-whead-t ws-whead-wrap">Повторные инструктажи и периодическая проверка знаний · ' +
+                  this._year + '</div><div class="ws-whead-a">' +
+                  (withEdit ? '<button type="button" class="ws-wbtn ws-emp-addins"' +
+                  ' title="Добавить инструктаж этому работнику"' +
+                  ' onclick="WorkSchedule.onEmpAddInstruction(\'' +
+                  this._esc(String(emp['таб_номер'] || '')) + '\')">+ Инструктаж…</button>' : '') +
+                  '</div></div>'
+                : '<div class="ws-popup-sec">Повторные инструктажи и периодическая проверка знаний · ' +
+                     this._year + '</div>';
+            if (!ins.length) {
+                b5 += '<div class="ws-emp-empty">нет инструктажей и проверок знаний за год</div>';
+            } else {
+                for (var ik = 0; ik < ins.length; ik++) {
+                    var it = ins[ik];
+                    var iCode = this._trainingCodeOf(it.тип);
+                    var iMeta = this._statusMeta(iCode) || {};
+                    var iTrId = parseInt(it.id, 10);
+                    var iActs = '';
+                    if (withEdit && iTrId) {
+                        iActs = '<span class="ws-popup-act" title="Редактировать"' +
+                                ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + iTrId + ')">✎</span>' +
+                                '<span class="ws-popup-act ws-popup-act-del" title="Удалить"' +
+                                ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + iTrId + ')">✕</span>';
+                    }
+                    var iPeriod = (it.дата_начала === it.дата_окончания)
+                        ? this._fmtDateRu(it.дата_начала)
+                        : (this._fmtDateRu(it.дата_начала) + ' — ' +
+                           this._fmtDateRu(it.дата_окончания));
+                    b5 += '<div class="ws-popup-row ws-popup-event' +
+                          ((asBlocks && ik % 2 === 1) ? ' ws-row-alt' : '') + '">' +
+                          '<span class="ws-popup-swatch" style="background:' +
+                          (iMeta.color || '#3a3a3a') + ';"></span>' +
+                          '<span class="ws-popup-code">' + this._esc(iCode || '—') + '</span>' +
+                          '<span class="ws-popup-name">' +
+                          this._esc(it.тема || iMeta.name || it.тип) +
+                          ' · ' + iPeriod + '</span>' + iActs + '</div>';
+                }
+            }
+            // «+ Инструктаж…» — шторка «Новое мероприятие» с работником
+            // карточки и типом «инструктаж» (Task 405; вид без
+            // asBlocks — строка внизу блока, как у отпусков)
+            if (withEdit && !asBlocks) {
+                b5 += '<div class="ws-popup-row ws-popup-more ws-emp-addins"' +
+                      ' title="Добавить инструктаж этому работнику"' +
+                      ' onclick="WorkSchedule.onEmpAddInstruction(\'' +
+                      this._esc(String(emp['таб_номер'] || '')) + '\')">+ Инструктаж…</div>';
             }
 
             // --- Секция 4: СИЗ — средства индивидуальной защиты
@@ -48079,29 +48181,34 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                       ' onclick="WorkSchedule.onEmpAddPpe(\'' +
                       this._esc(String(emp['таб_номер'] || '')) + '\')">+ СИЗ…</div>';
             }
-            // Task 393: asBlocks — массив 4 блоков (страница
+            // Task 393: asBlocks — массив блоков (страница
             // «Работники», каждое — своё окно), без флага — строка.
             // Task 403 (заявка): попап шахматки — БЕЗ блока СИЗ (из
-            // сплывающего окна данные СИЗ убраны; страница «Работники»
-            // — по-прежнему все четыре блока)
-            return asBlocks ? [b1, b2, b3, b4] : (b1 + b2 + b3);
+            // сплывающего окна данные СИЗ убраны). Task 405: ПЯТЬ
+            // блоков — добавлен «Повторные инструктажи и периодическая
+            // проверка знаний» (попап: профиль/отпуска/мероприятия/
+            // инструктажи; страница «Работники» — все пять)
+            return asBlocks ? [b1, b2, b3, b4, b5] : (b1 + b2 + b3 + b5);
         },
 
-        // Task 393 (заявка): ЧЕТЫРЕ БЛОКА карточки работника на
-        // странице «Работники»: профиль с действиями / отпуска /
-        // мероприятия / СИЗ — КАЖДЫЙ блок отдельным окном-панелью
-        // .ws-wcard. Попап шахматки — сплошной вид БЕЗ блока СИЗ
-        // (_renderWorkerCard без asBlocks; Task 403)
+        // Task 393 (заявка): БЛОКИ карточки работника на странице
+        // «Работники»: профиль с действиями / отпуска / мероприятия
+        // / СИЗ / повторные инструктажи (Task 405) — КАЖДЫЙ блок
+        // отдельным окном-панелью .ws-wcard. Попап шахматки —
+        // сплошной вид БЕЗ блока СИЗ (_renderWorkerCard без
+        // asBlocks; Task 403)
         // Task 395 → 403 → 404 (заявка): ТРИ колонки-обёртки .ws-wcol
         // (раскладка — CSS @media ≥1024px). Task 404 (заявка: «блок
         // СИЗ размести слева от блока мероприятия; в верхней части —
         // три блока слева направо: профиль (под ним отпуска), СИЗ,
         // мероприятия»): колонка 1 — ПРОФИЛЬ + ОТПУСКА (вертикальный
         // стек), колонка 2 (.ws-wcol-ppe) — СИЗ, колонка 3
-        // (.ws-wcol-tr) — МЕРОПРИЯТИЯ: три верхних блока в ОДНУ
-        // ЛИНИЮ. Мобайл ≤1023px — вертикальный СТЕК колонок
-        // (профиль → отпуска → СИЗ → мероприятия); зазоры —
-        // margin-bottom панелей (Task 393) + межколоночный (CSS)
+        // (.ws-wcol-tr) — МЕРОПРИЯТИЯ, под ним (Task 405) — блок
+        // «Повторные инструктажи и периодическая проверка знаний»:
+        // три верхних блока в ОДНУ ЛИНИЮ. Мобайл ≤1023px —
+        // вертикальный СТЕК колонок (профиль → отпуска → СИЗ →
+        // мероприятия → инструктажи); зазоры — margin-bottom панелей
+        // (Task 393) + межколоночный (CSS)
         _renderWorkerCardPanels: function(tabNo, withEdit) {
             var blocks = this._renderWorkerCard(tabNo, withEdit, true);
             var colMain = '', colPpe = '', colTr = '';
@@ -48220,9 +48327,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             // тело вкладки: «Общая» — сводная таблица всех
             // работников (Task 389: ОКНО-панель .ws-wgen со сплошным
-            // фоном — как карточка работника); работник — ЧЕТЫРЕ
-            // блока-панели карточки (Task 393: профиль с действиями /
-            // отпуска / мероприятия / СИЗ — каждое своё окно)
+            // фоном — как карточка работника); работник — ПЯТЬ
+            // блоков-панелей карточки (Task 393: профиль с действиями
+            // / отпуска / мероприятия / СИЗ; Task 405: + повторные
+            // инструктажи — каждое своё окно)
             var contentHtml = '';
             if (tab === 'general') {
                 contentHtml = '<div class="ws-wgen">' +
@@ -48361,6 +48469,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     '<th>Дата приёма</th>' +
                     '<th>Отпуск · ' + this._year + '</th>' +
                     '<th>Мероприятия · ' + this._year + '</th>' +
+                    '<th>Инструктажи · ' + this._year + '</th>' +
                     '</tr></thead><tbody>';
             for (var i = 0; i < list.length; i++) {
                 var emp = list[i];
@@ -48375,9 +48484,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     if (v['таб_номер'] !== emp['таб_номер']) continue;
                     vacDays += this._vacNetDaysInYear(v, this._year);
                 }
-                var trN = 0;
+                // Task 405 (разделение таблицы): «Мероприятия» —
+                // только обучение/примечание/прогул; инструктажи и
+                // проверки знаний — своя колонка «Инструктажи · год»
+                var trN = 0, insN = 0;
                 for (var ti = 0; ti < (this._TRAININGS || []).length; ti++) {
-                    if (this._TRAININGS[ti]['таб_номер'] === emp['таб_номер']) trN++;
+                    if (this._TRAININGS[ti]['таб_номер'] !== emp['таб_номер']) continue;
+                    if (this._isInstrType(this._TRAININGS[ti].тип)) insN++;
+                    else trN++;
                 }
                 html += '<tr><td>' + this._esc(emp['таб_номер']) + '</td>' +
                         '<td class="ws-wgen-fio">' + this._esc(emp['ФИО']) + '</td>' +
@@ -48387,7 +48501,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         '<td>' + (emp['дата_приёма'] ? this._fmtDateRu(emp['дата_приёма']) : '—') + '</td>' +
                         '<td>' + (vacDays ? vacDays + ' ' +
                             this._plural(vacDays, ['день', 'дня', 'дней']) : '—') + '</td>' +
-                        '<td>' + (trN || '—') + '</td></tr>';
+                        '<td>' + (trN || '—') + '</td>' +
+                        '<td>' + (insN || '—') + '</td></tr>';
             }
             html += '</tbody></table>';
             // Task 390: сноска «Сводка по всем работникам…» удалена
@@ -49157,7 +49272,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // (_eventsAt/_trainingCodeOf); добавление — «+ Мероприятие…»
         // в попапе ячейки → openTrainingForm (шторка #wsTrSheet).
 
-        openTrainingForm: function(prefillTab, prefillDate, editTraining) {
+        openTrainingForm: function(prefillTab, prefillDate, editTraining, prefillType) {
             if (!this._canEdit) return;
             var sheetTitle = document.getElementById('wsTrSheetTitle');
             var submitBtn = document.getElementById('wsTrSubmitBtn');
@@ -49207,7 +49322,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 document.getElementById('wsTrStart').value = today;
                 document.getElementById('wsTrEnd').value = today;
                 document.getElementById('wsTrDays').value = 1;
-                document.getElementById('wsTrType').value = 'инструктаж';
+                // Task 405: тип по умолчанию — из кнопки входа
+                // («+ Мероприятие…» блока мероприятий → обучение,
+                // «+ Инструктаж…» → инструктаж); без указания —
+                // прежний дефолт «инструктаж» (попап ячейки)
+                var preTip = String(prefillType || '').trim();
+                document.getElementById('wsTrType').value =
+                    (preTip === 'инструктаж' || preTip === 'обучение' ||
+                     preTip === 'проверка_знаний' || preTip === 'прогул' ||
+                     preTip === 'примечание') ? preTip : 'инструктаж';
                 document.getElementById('wsTrTitle').value = '';
                 document.getElementById('wsTrComment').value = '';
                 if (sheetTitle) sheetTitle.textContent = 'Новое мероприятие';
@@ -49390,7 +49513,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // селекте ДО дефолтов даты
         onEmpAddTraining: function(tabNo) {
             this.closeEmpPopup();
-            this.openTrainingForm(tabNo);
+            // Task 405: кнопка блока «Мероприятия» — дефолт типа
+            // «обучение» (запись уйдёт в таблицу «Мероприятия»)
+            this.openTrainingForm(tabNo, null, null, 'обучение');
+        },
+
+        // Task 405: «+ Инструктаж…» из блока «Повторные инструктажи и
+        // периодическая проверка знаний» — шторка «Новое мероприятие»
+        // с работником карточки и типом «инструктаж» (запись уйдёт в
+        // таблицу «Инструктажи»); двойная защита — в openTrainingForm
+        onEmpAddInstruction: function(tabNo) {
+            this.closeEmpPopup();
+            this.openTrainingForm(tabNo, null, null, 'инструктаж');
         },
 
         // Task 384: правка периода отпуска из карточки сотрудника
