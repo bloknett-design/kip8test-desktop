@@ -5495,6 +5495,56 @@
     }
     [data-theme="light"] .ws-ppe-name { color: #222; }
     [data-theme="light"] .ws-ppe-meta { color: #777; }
+    /* Task 407: блок «Повторные инструктажи и периодическая проверка
+       знаний» по ШАБЛОНУ «Список_И_и_ПЗ» — ГРУППЫ: шапка пункта
+       (свотч / код И|ПЗ / название / «раз в N мес.»), строки-записи
+       года (код + дата + ✎/✕ — .ws-popup-row.ws-il-row), строка
+       следующего срока (✓ актуально / ⚠ просрочено — «последний»
+       инструктаж ищется по записям ВСЕХ лет), разделитель
+       «вне списка» (записи без соответствия шаблону) */
+    .ws-il-head {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        padding: 5px 10px 2px 8px;
+        font-size: 12px;
+        line-height: 1.3;
+    }
+    .ws-il-name {
+        color: var(--text-primary, #e0e0e0);
+        font-weight: 600;
+        overflow-wrap: break-word;
+        min-width: 0;
+    }
+    .ws-il-per {
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+        font-size: 10.5px;
+        white-space: nowrap;
+        margin-left: auto;
+    }
+    .ws-il-row { /* маркер строки-записи года в группе (стили — .ws-popup-row) */ }
+    .ws-il-due {
+        padding: 1px 10px 5px 8px;
+        font-size: 11px;
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+    }
+    .ws-il-due-ok { color: #81c784; }
+    .ws-il-due-bad { color: #ef5350; font-weight: 600; }
+    [data-theme="light"] .ws-il-name { color: #222; }
+    [data-theme="light"] .ws-il-per { color: #777; }
+    [data-theme="light"] .ws-il-due { color: #777; }
+    [data-theme="light"] .ws-il-due-ok { color: #2e7d32; }
+    [data-theme="light"] .ws-il-due-bad { color: #c62828; }
+    .ws-il-off {
+        padding: 7px 10px 2px 8px;
+        font-size: 10.5px;
+        letter-spacing: 0.4px;
+        color: var(--text-secondary, rgba(255,255,255,0.45));
+        font-style: italic;
+        border-top: 1px dashed var(--card-border, rgba(255,255,255,0.08));
+        margin-top: 4px;
+    }
+    [data-theme="light"] .ws-il-off { color: #999; }
     /* Task 392: строка АВТО-даты окончания срока годности в шторке
        СИЗ (дата выдачи + срок; стиль — как .ws-vac-form-info) */
     .ws-ppe-form-info {
@@ -6138,6 +6188,14 @@
     }
     .ws-wcard .ws-ppe-name { font-size: 14px; }
     .ws-wcard .ws-ppe-meta { font-size: 12.5px; }
+    /* Task 407: группы шаблона «Список_И_и_ПЗ» в окне карточки —
+       крупнее (как строки СИЗ/мероприятий); строки-записи года —
+       компактнее «пилюль» (группы и так делят блок) */
+    .ws-wcard .ws-il-head { font-size: 14px; padding: 6px 10px 2px; }
+    .ws-wcard .ws-il-name { font-size: 14px; }
+    .ws-wcard .ws-il-per { font-size: 12px; }
+    .ws-wcard .ws-il-row { font-size: 14px; padding: 4px 10px; }
+    .ws-wcard .ws-il-due { font-size: 12.5px; padding: 1px 10px 6px; }
     .ws-wcard .ws-popup-act {
         width: 26px;
         height: 26px;
@@ -18835,7 +18893,12 @@
     <div class="flow-input-row">
         <div class="flow-input-group" style="flex:1 1 100%;">
             <label class="flow-input-label" for="wsTrTitle">Тема</label>
-            <input type="text" id="wsTrTitle" class="flow-input-field-small" placeholder="Повторный инструктаж по ОТ (Q3 2026)" autocomplete="off">
+            <!-- Task 407: подсказки названий из шаблона «Список_И_и_ПЗ»
+                 (datalist #wsTrTitleList) — при типе инструктаж/проверка
+                 знаний, по «виду» пункта; свободный ввод остаётся
+                 (внеплановые темы) -->
+            <input type="text" id="wsTrTitle" class="flow-input-field-small" placeholder="Повторный инструктаж по ОТ (Q3 2026)" autocomplete="off" list="wsTrTitleList">
+            <datalist id="wsTrTitleList"></datalist>
         </div>
     </div>
     <div class="flow-input-row">
@@ -41427,6 +41490,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _EMPLOYEES: [],
         _ENTRIES: [],
         _TRAININGS: [],
+        // Task 407: каркас блока «Повторные инструктажи и периодическая
+        // проверка знаний» — шаблон «Список_И_и_ПЗ» (название/вид/
+        // периодичность/основание) и ВСЕ записи «Инструктажей» (без
+        // фильтра года — «последний» инструктаж ищется по всем годам).
+        // Пустой шаблон (листа нет/сервер старый/кэш прежней версии) —
+        // блок живёт плоским списком записей года (как до Task 407)
+        _INSTR_LIST: [],
+        _INSTR_ALL: [],
         _PATTERNS: [],
         _STATUS_CODES: [],
         // Task 303: слой мероприятий в ячейке («два значения»):
@@ -42284,6 +42355,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return this._api('workSchedule.listTrainings', { year: this._year })
                 .then(function(data) {
                     self._TRAININGS = data.trainings || [];
+                    // Task 407: шаблон «Список_И_и_ПЗ» + все записи
+                    // «Инструктажей» (старый сервер полей не отдаёт —
+                    // пустые массивы, блок без шаблона/без межгодовых
+                    // сроков)
+                    self._INSTR_LIST = data.instrList || [];
+                    self._INSTR_ALL = data.instrAll || [];
                 });
         },
 
@@ -42386,6 +42463,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // не быть (до Task 392) — пустой список, до серверного
             // деплоя он и будет пустым
             this._PPE = Array.isArray(c.ppe) ? c.ppe : [];
+            // Task 407: шаблон инструктажей + все записи «Инструктажей»
+            // (кэш прежних версий полей не содержит — пустые, блок без
+            // шаблона до первого «Обновить»)
+            this._INSTR_LIST = Array.isArray(c.instrList) ? c.instrList : [];
+            this._INSTR_ALL = Array.isArray(c.instrAll) ? c.instrAll : [];
             this._cacheTs = view.ts || 0;
             // select «Статус» шита «Дополнительно…» — из восстановленных
             // кодов (как после _loadStatusCodes)
@@ -42410,6 +42492,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 c.vacations[String(this._year)] = this._VACATIONS;
                 // Task 392: СИЗ — единый список (не по годам)
                 c.ppe = this._PPE;
+                // Task 407: шаблон инструктажей + все записи
+                // «Инструктажей» (не по годам)
+                c.instrList = this._INSTR_LIST;
+                c.instrAll = this._INSTR_ALL;
                 if (!c.views || typeof c.views !== 'object') c.views = {};
                 var ym = this._ymKey();
                 c.views[ym] = { entries: this._ENTRIES, trainings: this._TRAININGS, ts: Date.now() };
@@ -43711,6 +43797,41 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var t = String(тип || '').trim().toLowerCase()
                        .replace(/\s+/g, '_');
             return t === 'инструктаж' || t === 'проверка_знаний';
+        },
+
+        // Task 407: нормализованный ключ соответствия «тема» записи
+        // «Инструктажей» ↔ «название» пункта шаблона «Список_И_и_ПЗ»:
+        // регистр/лишние пробелы/«ё» не важны (ручное заполнение)
+        _normInstrKey: function(s) {
+            return String(s || '').trim().toLowerCase()
+                       .replace(/ё/g, 'е')
+                       .replace(/\s+/g, ' ');
+        },
+
+        // Task 407: «вид» пункта шаблона / тип записи → инструктаж |
+        // проверка_знаний (толерантно, как _isInstrType; пустое
+        // значение — инструктаж)
+        _normInstrKind: function(вид) {
+            var v = String(вид || '').trim().toLowerCase()
+                        .replace(/\s+/g, '_');
+            return v === 'проверка_знаний' ? 'проверка_знаний'
+                                            : 'инструктаж';
+        },
+
+        // Task 407: ISO-дата + N месяцев (день клампится к концу
+        // месяца: 31.01 + 1 мес → 28.02) — «следующий срок»
+        // периодичного инструктажа от последней записи
+        _addMonthsIso: function(iso, months) {
+            var p = String(iso || '').split('-');
+            if (p.length < 3 || !months) return '';
+            var y = parseInt(p[0], 10);
+            var m = parseInt(p[1], 10);
+            var d = parseInt(p[2], 10);
+            if (!y || !m || !d) return '';
+            var t = new Date(y, m - 1 + months, 1);
+            var dim = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate();
+            t.setDate(Math.min(d, dim));
+            return this._isoDate(t);
         },
 
         // Тип мероприятия → код статуса (как TRAINING_TYPE_TO_STATUS
@@ -48074,7 +48195,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                   '</div></div>'
                 : '<div class="ws-popup-sec">Повторные инструктажи и периодическая проверка знаний · ' +
                      this._year + '</div>';
-            if (!ins.length) {
+            // Task 407: шаблон «Список_И_и_ПЗ» загружен — ГРУППОВОЙ
+            // вид (пункты шаблона + записи года + «следующий срок» +
+            // секция «вне списка»); шаблона нет (лист не создан /
+            // сервер старый / кэш прежней версии) — прежний ПЛОСКИЙ
+            // список записей года
+            if (this._INSTR_LIST && this._INSTR_LIST.length) {
+                b5 += this._renderInstrSection(ins, tabNo, withEdit,
+                                                asBlocks, this._INSTR_LIST);
+            } else if (!ins.length) {
                 b5 += '<div class="ws-emp-empty">нет инструктажей и проверок знаний за год</div>';
             } else {
                 for (var ik = 0; ik < ins.length; ik++) {
@@ -48220,6 +48349,159 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return '<div class="ws-wcol">' + colMain + '</div>' +
                    '<div class="ws-wcol ws-wcol-instr">' + colInstr + '</div>' +
                    '<div class="ws-wcol ws-wcol-ppe">' + colPpe + '</div>';
+        },
+
+        // Task 407: ТЕЛО блока «Повторные инструктажи и периодическая
+        // проверка знаний» по ШАБЛОНУ «Список_И_и_ПЗ» (вызывается из
+        // _renderWorkerCard, когда шаблон загружен):
+        //   • ГРУППА на каждый пункт шаблона (порядок = порядок строк
+        //     листа): шапка (свотч/код И|ПЗ по «виду» пункта/название/
+        //     «раз в N мес.»), записи ГОДА с ✎/✕ (связка — по
+        //     нормализованному названию «тема» ↔ «название»; код
+        //     строки — факт записи), строка следующего срока от
+        //     ПОСЛЕДНЕЙ записи ЛЮБОГО года («след. срок: … ✓» /
+        //     «⚠ просрочено с …»; периодичность 0 = разовый — срок не
+        //     считается). Карточка (asBlocks) дополнительно показывает
+        //     «— не проводился» / «— в этом году не проводился»; попап
+        //     — компактно, без этих строк и без пустых пунктов;
+        //   • записи года без соответствия шаблону — секция
+        //     «вне списка» (плоские строки, как до Task 407).
+        // Дубли названий шаблона — первый пункт (map). Вид записи ≠
+        // вид пункта — показываем факт записи, периодичность из шаблона
+        _renderInstrSection: function(ins, tabNo, withEdit, asBlocks, iList) {
+            var html = '';
+            var today = this._isoDate(new Date());
+            var map = {}, order = [];
+            for (var ii = 0; ii < iList.length; ii++) {
+                var key = this._normInstrKey(iList[ii].название);
+                if (!key || map[key]) continue;
+                map[key] = iList[ii];
+                order.push(key);
+            }
+            // записи работника по ВСЕМ годам («последний» инструктаж):
+            // _INSTR_ALL (все «Инструктажи») + срез года ins (запись
+            // могла попасть в лист «Мероприятия» вручную) — dedupe
+            // по id, только инструктажные типы и записи с датой
+            var all = [], seen = {};
+            var pool = (this._INSTR_ALL || []).concat(ins || []);
+            for (var ai = 0; ai < pool.length; ai++) {
+                var ar = pool[ai];
+                if (ar['таб_номер'] !== tabNo) continue;
+                if (!this._isInstrType(ar.тип)) continue;
+                if (!ar.дата_начала) continue;
+                var ak = parseInt(ar.id, 10);
+                var dedup = ak ? ('i' + ak)
+                    : ('t' + ar.дата_начала + '|' + String(ar.тема || ''));
+                if (seen[dedup]) continue;
+                seen[dedup] = true;
+                all.push(ar);
+            }
+            all.sort(function(a, b) {
+                return String(a.дата_начала).localeCompare(String(b.дата_начала));
+            });
+            // записи года по группам; без соответствия — «вне списка»
+            var byKey = {}, offlist = [];
+            for (var yi = 0; yi < (ins || []).length; yi++) {
+                var yk = this._normInstrKey(ins[yi].тема);
+                if (yk && map[yk]) {
+                    if (!byKey[yk]) byKey[yk] = [];
+                    byKey[yk].push(ins[yi]);
+                } else {
+                    offlist.push(ins[yi]);
+                }
+            }
+            for (var gi = 0; gi < order.length; gi++) {
+                var gKey = order[gi];
+                var gItem = map[gKey];
+                var gRows = byKey[gKey] || [];
+                var last = null;
+                for (var li = 0; li < all.length; li++) {
+                    if (this._normInstrKey(all[li].тема) === gKey) {
+                        last = all[li];
+                    }
+                }
+                // попап: пункты без записей вообще — не показываем
+                if (!asBlocks && !gRows.length && !last) continue;
+                var gKind = this._normInstrKind(gItem.вид);
+                var gCode = gKind === 'проверка_знаний' ? 'ПЗ' : 'И';
+                var gMeta = this._statusMeta(gCode) || {};
+                html += '<div class="ws-il-head">' +
+                        '<span class="ws-popup-swatch" style="background:' +
+                        (gMeta.color || '#3a3a3a') + ';"></span>' +
+                        '<span class="ws-popup-code">' + this._esc(gCode) + '</span>' +
+                        '<span class="ws-il-name">' +
+                        this._esc(String(gItem.название || '')) + '</span>' +
+                        (gItem.периодичность
+                            ? '<span class="ws-il-per">раз в ' + gItem.периодичность + ' ' +
+                              this._plural(gItem.периодичность,
+                                           ['месяц', 'месяца', 'месяцев']) + '</span>'
+                            : '') +
+                        '</div>';
+                for (var ri = 0; ri < gRows.length; ri++) {
+                    var gr = gRows[ri];
+                    var rId = parseInt(gr.id, 10);
+                    var rActs = '';
+                    if (withEdit && rId) {
+                        rActs = '<span class="ws-popup-act" title="Редактировать"' +
+                                ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + rId + ')">✎</span>' +
+                                '<span class="ws-popup-act ws-popup-act-del" title="Удалить"' +
+                                ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + rId + ')">✕</span>';
+                    }
+                    var rPeriod = (gr.дата_начала === gr.дата_окончания)
+                        ? this._fmtDateRu(gr.дата_начала)
+                        : (this._fmtDateRu(gr.дата_начала) + ' — ' +
+                           this._fmtDateRu(gr.дата_окончания));
+                    html += '<div class="ws-popup-row ws-popup-event ws-il-row">' +
+                            '<span class="ws-popup-code">' +
+                            this._esc(this._trainingCodeOf(gr.тип) || gCode) + '</span>' +
+                            '<span class="ws-popup-name">' + rPeriod + '</span>' +
+                            rActs + '</div>';
+                }
+                if (asBlocks && !gRows.length) {
+                    html += last
+                        ? '<div class="ws-emp-empty">— в этом году не проводился</div>'
+                        : '<div class="ws-emp-empty">— не проводился</div>';
+                }
+                var perN = parseFloat(gItem.периодичность) || 0;
+                var dueIso = (last && perN > 0)
+                    ? this._addMonthsIso(last.дата_начала, perN) : '';
+                if (dueIso) {
+                    html += (dueIso < today)
+                        ? '<div class="ws-il-due ws-il-due-bad">⚠ просрочено с ' +
+                          this._fmtDateRu(dueIso) + '</div>'
+                        : '<div class="ws-il-due ws-il-due-ok">след. срок: ' +
+                          this._fmtDateRu(dueIso) + ' ✓</div>';
+                }
+            }
+            if (offlist.length) {
+                html += '<div class="ws-il-off">вне списка:</div>';
+                for (var oi = 0; oi < offlist.length; oi++) {
+                    var ot = offlist[oi];
+                    var oCode = this._trainingCodeOf(ot.тип);
+                    var oMeta = this._statusMeta(oCode) || {};
+                    var oId = parseInt(ot.id, 10);
+                    var oActs = '';
+                    if (withEdit && oId) {
+                        oActs = '<span class="ws-popup-act" title="Редактировать"' +
+                                ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + oId + ')">✎</span>' +
+                                '<span class="ws-popup-act ws-popup-act-del" title="Удалить"' +
+                                ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + oId + ')">✕</span>';
+                    }
+                    var oPeriod = (ot.дата_начала === ot.дата_окончания)
+                        ? this._fmtDateRu(ot.дата_начала)
+                        : (this._fmtDateRu(ot.дата_начала) + ' — ' +
+                           this._fmtDateRu(ot.дата_окончания));
+                    html += '<div class="ws-popup-row ws-popup-event' +
+                          ((asBlocks && oi % 2 === 1) ? ' ws-row-alt' : '') + '">' +
+                          '<span class="ws-popup-swatch" style="background:' +
+                          (oMeta.color || '#3a3a3a') + ';"></span>' +
+                          '<span class="ws-popup-code">' + this._esc(oCode || '—') + '</span>' +
+                          '<span class="ws-popup-name">' +
+                          this._esc(ot.тема || oMeta.name || ot.тип) +
+                          ' · ' + oPeriod + '</span>' + oActs + '</div>';
+                }
+            }
+            return html;
         },
 
         // Task 385 → 386 → 395: СТРАНИЦА «РАБОТНИКИ» — переход
@@ -49271,6 +49553,32 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // (_eventsAt/_trainingCodeOf); добавление — «+ Мероприятие…»
         // в попапе ячейки → openTrainingForm (шторка #wsTrSheet).
 
+        // Task 407: пересобрать подсказки поля «Тема» шторки «Новое
+        // мероприятие» (datalist #wsTrTitleList) по шаблону
+        // «Список_И_и_ПЗ»: тип инструктаж — названия вида «инструктаж»,
+        // проверка знаний — «проверка_знаний» (толерантно); прочие
+        // типы (обучение/прогул/примечание) — без подсказок (темы
+        // свободные). Шаблона нет (лист не создан/сервер старый) —
+        // пустой список, ввод свободный
+        _fillTrTitleOptions: function() {
+            var dl = document.getElementById('wsTrTitleList');
+            if (!dl) return;
+            var tipEl = document.getElementById('wsTrType');
+            var tip = tipEl ? tipEl.value : '';
+            var html = '';
+            if (this._isInstrType(tip)) {
+                var want = this._normInstrKind(tip);
+                for (var i = 0; i < (this._INSTR_LIST || []).length; i++) {
+                    if (this._normInstrKind(this._INSTR_LIST[i].вид) !== want) {
+                        continue;
+                    }
+                    html += '<option value="' +
+                            this._esc(this._INSTR_LIST[i].название) + '"></option>';
+                }
+            }
+            dl.innerHTML = html;
+        },
+
         openTrainingForm: function(prefillTab, prefillDate, editTraining, prefillType) {
             if (!this._canEdit) return;
             var sheetTitle = document.getElementById('wsTrSheetTitle');
@@ -49291,6 +49599,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // к форме «Новое мероприятие»)
                 if (prefillTab) empSel.value = String(prefillTab);
             }
+            // Task 407: подсказки названий «Темы» из шаблона
+            // «Список_И_и_ПЗ» (datalist #wsTrTitleList): тип
+            // инструктаж/проверка знаний — названия соответствующего
+            // вида; пересбор при смене типа (onchange); свободный
+            // ввод остаётся (внеплановые темы)
+            var typeSel = document.getElementById('wsTrType');
+            if (typeSel) {
+                typeSel.onchange = function() {
+                    WorkSchedule._fillTrTitleOptions();
+                };
+            }
+            this._fillTrTitleOptions();
             // Task 309: два режима формы — создание (по умолчанию) и
             // ПРАВКА существующего мероприятия (editTraining: запись из
             // _TRAININGS, найденная по id в editTraining()). В правке
