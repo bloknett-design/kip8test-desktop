@@ -6263,6 +6263,59 @@
         margin-left: auto;
         flex: none;
     }
+    /* Task 408: навигатор года «‹ 2026 ›» в заголовках блоков карточки
+       (стрелки листают годовые архивы инструктажей/мероприятий) */
+    .ws-ynav {
+        display: inline-flex;
+        align-items: center;
+        gap: 1px;
+        margin-left: 2px;
+    }
+    .ws-ynav-btn {
+        display: inline-block;
+        min-width: 17px;
+        padding: 0 3px;
+        cursor: pointer;
+        user-select: none;
+        color: var(--accent-blue, #4a8fc7);
+        font-weight: 700;
+        border-radius: 4px;
+        line-height: 1;
+    }
+    .ws-ynav-btn:hover {
+        background: rgba(74, 143, 199, 0.22);
+    }
+    .ws-ynav-btn.ws-ynav-off {
+        color: #5a6b7d;
+        opacity: 0.35;
+        cursor: default;
+    }
+    .ws-ynav-btn.ws-ynav-off:hover {
+        background: none;
+    }
+    .ws-ynav-y {
+        font-weight: 700;
+    }
+    [data-theme="light"] .ws-ynav-btn {
+        color: #2f6da3;
+    }
+    [data-theme="light"] .ws-ynav-btn:hover {
+        background: rgba(198, 97, 63, 0.18);
+    }
+    [data-theme="light"] .ws-ynav-btn.ws-ynav-off {
+        color: #8494a3;
+    }
+    /* Task 408: подсказка выбранного пункта шаблона в шторке
+       «Новое мероприятие» (периодичность · основание) */
+    .ws-tr-item-hint {
+        margin-top: 4px;
+        font-size: 12px;
+        line-height: 1.35;
+        color: #93a7b8;
+    }
+    [data-theme="light"] .ws-tr-item-hint {
+        color: #6e7f90;
+    }
     /* Task 396 (заявка): КОМПАКТНЫЕ кнопки действий шапки — стиль
        сайта (как «Добавить работника», Task 391): тёмная — СИНИЙ
        var(--accent-blue) #4a8fc7, светлая — ОРАНЖЕВЫЙ #C6613F,
@@ -18893,12 +18946,21 @@
     <div class="flow-input-row">
         <div class="flow-input-group" style="flex:1 1 100%;">
             <label class="flow-input-label" for="wsTrTitle">Тема</label>
-            <!-- Task 407: подсказки названий из шаблона «Список_И_и_ПЗ»
-                 (datalist #wsTrTitleList) — при типе инструктаж/проверка
-                 знаний, по «виду» пункта; свободный ввод остаётся
-                 (внеплановые темы) -->
+            <!-- Task 408 (заявка: записи «Инструктажей» формируются
+                 РУЧНЫМ ВЫБОРОМ из шаблонного списка): тип
+                 инструктаж/проверка знаний — СТРОГИЙ select пунктов
+                 «Список_И_и_ПЗ» этого вида (свободного ввода нет;
+                 внеплановые — сначала добавить в список); прочие типы
+                 и ОТСУТСТВИЕ шаблона (лист не создан/сервер старый) —
+                 прежний текстовый ввод #wsTrTitle (Task 407 datalist
+                 остаётся как деградация) -->
+            <select id="wsTrTitleSel" class="flow-input-field-small" hidden></select>
             <input type="text" id="wsTrTitle" class="flow-input-field-small" placeholder="Повторный инструктаж по ОТ (Q3 2026)" autocomplete="off" list="wsTrTitleList">
             <datalist id="wsTrTitleList"></datalist>
+            <!-- Task 408: подсказка выбранного пункта — периодичность
+                 и основание подтягиваются из шаблона; разовый/без
+                 данных — строка скрыта -->
+            <div id="wsTrItemHint" class="ws-tr-item-hint" hidden></div>
         </div>
     </div>
     <div class="flow-input-row">
@@ -41498,6 +41560,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // блок живёт плоским списком записей года (как до Task 407)
         _INSTR_LIST: [],
         _INSTR_ALL: [],
+        // Task 408: ВСЕ записи «Мероприятий» (listTrainings.eventsAll;
+        // годовые архивы блока «Мероприятия · ‹год›»)
+        _EVENTS_ALL: [],
         _PATTERNS: [],
         _STATUS_CODES: [],
         // Task 303: слой мероприятий в ячейке («два значения»):
@@ -42361,6 +42426,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     // сроков)
                     self._INSTR_LIST = data.instrList || [];
                     self._INSTR_ALL = data.instrAll || [];
+                    // Task 408: все записи «Мероприятий» (старый
+                    // сервер поля не отдаёт — пустой массив)
+                    self._EVENTS_ALL = data.eventsAll || [];
                 });
         },
 
@@ -42468,6 +42536,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // шаблона до первого «Обновить»)
             this._INSTR_LIST = Array.isArray(c.instrList) ? c.instrList : [];
             this._INSTR_ALL = Array.isArray(c.instrAll) ? c.instrAll : [];
+            // Task 408: все «Мероприятия» (кэш прежних версий поля не
+            // содержит — пустой массив, архивная навигация деградирует
+            // к году шахматки)
+            this._EVENTS_ALL = Array.isArray(c.eventsAll) ? c.eventsAll : [];
             this._cacheTs = view.ts || 0;
             // select «Статус» шита «Дополнительно…» — из восстановленных
             // кодов (как после _loadStatusCodes)
@@ -42496,6 +42568,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // «Инструктажей» (не по годам)
                 c.instrList = this._INSTR_LIST;
                 c.instrAll = this._INSTR_ALL;
+                // Task 408: все «Мероприятия» (не по годам)
+                c.eventsAll = this._EVENTS_ALL;
                 if (!c.views || typeof c.views !== 'object') c.views = {};
                 var ym = this._ymKey();
                 c.views[ym] = { entries: this._ENTRIES, trainings: this._TRAININGS, ts: Date.now() };
@@ -47034,8 +47108,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var evChips = '';
                 for (var evj = 0; evj < events.length; evj++) {
                     var evMeta = this._statusMeta(events[evj].code) || {};
+                    // Task 408 (заявка: коды И и ПЗ в шахматке — «с
+                    // указанием вида инструктажа или проверки знаний»):
+                    // тултип бейджа «код — тема записи» (вид); записи
+                    // нет (виртуальный бейдж статуса) — полное имя
+                    // кода из справочника
+                    var evTr = events[evj].training;
+                    var evTip = (evTr && String(evTr.тема || '').trim())
+                        ? (events[evj].code + ' — ' + String(evTr.тема).trim())
+                        : String((evMeta.name || '')).trim();
                     evChips += '<span class="ws-ev-badge"' +
                                (evMeta.color ? ' style="background:' + evMeta.color + ';"' : '') +
+                               (evTip ? ' title="' + this._esc(evTip) + '"' : '') +
                                '>' + this._esc(events[evj].code) + '</span>';
                 }
                 evHtml = '<span class="ws-ev-wrap">' + evChips + '</span>';
@@ -48102,33 +48186,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             //     (обучение/примечание/прогул) и «Повторные
             //     инструктажи и периодическая проверка знаний»
             //     (инструктаж/проверка_знаний; см. b5 ниже) ---
-            var trs = [];
-            var trYStart = this._year + '-01-01', trYEnd = this._year + '-12-31';
-            for (var ti = 0; ti < (this._TRAININGS || []).length; ti++) {
-                var tRec = this._TRAININGS[ti];
-                if (tRec['таб_номер'] !== tabNo) continue;
-                var tS = String(tRec['дата_начала'] || '');
-                if (!tS) continue;
-                var tE = String(tRec['дата_окончания'] || tS);
-                if (tE < trYStart || tS > trYEnd) continue;
-                trs.push(tRec);
-            }
-            trs.sort(function(a, b) {
-                return String(a.дата_начала).localeCompare(String(b.дата_начала));
-            });
-            // Task 405: деление годовых записей по типу — блок
-            // «Мероприятия» (evs: обучение/примечание/прогул) и блок
-            // «Повторные инструктажи…» (ins: инструктаж/проверка_знаний)
-            var evs = [], ins = [];
-            for (var si = 0; si < trs.length; si++) {
-                if (this._isInstrType(trs[si].тип)) ins.push(trs[si]);
-                else evs.push(trs[si]);
-            }
+            // Task 408 (заявка: годовые архивы): на странице
+            // «Работники» (asBlocks) блоки листают годы СТРЕЛКАМИ
+            // «‹ год ›» — записи любого года из instrAll/eventsAll
+            // (выбранный год хранится по работнику); попап ячейки
+            // остаётся за ГОД ШАХМАТКИ
+            var wYear = asBlocks ? this._wtabYearOf(tabNo) : this._year;
+            var wRecs = this._wtabYearRecords(tabNo, wYear);
+            var evs = wRecs.evs, ins = wRecs.ins;
             // Task 396: шапка блока мероприятий — полоса .ws-whead,
             // кнопка «+ Мероприятие…» — КОМПАКТНАЯ, в правом углу
             var b3 = asBlocks
                 ? '<div class="ws-whead"><div class="ws-whead-t">Мероприятия · ' +
-                  this._year + '</div><div class="ws-whead-a">' +
+                  wYear + this._wtabYearNav(tabNo, wYear) + '</div><div class="ws-whead-a">' +
                   (withEdit ? '<button type="button" class="ws-wbtn ws-emp-addtr"' +
                   ' title="Добавить мероприятие этому работнику"' +
                   ' onclick="WorkSchedule.onEmpAddTraining(\'' +
@@ -48187,7 +48257,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             //     «инструктаж» ---
             var b5 = asBlocks
                 ? '<div class="ws-whead"><div class="ws-whead-t ws-whead-wrap">Повторные инструктажи и периодическая проверка знаний · ' +
-                  this._year + '</div><div class="ws-whead-a">' +
+                  wYear + this._wtabYearNav(tabNo, wYear) + '</div><div class="ws-whead-a">' +
                   (withEdit ? '<button type="button" class="ws-wbtn ws-emp-addins"' +
                   ' title="Добавить инструктаж этому работнику"' +
                   ' onclick="WorkSchedule.onEmpAddInstruction(\'' +
@@ -48202,7 +48272,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // список записей года
             if (this._INSTR_LIST && this._INSTR_LIST.length) {
                 b5 += this._renderInstrSection(ins, tabNo, withEdit,
-                                                asBlocks, this._INSTR_LIST);
+                                                asBlocks, this._INSTR_LIST, wYear);
             } else if (!ins.length) {
                 b5 += '<div class="ws-emp-empty">нет инструктажей и проверок знаний за год</div>';
             } else {
@@ -48368,9 +48438,120 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         //     «вне списка» (плоские строки, как до Task 407).
         // Дубли названий шаблона — первый пункт (map). Вид записи ≠
         // вид пункта — показываем факт записи, периодичность из шаблона
-        _renderInstrSection: function(ins, tabNo, withEdit, asBlocks, iList) {
+        // Task 408: год просмотра блока «Повторные инструктажи…»
+        // (стрелки ‹год› карточки). Не выбран/попап — год шахматки.
+        // Снимок: «последний» и «след. срок» считаются по записям
+        // ДО КОНЦА выбранного года; архивный год — нейтральная
+        // строка срока, без красного «просрочено»
+        _wtabYearOf: function(tabNo) {
+            var y = this._wtabYear && this._wtabYear[String(tabNo)];
+            y = parseInt(y, 10);
+            if (y && y >= 1900 && y <= 2999) return y;
+            return this._year || new Date().getFullYear();
+        },
+
+        // нижняя граница навигации — самый ранний год записи
+        // работника (instrAll/eventsAll/срез года табеля); записей
+        // нет — год шахматки
+        _wtabYearMin: function(tabNo) {
+            tabNo = String(tabNo);
+            var min = null;
+            var pools = [this._INSTR_ALL, this._EVENTS_ALL, this._TRAININGS];
+            for (var p = 0; p < pools.length; p++) {
+                var arr = pools[p] || [];
+                for (var i = 0; i < arr.length; i++) {
+                    if (String(arr[i]['таб_номер']) !== tabNo) continue;
+                    var s = String(arr[i].дата_начала || '');
+                    if (s.length >= 4) {
+                        var y = parseInt(s.slice(0, 4), 10);
+                        if (y && (min === null || y < min)) min = y;
+                    }
+                }
+            }
+            return min || (this._year || new Date().getFullYear());
+        },
+
+        // стрелка ‹/› — смена года работника и перерисовка страницы
+        // «Работники»; границы клампятся (раньше записей нельзя,
+        // выше максимума(текущий; год табеля) нельзя); возврат к
+        // году табеля снимает персональный выбор
+        _wtabYearShift: function(tabNo, delta) {
+            tabNo = String(tabNo);
+            var now = new Date().getFullYear();
+            var y = this._wtabYearOf(tabNo) + (delta || 0);
+            var min = this._wtabYearMin(tabNo);
+            var max = Math.max(now, this._year || now);
+            if (y < min) y = min;
+            if (y > max) y = max;
+            if (!this._wtabYear) this._wtabYear = {};
+            if (y === (this._year || now)) delete this._wtabYear[tabNo];
+            else this._wtabYear[tabNo] = y;
+            this._renderWorkersPage();
+        },
+
+        // навигатор «‹ ›» для заголовка блока карточки (год стоит
+        // перед ним текстом; только asBlocks — страница «Работники»);
+        // на границах — приглушённые стрелки без клика
+        _wtabYearNav: function(tabNo, year) {
+            var min = this._wtabYearMin(tabNo);
+            var now = new Date().getFullYear();
+            var max = Math.max(now, this._year || now);
+            var left = (year > min)
+                ? '<span class="ws-ynav-btn" role="button" title="Предыдущий год"' +
+                  ' onclick="event.stopPropagation(); WorkSchedule._wtabYearShift(\'' +
+                  this._esc(String(tabNo)) + '\', -1)">‹</span>'
+                : '<span class="ws-ynav-btn ws-ynav-off">‹</span>';
+            var right = (year < max)
+                ? '<span class="ws-ynav-btn" role="button" title="Следующий год"' +
+                  ' onclick="event.stopPropagation(); WorkSchedule._wtabYearShift(\'' +
+                  this._esc(String(tabNo)) + '\', 1)">›</span>'
+                : '<span class="ws-ynav-btn ws-ynav-off">›</span>';
+            return '<span class="ws-ynav">' + left + right + '</span>';
+        },
+
+        // записи работника за выбранный год блока — единый пул:
+        // instrAll (все «Инструктажи») + eventsAll (все «Мероприятия»)
+        // + годовой срез _TRAININGS (старый сервер/кэш без eventsAll;
+        // для архивных лет срез года табеля отфильтруется датами, а
+        // дубли снимет дедуп по id); возврат { ins, evs } выбранного
+        // года (пересечение с годом)
+        _wtabYearRecords: function(tabNo, year) {
+            tabNo = String(tabNo);
+            var yS = year + '-01-01', yE = year + '-12-31';
+            var pool = [].concat(this._INSTR_ALL || [],
+                                 this._EVENTS_ALL || [],
+                                 this._TRAININGS || []);
+            var seen = {}, ins = [], evs = [];
+            for (var i = 0; i < pool.length; i++) {
+                var r = pool[i];
+                if (String(r['таб_номер']) !== tabNo) continue;
+                var s = String(r['дата_начала'] || '');
+                if (!s) continue;
+                var e = String(r['дата_окончания'] || s);
+                if (e < yS || s > yE) continue;
+                var id = parseInt(r.id, 10);
+                var k = id ? ('i' + id)
+                    : ('t' + s + '|' + String(r.тема || ''));
+                if (seen[k]) continue;
+                seen[k] = true;
+                if (this._isInstrType(r.тип)) ins.push(r);
+                else evs.push(r);
+            }
+            var byDate = function(a, b) {
+                return String(a.дата_начала).localeCompare(String(b.дата_начала));
+            };
+            ins.sort(byDate);
+            evs.sort(byDate);
+            return { ins: ins, evs: evs };
+        },
+
+        _renderInstrSection: function(ins, tabNo, withEdit, asBlocks, iList, year) {
             var html = '';
             var today = this._isoDate(new Date());
+            // Task 408: год блока (не задан — год шахматки); снимок
+            // «последнего» ограничен концом выбранного года
+            year = year || this._year || new Date().getFullYear();
+            var nowY = new Date().getFullYear();
             var map = {}, order = [];
             for (var ii = 0; ii < iList.length; ii++) {
                 var key = this._normInstrKey(iList[ii].название);
@@ -48415,7 +48596,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var gItem = map[gKey];
                 var gRows = byKey[gKey] || [];
                 var last = null;
+                var lastCut = year + '-12-31';
                 for (var li = 0; li < all.length; li++) {
+                    if (String(all[li].дата_начала) > lastCut) continue;
                     if (this._normInstrKey(all[li].тема) === gKey) {
                         last = all[li];
                     }
@@ -48458,19 +48641,27 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             rActs + '</div>';
                 }
                 if (asBlocks && !gRows.length) {
+                    // Task 408: wording с номером года (архивы)
                     html += last
-                        ? '<div class="ws-emp-empty">— в этом году не проводился</div>'
+                        ? '<div class="ws-emp-empty">— за ' + year + ' год не проводился</div>'
                         : '<div class="ws-emp-empty">— не проводился</div>';
                 }
                 var perN = parseFloat(gItem.периодичность) || 0;
                 var dueIso = (last && perN > 0)
                     ? this._addMonthsIso(last.дата_начала, perN) : '';
                 if (dueIso) {
-                    html += (dueIso < today)
-                        ? '<div class="ws-il-due ws-il-due-bad">⚠ просрочено с ' +
-                          this._fmtDateRu(dueIso) + '</div>'
-                        : '<div class="ws-il-due ws-il-due-ok">след. срок: ' +
-                          this._fmtDateRu(dueIso) + ' ✓</div>';
+                    if (year < nowY) {
+                        // Task 408: архивный год — нейтральный снимок
+                        // срока (состояние на конец того года)
+                        html += '<div class="ws-il-due">след. срок (на конец ' +
+                                year + '): ' + this._fmtDateRu(dueIso) + '</div>';
+                    } else {
+                        html += (dueIso < today)
+                            ? '<div class="ws-il-due ws-il-due-bad">⚠ просрочено с ' +
+                              this._fmtDateRu(dueIso) + '</div>'
+                            : '<div class="ws-il-due ws-il-due-ok">след. срок: ' +
+                              this._fmtDateRu(dueIso) + ' ✓</div>';
+                    }
                 }
             }
             if (offlist.length) {
@@ -48547,6 +48738,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // живёт между перерисовками (данные обновляются вместе с
         // сеткой — _renderWorkersIfOpen)
         _workersTab: 'general',
+        // Task 408: выбранный ГОД блоков карточки по работникам
+        // (стрелки ‹год›; не выбран — год шахматки)
+        _wtabYear: {},
 
         // клик по ярлыку вкладки (inline onclick ярлыка): выбор
         // вкладки + перерисовка страницы
@@ -49579,6 +49773,80 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             dl.innerHTML = html;
         },
 
+        // Task 408: СТРОГИЙ выбор пункта шаблона в шторке «Новое
+        // мероприятие» — тип инструктаж/проверка знаний показывает
+        // SELECT пунктов «Список_И_и_ПЗ» этого вида (свободный ввод
+        // скрыт; внеплановые темы — сначала добавить в список);
+        // прочие типы и ОТСУТСТВИЕ шаблона — прежний текстовый ввод
+        // (#wsTrTitle + datalist). selValue — тема правки: совпала с
+        // пунктом — выбрать его; нет — отдельный пункт «(вне
+        // списка)» (значение сохранится, можно перевыбрать)
+        _syncTrTitleField: function(selValue) {
+            var typeEl = document.getElementById('wsTrType');
+            var sel = document.getElementById('wsTrTitleSel');
+            var inp = document.getElementById('wsTrTitle');
+            var hint = document.getElementById('wsTrItemHint');
+            if (!sel || !inp) return;
+            var tip = typeEl ? typeEl.value : '';
+            var useSel = this._isInstrType(tip) &&
+                         (this._INSTR_LIST || []).length > 0;
+            sel.hidden = !useSel;
+            inp.hidden = !!useSel;
+            if (useSel) {
+                var want = this._normInstrKind(tip);
+                var opts = ['<option value="">— выберите из списка —</option>'];
+                var matchName = '';
+                for (var i = 0; i < this._INSTR_LIST.length; i++) {
+                    var nm = String(this._INSTR_LIST[i].название || '');
+                    if (this._normInstrKind(this._INSTR_LIST[i].вид) !== want) continue;
+                    if (selValue && this._normInstrKey(selValue) ===
+                        this._normInstrKey(nm)) {
+                        matchName = nm;
+                    }
+                    opts.push('<option value="' + this._esc(nm) + '">' +
+                              this._esc(nm) + '</option>');
+                }
+                if (selValue && !matchName) {
+                    opts.push('<option value="' + this._esc(selValue) + '">' +
+                              this._esc(selValue) + ' (вне списка)</option>');
+                }
+                sel.innerHTML = opts.join('');
+                sel.value = matchName || String(selValue || '');
+                this._updateTrItemHint();
+            } else {
+                if (hint) { hint.hidden = true; hint.textContent = ''; }
+                this._fillTrTitleOptions();
+            }
+        },
+
+        // Task 408: подсказка выбранного пункта — периодичность и
+        // основание из шаблона (заявка: «вся необходимая информация
+        // подтягивается»); разовый/без данных — строка скрыта
+        _updateTrItemHint: function() {
+            var sel = document.getElementById('wsTrTitleSel');
+            var hint = document.getElementById('wsTrItemHint');
+            if (!hint) return;
+            var txt = '';
+            if (sel && !sel.hidden) {
+                var key = this._normInstrKey(sel.value);
+                for (var i = 0; i < (this._INSTR_LIST || []).length; i++) {
+                    if (this._normInstrKey(this._INSTR_LIST[i].название) !== key) continue;
+                    var per = parseFloat(this._INSTR_LIST[i].периодичность) || 0;
+                    var osn = String(this._INSTR_LIST[i].основание || '').trim();
+                    if (per > 0) {
+                        txt = 'раз в ' + per + ' ' +
+                              this._plural(per, ['месяц', 'месяца', 'месяцев']);
+                    }
+                    if (osn) {
+                        txt += (txt ? ' · ' : '') + 'Основание: ' + osn;
+                    }
+                    break;
+                }
+            }
+            hint.textContent = txt;
+            hint.hidden = !txt;
+        },
+
         openTrainingForm: function(prefillTab, prefillDate, editTraining, prefillType) {
             if (!this._canEdit) return;
             var sheetTitle = document.getElementById('wsTrSheetTitle');
@@ -49607,10 +49875,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var typeSel = document.getElementById('wsTrType');
             if (typeSel) {
                 typeSel.onchange = function() {
-                    WorkSchedule._fillTrTitleOptions();
+                    WorkSchedule._syncTrTitleField();
                 };
             }
-            this._fillTrTitleOptions();
+            var trSelEl = document.getElementById('wsTrTitleSel');
+            if (trSelEl) {
+                trSelEl.onchange = function() {
+                    WorkSchedule._updateTrItemHint();
+                };
+            }
             // Task 309: два режима формы — создание (по умолчанию) и
             // ПРАВКА существующего мероприятия (editTraining: запись из
             // _TRAININGS, найденная по id в editTraining()). В правке
@@ -49633,6 +49906,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     parseInt(editTraining.длительность_дней, 10) || 1;
                 document.getElementById('wsTrComment').value =
                     String(editTraining.комментарий || '');
+                // Task 408: тема правки — в строгий select (совпала с
+                // пунктом — выбрана; «вне списка» — отдельный пункт)
+                this._syncTrTitleField(String(editTraining.тема || ''));
                 if (sheetTitle) sheetTitle.textContent = 'Правка мероприятия';
                 if (submitBtn) submitBtn.textContent = 'Сохранить';
             } else {
@@ -49652,6 +49928,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                      preTip === 'примечание') ? preTip : 'инструктаж';
                 document.getElementById('wsTrTitle').value = '';
                 document.getElementById('wsTrComment').value = '';
+                // Task 408: новый инструктаж/ПЗ — select «— выберите
+                // из списка —»
+                this._syncTrTitleField();
                 if (sheetTitle) sheetTitle.textContent = 'Новое мероприятие';
                 if (submitBtn) submitBtn.textContent = 'Добавить';
             }
@@ -49698,7 +49977,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         submitTrainingForm: function() {
             var tabNo = document.getElementById('wsTrTabNo').value.trim();
             var tip = document.getElementById('wsTrType').value;
-            var tema = document.getElementById('wsTrTitle').value.trim();
+            // Task 408: инструктаж/ПЗ со шаблоном — тема ТОЛЬКО из
+            // строгого select (свободный ввод скрыт); прочие типы —
+            // прежний текстовый ввод
+            var trSel = document.getElementById('wsTrTitleSel');
+            var trInp = document.getElementById('wsTrTitle');
+            var tema = (this._isInstrType(tip) && trSel && !trSel.hidden)
+                ? String(trSel.value || '').trim()
+                : String((trInp && trInp.value) || '').trim();
             var startDate = document.getElementById('wsTrStart').value;
             var endDate = document.getElementById('wsTrEnd').value || startDate;
             var days = parseInt(document.getElementById('wsTrDays').value, 10) || 1;
@@ -49706,7 +49992,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var self = this;
 
             if (!tabNo) { if (typeof KipToast !== 'undefined') KipToast.show('Выберите работника'); return; }
-            if (!tema) { if (typeof KipToast !== 'undefined') KipToast.show('Введите тему мероприятия'); return; }
+            if (!tema) {
+                if (typeof KipToast !== 'undefined') {
+                    KipToast.show(this._isInstrType(tip) && trSel && !trSel.hidden
+                        ? 'Выберите пункт из списка'
+                        : 'Введите тему мероприятия');
+                }
+                return;
+            }
             if (!startDate) { if (typeof KipToast !== 'undefined') KipToast.show('Укажите дату начала'); return; }
 
             var payload = {
