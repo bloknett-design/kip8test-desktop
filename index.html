@@ -43665,7 +43665,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                               evE.slice(8) + '.' + evE.slice(5, 7);
                 }
                 var evText = (evCode ? evCode + ' · ' : '') +
-                             (ev['тема'] || evMeta.name || '—') + ' · ' + evFio;
+                             // Task 416: печать табеля — короткое
+                             // название («сокращение» из
+                             // «Список_И_и_ПЗ»), нет — полное
+                             (this._instrShortOf(ev['тема']) || evMeta.name || '—') +
+                             ' · ' + evFio;
                 html += '<span class="wsp-mev-item">' +
                         '<i style="background:' + (evMeta.color || '#3a3a3a') + ';"></i>' +
                         '<b class="wsp-mev-date">' + this._esc(evRange) + '</b>' +
@@ -44059,6 +44063,36 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
             }
             return '';
+        },
+
+        // Task 416 (заявка: «в таблице Список_И_и_ПЗ новый столбец E
+        // "сокращение"… применять на странице Табель учёта рабочего
+        // времени, в окне мероприятий и в мини окнах шахматки и
+        // фамилий работников»): краткое название пункта по ТЕМЕ
+        // записи — запись сопоставляется пункту шаблона тем же
+        // ключом _normInstrKey, что и группировка карточки (407);
+        // есть непустое «сокращение» — ОНО, иначе ПОЛНОЕ название
+        // (нет соответствия / пустая ячейка E / старый сервер без
+        // поля — ничего не теряем). Применяется в КОМПАКТНЫХ
+        // показах: тултип бейджа шахматки, окно «Мероприятия в
+        // этот день», окно «Мероприятия» (месяц), список
+        // мероприятий ПЕЧАТИ табеля, строки мероприятий/инструктажей
+        // карточки (попап фамилии + страница «Работники») и
+        // заголовки групп шаблона. НЕ применяется: select формы
+        // «+ Инструктаж…» — выбор ведётся по полным названиям
+        _instrShortOf: function(тема) {
+            var t = String(тема || '').trim();
+            if (!t) return '';
+            var key = this._normInstrKey(t);
+            if (key) {
+                for (var i = 0; i < (this._INSTR_LIST || []).length; i++) {
+                    if (this._normInstrKey(this._INSTR_LIST[i].название) === key) {
+                        var sh = String(this._INSTR_LIST[i].сокращение || '').trim();
+                        return sh || t;
+                    }
+                }
+            }
+            return t;
         },
 
         // Task 407: ISO-дата + N месяцев (день клампится к концу
@@ -45002,8 +45036,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var meta = this._statusMeta(code) || {};
                 var fio = fioIdx[tr['таб_номер']] || ('таб. №' + tr['таб_номер']);
                 var range = fmtRange(tr['дата_начала'], tr['дата_окончания']);
+                // Task 416: строка окна «Мероприятия» — короткое
+                // название инструктажей/ПЗ («сокращение» из
+                // «Список_И_и_ПЗ»), нет — полное, как прежде
                 var text = (code ? code + ' · ' : '') +
-                           (tr['тема'] || meta.name || '—') + ' · ' + fio;
+                           (this._instrShortOf(tr['тема']) || meta.name || '—') + ' · ' + fio;
                 // Task 328 (заявка): всплывающая подсказка строки
                 // (нативный title) УБРАНА — при наведении на окно
                 // мероприятий ничего не всплывает; вся информация
@@ -47307,8 +47344,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     // нет (виртуальный бейдж статуса) — полное имя
                     // кода из справочника
                     var evTr = events[evj].training;
+                    // Task 416 (заявка: столбец E «сокращение» в
+                    // «Список_И_и_ПЗ»): тултип бейджа — КОРОТКОЕ
+                    // название пункта (нет сокращения — полное,
+                    // как прежде)
                     var evTip = (evTr && String(evTr.тема || '').trim())
-                        ? (events[evj].code + ' — ' + String(evTr.тема).trim())
+                        ? (events[evj].code + ' — ' +
+                           this._instrShortOf(String(evTr.тема).trim()))
                         : String((evMeta.name || '')).trim();
                     evChips += '<span class="ws-ev-badge"' +
                                (evMeta.color ? ' style="background:' + evMeta.color + ';"' : '') +
@@ -47771,7 +47813,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 html += '<div class="ws-popup-row ws-popup-event">' +
                         '<span class="ws-popup-swatch" style="background:' + (deMeta.color || '#3a3a3a') + ';"></span>' +
                         '<span class="ws-popup-code">' + this._esc(dayEvents[de].code) + '</span>' +
-                        '<span class="ws-popup-name">' + this._esc(deT.тема || deMeta.name || '') + '</span>' +
+                        // Task 416: запись дня — короткое название
+                        // («сокращение» из «Список_И_и_ПЗ», нет — полное)
+                        '<span class="ws-popup-name">' +
+                        this._esc(this._instrShortOf(deT.тема) || deMeta.name || '') + '</span>' +
                         deActs + '</div>';
             }
             return html;
@@ -48427,7 +48472,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                           (meta.color || '#3a3a3a') + ';"></span>' +
                           '<span class="ws-popup-code">' + this._esc(code || '—') + '</span>' +
                           '<span class="ws-popup-name">' +
-                          this._esc(t.тема || meta.name || t.тип) +
+                          // Task 416: короткое название записи
+                          // («сокращение» из «Список_И_и_ПЗ»)
+                          this._esc(this._instrShortOf(t.тема) || meta.name || t.тип) +
                           ' · ' + period + '</span>' + acts + '</div>';
                 }
             }
@@ -48500,7 +48547,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                           (iMeta.color || '#3a3a3a') + ';"></span>' +
                           '<span class="ws-popup-code">' + this._esc(iCode || '—') + '</span>' +
                           '<span class="ws-popup-name">' +
-                          this._esc(it.тема || iMeta.name || it.тип) +
+                          // Task 416: короткое название записи
+                          // («сокращение» из «Список_И_и_ПЗ»)
+                          this._esc(this._instrShortOf(it.тема) || iMeta.name || it.тип) +
                           ' · ' + iPeriod + '</span>' + iActs + '</div>';
                 }
             }
@@ -48815,12 +48864,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var gKind = this._normInstrKind(gItem.вид);
                 var gCode = gKind === 'проверка_знаний' ? 'ПЗ' : 'И';
                 var gMeta = this._statusMeta(gCode) || {};
+                // Task 416 (заявка: столбец E «сокращение»): заголовок
+                // группы в мини-окне фамилии — КОРОТКОЕ название
+                // пункта (нет сокращения — полное, как прежде);
+                // полное название остаётся в нативном тултипе title
+                // (сокращение может быть слишком лаконичным)
+                var gName = this._instrShortOf(String(gItem.название || ''));
+                var gFull = String(gItem.название || '').trim();
                 html += '<div class="ws-il-head">' +
                         '<span class="ws-popup-swatch" style="background:' +
                         (gMeta.color || '#3a3a3a') + ';"></span>' +
                         '<span class="ws-popup-code">' + this._esc(gCode) + '</span>' +
-                        '<span class="ws-il-name">' +
-                        this._esc(String(gItem.название || '')) + '</span>' +
+                        '<span class="ws-il-name"' +
+                        (gName !== gFull && gFull
+                            ? ' title="' + this._esc(gFull) + '"' : '') + '>' +
+                        this._esc(gName) + '</span>' +
                         (gItem.периодичность
                             ? '<span class="ws-il-per">' +
                               this._fmtPeriodRu(gItem.периодичность) + '</span>'
