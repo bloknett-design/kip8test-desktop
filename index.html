@@ -42288,7 +42288,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // отпуском…» вместо малопонятного «Ошибка: overlap».
         _apiErrText: function(err) {
             if (err && err.serverMessage) return err.serverMessage;
-            if (err && err.message) return err.message;
+            if (err && err.message) {
+                // Task 413: таблица удалена из файла вручную —
+                // сервер отдаёт 'sheet_not_found: <имя листа>'.
+                // Обновлённый WorkSchedule.gs создаёт лист
+                // автоматически при первом добавлении записи; до
+                // обновления — понятный текст вместо кода ошибки
+                var sm = /^sheet_not_found:\s*(.+?)\s*$/.exec(err.message);
+                if (sm) {
+                    return 'таблица «' + sm[1] + '» отсутствует в ' +
+                           'файле табель_КИП_ИОС — обновите ' +
+                           'WorkSchedule.gs в Apps Script: она будет ' +
+                           'создана автоматически при первом ' +
+                           'добавлении записи';
+                }
+                return err.message;
+            }
             return String(err || 'ошибка');
         },
 
@@ -43817,13 +43832,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // Task 314: при обновлении живой сетки — НЕ стираем её
                 // экраном ошибки: тост достаточен, данные остались
                 if (!keepGrid && wrapEl) {
-                    wrapEl.innerHTML = '<div class="admin-empty">Ошибка загрузки: ' + (err.message || err) + '</div>';
+                    // Task 413: понятный текст ошибок сервера
+                    wrapEl.innerHTML = '<div class="admin-empty">Ошибка загрузки: ' + self._apiErrText(err) + '</div>';
                 }
                 // Task 264: окошко календаря рисуем и при ошибке загрузки
                 // сетки — календарь не зависит от бэкенда шахматки
                 self._updateCalChip();
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
-                    KipToast.show('Ошибка загрузки графика: ' + (err.message || err));
+                    // Task 413: понятный текст ошибок сервера
+                    KipToast.show('Ошибка загрузки графика: ' + self._apiErrText(err));
                 }
                 return false;
             });
@@ -50301,7 +50318,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self.loadGrid(true);
             }).catch(function(err) {
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
-                    KipToast.show('Ошибка: ' + (err.message || err));
+                    // Task 413: понятный текст ошибок сервера
+                    // (sheet_not_found → «таблица отсутствует…»)
+                    KipToast.show('Ошибка: ' + self._apiErrText(err));
                 }
             });
         },
@@ -50337,7 +50356,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 })
                 .catch(function(err) {
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
-                        KipToast.show('Ошибка: ' + (err.message || err));
+                        // Task 413: понятный текст ошибок сервера
+                        KipToast.show('Ошибка: ' + self._apiErrText(err));
                     }
                 });
         },
