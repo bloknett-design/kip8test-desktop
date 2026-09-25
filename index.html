@@ -5422,6 +5422,66 @@
     .ws-popup-act.ws-popup-act-del { color: #ef5350; }
     .ws-popup-act.ws-popup-act-del:hover { background: rgba(239, 83, 80, 0.2); }
     [data-theme="light"] .ws-popup-act:hover { background: rgba(42, 93, 143, 0.18); }
+    /* Task 418 (заявка: столбцы «выполнение»/«просрочен» листа
+       «Инструктажи»): ГАЛОЧКА отметки о выполнении записи —
+       справа от названия строки блока «Повторные инструктажи и
+       периодическая проверка знаний» КАРТОЧКИ работника (перед
+       ✎/✕). Пустой круг — отметки нет («выполнение» = 0), зелёный
+       с ✓ — выполнено (= 1); клик переключает значение (только
+       уровень edit; зрители видят некликабельное состояние). */
+    .ws-done-chk {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        border: 1.5px solid rgba(255, 255, 255, 0.28);
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1;
+        color: transparent;
+        cursor: pointer;
+        flex-shrink: 0;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .ws-done-chk:hover {
+        background: rgba(76, 175, 80, 0.15);
+        border-color: #66bb6a;
+    }
+    .ws-done-chk.ws-done-on {
+        background: #43a047;
+        border-color: #43a047;
+        color: #fff;
+    }
+    .ws-done-chk.ws-done-ro { cursor: default; }
+    .ws-done-chk.ws-done-ro:hover { background: none; border-color: #43a047; }
+    [data-theme="light"] .ws-done-chk { border-color: rgba(0, 0, 0, 0.28); }
+    [data-theme="light"] .ws-done-chk:hover { background: rgba(67, 160, 71, 0.12); }
+    /* Task 418: бейдж «просрочен» — дата проведения прошла, отметки
+       о выполнении нет («просрочен» = 1) */
+    .ws-late-tag {
+        flex-shrink: 0;
+        padding: 2px 7px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        background: rgba(239, 83, 80, 0.16);
+        color: #ef5350;
+    }
+    [data-theme="light"] .ws-late-tag {
+        background: rgba(229, 57, 53, 0.12);
+        color: #c62828;
+    }
+    /* Task 418: выполненная запись — приглушена (состояние видит и
+       зритель: зелёная галочка + приглушённый текст) */
+    .ws-wcard .ws-popup-row.ws-row-done .ws-popup-name,
+    .ws-wcard .ws-popup-row.ws-row-done .ws-popup-code {
+        opacity: 0.55;
+    }
     /* Task 417: стили ПОПАПА КАРТОЧКИ у колонки ФИО удалены вместе с
        окном #wsEmpPopup (.ws-cell-popup.ws-emp-popup — габариты;
        .ws-emp-popup .ws-popup-title/.ws-popup-sec — перенос
@@ -48391,6 +48451,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             } else if (!ins.length) {
                 b5 += '<div class="ws-emp-empty">нет инструктажей и проверок знаний за год</div>';
             } else {
+                // Task 418: граница просрочки — «сегодня» (расчёт для
+                // записей без поля «просрочен»: старый сервер/кэш);
+                // самодостаточный ISO — без this._isoDate (VM-хосты
+                // карточки метод не заглушают)
+                var wNow = new Date();
+                var wTodayIso = wNow.getFullYear() + '-' +
+                    (wNow.getMonth() + 1 < 10 ? '0' + (wNow.getMonth() + 1)
+                     : String(wNow.getMonth() + 1)) + '-' +
+                    (wNow.getDate() < 10 ? '0' + wNow.getDate()
+                     : String(wNow.getDate()));
                 for (var ik = 0; ik < ins.length; ik++) {
                     var it = ins[ik];
                     var iCode = this._trainingCodeOf(it.тип);
@@ -48407,8 +48477,40 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         ? this._fmtDateRu(it.дата_начала)
                         : (this._fmtDateRu(it.дата_начала) + ' — ' +
                            this._fmtDateRu(it.дата_окончания));
+                    // Task 418 (заявка: столбцы «дата_проведения» /
+                    // «выполнение» / «просрочен» листа «Инструктажи»):
+                    // состояние записи — отметка о выполнении
+                    // (ГАЛОЧКА строки; ставится/снимается кликом —
+                    // toggleTrainingDone) и бейдж «просрочен» (дата
+                    // проведения прошла, отметки нет). Отметка —
+                    // ТОЛЬКО в КАРТОЧКЕ (asBlocks; попап ячейки
+                    // шахматки не менялся); «просрочен» — поле записи
+                    // (сервер пересчитал) либо расчёт по дате (старый
+                    // сервер/кэш без поля)
+                    var iDone = (parseInt(it.выполнение, 10) === 1);
+                    var iLate = (it.просрочен !== undefined)
+                        ? (parseInt(it.просрочен, 10) === 1)
+                        : (!iDone && String(it.дата_начала || '') < wTodayIso);
+                    var iLateTag = iLate
+                        ? '<span class="ws-late-tag">просрочен</span>' : '';
+                    var iChk = '';
+                    if (asBlocks && iTrId && withEdit) {
+                        iChk = '<span class="ws-done-chk' +
+                               (iDone ? ' ws-done-on' : '') + '"' +
+                               ' role="button" tabindex="0" title="' +
+                               (iDone ? 'Снять отметку о выполнении'
+                                      : 'Отметить выполнение') +
+                               '" onclick="event.stopPropagation(); ' +
+                               'WorkSchedule.toggleTrainingDone(' + iTrId +
+                               ')">✓</span>';
+                    } else if (asBlocks && iTrId && iDone) {
+                        // зрители видят СОСТОЯНИЕ отметки (некликабельно)
+                        iChk = '<span class="ws-done-chk ws-done-on ws-done-ro"' +
+                               ' title="Выполнено">✓</span>';
+                    }
                     b5 += '<div class="ws-popup-row ws-popup-event' +
-                          ((asBlocks && ik % 2 === 1) ? ' ws-row-alt' : '') + '">' +
+                          ((asBlocks && ik % 2 === 1) ? ' ws-row-alt' : '') +
+                          (iDone ? ' ws-row-done' : '') + '">' +
                           '<span class="ws-popup-swatch" style="background:' +
                           (iMeta.color || '#3a3a3a') + ';"></span>' +
                           '<span class="ws-popup-code">' + this._esc(iCode || '—') + '</span>' +
@@ -48418,7 +48520,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                           // остались в тултипе бейджа, окнах дня и
                           // месяца, печати табеля)
                           this._esc(it.тема || iMeta.name || it.тип) +
-                          ' · ' + iPeriod + '</span>' + iActs + '</div>';
+                          ' · ' + iPeriod + '</span>' +
+                          iLateTag + iChk + iActs + '</div>';
                 }
             }
             // «+ Инструктаж…» — шторка «Новое мероприятие» с работником
@@ -50085,11 +50188,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // применяет изменения (add новой записи + delete старой)
             this._editTrainingId = null;
             this._trEditType = '';
+            // Task 418: отметка о выполнении правимой записи —
+            // сохраняется при правке (add новой + delete старой
+            // переносят столбец «выполнение» в новую строку)
+            this._trEditDone = 0;
             if (editTraining && editTraining.id) {
                 this._editTrainingId = parseInt(editTraining.id, 10);
                 // Task 410: правка инструктажа/ПЗ — instr-режим (select
                 // «Список_И_и_ПЗ»); мероприятия — прежний ввод типа
                 this._trEditType = String(editTraining.тип || '');
+                this._trEditDone = (parseInt(editTraining.выполнение, 10) === 1) ? 1 : 0;
                 this._trInstrMode = this._isInstrType(this._trEditType);
                 // Task 411: работник записи уже отображён выше
                 // (строка из таб. номера правимой записи)
@@ -50267,6 +50375,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 длительность_дней: days, комментарий: comment
             };
 
+            // Task 418: правка (add новой + delete старой) СОХРАНЯЕТ
+            // отметку о выполнении записи «Инструктажей» — сервер
+            // пишет столбец «выполнение» (F) новой строки; новое
+            // добавление отметки не имеет (0)
+            if (this._editTrainingId && this._trEditDone) {
+                payload['выполнение'] = this._trEditDone;
+            }
+
             // Task 309: РЕЖИМ ПРАВКИ — сохранить изменения существующего
             // мероприятия. Серверного updateTraining нет (Apps Script
             // не трогаем), поэтому правка = добавить запись с новыми
@@ -50362,6 +50478,84 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 .catch(function(err) {
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
                         // Task 413: понятный текст ошибок сервера
+                        KipToast.show('Ошибка: ' + self._apiErrText(err));
+                    }
+                });
+        },
+
+        // Task 418 (заявка: столбцы «выполнение»/«просрочен» листа
+        // «Инструктажи»): отметка о выполнении записи — галочка
+        // строки блока «Повторные инструктажи и периодическая
+        // проверка знаний» КАРТОЧКИ работника. Запись ищется в
+        // едином пуле (как editTraining Task 417), значение
+        // переключается 0↔1; сервер (setTrainingDone) пишет столбец
+        // «выполнение» (F) и пересчитывает «просрочен» (G). Локальное
+        // обновление записи + перерисовка страницы «Работники» (без
+        // полной перезагрузки сетки); ошибка — тост с текстом
+        // сервера (легаси-столбцы/старый Apps Script — понятный код)
+        toggleTrainingDone: function(id) {
+            if (!this._canEdit) return;
+            var tid = parseInt(id, 10);
+            var rec = null;
+            if (tid) {
+                var pools = [this._TRAININGS, this._INSTR_ALL,
+                             this._EVENTS_ALL];
+                for (var p = 0; p < pools.length && !rec; p++) {
+                    var arr = pools[p] || [];
+                    for (var i = 0; i < arr.length; i++) {
+                        if (parseInt(arr[i].id, 10) === tid) {
+                            rec = arr[i];
+                            break;
+                        }
+                    }
+                }
+            }
+            if (!rec) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Запись не найдена — обновите график');
+                }
+                return;
+            }
+            var cur = (parseInt(rec.выполнение, 10) === 1) ? 1 : 0;
+            var val = cur === 1 ? 0 : 1;
+            var self = this;
+            // возвращаем промис-цепочку (клику безразлично, тесты
+            // ждут завершения тоста/перерисовки)
+            return this._api('workSchedule.setTrainingDone',
+                      { id: tid, 'выполнение': val })
+                .then(function(res) {
+                    // KipAuth.api резолвит data РАЗВЁРНУТО (Task 282);
+                    // прямые вызовы/тесты — {data: {...}}: обе формы
+                    var d = (res && res.data) ? res.data : (res || {});
+                    var newDone = (parseInt(d.выполнение, 10) === 1) ? 1 : val;
+                    var newLate = (d.просрочен !== undefined)
+                        ? (parseInt(d.просрочен, 10) === 1 ? 1 : 0)
+                        : ((newDone !== 1 &&
+                            String(rec.дата_начала || '') < self._isoDate(new Date())) ? 1 : 0);
+                    // обновляем ВСЕ копии записи по id: карточка
+                    // «Работники» читает архивный пул _INSTR_ALL, а
+                    // годовой срез _TRAININGS (бейджи/печать) держит
+                    // СВОЙ объект той же записи (Task 418)
+                    var pools = [self._TRAININGS, self._INSTR_ALL,
+                                 self._EVENTS_ALL];
+                    for (var p = 0; p < pools.length; p++) {
+                        var arr = pools[p] || [];
+                        for (var i = 0; i < arr.length; i++) {
+                            if (parseInt(arr[i].id, 10) === tid) {
+                                arr[i].выполнение = newDone;
+                                arr[i].просрочен = newLate;
+                            }
+                        }
+                    }
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show(newDone === 1
+                            ? 'Отмечено выполнение'
+                            : 'Отметка о выполнении снята');
+                    }
+                    self._renderWorkersIfOpen();
+                })
+                .catch(function(err) {
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
                         KipToast.show('Ошибка: ' + self._apiErrText(err));
                     }
                 });
