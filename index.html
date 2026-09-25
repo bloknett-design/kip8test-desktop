@@ -18924,14 +18924,24 @@
          (editTraining → «Правка мероприятия») против создания -->
     <div class="flow-input-sheet-title" id="wsTrSheetTitle">Новое мероприятие</div>
     <div class="flow-input-row">
-        <div class="flow-input-group" style="flex:0 0 35%;" id="wsTrTabGroup">
-            <label class="flow-input-label" for="wsTrTabNo">Таб. №</label>
-            <select id="wsTrTabNo" class="flow-input-field-small"></select>
+        <!-- Task 411: работник вычисляется из карточки/ячейки, где
+             открыта форма (кнопка блока, попап ячейки, правка записи) —
+             выпадающий список фамилий убран; статичная строка
+             «ФИО · таб. №» (как шторка увольнения, Task 318) +
+             скрытое поле значения (#wsTrTabNo остаётся держателем
+             табельного номера для submit) -->
+        <div class="flow-input-group" style="flex:1 1 100%;" id="wsTrTabGroup">
+            <label class="flow-input-label">Работник</label>
+            <div id="wsTrEmp" class="ws-dismiss-emp">—</div>
+            <input type="hidden" id="wsTrTabNo">
         </div>
+    </div>
+    <div class="flow-input-row">
         <!-- Task 410: группа «Тип» скрывается в instr-режиме — записи
              «Инструктажей» добавляются ВЫБОРОМ пункта «Список_И_и_ПЗ»
-             без выбора типа (вид определяет сам пункт) -->
-        <div class="flow-input-group" style="flex:1 1 65%;" id="wsTrTypeGroup">
+             без выбора типа (вид определяет сам пункт); Task 411:
+             работник — отдельной строкой выше, тип во всю ширину -->
+        <div class="flow-input-group" style="flex:1 1 100%;" id="wsTrTypeGroup">
             <label class="flow-input-label" for="wsTrType">Тип</label>
             <!-- Task 306: добавлены «прогул» (ПР) и «примечание» (*) —
                  по заявке пользователя к И/ОБ/ПЗ; карта тип→код —
@@ -18971,16 +18981,20 @@
             <div id="wsTrItemHint" class="ws-tr-item-hint" hidden></div>
         </div>
     </div>
+    <!-- Task 411: инструктаж/ПЗ — ОДНО поле даты «Дата проведения»
+         («Дата окончания» и «Длит., дн» скрываются в instr-режиме —
+         _applyTrFormMode; submit всегда пишет однодневную запись);
+         мероприятие (обучение может быть многодневным) — период -->
     <div class="flow-input-row">
-        <div class="flow-input-group">
-            <label class="flow-input-label" for="wsTrStart">Дата начала</label>
+        <div class="flow-input-group" id="wsTrStartGroup">
+            <label class="flow-input-label" for="wsTrStart" id="wsTrStartLabel">Дата начала</label>
             <input type="date" id="wsTrStart" class="flow-input-field-small">
         </div>
-        <div class="flow-input-group">
+        <div class="flow-input-group" id="wsTrEndGroup">
             <label class="flow-input-label" for="wsTrEnd">Дата окончания</label>
             <input type="date" id="wsTrEnd" class="flow-input-field-small">
         </div>
-        <div class="flow-input-group">
+        <div class="flow-input-group" id="wsTrDaysGroup">
             <label class="flow-input-label" for="wsTrDays">Длит., дн</label>
             <input type="number" id="wsTrDays" class="flow-input-field-small" min="1" value="1">
         </div>
@@ -49921,20 +49935,30 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             hint.hidden = !txt;
         },
 
-        // Task 410: применить режим шторки к разметке — instr: поле
-        // «Тип» скрыто (тип записи определит выбранный пункт
-        // «Список_И_и_ПЗ»), «Таб. №» во всю ширину, подпись «Инструктаж
-        // / проверка знаний»; мероприятие — прежний вид формы
+        // Task 410 → 411: применить режим шторки к разметке — instr:
+        // поле «Тип» скрыто (тип записи определит выбранный пункт
+        // «Список_И_и_ПЗ»), подпись «Инструктаж / проверка знаний»,
+        // ОДНА дата («Дата проведения»: «Дата окончания» и «Длит., дн»
+        // скрыты — инструктаж/ПЗ проводится одним днём); мероприятие —
+        // прежний вид (период: обучение может быть многодневным)
         _applyTrFormMode: function() {
             var typeGroup = document.getElementById('wsTrTypeGroup');
-            var tabGroup = document.getElementById('wsTrTabGroup');
             var lbl = document.getElementById('wsTrTitleLabel');
+            var endGroup = document.getElementById('wsTrEndGroup');
+            var daysGroup = document.getElementById('wsTrDaysGroup');
+            var startLbl = document.getElementById('wsTrStartLabel');
             var instr = !!this._trInstrMode;
             if (typeGroup) typeGroup.style.display = instr ? 'none' : '';
-            if (tabGroup) tabGroup.style.flex = instr ? '1 1 100%' : '0 0 35%';
             if (lbl) {
                 lbl.textContent = instr
                     ? 'Инструктаж / проверка знаний' : 'Тема';
+            }
+            // Task 411: однодневность инструктажа/ПЗ в форме
+            if (endGroup) endGroup.style.display = instr ? 'none' : '';
+            if (daysGroup) daysGroup.style.display = instr ? 'none' : '';
+            if (startLbl) {
+                startLbl.textContent = instr
+                    ? 'Дата проведения' : 'Дата начала';
             }
         },
 
@@ -49942,22 +49966,33 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!this._canEdit) return;
             var sheetTitle = document.getElementById('wsTrSheetTitle');
             var submitBtn = document.getElementById('wsTrSubmitBtn');
-            var empSel = document.getElementById('wsTrTabNo');
-            if (empSel) {
-                var html = '<option value="">— выберите —</option>';
-                for (var i = 0; i < this._EMPLOYEES.length; i++) {
-                    html += '<option value="' + this._esc(this._EMPLOYEES[i]['таб_номер']) + '">' +
-                            this._esc(this._EMPLOYEES[i]['таб_номер']) + ' — ' + this._esc(this._EMPLOYEES[i]['ФИО']) +
-                            '</option>';
+            // Task 411: работник вычисляется из КАРТОЧКИ/ЯЧЕЙКИ входа
+            // (кнопка блока, попап ячейки, правка записи) — выпадающий
+            // список фамилий убран; статичная строка «ФИО · таб. №»
+            // (как шторка увольнения, Task 318); #wsTrTabNo остаётся
+            // скрытым держателем значения для submit
+            var tabNo = String(prefillTab ||
+                               (editTraining && editTraining['таб_номер']) ||
+                               '').trim();
+            var emp = null;
+            for (var e = 0; e < (this._EMPLOYEES || []).length; e++) {
+                if (String(this._EMPLOYEES[e]['таб_номер']) === tabNo) {
+                    emp = this._EMPLOYEES[e];
+                    break;
                 }
-                empSel.innerHTML = html;
-                // Task 303: префилл из попапа ячейки — сотрудник и дата
-                // (вызов с «+ Мероприятие…»: быстрая привязка события к
-                // выбранному дню; Task 308: страницы «Инструктажи»
-                // больше нет — попап ячейки остался единственным входом
-                // к форме «Новое мероприятие»)
-                if (prefillTab) empSel.value = String(prefillTab);
             }
+            if (!emp) {
+                if (typeof KipToast !== 'undefined') {
+                    KipToast.show('Работник не определён — откройте форму из карточки работника');
+                }
+                return;
+            }
+            var empDiv = document.getElementById('wsTrEmp');
+            if (empDiv) {
+                empDiv.textContent = emp['ФИО'] + ' · таб. №' + emp['таб_номер'];
+            }
+            var empInput = document.getElementById('wsTrTabNo');
+            if (empInput) empInput.value = String(emp['таб_номер']);
             // Task 407: подсказки названий «Темы» из шаблона
             // «Список_И_и_ПЗ» (datalist #wsTrTitleList): тип
             // инструктаж/проверка знаний — названия соответствующего
@@ -49989,7 +50024,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // «Список_И_и_ПЗ»); мероприятия — прежний ввод типа
                 this._trEditType = String(editTraining.тип || '');
                 this._trInstrMode = this._isInstrType(this._trEditType);
-                if (empSel) empSel.value = String(editTraining['таб_номер'] || '');
+                // Task 411: работник записи уже отображён выше
+                // (строка из таб. номера правимой записи)
                 if (!this._trInstrMode) {
                     document.getElementById('wsTrType').value =
                         String(editTraining.тип || 'обучение');
@@ -50048,8 +50084,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             document.getElementById('wsTrOverlay').classList.add('active');
             document.getElementById('wsTrSheet').classList.add('active');
+            // Task 411: фокус — первый видимый контроль формы
+            // (выпадающий список работников убран): пункт шаблона в
+            // instr-режиме, тип — в режиме мероприятия
+            var instrFocus = !!this._trInstrMode;
             setTimeout(function() {
-                var f = document.getElementById('wsTrTabNo');
+                var sel = document.getElementById('wsTrTitleSel');
+                var f = (instrFocus && sel && !sel.hidden)
+                    ? sel : document.getElementById(instrFocus
+                        ? 'wsTrTitle' : 'wsTrType');
                 if (f) f.focus();
             }, 350);
         },
@@ -50107,10 +50150,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var startDate = document.getElementById('wsTrStart').value;
             var endDate = document.getElementById('wsTrEnd').value || startDate;
             var days = parseInt(document.getElementById('wsTrDays').value, 10) || 1;
+            // Task 411: инструктаж/ПЗ — однодневное событие: дата
+            // окончания = дата проведения, длительность 1 день
+            // (скрытые поля могли хранить значения прошлой правки
+            // многодневного мероприятия)
+            if (this._trInstrMode) {
+                endDate = startDate;
+                days = 1;
+            }
             var comment = document.getElementById('wsTrComment').value.slice(0, 500);
             var self = this;
 
-            if (!tabNo) { if (typeof KipToast !== 'undefined') KipToast.show('Выберите работника'); return; }
+            // Task 411: работник задан карточкой входа (скрытое поле);
+            // пустое значение — защита от прямых вызовов
+            if (!tabNo) { if (typeof KipToast !== 'undefined') KipToast.show('Работник не определён'); return; }
             if (!tema) {
                 if (typeof KipToast !== 'undefined') {
                     KipToast.show(this._trInstrMode && trSel && !trSel.hidden
@@ -50119,7 +50172,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
                 return;
             }
-            if (!startDate) { if (typeof KipToast !== 'undefined') KipToast.show('Укажите дату начала'); return; }
+            if (!startDate) {
+                if (typeof KipToast !== 'undefined') {
+                    KipToast.show(this._trInstrMode
+                        ? 'Укажите дату проведения' : 'Укажите дату начала');
+                }
+                return;
+            }
 
             var payload = {
                 'таб_номер': tabNo, тип: tip, тема: tema,
