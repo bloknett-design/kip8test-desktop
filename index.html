@@ -5016,9 +5016,9 @@
        работника» на странице «Работники»).
        Task 312: «+ Отпуск» из тулбара ТОЖЕ УБРАНА (стиль мёртв —
        правило удалено вместе с кнопкой) — добавление периода
-       теперь строкой «+ Отпуск…» в блоке отпусков карточки
-       сотрудника (.ws-popup-row.ws-popup-more.ws-emp-addvac,
-       см. _renderEmpPopup) */
+       кнопкой «+ Отпуск…» блока отпусков карточки работника
+       (.ws-popup-row.ws-popup-more.ws-emp-addvac, см.
+       _renderWorkerCard; Task 417: попап ФИО удалён) */
 
     /* Task 269 → 324: ЕДИНАЯ ВЫСОТА всех элементов рядов кнопок
        тулбара — селекты месяца/года, «Сформировать», «Сохранить»,
@@ -5250,9 +5250,9 @@
        высота строки растёт. ТОЛЬКО #wsCellPopup: окно «Мероприятия
        в этот день» и карточка сотрудника — прежний однострочный
        вид (заявка — только окно выбора кодов).
-       Task 415: сама КАРТА (блоки «Работники» и попап
-       #wsEmpPopup) теперь ТОЖЕ переносит записи — отдельное
-       правило ниже по файлу (.ws-wcard / #wsEmpPopup). */
+       Task 415: сама КАРТА (блоки страницы «Работники»)
+       тоже переносит записи — отдельное правило ниже по файлу
+       (.ws-wcard; Task 417: попап #wsEmpPopup удалён). */
     #wsCellPopup .ws-popup-name {
         /* Task 330 (заявка): шрифт ОПИСАНИЯ кодов — МАЛЕНЬКИЙ
            (прежде 12px) */
@@ -5422,33 +5422,11 @@
     .ws-popup-act.ws-popup-act-del { color: #ef5350; }
     .ws-popup-act.ws-popup-act-del:hover { background: rgba(239, 83, 80, 0.2); }
     [data-theme="light"] .ws-popup-act:hover { background: rgba(42, 93, 143, 0.18); }
-    /* Task 309: карточка сотрудника — попап у колонки ФИО (наведение
-       или клик). Данные из удалённых вкладок (Task 307/308): профиль
-       «Сотрудники», план отпусков «Отпуска», мероприятия «Инструктажи».
-       База — .ws-cell-popup (позиционирование/фон/рамка/скролл);
-       специфичное: чуть шире, поля «метка: значение», периоды и
-       мероприятия с кнопками ✎/✕ (только редакторам). */
-    .ws-cell-popup.ws-emp-popup {
-        min-width: 280px;
-        max-width: 380px;
-        max-height: 440px;
-    }
-    /* Task 415 (заявка): попап карточки у сетки (тот же вид карты,
-    что и блоки страницы «Работники») — заголовок ФИО
-    (.ws-popup-title) и заголовки секций (.ws-popup-sec) не
-    обрезаются многоточием в окне 380px («Повторные инструктажи и
-    периодическая проверка знаний · 2026»), а переносятся на
-    следующую строку. НЕ трогает заголовки попапа дня и окна
-    «Мероприятия в этот день» (#wsCellPopup/#wsEventsPopup —
-    компактный однострочный вид) */
-    .ws-emp-popup .ws-popup-title,
-    .ws-emp-popup .ws-popup-sec {
-        white-space: normal;
-        overflow-wrap: break-word;
-        overflow: visible;
-        text-overflow: clip;
-        line-height: 1.35;
-    }
+    /* Task 417: стили ПОПАПА КАРТОЧКИ у колонки ФИО удалены вместе с
+       окном #wsEmpPopup (.ws-cell-popup.ws-emp-popup — габариты;
+       .ws-emp-popup .ws-popup-title/.ws-popup-sec — перенос
+       заголовков Task 415). Заголовки и записи КАРТ страницы
+       «Работники» переносятся правилами .ws-wcard (Task 415) */
     .ws-emp-field {
         display: flex;
         align-items: baseline;
@@ -6166,11 +6144,10 @@
     /* Task 393 (заявка): карточка работника на странице «Работники» —
        ШРИФТ ТЕКСТА КРУПНЕЕ + ЧЕТЫРЕ ОТДЕЛЬНЫХ БЛОКА-ОКНА (профиль с
        действиями / отпуска / мероприятия / СИЗ; сборка —
-       _renderWorkerCardPanels). Все правила — каскадом от .ws-wcard:
-       ПОПАП карточки у сетки (#wsEmpPopup / .ws-cell-popup.ws-emp-
-       popup) НЕ внутри .ws-wcard — остаётся в прежней компактной
-       типографике. Внутренние строки прижаты к краям окна (боковые
-       отступы даёт паддинг панели, а не строки) */
+       _renderWorkerCardPanels). Все правила — каскадом от .ws-wcard
+       (Task 417: попап карточки у сетки #wsEmpPopup удалён — жива
+       только страница). Внутренние строки прижаты к краям окна
+       (боковые отступы даёт паддинг панели, а не строки) */
     .ws-wcard .ws-popup-title {
         font-size: 15px;
         padding: 2px 0 8px;
@@ -6214,16 +6191,15 @@
        инструктажей длинные («…в электроустановках до 1000 В ·
        20.03.2026»), а узкие колонки страницы «Работники» (3
        колонки) и попап карточки (максимум 380px) их обрезали.
-       Действует в ОБЕИХ проекциях карты: блоки-окна страницы
-       «Работники» (.ws-wcard) и попап карточки у сетки
-       (#wsEmpPopup — все его строки, включая записи групп
-       шаблона ws-il-row и «вне списка»). НЕ трогает попап дня
+       (попап карточки до Task 417 — тоже, окно удалено).
+       Действует в блоках-окнах страницы «Работники» (.ws-wcard —
+       все строки, включая записи групп шаблона ws-il-row и «вне
+       списка»). НЕ трогает попап дня
        «Мероприятия в этот день» и окно выбора кодов
        (#wsCellPopup — компактный однострочный вид, Task 319).
        Свотч/код/кнопки ✎/✕ — flex-shrink по-прежнему, строка
        растёт ВЫСОТОЙ, зебра ws-row-alt тянется на все строки */
-    .ws-wcard .ws-popup-name,
-    #wsEmpPopup .ws-popup-name {
+    .ws-wcard .ws-popup-name {
         white-space: normal;
         overflow-wrap: break-word;
         overflow: visible;
@@ -7794,8 +7770,8 @@
        же приём, что у подсветки «сегодня», Task 313); в широком
        режиме (шторка открыта) — поверх усиленного фона (правило
        gridwide ниже перебивает шорткатом background, поэтому
-       продублировано с выше конкретностью). Hover ФИО (клик-карточка)
-       ставит сплошной background — зебра на время наведения гаснет */
+       продублировано с выше конкретностью). Task 417: hover ФИО
+       (клик-карточка) удалён вместе с попапом — зебра живёт всегда */
     .ws-grid tbody tr:nth-child(even) td.ws-emp-col {
         background-image: linear-gradient(rgba(255, 255, 255, 0.09),
                                           rgba(255, 255, 255, 0.09));
@@ -7812,11 +7788,6 @@
     tbody tr:nth-child(even) td.ws-emp-col {
         background-image: linear-gradient(rgba(0, 0, 0, 0.07),
                                           rgba(0, 0, 0, 0.07));
-    }
-    /* hover ФИО (карточка сотрудника) — сплошная подсветка БЕЗ зебры:
-       одинаково на чётных/нечётных строках (перебивает градиент) */
-    .ws-grid tbody tr:nth-child(even) td.ws-emp-col:hover {
-        background-image: none;
     }
     .ws-grid tbody td.ws-emp-col .ws-tab-no {
         font-family: Consolas, monospace;
@@ -7971,41 +7942,16 @@
     [data-theme="light"] .ws-grid tbody td.ws-cell.ws-manual-dn::before {
         border-color: rgba(38, 50, 56, 0.75);
     }
-    /* Task 309: колонка ФИО — интерактивна (карточка сотрудника по
-       клику; Task 311: hover-режим убран — клик единственный триггер):
-       курсор-указатель и сплошная подсветка при наведении (сплошная —
-       колонка sticky, сквозь полупрозрачный фон просвечивали бы
-       прокручиваемые ячейки дней) */
-    .ws-grid tbody td.ws-emp-col:hover {
-        background: #15202f;
-    }
-    [data-theme="light"] .ws-grid tbody td.ws-emp-col:hover {
-        background: #e2e8ef;
-    }
-    /* Task 338 (заявка: у роли «КИП ИОС дежурный» — только просмотр —
-       «не должны быть видны … карточки сотрудников»): режим зрителя —
-       класс ws-readonly на #page-work-schedule (JS: init/_onRoleUpdate
-       по _canEdit из матрицы). Колонка ФИО неинтерактивна: клика нет
-       (onclick в сетке не рендерится), подсветки наведения нет —
-       фон как в покое (нечётные — базовый, чётные — с зеброй).
-       Перекрестье (ws-hover-row) живёт — фича просмотра.
-       Специфичность с #id — выше правил hover выше. */
-    #page-work-schedule.ws-readonly .ws-grid tbody td.ws-emp-col:hover {
-        background: var(--bg-tertiary, #0e1621);
-    }
-    #page-work-schedule.ws-readonly .ws-grid tbody tr:nth-child(even) td.ws-emp-col:hover {
-        background: var(--bg-tertiary, #0e1621);
-        background-image: linear-gradient(rgba(255, 255, 255, 0.09),
-                                          rgba(255, 255, 255, 0.09));
-    }
-    [data-theme="light"] #page-work-schedule.ws-readonly .ws-grid tbody td.ws-emp-col:hover {
-        background: rgba(240, 240, 240, 0.95);
-    }
-    [data-theme="light"] #page-work-schedule.ws-readonly .ws-grid tbody tr:nth-child(even) td.ws-emp-col:hover {
-        background: rgba(240, 240, 240, 0.95);
-        background-image: linear-gradient(rgba(0, 0, 0, 0.07),
-                                          rgba(0, 0, 0, 0.07));
-    }
+    /* Task 417: подсветка НАВЕДЕНИЯ колонки ФИО удалена вместе с
+       попапом карточки (клика по фамилии больше нет — подсветка без
+       действия вводила в заблуждение). Зебра чётных строк колонки —
+       выше, без изменений */
+    /* Task 338 → 417: CSS-правила режима ws-readonly (гасили
+       hover-подсветку ФИО уровню «min») удалены вместе с самой
+       подсветкой (попап карточки удалён). Класс ws-readonly
+       продолжает ставиться JS (init/_onRoleUpdate — семантика
+       уровня «min») и остаётся для совместимости; перекрестье
+       (ws-hover-row) живёт — фича просмотра */
     /* Подсветка ячейки по источнику: ручные записи — рамка темнее */
     .ws-grid tbody td.ws-cell.ws-source-manual {
         box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.5);
@@ -15550,13 +15496,14 @@
                          просто надпись, функции кнопки не несёт). -->
                     <!-- Task 312: кнопка «+ Отпуск» УДАЛЕНА из тулбара
                          (пришла сюда в Task 308 с удалённой страницы
-                         «Отпуска»). Её функцию теперь выполняет строка
-                         «+ Отпуск…» в блоке отпусков карточки
-                         сотрудника (клик по полю ФИО слева от шахматки):
-                         открывает прежний bottom-sheet #wsVacSheet
-                         (openVacationForm) с УЖЕ ВЫБРАННЫМ сотрудником
-                         карточки; видимость — по _canEdit в
-                         _renderEmpPopup, двойная защита в openVacationForm -->
+                         «Отпуска»). Её функцию выполняет кнопка
+                         «+ Отпуск…» блока отпусков карточки работника
+                         (страница «Работники»; Task 417: попап по клику
+                         на ФИО удалён): открывает прежний bottom-sheet
+                         #wsVacSheet (openVacationForm) с УЖЕ
+                         ВЫБРАННЫМ работником карточки; видимость — по
+                         _canEdit в _renderWorkerCard, двойная защита в
+                         openVacationForm -->
                     <!-- Task 306: кнопки «Обновить» и «Сформировать»
                          ОБЪЕДИНЕНЫ в одну «Сформировать» (заявка
                          пользователя). Прежняя кнопка «Обновить»
@@ -18836,22 +18783,13 @@
      «Дополнительно…», Esc, карточка сотрудника). -->
 <div id="wsEventsPopup" class="ws-cell-popup ws-events-popup" role="dialog" aria-label="Мероприятия в этот день"></div>
 
-<!-- Task 309: карточка работника — попап у колонки ФИО шахматки
-     (КЛИК; Task 311: наведение больше не открывает — пояснительные
-     окна при наведении убраны по заявке). Показывает данные,
-     которые были в удалённых вкладках (Task 307/308): профиль
-     («Сотрудники» — тип/смена/должность), план отпусков
-     («Отпуска» — периоды года шахматки по частям) и мероприятия
-     («Инструктажи» — события месяца). Карточка прикреплена к
-     клику: закрытие — фоновый кловер и Esc. Task 384 приносил
-     сюда центр правки («Правка данных…»/updateEmployee, ✎/✕
-     отпусков updateVacation/deleteVacation, «+ Мероприятие…»);
-     Task 385: карточка — ТОЛЬКО ЧТЕНИЕ для всех уровней —
-     внесение/редактирование переехало на страницу «Работники»
-     (кнопка тулбара — единственный вход, Task 386); шахматка на месяц
-     и год строится из этих данных («Сформировать»). -->
-<div id="wsEmpPopupCloser" class="ws-popup-closer" onclick="WorkSchedule.closeEmpPopup()"></div>
-<div id="wsEmpPopup" class="ws-cell-popup ws-emp-popup" role="dialog" aria-label="Карточка работника"></div>
+<!-- Task 417 (заявка): ПОПАП КАРТОЧКИ ПО ФАМИЛИИ УДАЛЁН ПОЛНОСТЬЮ —
+     окно #wsEmpPopup с кловером и onclick ячеек ФИО убраны: все
+     подробные данные смотрятся в КАРТАХ работников (страница
+     «Работники», уровни edit/view). История окна: Task 309 — попап у
+     колонки ФИО (профиль/отпуска/мероприятия удалённых вкладок
+     307/308); Task 311 — только клик; Task 384 — центр правки;
+     Task 385 — только чтение. Кликов по фамилии больше нет. -->
 
 <!-- Task 272: bottom sheet производственного календаря УДАЛЁН —
      шторка с выбором региона, источником и API-токеном
@@ -41901,7 +41839,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Task 251: Esc закрывает попап выбора статуса; beforeunload
             // предупреждает о несохранённых правках шахматки (обработчики
             // вешаются один раз — init больше не пройдёт мимо этой точки).
-            // Task 309: Esc закрывает и карточку сотрудника (wsEmpPopup)
+            // Task 309 → 417: попап карточки сотрудника удалён —
+            // closeEmpPopup остался защитным no-op (окна нет, флаги
+            // просто сбрасываются)
             var selfOnce = this;
             document.addEventListener('keydown', function(ev) {
                 if (ev.key === 'Escape') {
@@ -42001,10 +41941,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // программных вызовов/состояний до прихода матрицы)
             var printBtn = document.getElementById('wsPrintBtn');
             if (printBtn) printBtn.hidden = (this._viewLevel === null);
-            // Task 338→340: класс ws-readonly (CSS выключает подсветку
-            // наведения ФИО; клик карточки в сетке не рендерится) —
-            // только уровню «min» (карточек нет); уровню «view»
-            // карточка открывается — подсветка уместна
+            // Task 338→417: класс ws-readonly — уровню «min»
+            // (семантика ограниченного просмотра; CSS-правила
+            // гашения hover ФИО удалены в Task 417 вместе с попапом —
+            // класс остаётся маркером уровня для совместимости)
             var wsPageEl = document.getElementById('page-work-schedule');
             if (wsPageEl && wsPageEl.classList && wsPageEl.classList.toggle) {
                 wsPageEl.classList.toggle('ws-readonly', this._viewLevel === 'min');
@@ -42220,9 +42160,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
 
             // Task 312: «+ Отпуск» из тулбара УБРАНА — её функцию
-            // выполняет строка «+ Отпуск…» в блоке отпусков карточки
-            // сотрудника (клик по полю ФИО): видимость решается в
-            // _renderEmpPopup по _canEdit при каждом рендере карточки,
+            // выполняет кнопка «+ Отпуск…» блока отпусков карточки
+            // работника (страница «Работники»; Task 417: попап по
+            // клику на ФИО удалён): видимость решается в
+            // _renderWorkerCard по _canEdit при каждом рендере,
             // двойная защита — в openVacationForm. (Task 311: «+
             // Сотрудник» из тулбара убрана аналогично — заголовок
             // «Сотрудник» в шапке сетки, см. _renderGrid)
@@ -42925,13 +42866,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return this._computeViewLevel(role) === 'edit';
         },
 
-        // Task 340: карточка сотрудника (клик по ФИО) доступна уровням
-        // 'edit' и 'view' (у 'view' — БЕЗ элементов правки: «Уволить…»/
-        // «+ Отпуск…»/✎/✕ гейтятся _canEdit в _renderEmpPopup);
-        // 'min' и null (нет прав) — карточка не открывается
-        _empCardAllowed: function() {
-            return this._viewLevel === 'edit' || this._viewLevel === 'view';
-        },
+        // Task 340 → 417: гейт карточки по фамилии _empCardAllowed
+        // УДАЛЁН вместе с попапом (клика по ФИО больше нет); страница
+        // «Работники» гейтится отдельно — кнопка тулбара скрыта
+        // уровням null/min (см. _onRoleUpdate)
 
         // Восстановление вида при init: роль «КИП ИОС дежурный» (замок,
         // только если она ЕЩЁ и редактор матрицы) — «сменный» насильно;
@@ -43146,9 +43084,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // скрыта только при полном отсутствии прав
             var rolePrintBtn = document.getElementById('wsPrintBtn');
             if (rolePrintBtn) rolePrintBtn.hidden = (newLevel === null);
-            // Task 338→340: ws-readonly (CSS: колонка ФИО без
-            // hover-подсветки) — только уровню «min» (карточек нет);
-            // уровню «view» карточка открывается — подсветка уместна
+            // Task 338→417: ws-readonly — только уровню «min»
+            // (Task 417: попап и hover ФИО удалены — класс остаётся
+            // маркером уровня для совместимости)
             var rolePageEl = document.getElementById('page-work-schedule');
             if (rolePageEl && rolePageEl.classList && rolePageEl.classList.toggle) {
                 rolePageEl.classList.toggle('ws-readonly', newLevel === 'min');
@@ -44484,23 +44422,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var empTip = empTipLabel
                     ? '<div class="ws-emp-tip">' + this._esc(empTipLabel) + '</div>'
                     : '';
-                // Task 309: колонка ФИО — КЛИК открывает карточку
-                // сотрудника (данные бывших вкладок: профиль, отпуска,
-                // мероприятия; data-tab — таб. номер для обработчика).
-                // Task 311: пояснительные окна при наведении убраны по
-                // заявке — тултип (title) снят, hover-режим карточки
-                // удалён; назначение клика видно по курсору-пальцу.
-                // Task 340 (заявка: уровням view карточка ОТКРЫВАЕТСЯ
-                // — БЕЗ элементов правки; min — нет): onclick
-                // рендерится уровням edit/view (гейт _empCardAllowed,
-                // двойная защита: и здесь, и в
-                // onEmpCellClick/_openEmpPopup)
+                // Task 309 → 417: колонка ФИО БЫЛА кликабельной —
+                // открывала попап карточки сотрудника. Task 417
+                // (заявка): попап по фамилии УДАЛЁН ПОЛНОСТЬЮ —
+                // подробные данные в КАРТАХ работников (страница
+                // «Работники»); ячейка ФИО неинтерактивна. data-tab
+                // сохранён (идентификация строки сетки)
                 var safeEmpTab = String(emp['таб_номер'] || '').replace(/'/g, '');
-                html += '<td class="ws-emp-col" data-tab="' + this._escAttr(safeEmpTab) + '"' +
-                        (this._empCardAllowed()
-                            ? ' onclick="WorkSchedule.onEmpCellClick(event, \'' + safeEmpTab + '\')"'
-                            : '') +
-                        '><div class="ws-emp-name">' +
+                html += '<td class="ws-emp-col" data-tab="' + this._escAttr(safeEmpTab) + '">' +
+                        '<div class="ws-emp-name">' +
                         '<span class="ws-tab-no">' + this._esc(emp['таб_номер']) + '</span>' +
                         // Task 334: ФИО — в span.ws-emp-full с data-full/
                         // data-s4 (первые 4 буквы фамилии): JS-сужение при
@@ -47645,9 +47575,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Клик по ячейке: открыть попап со списком статусов рядом с ячейкой.
         onCellClick: function(ev, isoDate, tabNo) {
-            // Task 309: взаимная блокировка попапов — при открытии
-            // статусного попапа карточка сотрудника закрывается
-            // (обратное делает onEmpCellClick)
+            // Task 309 → 417: попап карточки удалён — вызов
+            // closeEmpPopup остаётся защитным no-op (окна нет)
             this.closeEmpPopup();
             if (this._saving) return; // идёт пакетное сохранение — не мешаем
             var td = null;
@@ -47909,8 +47838,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Task 313: окно «Мероприятия в этот день» закрывается
             // ВМЕСТЕ с окном кодов (один жизненный цикл: кловер,
             // выбор статуса, «+ Мероприятие…», «Дополнительно…»,
-            // Esc, editTraining/deleteTraining, onEmpCellClick —
-            // все пути идут через closeCellPopup)
+            // Esc, editTraining/deleteTraining — все пути идут
+            // через closeCellPopup; Task 417: попап карточки
+            // удалён)
             var evp = document.getElementById('wsEventsPopup');
             if (evp) { evp.classList.remove('active'); evp.innerHTML = ''; }
             if (popup) { popup.classList.remove('active'); popup.innerHTML = ''; }
@@ -48103,91 +48033,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // ============================================================
-        // Task 309: карточка сотрудника — попап у колонки ФИО
+        // Task 309 → 417: карточка сотрудника — попап у колонки ФИО
         // ============================================================
-        // КЛИК по полю сотрудника слева от шахматки открывает окно
-        // с данными, которые раньше были в удалённых вкладках
-        // (Task 307/308):
-        //   • «Сотрудники» — профиль: тип/смена, должность, дата
-        //     приёма, комментарий (Task 310/311: строки «старт цикла» и
-        //     «шаблон ротации» убраны из карточки по заявкам);
-        //   • «Отпуска» — периоды года шахматки по частям (Task 310:
-        //     чистыми днями за вычетом праздников ст. 112; Task 311:
-        //     итог-строка года убрана — лимит 42 дн. контролирует
-        //     шторка «+ Отпуск»);
-        //   • «Инструктажи» — мероприятия месяца (тема, период) с
-        //     кнопками ✎/✕ (правка/удаление — только редакторам).
-        // Task 311: пояснительные окна при НАВЕДЕНИИ убраны по заявке
-        // пользователя — единственный триггер карточки теперь КЛИК
-        // (в т.ч. на таче; hover-делегат с задержками 350/400 мс
-        // удалён вместе со своим методом). Закрытие —
-        // фоновый кловер #wsEmpPopupCloser или Esc.
-
-        // Клик по полю сотрудника — прикреплённая карточка (кловер
-        // активен, закрытие — клик мимо попапа или Esc).
-        onEmpCellClick: function(ev, tabNo) {
-            // Task 340 (заявка: уровням workschedule.view карточка
-            // ОТКРЫВАЕТСЯ, workschedule.view.min — нет): гейт
-            // _empCardAllowed (edit/view) — двойная защита (onclick в
-            // сетке рендерится только этим же уровням; сюда — прямые/
-            // легаси вызовы)
-            if (!this._empCardAllowed()) return;
-            // взаимная блокировка попапов (обратное — onCellClick)
-            this.closeCellPopup();
-            var td = null;
-            try {
-                if (ev && ev.target && ev.target.closest) {
-                    td = ev.target.closest('td.ws-emp-col');
-                }
-            } catch (e) {}
-            this._openEmpPopup(td, tabNo);
-        },
-
-        // Открыть карточку рядом с ячейкой ФИО: правее ячейки, не
-        // влезает — прижать к правому краю (колонка sticky слева,
-        // «левее ячейки» места нет); по вертикали — от верха ячейки,
-        // не влезает вниз — прижать к низу вьюпорта. Геометрия — как
-        // у статусного попапа (_openCellPopup). Карточка всегда
-        // «прикреплена» (Task 311: hover-режим удалён — теперь только
-        // клик, кловер активен, закрытие — клик мимо/Esc).
-        _openEmpPopup: function(td, tabNo) {
-            // Task 340 (заявка): карточка сотрудника — уровням
-            // edit/view (у «view» — БЕЗ элементов правки: «Уволить…»/
-            // «+ Отпуск…»/✎/✕ скрыты _canEdit в _renderEmpPopup);
-            // «min» попап не получает (гейт и для программных вызовов)
-            if (!this._empCardAllowed()) return;
-            var popup = document.getElementById('wsEmpPopup');
-            var closer = document.getElementById('wsEmpPopupCloser');
-            if (!popup || !closer) return;
-            this._empPopupTab = tabNo;
-            this._empPinned = true;
-            popup.innerHTML = this._renderEmpPopup(tabNo);
-            closer.classList.add('active');
-            popup.classList.add('active');
-            // сначала скрыто в левом верхнем углу — измерить габариты
-            popup.style.left = '0px';
-            popup.style.top = '0px';
-            popup.style.visibility = 'hidden';
-            var pw = popup.offsetWidth;
-            var ph = popup.offsetHeight;
-            var vw = window.innerWidth;
-            var vh = window.innerHeight;
-            var left, top;
-            var rect = td ? td.getBoundingClientRect() : null;
-            if (rect) {
-                left = rect.right + 6;
-                if (left + pw > vw - 8) left = Math.max(8, vw - pw - 8);
-                top = rect.top;
-                if (top + ph > vh - 8) top = Math.max(8, vh - ph - 8);
-            } else {
-                left = Math.max(8, (vw - pw) / 2);
-                top = Math.max(8, (vh - ph) / 2);
-            }
-            popup.style.left = Math.round(left) + 'px';
-            popup.style.top = Math.round(top) + 'px';
-            popup.style.visibility = '';
-            this._empPopupOpen = true;
-        },
+        // Task 417 (заявка: «Попап по фамилии — убери полностью окно,
+        // теперь все подробные данные можно посмотреть в картах
+        // работников»): ПОПАП УДАЛЁН ПОЛНОСТЬЮ. Удалены: окно
+        // #wsEmpPopup/#wsEmpPopupCloser (DOM), onclick ячеек ФИО
+        // (onEmpCellClick), позиционирование (_openEmpPopup), гейт
+        // _empCardAllowed и hover-подсветка колонки ФИО (CSS).
+        // Подробные данные работника — КАРТОЧКИ страницы
+        // «Работники» (профиль, отпуска, мероприятия, повторные
+        // инструктажи, СИЗ; кнопка тулбара видна уровням edit/view).
+        // Оставлено для совместимости (защитные no-op):
+        //   • closeEmpPopup — окна нет, метод только сбрасывает
+        //     флаги; вызовы при открытии форм/навигации безопасны;
+        //   • _renderEmpPopup — обёртка «попапной» проекции карточки
+        //     (_renderWorkerCard(tabNo, false)); в проде не
+        //     вызывается, живёт для прямых вызовов в тестах.
 
         closeEmpPopup: function() {
             var popup = document.getElementById('wsEmpPopup');
@@ -48202,11 +48064,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._empPopupTab = null;
         },
 
-        // Содержимое карточки: шапка (ФИО · таб. №) + блоки — профиль
-        // (Task 311: без строки-заголовка «Сотрудник», поля сразу после
-        // шапки), отпуска года, мероприятия года. Task 403 (заявка):
-        // данные СИЗ из попапа УБРАНЫ — СИЗ только на странице
-        // «Работники» (кнопки ✎/✕ мероприятий — ролям с правом записи).
+        // Task 417: обёртка «попапной» проекции карточки — в проде НЕ
+        // ВЫЗЫВАЕТСЯ (попап по фамилии удалён), сохранена для прямых
+        // вызовов в тестах (Task 309-409). Содержимое: шапка (ФИО ·
+        // таб. №) + блоки — профиль (Task 311: без строки-заголовка
+        // «Сотрудник»), отпуска года, мероприятия года; Task 403: СИЗ
+        // только на странице «Работники»
         _renderEmpPopup: function(tabNo) {
             // Task 385: карточка в шахматке — ТОЛЬКО ЧТЕНИЕ для всех
             // уровней (заявка: все кнопки правки убраны из окна
@@ -48220,9 +48083,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // СИЗ — только страница «Работники») для
         // _renderWorkerCardPanels (страница «Работники» — каждый
         // блок ОТДЕЛЬНЫМ окном .ws-wcard); без флага — склеенная
-        // строка (попап шахматки, прежний сплошной вид)
-        // Task 385: ПОЛНАЯ КАРТОЧКА РАБОТНИКА — общий рендер: попап
-        // шахматки (withEdit=false — чистая информация) и страница
+        // строка (Task 417: попап удалён — ветка жива для прямых
+        // вызовов в тестах)
+        // Task 385: ПОЛНАЯ КАРТОЧКА РАБОТНИКА — общий рендер (Task 417:
+        // попап удалён): withEdit=false — тестовая проекция и страница
         // «Работники» (withEdit=true — «Правка данных…», «Уволить…»,
         // ✎/✕ отпусков, «+ Отпуск…», ✎/✕ мероприятий,
         // «+ Мероприятие…»; страница открывается только редакторам —
@@ -48472,9 +48336,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                           (meta.color || '#3a3a3a') + ';"></span>' +
                           '<span class="ws-popup-code">' + this._esc(code || '—') + '</span>' +
                           '<span class="ws-popup-name">' +
-                          // Task 416: короткое название записи
-                          // («сокращение» из «Список_И_и_ПЗ»)
-                          this._esc(this._instrShortOf(t.тема) || meta.name || t.тип) +
+                          // Task 417 (заявка): в блоках карт — ПОЛНЫЕ
+                          // названия записей (сокращения Task 416
+                          // остались в тултипе бейджа, окнах дня и
+                          // месяца, печати табеля)
+                          this._esc(t.тема || meta.name || t.тип) +
                           ' · ' + period + '</span>' + acts + '</div>';
                 }
             }
@@ -48547,9 +48413,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                           (iMeta.color || '#3a3a3a') + ';"></span>' +
                           '<span class="ws-popup-code">' + this._esc(iCode || '—') + '</span>' +
                           '<span class="ws-popup-name">' +
-                          // Task 416: короткое название записи
-                          // («сокращение» из «Список_И_и_ПЗ»)
-                          this._esc(this._instrShortOf(it.тема) || iMeta.name || it.тип) +
+                          // Task 417 (заявка): в блоках карт — ПОЛНЫЕ
+                          // названия записей (сокращения Task 416
+                          // остались в тултипе бейджа, окнах дня и
+                          // месяца, печати табеля)
+                          this._esc(it.тема || iMeta.name || it.тип) +
                           ' · ' + iPeriod + '</span>' + iActs + '</div>';
                 }
             }
@@ -50296,19 +50164,33 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }, 350);
         },
 
-        // Task 309: правка мероприятия из попапов (ячейки и карточки
-        // сотрудника — кнопки ✎). Находит запись в _TRAININGS по id
-        // и открывает форму в режиме правки. Попапы закрываются —
-        // форма мероприятия поверх, подтверждение на сервер уйдёт
-        // из submitTrainingForm.
+        // Task 309: правка мероприятия из окон (ячейки и карточки
+        // работника — кнопки ✎). Открывает форму в режиме правки;
+        // окна закрываются — форма мероприятия поверх, подтверждение
+        // на сервер уйдёт из submitTrainingForm.
+        // Task 417 (баг: правка записи ПРОШЛОГО года из карточки
+        // падала «Мероприятие не найдено — обновите график»):
+        // запись может быть из АРХИВНОГО года — годовые архивы
+        // карточки (Task 408) читают instrAll/eventsAll, а не только
+        // годовой срез сетки _TRAININGS. Поиск — по ЕДИНОМУ ПУЛУ с
+        // приоритетом свежести: _TRAININGS (срез года табеля) →
+        // _INSTR_ALL (архив «Инструктажей») → _EVENTS_ALL (архив
+        // «Мероприятий»)
         editTraining: function(id) {
             if (!this._canEdit) return;
             var tid = parseInt(id, 10);
             var rec = null;
-            for (var i = 0; i < (this._TRAININGS || []).length; i++) {
-                if (parseInt(this._TRAININGS[i].id, 10) === tid) {
-                    rec = this._TRAININGS[i];
-                    break;
+            if (tid) {
+                var pools = [this._TRAININGS, this._INSTR_ALL,
+                             this._EVENTS_ALL];
+                for (var p = 0; p < pools.length && !rec; p++) {
+                    var arr = pools[p] || [];
+                    for (var i = 0; i < arr.length; i++) {
+                        if (parseInt(arr[i].id, 10) === tid) {
+                            rec = arr[i];
+                            break;
+                        }
+                    }
                 }
             }
             if (!rec) {
