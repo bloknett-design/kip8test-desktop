@@ -44110,6 +44110,30 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return forms[2];
         },
 
+
+        // Task 409: периодичность по-русски: 12 мес → «раз в год»,
+        // 24 → «раз в 2 года», 36 → «раз в 3 года», 6 → «раз в
+        // 6 месяцев», 3 → «раз в 3 месяца», 1 → «раз в месяц»;
+        // 0/пусто → '' (разовый — не показывается)
+        _fmtPeriodRu: function(n) {
+            n = parseFloat(n) || 0;
+            if (n <= 0) return '';
+            var forms = function(k, f) {
+                var a = Math.abs(k) % 100, b = a % 10;
+                if (a > 10 && a < 20) return f[2];
+                if (b > 1 && b < 5) return f[1];
+                if (b === 1) return f[0];
+                return f[2];
+            };
+            if (n % 12 === 0) {
+                var y = Math.round(n / 12);
+                return 'раз в ' + (y === 1 ? '' : y + ' ') +
+                       forms(y, ['год', 'года', 'лет']);
+            }
+            return 'раз в ' + (n === 1 ? '' : String(n).replace('.', ',') + ' ') +
+                   forms(n, ['месяц', 'месяца', 'месяцев']);
+        },
+
         _renderGrid: function() {
             var wrap = document.getElementById('wsGridWrap');
             if (!wrap) return;
@@ -48615,9 +48639,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         '<span class="ws-il-name">' +
                         this._esc(String(gItem.название || '')) + '</span>' +
                         (gItem.периодичность
-                            ? '<span class="ws-il-per">раз в ' + gItem.периодичность + ' ' +
-                              this._plural(gItem.периодичность,
-                                           ['месяц', 'месяца', 'месяцев']) + '</span>'
+                            ? '<span class="ws-il-per">' +
+                              this._fmtPeriodRu(gItem.периодичность) + '</span>'
                             : '') +
                         '</div>';
                 for (var ri = 0; ri < gRows.length; ri++) {
@@ -49834,8 +49857,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var per = parseFloat(this._INSTR_LIST[i].периодичность) || 0;
                     var osn = String(this._INSTR_LIST[i].основание || '').trim();
                     if (per > 0) {
-                        txt = 'раз в ' + per + ' ' +
-                              this._plural(per, ['месяц', 'месяца', 'месяцев']);
+                        // Task 409: «раз в год» для 12 мес
+                        txt = this._fmtPeriodRu(per);
                     }
                     if (osn) {
                         txt += (txt ? ' · ' : '') + 'Основание: ' + osn;
