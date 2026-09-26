@@ -50707,7 +50707,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             }
                         }
                     }
+                    // Task 422 (заявка «при выполнении общего
+                    // 9-ОГЭ +3 мес не создаётся»): диагностика в тосте
+                    // и консоли — почему создано именно так:
+                    //   • skipped — дети без новой записи с ПРИЧИНОЙ
+                    //     (дубликат «уже запланирован на…» / периодичность)
+                    //   • autoNote — полный разбор (пункт/родитель/дети)
+                    //     в консоль — F12 → Console
+                    //   • srvVer — версия сервера автосоздания: старый
+                    //     Apps Script (без поля) даёт логику 419..421 —
+                    //     предупреждение в тосте (главная причина
+                    //     «создался только общий» на живых данных)
+                    if (d.autoNote) {
+                        try {
+                            console.log('[инструктажи] автосоздание:',
+                                        d.autoNote);
+                        } catch (eN) { /* ignore */ }
+                    }
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        var msg;
                         if (newDone === 1 && created.length) {
                             // новые сроки — датами в тосте (наглядно,
                             // какие записи созданы)
@@ -50718,13 +50736,38 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                         created[di].дата_начала));
                                 }
                             }
-                            KipToast.show('Отмечено выполнение — новые сроки: ' +
-                                          dates.join(', '));
+                            msg = 'Отмечено выполнение — новые сроки: ' +
+                                  dates.join(', ');
                         } else {
-                            KipToast.show(newDone === 1
+                            msg = newDone === 1
                                 ? 'Отмечено выполнение'
-                                : 'Отметка о выполнении снята');
+                                : 'Отметка о выполнении снята';
                         }
+                        if (newDone === 1) {
+                            // пропущенные дети — с причиной (тост)
+                            var skipped = Array.isArray(d.skipped)
+                                ? d.skipped : [];
+                            for (var si = 0; si < skipped.length; si++) {
+                                if (skipped[si] && skipped[si].тема) {
+                                    msg += '; ' + skipped[si].тема + ' — ' +
+                                           (skipped[si].причина ||
+                                            'новая запись не создана');
+                                }
+                            }
+                            // ошибка автосоздания — не молчание
+                            if (String(d.autoNote || '')
+                                    .indexOf('ОШИБКА автосоздания') === 0) {
+                                msg += '. ⚠ Автосоздание не завершено — ' +
+                                       'см. журнал Apps Script (подробности в консоли)';
+                            }
+                            // старый Apps Script: логика 419..421
+                            if (!d.srvVer) {
+                                msg += '. ⚠ Сервер Apps Script старой версии — ' +
+                                       'замените WorkSchedule.gs и создайте ' +
+                                       'новую версию развёртывания';
+                            }
+                        }
+                        KipToast.show(msg);
                     }
                     self._renderWorkersIfOpen();
                 })
