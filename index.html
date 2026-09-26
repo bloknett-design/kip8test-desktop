@@ -42574,8 +42574,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // сигнатура содержит «9огэ»; родитель — эталон →
                 // «рабочиминструкциям» → «общий» не-ПЗ; связь =
                 // НАЗВАНИЕ пункта листа; пустая периодичность
-                // 9-ОГЭ — 3 мес. Заполненный столбец главнее, если
-                // разрешается в пункт листа
+                // 9-ОГЭ — 3 мес; Task 423: период 9-ОГЭ при связи
+                // с общим — 3 мес ЭТАЛОНА (значение листа «6» не
+                // сдвигает «след. срок»). Заполненный столбец
+                // главнее, если разрешается в пункт листа
                 try {
                     var sigK = function(s) {
                         return String(s || '').trim().toLowerCase()
@@ -42633,9 +42635,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         }
                     }
                     if (chI >= 0) {
-                        if (!parseFloat(items[chI].периодичность)) {
-                            items[chI].периодичность = 3;
-                        }
                         if (pI >= 0 && pI !== chI) {
                             var link = String(items[chI]['в составе'] || '').trim();
                             var linkOk = false;
@@ -42650,6 +42649,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             if (!linkOk) {
                                 items[chI]['в составе'] = items[pI].название;
                             }
+                            // Task 423 (заявка «9-ОГЭ создалось
+                            // через 6 месяцев а не через 3»):
+                            // эффективная связь 9-ОГЭ — общий →
+                            // период = 3 мес ЭТАЛОНА заявки (дубль
+                            // логики WorkSchedule.gs): «след. срок»
+                            // 9-ОГЭ = дата общего + 3 мес независимо
+                            // от значения листа («6» скопирована с
+                            // родителя); связь на другой пункт —
+                            // период из листа (не форсируем)
+                            if (sameK(String(items[chI]['в составе'] || '')
+                                      .trim(), items[pI].название)) {
+                                items[chI].периодичность = 3;
+                            }
+                        }
+                        if (!parseFloat(items[chI].периодичность)) {
+                            items[chI].периодичность = 3;
                         }
                     }
                 } catch (e) { /* показ без связи */ }
@@ -50715,9 +50730,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     //   • autoNote — полный разбор (пункт/родитель/дети)
                     //     в консоль — F12 → Console
                     //   • srvVer — версия сервера автосоздания: старый
-                    //     Apps Script (без поля) даёт логику 419..421 —
-                    //     предупреждение в тосте (главная причина
-                    //     «создался только общий» на живых данных)
+                    //     Apps Script (без поля или < 423) даёт логику
+                    //     419..422 — предупреждение в тосте (до 423
+                    //     период 9-ОГЭ брался из листа: «9-ОГЭ
+                    //     создалось через 6 месяцев а не через 3»)
                     if (d.autoNote) {
                         try {
                             console.log('[инструктажи] автосоздание:',
@@ -50760,8 +50776,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                 msg += '. ⚠ Автосоздание не завершено — ' +
                                        'см. журнал Apps Script (подробности в консоли)';
                             }
-                            // старый Apps Script: логика 419..421
-                            if (!d.srvVer) {
+                            // старый Apps Script: нет srvVer (логика
+                            // 419..421) или версия ниже 423 — период
+                            // 9-ОГЭ ещё по значению листа (заявка
+                            // Task 423: «9-ОГЭ создалось через 6
+                            // месяцев а не через 3»)
+                            if (!d.srvVer || parseInt(d.srvVer, 10) < 423) {
                                 msg += '. ⚠ Сервер Apps Script старой версии — ' +
                                        'замените WorkSchedule.gs и создайте ' +
                                        'новую версию развёртывания';
