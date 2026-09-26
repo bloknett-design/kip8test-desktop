@@ -41651,7 +41651,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             { название: 'Повторный инструктаж по рабочим инструкциям ОТ',
               вид: 'инструктаж', периодичность: 6, основание: '' },
             { название: 'Повторный инструктаж по инструкции № 9-ОГЭ',
-              вид: 'инструктаж', периодичность: 3, основание: '' },
+              вид: 'инструктаж', периодичность: 3, основание: '',
+              // Task 419 (заявка 9-ОГЭ): пункт входит в состав
+              // общего повторного инструктажа — родитель покрывает
+              // его, между проведениями родителя пункт проводится
+              // самостоятельно (фактически раз в 3 месяца)
+              'в составе': 'Повторный инструктаж по рабочим инструкциям ОТ' },
             { название: 'Периодическая проверка знаний на допуск к самостоятельной работе',
               вид: 'проверка_знаний', периодичность: 12, основание: '' },
             { название: 'Периодическая проверка знаний на допуск к проведению работ в электроустановках до 1000 В',
@@ -42563,7 +42568,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             } catch (e) { /* ignore */ }
             return (this._INSTR_CANON || []).map(function(x) {
                 return { название: x.название, вид: x.вид,
-                         периодичность: x.периодичность, основание: x.основание };
+                         периодичность: x.периодичность, основание: x.основание,
+                         'в составе': x['в составе'] || '' };
             });
         },
 
@@ -48822,13 +48828,24 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var gKey = order[gi];
                 var gItem = map[gKey];
                 var gRows = byKey[gKey] || [];
+                // Task 419 (заявка 9-ОГЭ): пункт «в составе»
+                // родителя — «последним» событием пункта считается и
+                // последняя запись РОДИТЕЛЯ (проведение родителя
+                // покрывает пункт): после общего инструктажа след.
+                // срок 9-ОГЭ — +3 мес (а не от его собственной
+                // устаревшей записи)
+                var relKeys = [gKey];
+                var gParentKey = this._normInstrKey(gItem['в составе']);
+                if (gParentKey && gParentKey !== gKey) {
+                    relKeys.push(gParentKey);
+                }
                 var last = null;
                 var lastCut = year + '-12-31';
                 for (var li = 0; li < all.length; li++) {
                     if (String(all[li].дата_начала) > lastCut) continue;
-                    if (this._normInstrKey(all[li].тема) === gKey) {
-                        last = all[li];
-                    }
+                    if (relKeys.indexOf(
+                            this._normInstrKey(all[li].тема)) < 0) continue;
+                    last = all[li];
                 }
                 // попап: пункты без записей вообще — не показываем
                 if (!asBlocks && !gRows.length && !last) continue;
@@ -50547,10 +50564,58 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             }
                         }
                     }
+                    // Task 419 (заявка): сервер автосоздал записи с
+                    // новыми сроками (отметка выполнения —
+                    // периодичность «Списка_И_и_ПЗ»; 9-ОГЭ от общего
+                    // инструктажа) — кладём их в пулы без
+                    // перезагрузки; год даты = году табеля — и в
+                    // годовой срез _TRAININGS (бейджи/окна/печать)
+                    var created = Array.isArray(d.created) ? d.created : [];
+                    var curYear = self._year || new Date().getFullYear();
+                    for (var ci = 0; ci < created.length; ci++) {
+                        var nr = created[ci];
+                        if (!nr) continue;
+                        self._INSTR_ALL.push(nr);
+                        var nY = parseInt(String(nr.дата_начала || '')
+                                         .slice(0, 4), 10);
+                        if (nY === curYear) self._TRAININGS.push(nr);
+                    }
+                    // Task 419: ПОКРЫТЫЕ записи детей (родитель включает
+                    // пункт — 9-ОГЭ) — отметки выполнения по id
+                    var upd = Array.isArray(d.updated) ? d.updated : [];
+                    for (var uj = 0; uj < upd.length; uj++) {
+                        var uid = parseInt(upd[uj] && upd[uj].id, 10);
+                        if (!uid) continue;
+                        var uDone = (parseInt(upd[uj].выполнение, 10) === 1) ? 1 : 0;
+                        var uLate = (parseInt(upd[uj].просрочен, 10) === 1) ? 1 : 0;
+                        for (var up = 0; up < pools.length; up++) {
+                            var uarr = pools[up] || [];
+                            for (var ui = 0; ui < uarr.length; ui++) {
+                                if (parseInt(uarr[ui].id, 10) === uid) {
+                                    uarr[ui].выполнение = uDone;
+                                    uarr[ui].просрочен = uLate;
+                                }
+                            }
+                        }
+                    }
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
-                        KipToast.show(newDone === 1
-                            ? 'Отмечено выполнение'
-                            : 'Отметка о выполнении снята');
+                        if (newDone === 1 && created.length) {
+                            // новые сроки — датами в тосте (наглядно,
+                            // какие записи созданы)
+                            var dates = [];
+                            for (var di = 0; di < created.length; di++) {
+                                if (created[di]) {
+                                    dates.push(self._fmtDateRu(
+                                        created[di].дата_начала));
+                                }
+                            }
+                            KipToast.show('Отмечено выполнение — новые сроки: ' +
+                                          dates.join(', '));
+                        } else {
+                            KipToast.show(newDone === 1
+                                ? 'Отмечено выполнение'
+                                : 'Отметка о выполнении снята');
+                        }
                     }
                     self._renderWorkersIfOpen();
                 })
