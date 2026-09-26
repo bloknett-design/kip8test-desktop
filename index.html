@@ -42562,7 +42562,99 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     }
                 }
             }
-            if (items.length) return items;
+            if (items.length) {
+                // Task 420 (заявка: «отметка общего создала только
+                // общий +6 мес, записи 9-ОГЭ +3 нет»): живой список
+                // может приходить БЕЗ связи «в составе» (столбца
+                // нет / Apps Script прежней версии), а фактические
+                // названия пунктов отличаются от эталона «№»/тире/
+                // словами. Встроенная связь 9-ОГЭ → общий
+                // применяется ЗДЕСЬ (дубль логики WorkSchedule.gs):
+                // ребёнок — нестрогое совпадение с эталоном ИЛИ
+                // сигнатура содержит «9огэ»; родитель — эталон →
+                // «рабочиминструкциям» → «общий» не-ПЗ; связь =
+                // НАЗВАНИЕ пункта листа; пустая периодичность
+                // 9-ОГЭ — 3 мес. Заполненный столбец главнее, если
+                // разрешается в пункт листа
+                try {
+                    var sigK = function(s) {
+                        return String(s || '').trim().toLowerCase()
+                            .replace(/ё/g, 'е')
+                            .replace(/[^a-zа-я0-9]/g, '');
+                    };
+                    var sameK = function(a, b) {
+                        if (!a || !b) return false;
+                        var na = String(a).trim().toLowerCase()
+                                     .replace(/ё/g, 'е').replace(/\s+/g, ' ');
+                        var nb = String(b).trim().toLowerCase()
+                                     .replace(/ё/g, 'е').replace(/\s+/g, ' ');
+                        if (na === nb) return true;
+                        var sa = sigK(a), sb = sigK(b);
+                        return !!sa && sa === sb;
+                    };
+                    var canon = this._INSTR_CANON || [];
+                    var cChild = '', cParent = '';
+                    for (var ci = 0; ci < canon.length; ci++) {
+                        if (canon[ci]['в составе']) {
+                            cChild = canon[ci].название;
+                            cParent = canon[ci]['в составе'];
+                        }
+                    }
+                    var chI = -1, pI = -1;
+                    for (var ai = 0; ai < items.length; ai++) {
+                        if (pI < 0 && cParent &&
+                                sameK(items[ai].название, cParent)) pI = ai;
+                        if (chI < 0 && cChild &&
+                                sameK(items[ai].название, cChild)) chI = ai;
+                    }
+                    if (chI < 0) {
+                        for (var bi = 0; bi < items.length; bi++) {
+                            if (sigK(items[bi].название).indexOf('9огэ') >= 0) {
+                                chI = bi; break;
+                            }
+                        }
+                    }
+                    if (pI < 0) {
+                        for (var gi = 0; gi < items.length; gi++) {
+                            if (sigK(items[gi].название)
+                                    .indexOf('рабочиминструкциям') >= 0) {
+                                pI = gi; break;
+                            }
+                        }
+                    }
+                    if (pI < 0) {
+                        for (var hi = 0; hi < items.length; hi++) {
+                            var hKind = String(items[hi].вид || '')
+                                .trim().toLowerCase().replace(/\s+/g, '_');
+                            if (sigK(items[hi].название).indexOf('общий') >= 0 &&
+                                hKind !== 'проверка_знаний') {
+                                pI = hi; break;
+                            }
+                        }
+                    }
+                    if (chI >= 0) {
+                        if (!parseFloat(items[chI].периодичность)) {
+                            items[chI].периодичность = 3;
+                        }
+                        if (pI >= 0 && pI !== chI) {
+                            var link = String(items[chI]['в составе'] || '').trim();
+                            var linkOk = false;
+                            if (link) {
+                                for (var ei = 0; ei < items.length; ei++) {
+                                    if (ei !== chI &&
+                                            sameK(link, items[ei].название)) {
+                                        linkOk = true; break;
+                                    }
+                                }
+                            }
+                            if (!linkOk) {
+                                items[chI]['в составе'] = items[pI].название;
+                            }
+                        }
+                    }
+                } catch (e) { /* показ без связи */ }
+                return items;
+            }
             try {
                 console.warn('[Список_И_и_ПЗ] сервер не отдал ни одного пункта — работает встроенный эталон (5 пунктов заявки 409)');
             } catch (e) { /* ignore */ }
@@ -48841,10 +48933,27 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
                 var last = null;
                 var lastCut = year + '-12-31';
+                // Task 420: сравнение темы записи с ключами —
+                // НЕСТРОГОЕ (норм-ключ ИЛИ сигнатура: «№»/тире/
+                // точки/регистр не ломают «последнее» событие;
+                // фактические названия листа пользователя могут
+                // отличаться от эталона)
+                var _sigRel = function(s) {
+                    return String(s || '').trim().toLowerCase()
+                        .replace(/ё/g, 'е')
+                        .replace(/[^a-zа-я0-9]/g, '');
+                };
                 for (var li = 0; li < all.length; li++) {
                     if (String(all[li].дата_начала) > lastCut) continue;
-                    if (relKeys.indexOf(
-                            this._normInstrKey(all[li].тема)) < 0) continue;
+                    var liKey = this._normInstrKey(all[li].тема);
+                    var liHit = false;
+                    for (var rk = 0; rk < relKeys.length; rk++) {
+                        if (liKey === relKeys[rk]) { liHit = true; break; }
+                        var sa = _sigRel(all[li].тема);
+                        var sb = _sigRel(relKeys[rk]);
+                        if (sa && sa === sb) { liHit = true; break; }
+                    }
+                    if (!liHit) continue;
                     last = all[li];
                 }
                 // попап: пункты без записей вообще — не показываем
