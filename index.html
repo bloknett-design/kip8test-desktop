@@ -4750,7 +4750,16 @@
            wsp-bottom, flex-ряд: мероприятия слева, коды справа),
            каждая запись/код — по-прежнему отдельной строкой своего
            столбика; отступ сверху 2.5mm перенесён на обёртку.
-           Task 375: расстояние между столбиками — ровно 10px */
+           Task 375: расстояние между столбиками — ровно 10px.
+           Task 431 (заявка: «список кодов расположи справа от
+           списка мероприятий на расстоянии 10px, сейчас между
+           ними очень большое расстояние»): столбик мероприятий
+           БОЛЬШЕ НЕ РАСТЯГИВАЕТСЯ на всю свободную ширину
+           (flex-grow снят: 1 1 auto → 0 1 auto) — колонка сжимается
+           до своего текста, столбик кодов встаёт РЯДОМ с текстом
+           мероприятий (зазор — прежний gap 10px Task 375), а не у
+           правого края листа; сноска wsp-foot — под обоими
+           столбиками (как прежде) */
         #wsPrintSheet .wsp-bottom {
             display: flex;
             flex-direction: row;
@@ -4761,7 +4770,12 @@
             margin-top: 2.5mm;
         }
         #wsPrintSheet .wsp-mev {
-            flex: 1 1 auto;
+            /* Task 431: flex-grow 0 — НЕ тянется на всю ширину
+               (прежде 1 1 auto растягивал колонку, коды уезжали
+               к правому краю листа — «очень большое расстояние»);
+               колонка сжимается до самого широкого текста записи,
+               коды — в 10px справа от текста (gap ряда) */
+            flex: 0 1 auto;
             min-width: 0;
             margin-top: 0;
             font-size: 11px;
@@ -5619,6 +5633,21 @@
     .ws-done-chk.ws-done-ro:hover { background: none; border-color: #43a047; }
     [data-theme="light"] .ws-done-chk { border-color: rgba(0, 0, 0, 0.28); }
     [data-theme="light"] .ws-done-chk:hover { background: rgba(67, 160, 71, 0.12); }
+    /* Task 431 (заявка: «кнопку отметки выполнения расположи над
+       кнопкой удалить»): колонка-стек КОНЦА строки записи
+       инструктажа в карточке — ГАЛОЧКА отметки выполнения НАД
+       кнопкой удаления (✎ — левее колонки, как прежде по порядку
+       следования). Только блок «Повторные инструктажи…» (строки
+       b5); мероприятия/отпуска/СИЗ и попапы — прежний
+       горизонтальный порядок кнопок */
+    .ws-act-col {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        flex-shrink: 0;
+    }
     /* Task 418: бейдж «просрочен» — дата проведения прошла, отметки
        о выполнении нет («просрочен» = 1) */
     .ws-late-tag {
@@ -6620,6 +6649,30 @@
     [data-theme="light"] .ws-wcard .ws-ppe-item.ws-row-alt {
         background: rgba(0, 0, 0, 0.05);
     }
+    /* Task 431 (заявка: «в блоке Повторные инструктажи и
+       периодическая проверка знаний, при наведении указателя мыши
+       на строку зебры, она меняет цвет фона — убери этот
+       эффект»): колонка инструктажей .ws-wcol-instr (Task 406 — в
+       ней живёт ТОЛЬКО окно блока «Повторные инструктажи…») —
+       строки-записи при наведении БЕЗ смены фона: НЕзебра-строки
+       — прозрачно (перекрывает подсветку .ws-popup-row:hover, в
+       светлой теме — [data-theme="light"] .ws-popup-row:hover
+       rgba(42,93,143,0.12) — именно её и видел пользователь),
+       зебра-строки — СВОЙ статичный оттенок (подсветка НЕ
+       заменяет зебру). Зона — только блок инструктажей: строки
+       мероприятий/отпусков/СИЗ и попапы шахматки НЕ тронуты */
+    .ws-wcol-instr .ws-popup-row:hover { background: transparent; }
+    .ws-wcol-instr .ws-popup-row.ws-row-alt,
+    .ws-wcol-instr .ws-popup-row.ws-row-alt:hover {
+        background: rgba(255, 255, 255, 0.045);
+    }
+    [data-theme="light"] .ws-wcol-instr .ws-popup-row:hover {
+        background: transparent;
+    }
+    [data-theme="light"] .ws-wcol-instr .ws-popup-row.ws-row-alt,
+    [data-theme="light"] .ws-wcol-instr .ws-popup-row.ws-row-alt:hover {
+        background: rgba(0, 0, 0, 0.05);
+    }
     /* Task 386 (заявка): «Добавить работника» — ТЕКСТОВАЯ кнопка
        (прежде значок «+» 34×34): та же высота 34px, авто-ширина.
        Task 391 (заявка): кнопка — В СТИЛЕ САЙТА, акцентная:
@@ -6695,11 +6748,15 @@
        .ws-wcard (уже сплошной).
        Task 390 (заявка: в тёмной теме ярлыки СВЕТЛЕЕ и ДРУГИМ по
        цвету — ближе к светлой теме, чтобы НЕ сливались с общим
-       фоном страницы #1a2233): тёмная тема — ТЁПЛЫЙ тон (как
-       светлые #E4E0D3/#DBD6C8, затемнённый): неактивный #4B4E46,
-       hover #575A50, активный #63665B (светлее неактивного — как
-       активные вкладки браузеров); светлая тема — БЕЗ ИЗМЕНЕНИЙ
-       (#E4E0D3/#DBD6C8/var(--bg-tertiary)) */
+       фоном страницы #1a2233). Task 431 (заявка: «в тёмной теме фон
+       ярлыков работников сделай как фон в блоках карт
+       работников»): тёплый тон Task 390 (#4B4E46/#575A50/#63665B)
+       ЗАМЕНЁН СЕМЕЙСТВОМ ФОНА БЛОКОВ КАРТ (#243349, Task 395):
+       неактивный — ТОЧНО фон блока карты #243349, hover — на шаг
+       светлее #2A3A53, активный — ещё светлее #31445F (как
+       активные вкладки браузеров; акцентная планка слева жива);
+       светлая тема — БЕЗ ИЗМЕНЕНИЙ (#E4E0D3/#DBD6C8/
+       var(--bg-tertiary)) */
     .ws-workers-layout {
         display: flex;
         align-items: stretch;
@@ -6736,9 +6793,9 @@
            снята ниже в .ws-wtab.active, зазор до окна —
            gap раскладки Task 428 */
         border-radius: 8px;
-        /* Task 390: СВЕТЛЕЕ фона страницы (#1a2233) и ТЁПЛЫЙ тон
-           (ближе к светлой теме — не сливается с общим фоном) */
-        background: #4B4E46;
+        /* Task 431: фон — КАК У БЛОКОВ КАРТ работника (.ws-wcard
+           #243349, Task 395); тёплый тон Task 390 снят */
+        background: #243349;
         color: rgba(255, 255, 255, 0.78);
         padding: 8px 10px;
         font-size: 12.5px;
@@ -6747,17 +6804,18 @@
         overflow-wrap: break-word;
     }
     .ws-wtab:hover {
-        /* Task 390: тёплый, светлее неактивного */
-        background: #575A50;
+        /* Task 431: шаг светлее фона блоков карт */
+        background: #2A3A53;
         color: var(--text-primary, #e0e0e0);
     }
     .ws-wtab.active {
-        /* Task 390: активный — САМЫЙ светлый тёплый (как активные
+        /* Task 390: активный — САМЫЙ светлый (как активные
            вкладки браузеров) */
         /* Task 428: пристыковка к окну вкладок СНЯТА — ярлыки
            закруглены со всех сторон, между колонкой ярлыков и
            окнами — gap 5px раскладки (рамка справа — обычная) */
-        background: #63665B;
+        /* Task 431: самый светлый шаг семейства #243349 */
+        background: #31445F;
         border-color: rgba(255, 255, 255, 0.14);
         border-left-color: var(--accent-blue, #4a8fc7);
         color: var(--text-primary, #e0e0e0);
@@ -49108,11 +49166,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var iTrId = parseInt(it.id, 10);
                     // Task 427: семейство записи (id таблиц раздельные)
                     var iTrFam = this._isInstrType(it.тип) ? 1 : 0;
-                    var iActs = '';
+                    // Task 431 (заявка: «кнопку отметки выполнения
+                    // расположи над кнопкой удалить»): кнопки строки
+                    // РАЗДЕЛЕНЫ — ✎ остаётся горизонтальной, а ГАЛОЧКА
+                    // и ✕ собираются в вертикальную колонку .ws-act-col
+                    // (галочка — НАД удалением; конец строки)
+                    var iActEdit = '', iActDel = '';
                     if (withEdit && iTrId) {
-                        iActs = '<span class="ws-popup-act" title="Редактировать"' +
-                                ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + iTrId + ', ' + iTrFam + ')">✎</span>' +
-                                '<span class="ws-popup-act ws-popup-act-del" title="Удалить"' +
+                        iActEdit = '<span class="ws-popup-act" title="Редактировать"' +
+                                ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + iTrId + ', ' + iTrFam + ')">✎</span>';
+                        iActDel = '<span class="ws-popup-act ws-popup-act-del" title="Удалить"' +
                                 ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + iTrId + ', ' + iTrFam + ')">✕</span>';
                     }
                     var iPeriod = (it.дата_начала === it.дата_окончания)
@@ -49150,6 +49213,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         iChk = '<span class="ws-done-chk ws-done-on ws-done-ro"' +
                                ' title="Выполнено">✓</span>';
                     }
+                    // Task 431: КОНЕЦ строки — карточка: колонка
+                    // .ws-act-col с галочкой НАД кнопкой удаления
+                    // (у зрителей — одна галочка состояния; записи
+                    // без id — без колонки); попап ячейки — прежний
+                    // горизонтальный порядок ✎/✕ (галочки в попапе
+                    // нет — Task 418)
+                    var iRowEnd;
+                    if (asBlocks) {
+                        iRowEnd = iActEdit + ((iChk || iActDel)
+                            ? '<span class="ws-act-col">' + iChk + iActDel + '</span>'
+                            : '');
+                    } else {
+                        iRowEnd = iActEdit + iActDel;
+                    }
                     b5 += '<div class="ws-popup-row ws-popup-event' +
                           ((asBlocks && ik % 2 === 1) ? ' ws-row-alt' : '') +
                           (iDone ? ' ws-row-done' : '') + '">' +
@@ -49163,7 +49240,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                           // месяца, печати табеля)
                           this._esc(it.тема || iMeta.name || it.тип) +
                           ' · ' + iPeriod + '</span>' +
-                          iLateTag + iChk + iActs + '</div>';
+                          iLateTag + iRowEnd + '</div>';
                 }
             }
             // «+ Инструктаж…» — шторка «Новое мероприятие» с работником
