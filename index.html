@@ -47909,12 +47909,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // подстрахуемся на будущее)
                 var deT = dayEvents[de].training;
                 var deId = parseInt(deT.id, 10);
+                // Task 427: семейство записи (id таблиц раздельные —
+                // одинаковый id адресуется семейством типа)
+                var deFam = this._isInstrType(deT.тип) ? 1 : 0;
                 var deActs = '';
                 if (this._canEdit && deId) {
                     deActs = '<span class="ws-popup-act" title="Редактировать"' +
-                             ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + deId + ')">✎</span>' +
+                             ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + deId + ', ' + deFam + ')">✎</span>' +
                              '<span class="ws-popup-act ws-popup-act-del" title="Удалить"' +
-                             ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + deId + ')">✕</span>';
+                             ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + deId + ', ' + deFam + ')">✕</span>';
                 }
                 html += '<div class="ws-popup-row ws-popup-event">' +
                         '<span class="ws-popup-swatch" style="background:' + (deMeta.color || '#3a3a3a') + ';"></span>' +
@@ -48496,12 +48499,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var code = this._trainingCodeOf(t.тип);
                     var meta = this._statusMeta(code) || {};
                     var trId = parseInt(t.id, 10);
+                    // Task 427: семейство записи (id таблиц раздельные)
+                    var trFam = this._isInstrType(t.тип) ? 1 : 0;
                     var acts = '';
                     if (withEdit && trId) {
                         acts = '<span class="ws-popup-act" title="Редактировать"' +
-                               ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + trId + ')">✎</span>' +
+                               ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + trId + ', ' + trFam + ')">✎</span>' +
                                '<span class="ws-popup-act ws-popup-act-del" title="Удалить"' +
-                               ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + trId + ')">✕</span>';
+                               ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + trId + ', ' + trFam + ')">✕</span>';
                     }
                     var period = (t.дата_начала === t.дата_окончания)
                         ? this._fmtDateRu(t.дата_начала)
@@ -48583,12 +48588,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var iCode = this._trainingCodeOf(it.тип);
                     var iMeta = this._statusMeta(iCode) || {};
                     var iTrId = parseInt(it.id, 10);
+                    // Task 427: семейство записи (id таблиц раздельные)
+                    var iTrFam = this._isInstrType(it.тип) ? 1 : 0;
                     var iActs = '';
                     if (withEdit && iTrId) {
                         iActs = '<span class="ws-popup-act" title="Редактировать"' +
-                                ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + iTrId + ')">✎</span>' +
+                                ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + iTrId + ', ' + iTrFam + ')">✎</span>' +
                                 '<span class="ws-popup-act ws-popup-act-del" title="Удалить"' +
-                                ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + iTrId + ')">✕</span>';
+                                ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + iTrId + ', ' + iTrFam + ')">✕</span>';
                     }
                     var iPeriod = (it.дата_начала === it.дата_окончания)
                         ? this._fmtDateRu(it.дата_начала)
@@ -48874,7 +48881,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var e = String(r['дата_окончания'] || s);
                 if (e < yS || s > yE) continue;
                 var id = parseInt(r.id, 10);
-                var k = id ? ('i' + id)
+                // Task 427: последовательности id таблиц РАЗДЕЛЬНЫЕ —
+                // ключ дедупа по СЕМЕЙСТВУ типа (одинаковые id
+                // инструктажа и мероприятия — ДВЕ записи, не дубль)
+                var k = id
+                    ? (this._isInstrType(r.тип) ? 'i' + id : 'e' + id)
                     : ('t' + s + '|' + String(r.тема || ''));
                 if (seen[k]) continue;
                 seen[k] = true;
@@ -49003,12 +49014,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 for (var ri = 0; ri < gRows.length; ri++) {
                     var gr = gRows[ri];
                     var rId = parseInt(gr.id, 10);
+                    // Task 427: семейство записи (id таблиц раздельные)
+                    var rFam = this._isInstrType(gr.тип) ? 1 : 0;
                     var rActs = '';
                     if (withEdit && rId) {
                         rActs = '<span class="ws-popup-act" title="Редактировать"' +
-                                ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + rId + ')">✎</span>' +
+                                ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + rId + ', ' + rFam + ')">✎</span>' +
                                 '<span class="ws-popup-act ws-popup-act-del" title="Удалить"' +
-                                ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + rId + ')">✕</span>';
+                                ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + rId + ', ' + rFam + ')">✕</span>';
                     }
                     var rPeriod = (gr.дата_начала === gr.дата_окончания)
                         ? this._fmtDateRu(gr.дата_начала)
@@ -49051,12 +49064,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var oCode = this._trainingCodeOf(ot.тип);
                     var oMeta = this._statusMeta(oCode) || {};
                     var oId = parseInt(ot.id, 10);
+                    // Task 427: семейство записи (id таблиц раздельные)
+                    var oFam = this._isInstrType(ot.тип) ? 1 : 0;
                     var oActs = '';
                     if (withEdit && oId) {
                         oActs = '<span class="ws-popup-act" title="Редактировать"' +
-                                ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + oId + ')">✎</span>' +
+                                ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + oId + ', ' + oFam + ')">✎</span>' +
                                 '<span class="ws-popup-act ws-popup-act-del" title="Удалить"' +
-                                ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + oId + ')">✕</span>';
+                                ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + oId + ', ' + oFam + ')">✕</span>';
                     }
                     var oPeriod = (ot.дата_начала === ot.дата_окончания)
                         ? this._fmtDateRu(ot.дата_начала)
@@ -50429,9 +50444,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // приоритетом свежести: _TRAININGS (срез года табеля) →
         // _INSTR_ALL (архив «Инструктажей») → _EVENTS_ALL (архив
         // «Мероприятий»)
-        editTraining: function(id) {
+        editTraining: function(id, fam) {
             if (!this._canEdit) return;
             var tid = parseInt(id, 10);
+            // Task 427: fam (0|1) — СЕМЕЙСТВО типа записи (кнопки
+            // блоков/попапов передают): последовательности id таблиц
+            // РАЗДЕЛЬНЫЕ, одинаковый id разных листов адресуется
+            // семейством; без флага (прямые вызовы/старый кэш) —
+            // прежний порядок пулов
+            var useFam = (fam === 1 || fam === '1') ? true
+                       : (fam === 0 || fam === '0') ? false : null;
             var rec = null;
             if (tid) {
                 var pools = [this._TRAININGS, this._INSTR_ALL,
@@ -50439,10 +50461,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 for (var p = 0; p < pools.length && !rec; p++) {
                     var arr = pools[p] || [];
                     for (var i = 0; i < arr.length; i++) {
-                        if (parseInt(arr[i].id, 10) === tid) {
-                            rec = arr[i];
-                            break;
-                        }
+                        if (parseInt(arr[i].id, 10) !== tid) continue;
+                        if (useFam !== null &&
+                            this._isInstrType(arr[i].тип) !== useFam) continue;
+                        rec = arr[i];
+                        break;
                     }
                 }
             }
@@ -50540,9 +50563,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // создаст с новым id (шаг 4) — регенерация сходится.
             if (this._editTrainingId) {
                 var oldId = this._editTrainingId;
+                // Task 427: старая строка адресуется СЕМЕЙСТВОМ её
+                // типа (id таблиц раздельные; тип в правке мог
+                // смениться на другой ВНУТРИ того же семейства)
+                var oldFam = this._isInstrType(this._trEditType) ? 1 : 0;
                 this._api('workSchedule.addTraining', payload)
                     .then(function() {
-                        return self._api('workSchedule.deleteTraining', { id: oldId });
+                        return self._api('workSchedule.deleteTraining',
+                            { id: oldId, инстр: oldFam });
                     })
                     .then(function() {
                         self._editTrainingId = null;
@@ -50591,7 +50619,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             });
         },
 
-        deleteTraining: function(id) {
+        // Task 427: fam (0|1, необязательно) — СЕМЕЙСТВО типа записи
+        // (кнопки блоков/попапов передают): у таблиц раздельные
+        // последовательности id, подтверждение показывает раздел
+        deleteTraining: function(id, fam) {
             if (!this._canEdit) return;
             // Task 309: кнопки ✕ есть в окне «Мероприятия в этот день»
             // (Task 313, над окном кодов) и карточке сотрудника —
@@ -50599,17 +50630,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this.closeCellPopup();
             this.closeEmpPopup();
             var self = this;
+            var famTxt = (fam === 1 || fam === '1') ? ' (инструктаж)'
+                      : (fam === 0 || fam === '0') ? ' (мероприятие)' : '';
             if (typeof kipConfirm === 'function') {
-                kipConfirm('Удалить мероприятие id=' + id + '?', { danger: true })
-                    .then(function(ok) { if (ok) self._doDeleteTraining(id); });
+                kipConfirm('Удалить запись id=' + id + famTxt + '?', { danger: true })
+                    .then(function(ok) { if (ok) self._doDeleteTraining(id, fam); });
             } else {
-                if (confirm('Удалить мероприятие id=' + id + '?')) self._doDeleteTraining(id);
+                if (confirm('Удалить запись id=' + id + famTxt + '?')) self._doDeleteTraining(id, fam);
             }
         },
 
-        _doDeleteTraining: function(id) {
+        _doDeleteTraining: function(id, fam) {
             var self = this;
-            this._api('workSchedule.deleteTraining', { id: id })
+            // Task 427: инстр — семейство типа записи (id таблиц
+            // раздельные): сервер адресует лист по флагу
+            var pl = { id: id };
+            if (fam === 0 || fam === '0' || fam === 1 || fam === '1') {
+                pl.инстр = (fam === 1 || fam === '1') ? 1 : 0;
+            }
+            this._api('workSchedule.deleteTraining', pl)
                 .then(function() {
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
                         KipToast.show('Мероприятие удалено');
@@ -50632,8 +50671,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // «Инструктажи»): отметка о выполнении записи — галочка
         // строки блока «Повторные инструктажи и периодическая
         // проверка знаний» КАРТОЧКИ работника. Запись ищется в
-        // едином пуле (как editTraining Task 417), значение
-        // переключается 0↔1; сервер (setTrainingDone) пишет столбец
+        // пулах ТОЛЬКО инструктажных типов (Task 427: id таблиц
+        // раздельные — мероприятие с тем же id не перехватывается;
+        // галочка есть только у записей инструктажей), значение
+        // переключается 0↔1; сервер (setTrainingDone) ищет строку
+        // в листе «Инструктажи» и пишет столбец
         // «выполнение» (F) и пересчитывает «просрочен» (G). Локальное
         // обновление записи + перерисовка страницы «Работники» (без
         // полной перезагрузки сетки); ошибка — тост с текстом
@@ -50648,6 +50690,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 for (var p = 0; p < pools.length && !rec; p++) {
                     var arr = pools[p] || [];
                     for (var i = 0; i < arr.length; i++) {
+                        // Task 427: галочка — ТОЛЬКО записи
+                        // инструктажей (id таблиц раздельные:
+                        // мероприятие с тем же id не перехватывается)
+                        if (!this._isInstrType(arr[i].тип)) continue;
                         if (parseInt(arr[i].id, 10) === tid) {
                             rec = arr[i];
                             break;
@@ -50680,12 +50726,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     // обновляем ВСЕ копии записи по id: карточка
                     // «Работники» читает архивный пул _INSTR_ALL, а
                     // годовой срез _TRAININGS (бейджи/печать) держит
-                    // СВОЙ объект той же записи (Task 418)
+                    // СВОЙ объект той же записи (Task 418).
+                    // Task 427: копии — ТОЛЬКО инструктажных типов
+                    // (id таблиц раздельные, мероприятие с тем же
+                    // id в _TRAININGS не помечается)
                     var pools = [self._TRAININGS, self._INSTR_ALL,
                                  self._EVENTS_ALL];
                     for (var p = 0; p < pools.length; p++) {
                         var arr = pools[p] || [];
                         for (var i = 0; i < arr.length; i++) {
+                            if (!self._isInstrType(arr[i].тип)) continue;
                             if (parseInt(arr[i].id, 10) === tid) {
                                 arr[i].выполнение = newDone;
                                 arr[i].просрочен = newLate;
@@ -50719,6 +50769,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         for (var up = 0; up < pools.length; up++) {
                             var uarr = pools[up] || [];
                             for (var ui = 0; ui < uarr.length; ui++) {
+                                if (!self._isInstrType(uarr[ui].тип)) continue;
                                 if (parseInt(uarr[ui].id, 10) === uid) {
                                     uarr[ui].выполнение = uDone;
                                     uarr[ui].просрочен = uLate;
@@ -50781,11 +50832,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                        'см. журнал Apps Script (подробности в консоли)';
                             }
                             // старый Apps Script: нет srvVer (логика
-                            // 419..421) или версия ниже 423 — период
-                            // 9-ОГЭ ещё по значению листа (заявка
-                            // Task 423: «9-ОГЭ создалось через 6
-                            // месяцев а не через 3»)
-                            if (!d.srvVer || parseInt(d.srvVer, 10) < 423) {
+                            // 419..421) или версия ниже 427 — период
+                            // 9-ОГЭ ещё по значению листа (< 423,
+                            // заявка Task 423) или СКВОЗНАЯ нумерация
+                            // id обоих листов (< 427, заявка Task 427 —
+                            // правка/удаление по id без семейства
+                            // может задеть чужую строку)
+                            if (!d.srvVer || parseInt(d.srvVer, 10) < 427) {
                                 msg += '. ⚠ Сервер Apps Script старой версии — ' +
                                        'замените WorkSchedule.gs и создайте ' +
                                        'новую версию развёртывания';
