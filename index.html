@@ -4397,6 +4397,166 @@
     #wsPrintSheet { display: none; }
     .ws-print-btn { white-space: nowrap; }
 
+    /* ============================================================
+       Task 430 (заявка: «при печати шахматки табеля, вначале
+       должно появляться диалоговое окно с предпросмотром и с
+       возможностью сохранения графика в файл»): ДИАЛОГ
+       ПРЕДПРОСМОТРА ПЕЧАТИ #wsPrintPrevModal. Кнопка «Печать»
+       тулбара больше не печатает СРАЗУ — сначала модальный диалог:
+       белый «бумажный» лист (тот же HTML, что уйдёт на печать, —
+       iframe со standalone-документом; CSS печатного листа
+       переиспользуется из печатной медиа-секции приложения через
+       _printCssText), масштаб под ширину окна, снизу — действия:
+       «Печать» (window.print основного документа: печатная
+       медиа-секция скрывает всё, кроме #wsPrintSheet), «Сохранить
+       в файл» (standalone HTML в загрузки браузера), «Отмена».
+       Тема — переменные приложения; z-index выше попапов (9402),
+       ниже тостов (10000). При печати диалог скрывается общим
+       правилом body > *:not(#wsPrintSheet)
+       ============================================================ */
+    .wspprev-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 9500;
+        background: rgba(0, 0, 0, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+    }
+    .wspprev-dialog {
+        display: flex;
+        flex-direction: column;
+        width: min(1240px, 96vw);
+        max-width: 96vw;
+        height: min(92vh, 1000px);
+        background: var(--bg-primary, #141a22);
+        border: 1px solid var(--card-border, rgba(74, 143, 199, 0.25));
+        border-radius: 12px;
+        box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+        overflow: hidden;
+    }
+    .wspprev-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--card-border, rgba(255, 255, 255, 0.1));
+        flex: none;
+    }
+    .wspprev-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-primary, #e0e0e0);
+        white-space: nowrap;
+    }
+    .wspprev-sub {
+        flex: 1;
+        min-width: 0;
+        font-size: 12px;
+        color: var(--text-secondary, rgba(255, 255, 255, 0.5));
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .wspprev-close {
+        flex: none;
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--card-border, rgba(255, 255, 255, 0.16));
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text-primary, #e0e0e0);
+        font-size: 16px;
+        line-height: 1;
+        cursor: pointer;
+    }
+    .wspprev-close:hover { filter: brightness(1.3); }
+    .wspprev-body {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        background: rgba(0, 0, 0, 0.28);
+        display: flex;
+        justify-content: center;
+        padding: 14px;
+    }
+    .wspprev-paper {
+        position: relative;
+        flex: none;
+        overflow: hidden;
+    }
+    .wspprev-frame {
+        display: block;
+        border: 0;
+        width: 1063px; /* 281мм печатной области A4 (297 − 2×8мм) @96dpi */
+        background: transparent;
+    }
+    .wspprev-foot {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 10px 14px;
+        border-top: 1px solid var(--card-border, rgba(255, 255, 255, 0.1));
+        flex: none;
+    }
+    .wspprev-btn {
+        height: 34px;
+        padding: 0 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1;
+        white-space: nowrap;
+        cursor: pointer;
+        flex: none;
+    }
+    .wspprev-btn svg { width: 15px; height: 15px; }
+    .wspprev-print {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        border: 1px solid transparent;
+        background: var(--accent-blue, #4a8fc7);
+        color: #fff;
+    }
+    .wspprev-print:hover { filter: brightness(1.12); }
+    .wspprev-print:active { filter: brightness(0.9); }
+    .wspprev-save,
+    .wspprev-cancel {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        border: 1px solid var(--card-border, rgba(255, 255, 255, 0.22));
+        background: transparent;
+        color: var(--text-primary, #e0e0e0);
+    }
+    .wspprev-save:hover,
+    .wspprev-cancel:hover { background: rgba(255, 255, 255, 0.07); }
+    .wspprev-hint {
+        margin-left: auto;
+        font-size: 11px;
+        color: var(--text-secondary, rgba(255, 255, 255, 0.45));
+        white-space: nowrap;
+    }
+    /* мобайл: диалог на весь экран, кнопки — в полную ширину */
+    @media (max-width: 640px) {
+        .wspprev-overlay { padding: 0; }
+        .wspprev-dialog {
+            width: 100vw;
+            max-width: 100vw;
+            height: 100dvh;
+            border-radius: 0;
+            border: 0;
+        }
+        .wspprev-sub { display: none; }
+        .wspprev-foot { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+    }
+
     @media print {
         @page { size: A4 landscape; margin: 8mm; }
         html, body { background: #fff !important; }
@@ -6484,6 +6644,46 @@
     }
     .ws-workers-add:hover { filter: brightness(1.12); }
     .ws-workers-add:active { filter: brightness(0.9); }
+
+    /* Task 430 (заявка: «в общей карте работников добавь кнопку
+       сохранить архив, при нажатии на которую весь архив по
+       работникам должен сохраняться в формате таблицы excel»):
+       кнопка «Сохранить архив» — ВТОРАЯ в ряду действий шапки
+       «Общей» вкладки (рядом с «Добавить работника», контейнер
+       .ws-wgen-actions). В отличие от акцентной «Добавить» —
+       ВТОРИЧНАЯ контурная: выгрузка архива — фича ПРОСМОТРА,
+       доступна и уровню view (как «Печать»). Акцент берётся из
+       переменной темы (тёмная — синий #4a8fc7, светлая —
+       оранжевый #C6613F), отдельные светлые оверрайды не нужны.
+       Значок — дискета (inline SVG, как значки тулбара) */
+    .ws-wgen-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: none;
+    }
+    .ws-workers-archive {
+        height: 34px;
+        padding: 0 14px;
+        border-radius: 8px;
+        border: 1px solid var(--accent-blue, #4a8fc7);
+        background: transparent;
+        color: var(--accent-blue, #4a8fc7);
+        font-size: 13px;
+        line-height: 1;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+    }
+    .ws-workers-archive svg { width: 15px; height: 15px; flex: none; }
+    .ws-workers-archive:hover {
+        background: rgba(74, 143, 199, 0.14);
+    }
+    .ws-workers-archive:active { filter: brightness(0.9); }
 
     /* Task 388 (заявка): ярлыки-вкладки СТОЛБИКОМ СЛЕВА (браузерный
        вид): активный ярлык подсвечен и «пристыкован» к телу
@@ -43483,8 +43683,306 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var agg = this._totalsAgg(
                 this._totalsEffectiveEntries(),
                 this._empTypeMap(this._EMPLOYEES));
-            sheet.innerHTML = this._buildPrintHtml(viewEmps, agg);
-            window.print();
+            var html = this._buildPrintHtml(viewEmps, agg);
+            sheet.innerHTML = html;
+            // Task 430 (заявка: «при печати шахматки табеля, вначале
+            // должно появляться диалоговое окно с предпросмотром и с
+            // возможностью сохранения графика в файл»): кнопка
+            // «Печать» БОЛЬШЕ не печатает сразу — сначала открывает
+            // ДИАЛОГ ПРЕДПРОСМОТРА (белый «бумажный» лист в iframe +
+            // кнопки «Печать»/«Сохранить в файл»/«Отмена»). Диалог
+            // не открылся (нет DOM/iframe — экзотика) — фолбэк
+            // прежнего поведения Task 341: печать сразу
+            var opened = false;
+            try {
+                opened = this._openPrintPreview(html);
+            } catch (e) { opened = false; }
+            if (!opened) window.print();
+        },
+
+        // Task 430: CSS печатного листа текстом — правила из
+        // @media print-блока приложения (единственный блок с
+        // #wsPrintSheet/wsp-*), снятые с обёртки @media: тот же CSS
+        // работает в standalone-документе (предпросмотр-iframe и
+        // сохранённый файл) — вёрстка предпросмотра/файла ГАРАНТИ
+        // РОВАННО совпадает с печатью (@page уходит вместе с
+        // правилами: печать файла из браузера даёт A4 альбомную).
+        // Вне браузера (VM-тесты без styleSheets) — пустая строка
+        _printCssText: function() {
+            if (typeof document === 'undefined' ||
+                !document.styleSheets) return '';
+            var out = '';
+            try {
+                for (var s = 0; s < document.styleSheets.length; s++) {
+                    var rules;
+                    try { rules = document.styleSheets[s].cssRules; }
+                    catch (e) { continue; }
+                    if (!rules) continue;
+                    for (var r = 0; r < rules.length; r++) {
+                        var rule = rules[r];
+                        if (!rule || !rule.media) continue;
+                        var mt = '';
+                        try { mt = rule.media.mediaText; } catch (e) {}
+                        if (!mt || mt.indexOf('print') === -1) continue;
+                        var txt = rule.cssText || '';
+                        if (txt.indexOf('#wsPrintSheet') === -1 ||
+                            txt.indexOf('wsp-grid') === -1) continue;
+                        var i = txt.indexOf('{');
+                        var j = txt.lastIndexOf('}');
+                        if (i !== -1 && j > i) {
+                            out += txt.slice(i + 1, j) + '\n';
+                        }
+                    }
+                }
+            } catch (e) { return out; }
+            return out;
+        },
+
+        // Task 430: standalone-документ печатного листа: экран —
+        // белый лист 281мм (A4 альбомная минус поля 2×8мм) на
+        // подложке (файл) / в притирку к диалогу (iframe), печать
+        // файла — те же @page-правила из _printCssText.
+        // forFile=true — «бумажная» подложка и тень (файл красиво
+        // открывается в браузере), false — предпросмотр в диалоге
+        _buildPrintFileHtml: function(printHtml, forFile) {
+            var months = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                          'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            var mIdx = Math.min(Math.max(parseInt(this._month, 10) || 1, 1), 12);
+            var title = 'График работы — ' + months[mIdx - 1] + ' ' + this._year +
+                        ' (табель учёта рабочего времени)';
+            var screenCss = forFile
+                ? 'html{background:#566170;}' +
+                  'body{margin:0;padding:6mm 0;display:flex;' +
+                  'justify-content:center;}' +
+                  '#wsPrintSheet{background:#fff;box-shadow:0 1mm 4mm ' +
+                  'rgba(0,0,0,0.45);padding:8mm;width:281mm;}'
+                : 'body{margin:0;padding:0;}' +
+                  '#wsPrintSheet{background:#fff;padding:8mm;width:281mm;}';
+            return '<!DOCTYPE html>\n<html><head>' +
+                '<meta charset="utf-8">' +
+                '<meta name="viewport" content="width=device-width, ' +
+                'initial-scale=1">' +
+                '<title>' + this._esc(title) + '</title>' +
+                '<style>' + screenCss + '\n' + this._printCssText() +
+                '</style></head><body>' +
+                '<div id="wsPrintSheet">' + printHtml + '</div>' +
+                '</body></html>';
+        },
+
+        // Task 430: «Сохранить в файл» диалога предпросмотра —
+        // standalone-HTML печатного листа (с подложкой) в загрузки
+        // браузера; имя — «График_работы_‹Месяц›_‹год›.html»
+        _savePrintFile: function(printHtml) {
+            var months = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                          'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            var mIdx = Math.min(Math.max(parseInt(this._month, 10) || 1, 1), 12);
+            var name = 'График_работы_' + months[mIdx - 1] + '_' +
+                       this._year + '.html';
+            var html = this._buildPrintFileHtml(printHtml, true);
+            var ok = this._wsDownload(this._wsXlsBytes(html),
+                                      'text/html;charset=utf-8', name);
+            if (typeof KipToast !== 'undefined' && KipToast.show) {
+                KipToast.show(ok
+                    ? ('График сохранён — файл «' + name + '»')
+                    : 'Не удалось сохранить файл графика');
+            }
+        },
+
+        // Task 430: масштаб предпросмотра под окно: лист 1063px
+        // (281мм @96dpi) сжимается transform:scale до ширины тела
+        // диалога; высота «бумаги» = натуральная высота iframe × k
+        // (трансформ не меняет layout-габариты — гасим обёрткой)
+        _wsPrevFit: function() {
+            if (typeof document === 'undefined') return;
+            var overlay = document.getElementById('wsPrintPrevModal');
+            if (!overlay) return;
+            var body = overlay.querySelector('.wspprev-body');
+            var paper = overlay.querySelector('.wspprev-paper');
+            var frame = overlay.querySelector('.wspprev-frame');
+            if (!body || !paper || !frame) return;
+            var W = 1063;
+            var avail = (body.clientWidth || 0) - 28;
+            if (!(avail > 0)) avail = W;
+            var k = Math.min(1, avail / W);
+            var h = frame._natH || 800;
+            try {
+                frame.style.transformOrigin = 'top left';
+                frame.style.transform = 'scale(' + k + ')';
+                paper.style.width = Math.round(W * k) + 'px';
+                paper.style.height = Math.round(h * k) + 'px';
+            } catch (e) { /* моки без style — тихо */ }
+        },
+
+        // Task 430: закрыть диалог предпросмотра — снять слушатели
+        // окна, удалить элемент из <body>
+        _closePrintPreview: function() {
+            if (typeof window !== 'undefined' && window.removeEventListener) {
+                if (this._wsPrevEsc) {
+                    try { window.removeEventListener('keydown',
+                                                    this._wsPrevEsc); }
+                    catch (e) {}
+                }
+                if (this._wsPrevResize) {
+                    try { window.removeEventListener('resize',
+                                                    this._wsPrevResize); }
+                    catch (e) {}
+                }
+            }
+            this._wsPrevEsc = null;
+            this._wsPrevResize = null;
+            this._wsPrevFrame = null;
+            if (typeof document === 'undefined' ||
+                !document.getElementById) return;
+            var overlay = document.getElementById('wsPrintPrevModal');
+            if (overlay && overlay.parentNode &&
+                overlay.parentNode.removeChild) {
+                try { overlay.parentNode.removeChild(overlay); }
+                catch (e) {}
+            }
+        },
+
+        // Task 430: ДИАЛОГ ПРЕДПРОСМОТРА ПЕЧАТИ. Строится в <body>
+        // (динамически, id wsPrintPrevModal — как печатный лист
+        // Task 341): шапка (заголовок + месяц/год + ✕), тело —
+        // iframe со standalone-документом печатного листа (тот же
+        // HTML, что в #wsPrintSheet: предпросмотр = печать),
+        // масштаб под окно; низ — «Печать» (window.print() ОСНОВНОГО
+        // документа: @media print скрывает всё кроме #wsPrintSheet —
+        // диалог тоже, поэтому его можно не закрывать), «Сохранить
+        // в файл» (standalone-HTML в загрузки), «Отмена». Esc и
+        // клик по затемнению закрывают. Возвращает true при успехе;
+        // false — без DOM (фолбэк printGrid: печать сразу)
+        _openPrintPreview: function(printHtml) {
+            if (typeof document === 'undefined' ||
+                !document.createElement || !document.body ||
+                !document.body.appendChild) {
+                return false;
+            }
+            var self = this;
+            this._closePrintPreview();
+            var months = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                          'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            var mIdx = Math.min(Math.max(parseInt(this._month, 10) || 1, 1), 12);
+
+            var overlay = document.createElement('div');
+            overlay.id = 'wsPrintPrevModal';
+            overlay.className = 'wspprev-overlay';
+            if (overlay.addEventListener) {
+                overlay.addEventListener('click', function(ev) {
+                    if (ev && ev.target === overlay) {
+                        self._closePrintPreview();
+                    }
+                });
+            }
+
+            var dlg = document.createElement('div');
+            dlg.className = 'wspprev-dialog';
+
+            var head = document.createElement('div');
+            head.className = 'wspprev-head';
+            head.innerHTML = '<span class="wspprev-title">Предпросмотр ' +
+                             'печати</span>' +
+                             '<span class="wspprev-sub">График работы — ' +
+                             this._esc(months[mIdx - 1]) + ' ' + this._year +
+                             ' г.</span>';
+            var closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'wspprev-close';
+            if (closeBtn.setAttribute) {
+                closeBtn.setAttribute('aria-label', 'Закрыть предпросмотр');
+            }
+            closeBtn.innerHTML = '✕';
+            if (closeBtn.addEventListener) {
+                closeBtn.addEventListener('click', function() {
+                    self._closePrintPreview();
+                });
+            }
+            head.appendChild(closeBtn);
+
+            var body = document.createElement('div');
+            body.className = 'wspprev-body';
+            var paper = document.createElement('div');
+            paper.className = 'wspprev-paper';
+            var frame = document.createElement('iframe');
+            frame.className = 'wspprev-frame';
+            if (frame.setAttribute) {
+                frame.setAttribute('title', 'Предпросмотр печатного листа');
+            }
+            frame.style.height = '800px';
+            frame._natH = 800;
+            paper.appendChild(frame);
+            body.appendChild(paper);
+
+            var foot = document.createElement('div');
+            foot.className = 'wspprev-foot';
+            foot.innerHTML =
+                '<button type="button" class="wspprev-btn wspprev-print">' +
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V6z" fill="currentColor"/></svg>' +
+                'Печать</button>' +
+                '<button type="button" class="wspprev-btn wspprev-save">' +
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" fill="currentColor"/></svg>' +
+                'Сохранить в файл</button>' +
+                '<button type="button" class="wspprev-btn ' +
+                'wspprev-cancel">Отмена</button>' +
+                '<span class="wspprev-hint">A4 · альбомная</span>';
+
+            dlg.appendChild(head);
+            dlg.appendChild(body);
+            dlg.appendChild(foot);
+            overlay.appendChild(dlg);
+            document.body.appendChild(overlay);
+            this._wsPrevFrame = frame;
+
+            // содержимое iframe: standalone-документ листа. Слушатель
+            // load — ДО srcdoc (иначе событие теряется); высота — по
+            // scrollHeight содержимого, затем масштаб под окно
+            if (frame.addEventListener) {
+                frame.addEventListener('load', function() {
+                    var h = 0;
+                    try {
+                        var doc = frame.contentDocument;
+                        if (doc && doc.documentElement) {
+                            h = doc.documentElement.scrollHeight;
+                        }
+                    } catch (e) { h = 0; }
+                    frame._natH = (h > 200) ? h : 800;
+                    try { frame.style.height = frame._natH + 'px'; }
+                    catch (e2) {}
+                    self._wsPrevFit();
+                });
+            }
+            frame.srcdoc = this._buildPrintFileHtml(printHtml, false);
+            this._wsPrevFit();
+
+            var printBtn = foot.querySelector('.wspprev-print');
+            var saveBtn = foot.querySelector('.wspprev-save');
+            var cancelBtn = foot.querySelector('.wspprev-cancel');
+            if (printBtn && printBtn.addEventListener) {
+                printBtn.addEventListener('click', function() {
+                    try { window.print(); } catch (e) {}
+                });
+            }
+            if (saveBtn && saveBtn.addEventListener) {
+                saveBtn.addEventListener('click', function() {
+                    self._savePrintFile(printHtml);
+                });
+            }
+            if (cancelBtn && cancelBtn.addEventListener) {
+                cancelBtn.addEventListener('click', function() {
+                    self._closePrintPreview();
+                });
+            }
+
+            // Esc — закрыть; resize — перемасштабировать
+            this._wsPrevEsc = function(ev) {
+                if (ev && ev.key === 'Escape') self._closePrintPreview();
+            };
+            this._wsPrevResize = function() { self._wsPrevFit(); };
+            if (typeof window !== 'undefined' && window.addEventListener) {
+                window.addEventListener('keydown', this._wsPrevEsc);
+                window.addEventListener('resize', this._wsPrevResize);
+            }
+            return true;
         },
 
         // Task 341: HTML печатного листа (светлая «бумажная» вёрстка,
@@ -49336,9 +49834,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // СКОБОК — «Работников на текущий момент 12 (2 мастера,
             // 5 дневных, 5 сменных).» (заявка: «12 без скобок»)
             var totalN = masterN + dayN + shiftN;
+            // Task 430 (заявка): «Сохранить архив» — вторая кнопка
+            // действий шапки (контурная): выгрузка архива по всем
+            // работникам в Excel (фича просмотра — видна уровням
+            // edit И view, как «Печать»; контейнер .ws-wgen-actions
+            // держит кнопки шапки рядом, flex-wrap шапки переносит
+            // их вместе)
+            var archBtn = '<button type="button" id="wsWorkersArchiveBtn" class="ws-workers-archive" onclick="WorkSchedule.saveWorkersArchive()" aria-label="Сохранить архив по работникам в Excel" title="Весь архив по работникам (инструктажи + мероприятия, все годы) — файл Excel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" fill="currentColor"/></svg>Сохранить архив</button>';
             var addBtn = this._canEdit
                 ? '<button type="button" id="wsWorkersAddBtn" class="ws-workers-add" onclick="WorkSchedule.openEmployeeForm()" aria-label="Добавить работника">Добавить работника</button>'
                 : '';
+            var actionsHtml = '<div class="ws-wgen-actions">' +
+                              archBtn + addBtn + '</div>';
             var html = '<div class="ws-wgen-head"><div class="ws-wgen-info">' +
                        '<span class="ws-wgen-staff">Работников по штату 14 ' +
                        '(2 мастера, 7 дневных, 5 сменных).</span>' +
@@ -49348,7 +49855,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                        dayN + ' ' + this._plural(dayN, ['дневной', 'дневных', 'дневных']) + ', ' +
                        shiftN + ' ' + this._plural(shiftN, ['сменный', 'сменных', 'сменных']) +
                        ').</span>' +
-                       '</div>' + addBtn + '</div>';
+                       '</div>' + actionsHtml + '</div>';
             if (!list.length) {
                 html += '<div class="ws-tt-empty">Нет активных работников — добавьте первого кнопкой «Добавить работника».</div>';
                 return html;
@@ -49398,6 +49905,494 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Task 390: сноска «Сводка по всем работникам…» удалена
             // (заявка) — категории теперь в шапке сводки
             return html;
+        },
+
+        // ============================================================
+        // Task 430 (заявка: «в общей карте работников добавь кнопку
+        // сохранить архив, при нажатии на которую весь архив по
+        // работникам должен сохраняться в формате таблицы excel»):
+        // ВЫГРУЗКА АРХИВА В .XLSX — ПОЛНОСТЬЮ КЛИЕНТСКАЯ, без
+        // внешних библиотек (PWA работает офлайн). Собственный
+        // мини-писатель XLSX: zip-контейнер (метод STORED, без
+        // сжатия — Office читает), CRC32, листы с inline-строками
+        // (не sharedStrings — меньше файлов), шапки жирным на синем
+        // (styles.xml с 2 cellXfs), ширины колонок, закреплённая
+        // строка заголовков. Данные — уже загруженные пулы карточки:
+        // _EMPLOYEES (справочник) + _INSTR_ALL (все «Инструктажи»,
+        // Task 407) + _EVENTS_ALL (все «Мероприятия», Task 408) +
+        // годовой срез _TRAININGS (старый сервер без eventsAll);
+        // дедуп — по СЕМЕЙСТВУ типа (Task 427: i+id / e+id), как
+        // в _wtabYearRecords. КНИГА = ТРИ листа (независимые разделы
+        // — по правилу Task 429 раздельно):
+        //   1) «Работники» — справочник (таб/ФИО/тип/смена/
+        //      должность/группа допуска/дата приёма);
+        //   2) «Инструктажи» — ВСЕ записи всех лет (+дата проведения/
+        //      выполнение/просрочен, Task 418);
+        //   3) «Мероприятия» — ВСЕ записи всех лет (период/
+        //      длительность).
+        // Записи без id и без даты — пропускаются (мусорные строки
+        // листа не читаются сервером). VM-тесты зовут
+        // _workersArchiveData/_buildArchiveWorkbook напрямую —
+        // DOM не нужен; скачивание — _wsDownload (document/BLob
+        // под защитой typeof)
+        // ============================================================
+
+        // UTF-8 байты строки (TextEncoder; фолбэк unescape для
+        // окружений без TextEncoder — старые Safari/VM-тесты)
+        _wsXlsBytes: function(s) {
+            s = String(s == null ? '' : s);
+            if (typeof TextEncoder !== 'undefined') {
+                return new TextEncoder().encode(s);
+            }
+            var b = [], s2 = unescape(encodeURIComponent(s));
+            for (var i = 0; i < s2.length; i++) b.push(s2.charCodeAt(i) & 0xff);
+            return new Uint8Array(b);
+        },
+
+        // CRC32 (полином 0xEDB88320, таблица кэшируется)
+        _wsXlsCrc32: function(bytes) {
+            if (!this._wsXlsCrcTab) {
+                var t = [];
+                for (var n = 0; n < 256; n++) {
+                    var c = n;
+                    for (var k = 0; k < 8; k++) {
+                        c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+                    }
+                    t[n] = c >>> 0;
+                }
+                this._wsXlsCrcTab = t;
+            }
+            var crc = 0xFFFFFFFF;
+            for (var i = 0; i < bytes.length; i++) {
+                crc = (crc >>> 8) ^ this._wsXlsCrcTab[(crc ^ bytes[i]) & 0xFF];
+            }
+            return (crc ^ 0xFFFFFFFF) >>> 0;
+        },
+
+        // ZIP-контейнер, метод STORED (без сжатия): локальные
+        // заголовки + данные + центральный каталог + EOCD. Имена
+        // помечены флагом UTF-8 (0x0800) — кириллица не нужна (все
+        // имена ASCII), но флаг безвреден и честен
+        _wsXlsZip: function(files) {
+            var chunks = [], central = [], offset = 0;
+            var now = new Date();
+            var dosTime = ((now.getHours() << 11) |
+                           (now.getMinutes() << 5) | (now.getSeconds() >> 1)) & 0xffff;
+            var dosDate = (((now.getFullYear() - 1980) << 9) |
+                          ((now.getMonth() + 1) << 5) | now.getDate()) & 0xffff;
+            for (var f = 0; f < files.length; f++) {
+                var name = this._wsXlsBytes(files[f].name);
+                var data = files[f].data;
+                var crc = this._wsXlsCrc32(data);
+                var lh = new Uint8Array(30 + name.length);
+                var dv = new DataView(lh.buffer);
+                dv.setUint32(0, 0x04034b50, true);   // PK\x03\x04
+                dv.setUint16(4, 20, true);            // version needed
+                dv.setUint16(6, 0x0800, true);        // UTF-8 flag
+                dv.setUint16(8, 0, true);            // method: stored
+                dv.setUint16(10, dosTime, true);
+                dv.setUint16(12, dosDate, true);
+                dv.setUint32(14, crc, true);
+                dv.setUint32(18, data.length, true);
+                dv.setUint32(22, data.length, true);
+                dv.setUint16(26, name.length, true);
+                dv.setUint16(28, 0, true);            // extra len
+                lh.set(name, 30);
+                chunks.push(lh, data);
+                var ch = new Uint8Array(46 + name.length);
+                var cv = new DataView(ch.buffer);
+                cv.setUint32(0, 0x02014b50, true);     // PK\x01\x02
+                cv.setUint16(4, 20, true);             // version made by
+                cv.setUint16(6, 20, true);             // version needed
+                cv.setUint16(8, 0x0800, true);
+                cv.setUint16(10, 0, true);
+                cv.setUint16(12, dosTime, true);
+                cv.setUint16(14, dosDate, true);
+                cv.setUint32(16, crc, true);
+                cv.setUint32(20, data.length, true);
+                cv.setUint32(24, data.length, true);
+                cv.setUint16(28, name.length, true);
+                // extra/comment/disk/attrs — нули по умолчанию
+                cv.setUint32(42, offset, true);        // offset лок. заголовка
+                ch.set(name, 46);
+                central.push(ch);
+                offset += lh.length + data.length;
+            }
+            var centralSize = 0;
+            for (var c = 0; c < central.length; c++) centralSize += central[c].length;
+            var end = new Uint8Array(22);
+            var ev = new DataView(end.buffer);
+            ev.setUint32(0, 0x06054b50, true);         // PK\x05\x06
+            ev.setUint16(8, files.length, true);        // всего записей
+            ev.setUint16(10, files.length, true);
+            ev.setUint32(12, centralSize, true);
+            ev.setUint32(16, offset, true);
+            var total = offset + centralSize + 22;
+            var out = new Uint8Array(total);
+            var pos = 0;
+            var all = chunks.concat(central, [end]);
+            for (var a = 0; a < all.length; a++) {
+                out.set(all[a], pos);
+                pos += all[a].length;
+            }
+            return out;
+        },
+
+        // имя колонки листа: 0→A, 25→Z, 26→AA…
+        _wsXlsColName: function(idx) {
+            var s = '';
+            idx = idx + 1;
+            while (idx > 0) {
+                s = String.fromCharCode(65 + ((idx - 1) % 26)) + s;
+                idx = Math.floor((idx - 1) / 26);
+            }
+            return s;
+        },
+
+        // экранирование XML-текста
+        _wsXlsEsc: function(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        },
+
+        // XML листа: rows — массив строк (массив ячеек; строка =>
+        // inlineStr, число => числовая ячейка); строка 1 — шапка
+        // (стиль s="1": жирный белый на синем); opts: widths —
+        // ширины колонок, freeze — закрепить строк заголовка,
+        // active — tabSelected. Пустые ячейки пропускаются (sparse)
+        _wsXlsSheetXml: function(rows, opts) {
+            opts = opts || {};
+            var maxCol = 0;
+            for (var i = 0; i < (rows || []).length; i++) {
+                if (rows[i].length > maxCol) maxCol = rows[i].length;
+            }
+            var x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+                '<dimension ref="A1:' + this._wsXlsColName(Math.max(maxCol, 1) - 1) +
+                Math.max(rows ? rows.length : 0, 1) + '"/>' +
+                '<sheetViews><sheetView workbookViewId="0"' +
+                (opts.active ? ' tabSelected="1"' : '') + '>' +
+                (opts.freeze
+                    ? '<pane ySplit="' + opts.freeze + '" topLeftCell="A' +
+                      (opts.freeze + 1) + '" activePane="bottomLeft" state="frozen"/>'
+                    : '') +
+                '</sheetView></sheetViews>';
+            if (opts.widths && opts.widths.length) {
+                x += '<cols>';
+                for (var w = 0; w < opts.widths.length; w++) {
+                    x += '<col min="' + (w + 1) + '" max="' + (w + 1) +
+                         '" width="' + opts.widths[w] + '" customWidth="1"/>';
+                }
+                x += '</cols>';
+            }
+            x += '<sheetData>';
+            for (var r = 0; r < (rows || []).length; r++) {
+                var row = rows[r];
+                if (!row.length) continue;
+                x += '<row r="' + (r + 1) + '">';
+                for (var c = 0; c < row.length; c++) {
+                    var v = row[c];
+                    if (v === null || v === undefined || v === '') continue;
+                    var ref = this._wsXlsColName(c) + (r + 1);
+                    var hs = (r === 0) ? ' s="1"' : '';
+                    if (typeof v === 'number' && isFinite(v)) {
+                        x += '<c r="' + ref + '"' + hs + '><v>' + v + '</v></c>';
+                    } else {
+                        var sv = String(v);
+                        var sp = (/^\s|\s$/.test(sv)) ? ' xml:space="preserve"' : '';
+                        x += '<c r="' + ref + '" t="inlineStr"' + hs +
+                             '><is><t' + sp + '>' + this._wsXlsEsc(sv) +
+                             '</t></is></c>';
+                    }
+                }
+                x += '</row>';
+            }
+            x += '</sheetData></worksheet>';
+            return x;
+        },
+
+        // минимальный styles.xml: шрифт Arial 11 (обычный + жирный
+        // белый), заливка шапки #4472C4, cellXf 0 — обычный,
+        // 1 — шапка. Больше таблице не нужно
+        _wsXlsStylesXml: function() {
+            return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+                '<fonts count="2">' +
+                '<font><sz val="11"/><color rgb="FF1B1F24"/><name val="Arial"/></font>' +
+                '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>' +
+                '</fonts>' +
+                '<fills count="3">' +
+                '<fill><patternFill patternType="none"/></fill>' +
+                '<fill><patternFill patternType="gray125"/></fill>' +
+                '<fill><patternFill patternType="solid">' +
+                '<fgColor rgb="FF4472C4"/><bgColor indexed="64"/>' +
+                '</patternFill></fill>' +
+                '</fills>' +
+                '<borders count="1">' +
+                '<border><left/><right/><top/><bottom/><diagonal/></border>' +
+                '</borders>' +
+                '<cellStyleXfs count="1">' +
+                '<xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>' +
+                '</cellStyleXfs>' +
+                '<cellXfs count="2">' +
+                '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+                '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" ' +
+                'applyFont="1" applyFill="1"/>' +
+                '</cellXfs>' +
+                '<cellStyles count="1">' +
+                '<cellStyle name="Normal" xfId="0" builtinId="0"/>' +
+                '</cellStyles>' +
+                '</styleSheet>';
+        },
+
+        // СБОРКА ДАННЫХ АРХИВА (чистая функция — без DOM, для
+        // VM-тестов): три набора строк (шапка + данные)
+        _workersArchiveData: function() {
+            var list = (this._EMPLOYEES || []).slice().sort(function(a, b) {
+                return String(a['ФИО'] || '').localeCompare(
+                    String(b['ФИО'] || ''), 'ru');
+            });
+            var byTab = {};
+            for (var i = 0; i < list.length; i++) {
+                byTab[String(list[i]['таб_номер'])] = list[i];
+            }
+            var fioOf = function(tab) {
+                var e = byTab[String(tab)];
+                return e ? String(e['ФИО'] || '') : '';
+            };
+            var dateRu = function(iso) {
+                var p = String(iso || '').split('-');
+                return p.length === 3 ? (p[2] + '.' + p[1] + '.' + p[0]) : '';
+            };
+            // единый пул записей (как _wtabYearRecords, но БЕЗ
+            // фильтра года — ВЕСЬ архив всех лет); дедуп по
+            // семейству типа (Task 427: раздельные id листов)
+            var pool = [].concat(this._INSTR_ALL || [],
+                                 this._EVENTS_ALL || [],
+                                 this._TRAININGS || []);
+            var seen = {}, ins = [], evs = [];
+            for (var p = 0; p < pool.length; p++) {
+                var r = pool[p];
+                if (!r) continue;
+                var isInstr = !!this._isInstrType(r.тип);
+                var id = parseInt(r.id, 10);
+                var k = id
+                    ? (isInstr ? 'i' + id : 'e' + id)
+                    : ('t' + String(r['дата_начала'] || '') + '|' +
+                       String(r.тема || ''));
+                if (seen[k]) continue;
+                seen[k] = true;
+                (isInstr ? ins : evs).push(r);
+            }
+            var byDate = function(a, b) {
+                var d = String(a['дата_начала'] || '')
+                    .localeCompare(String(b['дата_начала'] || ''));
+                if (d) return d;
+                return (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0);
+            };
+            ins.sort(byDate);
+            evs.sort(byDate);
+
+            var employees = [['Таб. №', 'ФИО', 'Тип', 'Смена',
+                              'Должность', 'Группа допуска', 'Дата приёма']];
+            for (var e = 0; e < list.length; e++) {
+                var emp = list[e];
+                var smena = parseInt(emp['смена'], 10);
+                employees.push([
+                    String(emp['таб_номер'] || ''),
+                    String(emp['ФИО'] || ''),
+                    String(emp['тип'] || ''),
+                    (smena >= 1 && smena <= 5) ? smena : '',
+                    String(emp['должность'] || ''),
+                    String(emp['группа_допуска'] || ''),
+                    dateRu(emp['дата_приёма'])
+                ]);
+            }
+
+            var instr = [['id', 'Таб. №', 'ФИО', 'Тип', 'Тема',
+                          'Дата проведения', 'Выполнено', 'Просрочен',
+                          'Комментарий']];
+            for (var n = 0; n < ins.length; n++) {
+                var t = ins[n];
+                instr.push([
+                    parseInt(t.id, 10) || '',
+                    String(t['таб_номер'] || ''),
+                    fioOf(t['таб_номер']),
+                    String(t.тип || ''),
+                    String(t.тема || ''),
+                    dateRu(t['дата_начала']),
+                    (parseInt(t.выполнение, 10) === 1) ? 'да' : 'нет',
+                    (parseInt(t.просрочен, 10) === 1) ? 'да' : 'нет',
+                    String(t.комментарий || '')
+                ]);
+            }
+
+            var events = [['id', 'Таб. №', 'ФИО', 'Тип', 'Тема',
+                           'Дата начала', 'Дата окончания',
+                           'Длительность, дн', 'Комментарий']];
+            for (var v = 0; v < evs.length; v++) {
+                var m = evs[v];
+                events.push([
+                    parseInt(m.id, 10) || '',
+                    String(m['таб_номер'] || ''),
+                    fioOf(m['таб_номер']),
+                    String(m.тип || ''),
+                    String(m.тема || ''),
+                    dateRu(m['дата_начала']),
+                    dateRu(m['дата_окончания'] || m['дата_начала']),
+                    parseInt(m['длительность_дней'], 10) || '',
+                    String(m.комментарий || '')
+                ]);
+            }
+            return { employees: employees, instr: instr, events: events };
+        },
+
+        // КНИГА .xlsx: [Content_Types], rels, workbook, 3 листа,
+        // styles — ZIP (stored) → Uint8Array; имя файла — с датой
+        // выгрузки
+        _buildArchiveWorkbook: function() {
+            var d = this._workersArchiveData();
+            var sheets = [
+                { name: 'Работники', rows: d.employees, active: true,
+                  widths: [9, 32, 12, 8, 36, 15, 14] },
+                { name: 'Инструктажи', rows: d.instr,
+                  widths: [6, 9, 32, 17, 50, 17, 12, 12, 42] },
+                { name: 'Мероприятия', rows: d.events,
+                  widths: [6, 9, 32, 15, 50, 15, 15, 16, 42] }
+            ];
+            var files = [];
+            var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+                '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+                '<Default Extension="xml" ContentType="application/xml"/>' +
+                '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+                '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>';
+            var sheetTags = '', rels = '';
+            for (var i = 0; i < sheets.length; i++) {
+                var part = '/xl/worksheets/sheet' + (i + 1) + '.xml';
+                ct += '<Override PartName="' + part +
+                      '" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+                sheetTags += '<sheet name="' + this._wsXlsEsc(sheets[i].name) +
+                             '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>';
+                rels += '<Relationship Id="rId' + (i + 1) +
+                        '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"' +
+                        ' Target="worksheets/sheet' + (i + 1) + '.xml"/>';
+                files.push({
+                    name: 'xl/worksheets/sheet' + (i + 1) + '.xml',
+                    data: this._wsXlsBytes(this._wsXlsSheetXml(
+                        sheets[i].rows, { widths: sheets[i].widths,
+                                          freeze: 1, active: sheets[i].active }))
+                });
+            }
+            var relN = sheets.length + 1;
+            rels += '<Relationship Id="rId' + relN +
+                    '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"' +
+                    ' Target="styles.xml"/>';
+            files.push({ name: '[Content_Types].xml',
+                        data: this._wsXlsBytes(ct + '</Types>') });
+            files.push({
+                name: '_rels/.rels',
+                data: this._wsXlsBytes(
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+                    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"' +
+                    ' Target="xl/workbook.xml"/></Relationships>')
+            });
+            files.push({
+                name: 'xl/workbook.xml',
+                data: this._wsXlsBytes(
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"' +
+                    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+                    '<sheets>' + sheetTags + '</sheets></workbook>')
+            });
+            files.push({
+                name: 'xl/_rels/workbook.xml.rels',
+                data: this._wsXlsBytes(
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+                    rels + '</Relationships>')
+            });
+            files.push({ name: 'xl/styles.xml',
+                         data: this._wsXlsBytes(this._wsXlsStylesXml()) });
+            var now = new Date();
+            var name = 'Архив_по_работникам_' + this._isoDate(now) + '.xlsx';
+            return {
+                name: name,
+                bytes: this._wsXlsZip(files),
+                counts: {
+                    employees: Math.max(0, d.employees.length - 1),
+                    instr: Math.max(0, d.instr.length - 1),
+                    events: Math.max(0, d.events.length - 1)
+                }
+            };
+        },
+
+        // скачивание блоба (общий помощник выгрузок Task 430:
+        // xlsx-архив + html-график); вне браузера (VM) — false
+        _wsDownload: function(bytes, mime, name) {
+            if (typeof document === 'undefined' || typeof Blob === 'undefined' ||
+                typeof URL === 'undefined' || !URL.createObjectURL) {
+                return false;
+            }
+            try {
+                var blob = new Blob([bytes], { type: mime });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = name;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(function() {
+                    try { document.body.removeChild(a); } catch (e) {}
+                    try { URL.revokeObjectURL(url); } catch (e) {}
+                }, 100);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        },
+
+        // КНОПКА «Сохранить архив» (Общая вкладка): собрать книгу,
+        // скачать, тост с составом. Доступ — edit/view (как
+        // «Печать»: страница карточек и так закрыта для null/min)
+        saveWorkersArchive: function() {
+            var lvl = (this._viewLevel === undefined)
+                ? (this._canEdit ? 'edit' : 'view')
+                : this._viewLevel;
+            if (lvl !== 'edit' && lvl !== 'view') return;
+            var wb;
+            try {
+                wb = this._buildArchiveWorkbook();
+            } catch (e) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Не удалось собрать архив: ' +
+                                  ((e && e.message) ? e.message : String(e)));
+                }
+                return;
+            }
+            var ok = this._wsDownload(
+                wb.bytes,
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                wb.name);
+            if (typeof KipToast !== 'undefined' && KipToast.show) {
+                KipToast.show(ok
+                    ? ('Архив сохранён — «' + wb.name + '»: ' +
+                       wb.counts.employees + ' ' +
+                       this._plural(wb.counts.employees,
+                                    ['работник', 'работника', 'работников']) +
+                       ', ' + wb.counts.instr + ' ' +
+                       this._plural(wb.counts.instr,
+                                    ['инструктаж', 'инструктажа', 'инструктажей']) +
+                       ', ' + wb.counts.events + ' ' +
+                       this._plural(wb.counts.events,
+                                    ['мероприятие', 'мероприятия', 'мероприятий']))
+                    : 'Не удалось сохранить файл архива');
+            }
         },
 
         // Серверная запись по ключу (без pending-наложения)
