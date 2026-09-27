@@ -6154,7 +6154,9 @@
        всем работникам), под ней — работники ПО ФАМИЛЬНО ПО
        АЛФАВИТУ; клик по ярлыку открывает карточку справа */
     .ws-workers-body {
-        padding: 10px 12px 24px;
+        /* Task 428 (заявка): расстояние от границ окна — 5px
+           со всех сторон (прежде было 10/12/24px) */
+        padding: 5px;
         /* Task 394 (заявка): четыре блока карточки — РАВНОМЕРНО по
            горизонтали НА ВЕСЬ ЭКРАН: кап 1020px (Task 388) снят */
         /* Task 389 (заявка): ярлыки и окна вкладок — с ЛЕВОГО КРАЯ
@@ -6189,7 +6191,9 @@
         /* Task 393: карточка — ЧЕТЫРЕ блока-окна, текст крупнее
            (правила ниже) — паддинг чуть шире прежнего */
         padding: 14px 16px 12px;
-        margin-bottom: 12px;
+        /* Task 428 (заявка): зазор между блоками карточки — 5px
+           (перекрывается тем же 5px в .ws-wtab-body .ws-wcard) */
+        margin-bottom: 5px;
     }
     [data-theme="light"] .ws-wcard {
         /* Task 395: светлая — БЕЛАЯ панель поверх кремового фона
@@ -6499,6 +6503,10 @@
     .ws-workers-layout {
         display: flex;
         align-items: stretch;
+        /* Task 428 (заявка: расстояние между группой ярлыков и
+           блоками — 5px): равномерный зазор раскладки; на мобайле
+           (column, media ≤1023px) тот же 5px — вертикально */
+        gap: 5px;
     }
     .ws-wtabs {
         flex: none;
@@ -6512,17 +6520,22 @@
         display: flex;
         flex-direction: column;
         gap: 3px;
-        /* Task 390 (заявка: «ярлыки должны примыкать к окну
-           вкладок»): правый отступ колонки УБРАН (была щель между
-           ярлыками и окном вкладок); активный ярлык пристыкован
-           к окну (margin-right: -1px, правая рамка прозрачна) */
+        /* Task 390 → 428: правый отступ колонки убран ещё под
+           пристыковку к окну вкладок; Task 428 пристыковку снял
+           (ярлыки закруглены со всех сторон), зазор до окна
+           вкладок — gap 5px раскладки .ws-workers-layout */
     }
     .ws-wtab {
         display: block;
         text-align: left;
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-left: 3px solid transparent;
-        border-radius: 8px 0 0 8px;
+        /* Task 428 (заявка: ярлыки закруглены и СПРАВА, как
+           слева): прежде правые углы были прямые — под
+           пристыковку к окну вкладок (Task 390); пристыковка
+           снята ниже в .ws-wtab.active, зазор до окна —
+           gap раскладки Task 428 */
+        border-radius: 8px;
         /* Task 390: СВЕТЛЕЕ фона страницы (#1a2233) и ТЁПЛЫЙ тон
            (ближе к светлой теме — не сливается с общим фоном) */
         background: #4B4E46;
@@ -6540,14 +6553,15 @@
     }
     .ws-wtab.active {
         /* Task 390: активный — САМЫЙ светлый тёплый (как активные
-           вкладки браузеров), «пристыкован» к окну вкладки */
+           вкладки браузеров) */
+        /* Task 428: пристыковка к окну вкладок СНЯТА — ярлыки
+           закруглены со всех сторон, между колонкой ярлыков и
+           окнами — gap 5px раскладки (рамка справа — обычная) */
         background: #63665B;
         border-color: rgba(255, 255, 255, 0.14);
         border-left-color: var(--accent-blue, #4a8fc7);
-        border-right-color: transparent;
         color: var(--text-primary, #e0e0e0);
         font-weight: 600;
-        margin-right: -1px;
     }
     .ws-wtab-general { letter-spacing: 0.02em; }
     .ws-wtab-body {
@@ -6556,8 +6570,9 @@
     }
     /* Task 393: в теле вкладки карточка — ПЯТЬ блоков-окон (Task
        405): зазор между ними — margin-bottom, у последнего — 0 (стек
-       ВНУТРИ колонок Task 395 — и мобайл, и десктоп) */
-    .ws-wtab-body .ws-wcard { margin-bottom: 12px; }
+       ВНУТРИ колонок Task 395 — и мобайл, и десктоп)
+       Task 428 (заявка): зазор между блоками карточки — 5px */
+    .ws-wtab-body .ws-wcard { margin-bottom: 5px; }
     .ws-wtab-body .ws-wcard:last-child { margin-bottom: 0; }
     /* Task 395 (заявка): КОЛОНКИ-обёртки .ws-wcol (сборка —
        _renderWorkerCardPanels; Task 406 — ТРИ колонки: 1-я —
@@ -6568,8 +6583,9 @@
        Мобайл ≤1023px —
        колонки БЕЗ правил раскладки = блоки друг под другом; зазор
        между колонками — margin-bottom, у последней — 0 (внутри
-       колонок панелям — базовые правила Task 393 выше) */
-    .ws-wgrid2 .ws-wcol { margin-bottom: 12px; }
+       колонок панелям — базовые правила Task 393 выше);
+       Task 428 (заявка): зазор между колонками — 5px */
+    .ws-wgrid2 .ws-wcol { margin-bottom: 5px; }
     .ws-wgrid2 .ws-wcol:last-child { margin-bottom: 0; }
     /* Task 394 → 395 → 403 → 404 → 406 (заявки): ДЕСКТОП (≥1024px) —
        ТРИ РАВНЫЕ колонки НА ВСЮ ШИРИНУ окна вкладок (flex, обёртка
@@ -6579,13 +6595,14 @@
        (Task 406: блоки СИЗ и инструктажей поменяны местами; равные
        доли flex: 1 1 0 — блоки гарантированно помещаются;
        align-items: flex-start — колонки НЕ тянутся по высоте друг
-       друга). Зазоры: между колонками — gap 12px; между окнами
-       колонок — margin-bottom панелей (базовые правила Task 393) */
+       друга). Зазоры: между колонками — gap; между окнами
+       колонок — margin-bottom панелей (базовые правила Task 393);
+       Task 428 (заявка): зазор между колонками — 5px */
     @media (min-width: 1024px) {
         .ws-wgrid2 {
             display: flex;
             flex-wrap: nowrap;
-            gap: 12px;
+            gap: 5px;
             align-items: flex-start;
         }
         .ws-wgrid2 .ws-wcol {
@@ -6604,7 +6621,8 @@
         background: var(--bg-tertiary, #e9e7de);
         border-color: rgba(0, 0, 0, 0.16);
         border-left-color: var(--accent-blue, #4a8fc7);
-        border-right-color: transparent;
+        /* Task 428: пристыковка снята — правая рамка обычная
+           (ярлык закруглен со всех сторон) */
         color: #111;
     }
 
@@ -6699,7 +6717,8 @@
             flex-direction: row;
             overflow-x: auto;
             padding-right: 0;
-            padding-bottom: 8px;
+            /* Task 428: зазор лента→тело — gap 5px раскладки
+               (column) — собственный padding-bottom убран */
             gap: 6px;
             scrollbar-width: none;
         }
@@ -6715,7 +6734,8 @@
             text-overflow: ellipsis;
         }
         .ws-wtab.active {
-            margin-right: 0;
+            /* Task 428: пристыковки на десктопе больше нет —
+               margin-right-оверрайд снят вместе с ней */
             border-top-color: var(--accent-blue, #4a8fc7);
             border-right-color: rgba(255,255,255,0.14);
         }
@@ -50292,6 +50312,32 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
         },
 
+        // Task 428 (заявка): длительность мероприятия — АВТОМАТИЧЕСКИ
+        // по периоду: при установке/изменении «Дата начала» или
+        // «Дата окончания» поле «Длит., дн» пересчитывается
+        // (календарные дни, оба конца включены: 01..03 = 3 дн).
+        // Ручная правка поля остаётся: пересчёт ТОЛЬКО на смену
+        // дат (слушатели openTrainingForm), а не на каждое
+        // открытие/клик формы. Дата окончания раньше начала (или
+        // пустая) — период выравнивается: конец = начало, 1 дн
+        // (форма не хранит противоречивых значений). Инструктаж/ПЗ —
+        // поля скрыты (однодневность Task 411), пересчёт не нужен
+        _syncTrDays: function() {
+            if (this._trInstrMode) return;
+            var sInp = document.getElementById('wsTrStart');
+            var eInp = document.getElementById('wsTrEnd');
+            var dInp = document.getElementById('wsTrDays');
+            if (!sInp || !eInp || !dInp) return;
+            var s = String(sInp.value || '');
+            var e = String(eInp.value || '');
+            if (!s) return;                  // начала нет — не трогаем
+            if (!e || e < s) { e = s; eInp.value = s; }
+            var days = Math.round((this._parseIsoLocal(e) -
+                                   this._parseIsoLocal(s)) / 86400000) + 1;
+            if (!isFinite(days) || days < 1) days = 1;
+            dInp.value = String(days);
+        },
+
         openTrainingForm: function(prefillTab, prefillDate, editTraining, prefillType) {
             if (!this._canEdit) return;
             var sheetTitle = document.getElementById('wsTrSheetTitle');
@@ -50338,6 +50384,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (trSelEl) {
                 trSelEl.onchange = function() {
                     WorkSchedule._updateTrItemHint();
+                };
+            }
+            // Task 428 (заявка): смена дат периода — АВТО-длительность
+            // «Длит., дн» (поле остаётся правимым — пересчёт только
+            // на изменение дат, а не на каждое открытие формы)
+            var trStartEl = document.getElementById('wsTrStart');
+            if (trStartEl) {
+                trStartEl.onchange = function() {
+                    WorkSchedule._syncTrDays();
+                };
+            }
+            var trEndEl = document.getElementById('wsTrEnd');
+            if (trEndEl) {
+                trEndEl.onchange = function() {
+                    WorkSchedule._syncTrDays();
                 };
             }
             // Task 309: два режима формы — создание (по умолчанию) и
