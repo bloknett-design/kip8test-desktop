@@ -4634,8 +4634,30 @@
             color: #54606a;
             line-height: 1.1;
         }
-        /* выходные/праздники в шапке — заливка/цвет как в шахматке */
-        #wsPrintSheet .wsp-day.wsp-off { background: #dfe5e9; }
+        /* Task 442 (заявка: «…внешний контур линий выходных
+           календарных дней в шахматке сделай толще, а выделять
+           их фоном не нужно, и даты выходных жирнее»): выходные
+           в шапке — БЕЗ заливки: число ЖИРНОЕ (день недели под
+           ним — прежний обычный), сверху колонки выходного —
+           ТОЛСТАЯ линия контура, wsp-off-edge-l/r — бока полосы
+           (Сб+Вс подряд — один контур). Праздники — прежний
+           красный цвет чисел */
+        #wsPrintSheet .wsp-day {
+            /* Task 442: будние числа — ОБЫЧНЫЕ (дефолт th в браузере
+               — жирный; снимаем, чтобы выходные выделялись жирным) */
+            font-weight: 400;
+        }
+        #wsPrintSheet .wsp-day.wsp-off {
+            font-weight: 700;
+            border-top: 2px solid #8f99a3;
+        }
+        #wsPrintSheet .wsp-day.wsp-off span { font-weight: 400; }
+        #wsPrintSheet .wsp-day.wsp-off-edge-l {
+            border-left: 2px solid #8f99a3;
+        }
+        #wsPrintSheet .wsp-day.wsp-off-edge-r {
+            border-right: 2px solid #8f99a3;
+        }
         #wsPrintSheet .wsp-day.wsp-feast,
         #wsPrintSheet .wsp-day.wsp-feast span { color: #b02a2a; }
         /* Task 361: 9→10mm под шрифт 11px */
@@ -4680,44 +4702,34 @@
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
-        /* пустые ячейки нерабочих дней — серая заливка (как
-           розовая в шахматке, но в печатной гамме); статусные
-           ячейки сохраняют свой inline-фон */
-        #wsPrintSheet .wsp-cell.wsp-cell-off { background: #e2e8ec !important; }
+        /* Task 442 (заявка: «…выделять их фоном не нужно»):
+           серая заливка пустых ячеек нерабочих дней УДАЛЕНА —
+           класс wsp-cell-off теперь МАРКЕР колонки выходного
+           дня: у ВСЕХ ячеек полосы выходных (пустых, статусных,
+           плана отпуска) толстые линии ВНЕШНЕГО КОНТУРА:
+           wsp-off-edge-l/r — бока полосы, wsp-off-edge-b — низ
+           последней строки; !important — выше пунктирной рамки
+           плана отпуска на боках полосы. Статусные ячейки
+           сохраняют свой inline-фон кода */
+        #wsPrintSheet .wsp-cell.wsp-cell-off.wsp-off-edge-l {
+            border-left: 2px solid #8f99a3 !important;
+        }
+        #wsPrintSheet .wsp-cell.wsp-cell-off.wsp-off-edge-r {
+            border-right: 2px solid #8f99a3 !important;
+        }
+        #wsPrintSheet .wsp-cell.wsp-cell-off.wsp-off-edge-b {
+            border-bottom: 2px solid #8f99a3 !important;
+        }
         /* план отпуска (записи ещё нет) — пунктирная рамка */
         #wsPrintSheet .wsp-cell.wsp-vac {
             border: 1px dashed #6e7780 !important;
         }
-        /* Task 361 (заявка: «сделай отображение на печати значков
-           мероприятий в ячейках шахматки»): бейджи мероприятий в
-           печати ВЕРНУТЫ (Task 343 их убирал; заявка 361 вернула).
-           Формат — как в экранной сетке (Task 314/388): бейдж
-           ВСЕГДА сплошной с inline-цветом кода (Task 388: пунктирные
-           wsp-ev-plan у пустой ячейки удалены — как в сетке).
-           Правый НИЖНИЙ угол (точка переработки — правый
-           верхний, конфликтов нет); цвет печатается принудительно */
-        #wsPrintSheet .wsp-ev-wrap {
-            position: absolute;
-            right: 0.5mm;
-            bottom: 0.4mm;
-            line-height: 1;
-            white-space: nowrap;
-        }
-        #wsPrintSheet .wsp-ev {
-            display: inline-block;
-            border: 1px solid #4c5660;
-            border-radius: 0.5mm;
-            font-size: 7.5px;
-            font-weight: 700;
-            line-height: 1;
-            padding: 0.4mm 0.5mm 0.3mm;
-            margin-left: 0.5mm;
-            color: #263238;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-        /* Task 388: пунктирный бейдж-план печати удалён — бейдж
-           мероприятия всегда сплошной с цветом кода (как в сетке) */
+        /* Task 442 (заявка: «убери мини значки мероприятий в
+           шахматке»): бейджи мероприятий в печати УДАЛЕНЫ —
+           правила .wsp-ev-wrap/.wsp-ev и разметка в _printCell
+           сняты (Task 361 их возвращал, Task 343 убирал);
+           мероприятия месяца печатаются только списком под
+           таблицей, экранная сетка приложения не тронута */
         /* переработка — красная точка в правом верхнем углу
            (Task 361: 1.6→2.2mm — заметнее на печати) */
         #wsPrintSheet .wsp-over {
@@ -4770,33 +4782,19 @@
            конца листа, ПОД списком мероприятий; сноска
            wsp-foot — ниже обеих секций */
         #wsPrintSheet .wsp-bottom {
+            /* Task 442 (заявка: «убери … столбец с кодами»): блок
+               кодов УДАЛЕН — нижняя секция снова ОДНА колонка на
+               всю ширину листа: только список мероприятий (flex-ряд
+               и зазор 10px из Tasks 439/440 сняты вместе с блоком) */
             margin-top: 2.5mm;
-            /* Task 439 (заявка: «блок с кодами размести справа от
-               мероприятий»): нижняя секция — ГИБКИЙ РЯД: список
-               мероприятий слева (растягивается на остаток), блок
-               кодов — справа фиксированной ширины. Task 440 (заявка:
-               «коды справа от мероприятий на расстоянии друг от
-               друга 10px»): зазор между блоками — РОВНО 10px (прежде
-               6mm ≈ 23px) */
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
         }
         #wsPrintSheet .wsp-mev {
             margin-top: 0;
             font-size: 11px;
             line-height: 1.6;
-            /* Task 431 → Task 440 (заявка: «коды справа от
-               мероприятий на расстоянии друг от друга 10px»; ранее
-               в 431 — «сейчас между ними очень большое расстояние»):
-               столбик мероприятий НЕ растягивается (flex-grow снят,
-               было 1 1 auto Task 439) — блок кодов встаёт в 10px от
-               ПРАВОГО КРАЯ ТЕКСТА мероприятий (самой широкой строки),
-               а не прижатым к правому краю листа; длинные тексты —
-               по-прежнему переносятся (зона усечена flex-shrink +
-               min-width: 0: лист − 92мм кодов − 10px зазор) */
-            flex: 0 1 auto;
-            min-width: 0;
+            /* Task 442: столбца кодов справа больше нет — список
+               мероприятий на ВСЮ ширину листа (flex-ограничения
+               зоны из Tasks 439/440 сняты) */
         }
         #wsPrintSheet .wsp-mev-t { font-weight: 700; }
         /* Task 433 (заявка: «правая часть блока растянулась вправо
@@ -4837,58 +4835,12 @@
             min-width: 0;
         }
 
-        /* легенда кодов и пояснения (Task 360: только коды
-           этого месяца; Task 361: шрифт 8→11px, точка 7→9px;
-           Task 364: правая колонка ряда wsp-bottom; Task 432:
-           флоат у правого верхнего угла; Task 433: единая
-           строка-абзац «Коды: …» под списком мероприятий).
-           Task 434 (заявка: «коды на печати сделать в ДВЕ
-           КОЛОНКИ под названием "Коды:"»): заголовок «Коды:» —
-           ОТДЕЛЬНОЙ строкой СВЕРХУ, под ним сетка .wsp-legend-cols;
-           Task 441 (заявка: «коды сделай в один столбец»):
-           ОДНА колонка (grid 1fr; прежде ДВЕ равные, Task 434)
-           на всю ширину блока кодов ДО КОНЦА; каждая запись-код
-           — своя строка (длинное наименование переносится
-           ВНУТРИ колонки, запись не рвётся между страницами) */
-        #wsPrintSheet .wsp-legend {
-            margin-top: 0;
-            font-size: 11px;
-            line-height: 1.6;
-            /* Task 439: коды — ПРАВАЯ часть ряда (СПРАВА от
-               мероприятий), фиксированная ширина блока */
-            flex: 0 0 92mm;
-            min-width: 0;
-        }
-        #wsPrintSheet .wsp-legend-t {
-            display: block;
-            font-weight: 700;
-            margin-bottom: 1mm;
-        }
-        #wsPrintSheet .wsp-legend-cols {
-            display: grid;
-            /* Task 441 (заявка: «коды сделай в один столбец»):
-               ОДНА колонка — прежде ДВЕ равные (Task 434);
-               межколоночный зазор снят — колонок больше нет */
-            grid-template-columns: 1fr;
-            row-gap: 0.8mm;
-            align-items: start;
-        }
-        #wsPrintSheet .wsp-lg {
-            display: block;
-            min-width: 0;
-            white-space: normal;
-            break-inside: avoid;
-            page-break-inside: avoid;
-        }
-        #wsPrintSheet .wsp-lg i {
-            display: inline-block;
-            width: 9px;
-            height: 9px;
-            border: 1px solid #7a838c;
-            margin-right: 1mm;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
+        /* Task 442 (заявка: «убери … столбец с кодами»): ЛЕГЕНДА
+           КОДОВ УДАЛЕНА — правила .wsp-legend/.wsp-legend-t/
+           .wsp-legend-cols/.wsp-lg/.wsp-lg i сняты вместе с
+           разметкой в _buildPrintHtml; лист заканчивается списком
+           мероприятий (точка-цвет строки мероприятия жива —
+           правило .wsp-mev-item i выше) */
         /* Task 438: сноска .wsp-foot удалена — лист заканчивается
            перечнем кодов */
     }
@@ -44106,16 +44058,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Task 438: МОДЕЛЬ печатной формы (чистая, без DOM — для
         // VM-тестов). Логика повторяет _buildPrintHtml/_printCell
-        // (Tasks 341/360/361/362): дни месяца с выходными/празд-
-        // никами/«*» сокращённых; строки печатаемого вида с
+        // (Tasks 341/360/362): дни месяца с выходными/праздниками/
+        // «*» сокращённых (off — полосы выходных для контура и
+        // жирных чисел, Task 442); строки печатаемого вида с
         // ЭФФЕКТИВНЫМИ записями (запись + локальная правка,
         // __delete — пустая ячейка); цвет/текст основного кода,
-        // пунктирный план отпуска, точка переработки, бейджи
-        // мероприятий; построчные итоги «Дни»/«Перераб.» (только
-        // дни — Task 438); события месяца (Task 360/362 — записи
-        // листа «Инструктажи», пересекающие месяц, в видах
-        // «сменный»/«дневной» — только печатаемые строки) и
-        // перечень используемых кодов в сокращённом виде
+        // пунктирный план отпуска, точка переработки; построчные
+        // итоги «Дни»/«Перераб.» (только дни — Task 438); события
+        // месяца (Task 360/362 — записи листа «Инструктажи»,
+        // пересекающие месяц, в видах «сменный»/«дневной» — только
+        // печатаемые строки). Task 442: бейджи мероприятий в
+        // ячейках и перечень кодов УДАЛЕНЫ из модели (заявка:
+        // «убери мини значки мероприятий в шахматке и столбец с кодами»)
         _printModel: function(viewEmps, agg) {
             var dows = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
             var daysInMonth = new Date(this._year, this._month, 0).getDate();
@@ -44137,7 +44091,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var entryIdx = this._buildEntryIndex();
             var pend = this._PENDING || {};
             var rows = [];
-            var usedCodes = {};
             for (var ri = 0; ri < viewEmps.length; ri++) {
                 var emp = viewEmps[ri];
                 var cells = [];
@@ -44162,34 +44115,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         this._EVENT_CODES.indexOf(status) !== -1;
                     var meta = (status && !isDot && !isEvSt)
                         ? (this._statusMeta(status) || {}) : {};
-                    var evs = (typeof this._eventsAt === 'function')
-                        ? (this._eventsAt(isoDate, emp['таб_номер']) || [])
-                        : [];
-                    if (isEvSt) {
-                        var covered = false;
-                        for (var ei = 0; ei < evs.length; ei++) {
-                            if (evs[ei].code === status) { covered = true; break; }
-                        }
-                        if (!covered) {
-                            evs = evs.concat([{ code: status, training: null }]);
-                        }
-                    }
-                    var badges = [];
-                    for (var bi = 0; bi < evs.length; bi++) {
-                        var bMeta = this._statusMeta(evs[bi].code) || {};
-                        badges.push({ code: evs[bi].code,
-                                      color: bMeta.color || '' });
-                    }
+                    // Task 442: бейджи мероприятий в печатной
+                    // шахматке УДАЛЕНЫ — статус-мероприятия дают
+                    // ПУСТУЮ клетку (события месяца — списком под
+                    // таблицей), поле events в модели снято
                     cells.push({
                         status: (!isDot && !isEvSt) ? status : '',
                         color: meta.color || '',
                         overtime: !!(eff && eff.переработка === 1),
                         vac: !status
                             ? !!this._vacationAt(isoDate, emp['таб_номер'])
-                            : false,
-                        events: badges
+                            : false
                     });
-                    if (eff && eff.статус) usedCodes[eff.статус] = true;
                 }
                 var a = (agg && agg.byTab)
                     ? agg.byTab[String(emp['таб_номер'] || '')] : null;
@@ -44206,11 +44143,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 });
             }
             var events = this._printEventsData(viewEmps);
+            // Task 442: перечень кодов (codes/_printCodesData)
+            // УДАЛЕН из модели — столбца кодов в представлениях
+            // печати больше нет (заявка)
             return {
                 year: this._year, month: this._month, view: this._view,
-                days: days, rows: rows, usedCodes: usedCodes,
-                events: events,
-                codes: this._printCodesData(usedCodes, events)
+                days: days, rows: rows, events: events
             };
         },
 
@@ -44281,59 +44219,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return out;
         },
 
-        // Task 438: перечень кодов месяца для PDF/Excel — порядок
-        // справочника _STATUS_CODES (как в печати), «.» — слот
-        // «Выходной», обозначение — СОКРАЩЁННОЕ (short, Task 388;
-        // у кодов вне канона short нет — фолбэк name); легаси-коды
-        // месяца вне справочника — в конец без цвета (только код).
-        // Коды мероприятий (Task 362) тоже попадают в перечень
-        _printCodesData: function(usedCodes, events) {
-            var used = {};
-            for (var k in usedCodes) {
-                if (Object.prototype.hasOwnProperty.call(usedCodes, k)) {
-                    used[k] = true;
-                }
-            }
-            for (var i = 0; i < (events || []).length; i++) {
-                if (events[i].code) used[events[i].code] = true;
-            }
-            var codes = this._STATUS_CODES || [];
-            var out = [];
-            for (var ci = 0; ci < codes.length; ci++) {
-                if (!used[codes[ci].code] &&
-                    !(codes[ci].code === '' && used['.'])) continue;
-                out.push({ code: codes[ci].code,
-                           label: codes[ci].short || codes[ci].name || '',
-                           color: codes[ci].color || '' });
-            }
-            var legacy = [];
-            for (var lk in used) {
-                if (!Object.prototype.hasOwnProperty.call(used, lk)) continue;
-                // «.» уже раскрыт слотом «Выходной» (пустой код)
-                if (lk === '.') continue;
-                var known = false;
-                for (var cj = 0; cj < codes.length; cj++) {
-                    if (codes[cj].code === lk) { known = true; break; }
-                }
-                if (!known) legacy.push(lk);
-            }
-            legacy.sort();
-            for (var li = 0; li < legacy.length; li++) {
-                out.push({ code: legacy[li], label: '', color: '' });
-            }
-            return out;
-        },
-
+        // Task 442: метод _printCodesData (перечень кодов месяца
+        // для PDF/Excel, Tasks 438–441) УДАЛЁН по заявке
+        // («убери … столбец с кодами») — столбца кодов в
+        // представлениях печати больше нет
         // Task 438: РАСКЛАДКА СТРАНИЦ PDF (чистая, без DOM —
         // VM-тесты). A4 альбомная 842×595 pt, поля 8 мм ≈ 23 pt.
         // Страницы: [шапка (только первая) +] лента дней + строки
         // сотрудников (граница — только по строкам, лента
         // повторяется на каждой странице с таблицей); мероприятия
-        // и коды — РЯДОМ ДРУГ С ДРУГОМ (Task 439: события слева,
-        // коды справа, общая верхняя линия) на последней странице
-        // под таблицей, если влезают, иначе отдельными страницами
-        // (события режутся по высоте, коды — всегда одной
-        // страницей)
+        // — на последней странице под таблицей, если влезают,
+        // иначе отдельными страницами (события режутся по высоте).
+        // Task 442: зоны кодов справа больше нет (столбец кодов
+        // удалён по заявке) — мероприятия занимают всю ширину
+        // листа
         _printPdfLayout: function(model, opts) {
             opts = opts || {};
             var W = opts.W || 842, H = opts.H || 595, M = opts.M || 23;
@@ -44342,28 +44241,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var rowH = opts.rowH || 22;
             var secH = opts.secH || 18;
             var evRowH = opts.evRowH || 13;
-            var codeRowH = opts.codeRowH || 14;
             var gapH = opts.gapH || 8;
-            // Task 439: коды — СПРАВА от мероприятий: ширина
-            // правой зоны кодов и зазор между блоками. Task 440
-            // (заявка: «на расстоянии друг от друга 10px»): зазор
-            // 12pt → 7.5pt — РОВНО 10 CSS-px (1px = 0.75pt), как в
-            // печатной HTML-форме (gap: 10px)
-            var codeW = opts.codeW || 235;
-            var colGap = opts.colGap || 7.5;
             var contentH = H - 2 * M;
             var evList = (model.events || []).length
                 ? model.events : [{ placeholder: true }];
-            // Task 441 (заявка: «коды сделай в один столбец»):
-            // ОДНА колонка — строк на код не делим (прежде
-            // ДВЕ колонки: ceil(n/2) строк, Task 434/439)
-            var codeRows = Math.max(1,
-                (model.codes || []).length);
             // оценка числа строк записи мероприятия (тексты
             // краткие — обычно 1 строка; оценка консервативная
             // ~4.6pt/символ, реальная укладка по словам — в
-            // отрисовке _printPdfPaintPage)
-            var evW = W - 2 * M - codeW - colGap;
+            // отрисовке _printPdfPaintPage); Task 442: зона —
+            // ВСЯ ширина листа (прежде минус блок кодов)
+            var evW = W - 2 * M;
             var evLinesOf = function(ev) {
                 var est = (ev.range ? String(ev.range).length * 5.2 : 0) +
                           (ev.text ? String(ev.text).length * 4.6 : 0) + 18;
@@ -44373,11 +44260,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             for (var li = 0; li < evList.length; li++) {
                 evLines += evLinesOf(evList[li]);
             }
-            // Task 439: блоки РЯДОМ — высота пары = максимум, а не
-            // сумма (коды не добавляются под мероприятиями)
-            var evH = secH + evLines * evRowH;
-            var cdH = secH + codeRows * codeRowH;
-            var botH = Math.max(evH, cdH);
+            // Task 442: нижний блок — только мероприятия (высота
+            // пары max(evH, cdH) из Tasks 439/440 снята вместе с
+            // блоком кодов)
+            var botH = secH + evLines * evRowH;
 
             var pages = [];
             var rows = model.rows || [];
@@ -44390,26 +44276,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 i += chunk.length;
                 var used = dayHeadH + chunk.length * rowH + gapH;
                 if (i >= rows.length && used + botH <= contentH) {
-                    // последняя страница таблицы: мероприятия и коды
+                    // последняя страница таблицы: мероприятия
                     // помещаются под ней
                     pages.push({ first: first, rows: chunk,
-                                 events: model.events || [],
-                                 codes: model.codes || [] });
+                                 events: model.events || [] });
                     return { pages: pages, W: W, H: H, M: M, headH: headH,
                              dayHeadH: dayHeadH, rowH: rowH, secH: secH,
-                             evRowH: evRowH, codeRowH: codeRowH, gapH: gapH,
-                             codeW: codeW, colGap: colGap, evW: evW };
+                             evRowH: evRowH, gapH: gapH,
+                             evW: evW };
                 }
-                pages.push({ first: first, rows: chunk,
-                             events: null, codes: null });
+                pages.push({ first: first, rows: chunk, events: null });
             }
-            // мероприятия (+ коды, если влезут) — отдельными
-            // страницами; пустой месяц — строка-заглушка (как в
-            // печати: «нет мероприятий в этом месяце»)
+            // мероприятия — отдельными страницами; пустой месяц —
+            // строка-заглушка (как в печати: «нет мероприятий в
+            // этом месяце»)
             var evCap = Math.max(1,
                 Math.floor((contentH - secH) / evRowH));
             var ei = 0;
-            var codesPlaced = false;
             while (ei < evList.length) {
                 // Task 439: страница событий набирается по бюджету
                 // СТРОК (длинная запись может занимать две)
@@ -44423,24 +44306,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
                 var evChunk = evList.slice(ei, ei + take);
                 ei += take;
-                var chunkLines = evCap - budget;
-                // коды — РЯДОМ с последним куском событий (влезают
-                // по ВЫСОТЕ пары — max, не сумма)
-                var withCodes = (ei >= evList.length) &&
-                                (Math.max(secH + chunkLines * evRowH,
-                                          cdH) <= contentH);
-                if (withCodes) codesPlaced = true;
-                pages.push({ first: false, rows: [], events: evChunk,
-                             codes: withCodes ? (model.codes || []) : null });
-            }
-            if (!codesPlaced) {
-                pages.push({ first: false, rows: [], events: null,
-                             codes: model.codes || [] });
+                pages.push({ first: false, rows: [], events: evChunk });
             }
             return { pages: pages, W: W, H: H, M: M, headH: headH,
                      dayHeadH: dayHeadH, rowH: rowH, secH: secH,
-                     evRowH: evRowH, codeRowH: codeRowH, gapH: gapH,
-                     codeW: codeW, colGap: colGap, evW: evW };
+                     evRowH: evRowH, gapH: gapH,
+                     evW: evW };
         },
 
         // Task 438: СБОРКА PDF-ДОКУМЕНТА (чистая, VM-тесты).
@@ -44616,13 +44487,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 for (var dd = 0; dd < nDays; dd++) {
                     var day = model.days[dd];
                     var dx = x0 + empW + dd * dayW;
-                    if (day.off) {
-                        ctx.fillStyle = '#dfe5e9';
-                        ctx.fillRect(dx, yTop, dayW, lay.dayHeadH);
-                    }
+                    // Task 442: заливки выходных в шапке НЕТ;
+                    // число выходного дня — ЖИРНОЕ, обычные дни —
+                    // обычное начертание (как в HTML-печати)
                     ctx.textAlign = 'center';
                     ctx.fillStyle = day.feast ? '#b02a2a' : '#1b1f24';
-                    ctx.font = '700 7px Arial';
+                    ctx.font = (day.off ? '700 ' : '') + '7px Arial';
                     ctx.fillText(String(day.d) + (day.short ? '*' : ''),
                                  dx + dayW / 2, yTop + 9);
                     ctx.fillStyle = '#54606a';
@@ -44649,6 +44519,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             // строки сотрудников
             if (page.rows.length) {
+                // Task 442: gridTop — верх полос выходных
+                // (толстый контур от ленты дней до низа
+                // последней строки)
+                var gridTop = y;
                 drawDayHead(y);
                 y += lay.dayHeadH;
                 for (var rr = 0; rr < page.rows.length; rr++) {
@@ -44664,12 +44538,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     for (var cc = 0; cc < row.cells.length; cc++) {
                         var cell = row.cells[cc];
                         var dx = x0 + empW + cc * dayW;
-                        var dyy = model.days[cc];
+                        // Task 442: серой заливки нерабочих дней и
+                        // бейджей мероприятий больше нет — только
+                        // цвет статуса, пунктир плана отпуска,
+                        // код и точка переработки
                         if (cell.status && cell.color) {
                             ctx.fillStyle = cell.color;
-                            ctx.fillRect(dx, y, dayW, lay.rowH);
-                        } else if (!cell.status && !cell.vac && dyy.off) {
-                            ctx.fillStyle = '#e2e8ec';
                             ctx.fillRect(dx, y, dayW, lay.rowH);
                         }
                         if (cell.vac) {
@@ -44700,16 +44574,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                     0, Math.PI * 2);
                             ctx.fill();
                         }
-                        // бейджи мероприятий — правый нижний угол
-                        for (var bb = 0; bb < cell.events.length && bb < 3; bb++) {
-                            var bw = 3.4;
-                            var bx = dx + dayW - 2 - bw -
-                                     bb * (bw + 0.8);
-                            ctx.fillStyle = cell.events[bb].color ||
-                                            '#3a3a3a';
-                            ctx.fillRect(bx, y + lay.rowH - 2 - bw,
-                                         bw, bw);
-                        }
                         gridLine(dx, y, dayW, lay.rowH);
                     }
                     var tx = x0 + empW + nDays * dayW;
@@ -44726,26 +44590,30 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     }
                     y += lay.rowH;
                 }
+                // Task 442: ТОЛСТЫЙ внешний контур полос выходных —
+                // сверху ленты дней до низа последней строки
+                // (полоса = подряд идущие нерабочие дни, Сб+Вс —
+                // ОДИН контур; фоном выходные НЕ выделяются —
+                // заявка). Цвет — как у рамок HTML-печати
+                ctx.strokeStyle = '#8f99a3';
+                ctx.lineWidth = 1.4;
+                var runStart = -1;
+                for (var so = 0; so <= nDays; so++) {
+                    var offCol = so < nDays && model.days[so].off;
+                    if (offCol && runStart < 0) runStart = so;
+                    if (!offCol && runStart >= 0) {
+                        ctx.strokeRect(x0 + empW + runStart * dayW,
+                                       gridTop, (so - runStart) * dayW,
+                                       y - gridTop);
+                        runStart = -1;
+                    }
+                }
                 y += lay.gapH;
             }
 
-            // Task 439: мероприятия и коды — РЯДОМ: события —
-            // ЛЕВАЯ зона листа (x0..x0+evZoneW), коды — ПРАВАЯ
-            // (codeX..правый край), заголовки блоков на одной
-            // верхней линии
-            var codeW = lay.codeW || 235;
-            // Task 440: зазор мероприятий↔коды — 7.5pt (= 10px)
-            var colGap = lay.colGap || 7.5;
-            var evZoneW = CW - codeW - colGap;
-            // Task 440 (как в HTML flex 0 1 auto): блок кодов — за
-            // ФАКТИЧЕСКИМ правым краем строк мероприятий (+colGap),
-            // не прижат к правому краю листа; страницы без
-            // мероприятий — коды от левого края (+colGap);
-            // кодыX вычисляется ПОСЛЕ отрисовки мероприятий
-            // (evRightMax), ограничение — правый край листа
-            var codeX = x0 + colGap;
-            var evRightMax = 0;
-            var botY = y;
+            // Task 442: мероприятия — НА ВСЮ ширину листа (зоны
+            // кодов справа больше нет — столбец кодов удалён
+            // по заявке)
             // мероприятия (заголовок — как в печати: счётчик месяца)
             if (page.events) {
                 ctx.fillStyle = '#1b1f24';
@@ -44755,8 +44623,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                              (model.events.length
                                  ? ' · ' + model.events.length : '');
                 ctx.fillText(evHead, x0, y + 8);
-                evRightMax = Math.max(evRightMax,
-                    x0 + ctx.measureText(evHead).width);
                 y += lay.secH;
                 var evs = page.events.length ? page.events
                     : [{ range: '', color: '',
@@ -44792,7 +44658,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var evText = String(evs[ee].text || '');
                     var evWords = evText.split(' ');
                     var evLine = '', evLy = y + 7;
-                    var evMaxW = x0 + evZoneW - ex;
+                    // Task 442: перенос — до ПРАВОГО края листа
+                    var evMaxW = x0 + CW - ex;
                     for (var ewi = 0; ewi < evWords.length; ewi++) {
                         var evCand = evLine
                             ? evLine + ' ' + evWords[ewi] : evWords[ewi];
@@ -44801,16 +44668,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             evLine = evCand;
                         } else {
                             ctx.fillText(evLine, ex, evLy);
-                            evRightMax = Math.max(evRightMax,
-                                ex + ctx.measureText(evLine).width);
                             evLy += lay.evRowH;
                             evLine = evWords[ewi];
                         }
                     }
                     if (evLine) {
                         ctx.fillText(evLine, ex, evLy);
-                        evRightMax = Math.max(evRightMax,
-                            ex + ctx.measureText(evLine).width);
                     }
                     // шаг — по ФАКТИЧЕСКИ уложенным строкам
                     y += lay.evRowH *
@@ -44819,42 +44682,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 y += lay.gapH;
             }
 
-            // коды — ПРАВАЯ зона, ОДНА колонка (Task 441: «коды
-            // сделай в один столбец»; прежде две — Task 434);
-            // общая верхняя линия с мероприятиями
-            if (page.codes) {
-                y = botY;
-                // Task 440: коды — за фактическим краем мероприятий
-                // (в пределах листа); лист пуст от мероприятий — от
-                // левого края (+colGap)
-                if (page.events && evRightMax > 0) {
-                    codeX = Math.min(evRightMax + colGap,
-                                     x0 + CW - codeW);
-                }
-                ctx.fillStyle = '#1b1f24';
-                ctx.font = '700 9px Arial';
-                ctx.fillText('Коды:', codeX, y + 8);
-                y += lay.secH;
-                // Task 441: ОДИН столбец — все коды друг под
-                // другом от codeX (прежде: две колонки со
-                // сдвигом colW2 и разбивкой perCol)
-                for (var lc = 0; lc < page.codes.length; lc++) {
-                    var lx = codeX;
-                    var ly = y + lc * lay.codeRowH;
-                    var code = page.codes[lc];
-                    if (code.color) {
-                        ctx.fillStyle = code.color;
-                        ctx.fillRect(lx, ly + 1, 4.5, 4.5);
-                    }
-                    ctx.fillStyle = '#1b1f24';
-                    ctx.font = '8px Arial';
-                    ctx.fillText(code.code
-                        ? (code.label
-                           ? code.code + ' — ' + code.label : code.code)
-                        : (code.label || ''),
-                        lx + 7, ly + 5.5);
-                }
-            }
+            // Task 442: блок кодов (правая зона, Tasks 434–441)
+            // УДАЛЁН по заявке — страница заканчивается списком
+            // мероприятий на всю ширину листа
 
             var dataUrl;
             try {
@@ -44902,15 +44732,41 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // жирная (ФИО+Тип [wrapText, Task 439]/итоги), 6 — день
         // недели (серый 9, центр, рамка), 7+k — заливка цвета
         // кода k + рамка + центр
+        // Task 442: карта индексов стилей листа «Табель» — ЕДИНАЯ
+        // для _wsTabelStylesXml (порядок cellXfs) и _wsTabelRows
+        // (s-индексы ячеек). База 0–6 прежняя (0 default, 1 шапка
+        // bold/белая-по-синему, 2 заголовок листа, 3 подзаголовок,
+        // 4 ячейка сетки, 5 работник wrap, 6 день недели); далее
+        // ДИНАМИКА: цветные ячейки кодов (border thin, база 7),
+        // контуры полос выходных (medium-границы: шапка T/TL/TR/
+        // TLR — bold-число, дни недели L/R/LR, тело L/R/LR/B/BL/
+        // BR/BLR — обычные и ЦВЕТНЫЕ варианты), последняя — обычные
+        // (НЕ жирные) числа дат не-выходных
+        _wsTabelStyleMap: function(nColors) {
+            var coloredBase = 7;
+            var headC = coloredBase + nColors;
+            var dowsC = headC + 4;
+            var bodyC = dowsC + 3;
+            var colC = bodyC + 7;
+            var regDate = colC + 7 * nColors;
+            return { coloredBase: coloredBase, headC: headC,
+                     dowsC: dowsC, bodyC: bodyC, colC: colC,
+                     regDate: regDate };
+        },
+
         _wsTabelStylesXml: function(colors) {
             colors = colors || [];
-            var f = '', fl = '', xf = '';
+            var st = this._wsTabelStyleMap(colors.length);
+            var f = '', fl = '', xf = '', bd = '';
             f += '<font><sz val="11"/><color rgb="FF1B1F24"/><name val="Arial"/></font>';
             f += '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>';
             f += '<font><b/><sz val="14"/><color rgb="FF1B1F24"/><name val="Arial"/></font>';
             f += '<font><sz val="11"/><color rgb="FF5C6670"/><name val="Arial"/></font>';
             f += '<font><sz val="9"/><color rgb="FF5C6670"/><name val="Arial"/></font>';
             f += '<font><b/><sz val="11"/><color rgb="FF1B1F24"/><name val="Arial"/></font>';
+            // Task 442: числа дат НЕ-выходных дней — НЕ жирные
+            // (выходные остаются bold — «даты выходных жирнее»)
+            f += '<font><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>';
             fl += '<fill><patternFill patternType="none"/></fill>';
             fl += '<fill><patternFill patternType="gray125"/></fill>';
             fl += '<fill><patternFill patternType="solid">' +
@@ -44921,6 +44777,49 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                       '<fgColor rgb="FF' + colors[i] + '"/>' +
                       '<bgColor indexed="64"/></patternFill></fill>';
             }
+            // Task 442: границы — thin (сетка, как прежде) +
+            // MEDIUM-комбинации ВНЕШНЕГО КОНТУРА полос выходных
+            // (цвет 8F99A3 — как в HTML-печати). Порядок границ
+            // 2–12: T, TL, TR, TLR, L, R, LR, B, BL, BR, BLR —
+            // соответствует карте _wsTabelStyleMap (шапка —
+            // верх полосы, тело — бока и низ последней строки)
+            var TH = function(side) {
+                return '<' + side + ' style="thin">' +
+                       '<color rgb="FFB9C2CC"/></' + side + '>';
+            };
+            var MED = function(side) {
+                return '<' + side + ' style="medium">' +
+                       '<color rgb="FF8F99A3"/></' + side + '>';
+            };
+            var sideLine = function(sides, side) {
+                return sides.indexOf(side) !== -1
+                    ? MED(side) : TH(side);
+            };
+            var borderOf = function(sides) {
+                var out = '<border>';
+                out += sideLine(sides, 'left');
+                out += sideLine(sides, 'right');
+                out += sideLine(sides, 'top');
+                out += sideLine(sides, 'bottom');
+                return out + '<diagonal/></border>';
+            };
+            bd += '<border><left/><right/><top/><bottom/><diagonal/></border>';
+            bd += '<border>' +
+                  '<left style="thin"><color rgb="FFB9C2CC"/></left>' +
+                  '<right style="thin"><color rgb="FFB9C2CC"/></right>' +
+                  '<top style="thin"><color rgb="FFB9C2CC"/></top>' +
+                  '<bottom style="thin"><color rgb="FFB9C2CC"/></bottom>' +
+                  '<diagonal/></border>';
+            var CONTOURS = [
+                ['top'], ['top', 'left'], ['top', 'right'],
+                ['top', 'left', 'right'],
+                ['left'], ['right'], ['left', 'right'],
+                ['bottom'], ['bottom', 'left'], ['bottom', 'right'],
+                ['bottom', 'left', 'right']
+            ];
+            for (var bc = 0; bc < CONTOURS.length; bc++) {
+                bd += borderOf(CONTOURS[bc]);
+            }
             xf += '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>';
             xf += '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>';
             xf += '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>';
@@ -44930,42 +44829,64 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                   '<alignment wrapText="1" vertical="top"/></xf>';
             xf += '<xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1">' +
                   '<alignment horizontal="center"/></xf>';
-            // Task 440 (заявка: «коды справа от мероприятий на
-            // расстоянии друг от друга 10px»): Excel-эквивалент
-            // зазора — ОТСТУП indent="1" (~7px = ширина символа
-            // Arial 11) у ячеек КОДОВ в колонке D: текст мероприятий
-            // (A/B) переполнением через пустую C обрезается у левой
-            // кромки D, а текст кодов начинается на ~7px ПРАВЕЕ
-            // кромки — видимый зазор между блоками (10px точно
-            // недостижимы: колонка-разделитель C общая с сеткой дней
-            // табеля, сузить её нельзя). Стиль 7 — строка кода,
-            // стиль 8 — заголовок «Коды:» (шапка как s=1 + отступ)
-            xf += '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1">' +
-                  '<alignment horizontal="left" indent="1"/></xf>';
-            xf += '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1">' +
-                  '<alignment horizontal="left" indent="1"/></xf>';
+            // Task 442: indent-стили кодов (7/8 из Task 440)
+            // УДАЛЕНЫ вместе со столбцом кодов; база цветных — 7
             for (var k = 0; k < colors.length; k++) {
                 xf += '<xf numFmtId="0" fontId="0" fillId="' + (3 + k) +
                       '" borderId="1" xfId="0" applyFill="1" ' +
                       'applyBorder="1" applyAlignment="1">' +
                       '<alignment horizontal="center"/></xf>';
             }
+            // Task 442: контуры полос выходных — ШАПКА (bold-число
+            // на синей заливке, medium-верх + края): T, TL, TR, TLR
+            for (var hc = 0; hc < 4; hc++) {
+                xf += '<xf numFmtId="0" fontId="1" fillId="2" borderId="' +
+                      (2 + hc) + '" xfId="0" applyFont="1" applyFill="1" ' +
+                      'applyBorder="1" applyAlignment="1">' +
+                      '<alignment horizontal="center"/></xf>';
+            }
+            // Task 442: контуры полос выходных — ДНИ НЕДЕЛИ (серый
+            // мелкий, medium-края): L, R, LR
+            for (var dc = 0; dc < 3; dc++) {
+                xf += '<xf numFmtId="0" fontId="4" fillId="0" borderId="' +
+                      (6 + dc) + '" xfId="0" applyFont="1" ' +
+                      'applyBorder="1" applyAlignment="1">' +
+                      '<alignment horizontal="center"/></xf>';
+            }
+            // Task 442: контуры полос выходных — ТЕЛО, обычные
+            // ячейки (центр, без заливки): L, R, LR, B, BL, BR, BLR
+            for (var bcf = 0; bcf < 7; bcf++) {
+                xf += '<xf numFmtId="0" fontId="0" fillId="0" borderId="' +
+                      (6 + bcf) + '" xfId="0" applyBorder="1" ' +
+                      'applyAlignment="1">' +
+                      '<alignment horizontal="center"/></xf>';
+            }
+            // Task 442: контуры полос выходных — ТЕЛО, ЦВЕТНЫЕ
+            // ячейки статусов (заливка цвета кода + medium-бока):
+            // 7 вариантов на каждый цвет
+            for (var k2 = 0; k2 < colors.length; k2++) {
+                for (var bcc = 0; bcc < 7; bcc++) {
+                    xf += '<xf numFmtId="0" fontId="0" fillId="' +
+                          (3 + k2) + '" borderId="' + (6 + bcc) +
+                          '" xfId="0" applyFill="1" applyBorder="1" ' +
+                          'applyAlignment="1">' +
+                          '<alignment horizontal="center"/></xf>';
+                }
+            }
+            // Task 442: обычные (НЕ выходные) числа дат — НЕ
+            // жирные (fontId 6), та же синяя шапка и thin-рамка
+            xf += '<xf numFmtId="0" fontId="6" fillId="2" borderId="1" ' +
+                  'xfId="0" applyFont="1" applyFill="1" applyBorder="1" ' +
+                  'applyAlignment="1"><alignment horizontal="center"/></xf>';
             return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
                 '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
-                '<fonts count="' + 6 + '">' + f + '</fonts>' +
+                '<fonts count="' + 7 + '">' + f + '</fonts>' +
                 '<fills count="' + (3 + colors.length) + '">' + fl + '</fills>' +
-                '<borders count="2">' +
-                '<border><left/><right/><top/><bottom/><diagonal/></border>' +
-                '<border>' +
-                '<left style="thin"><color rgb="FFB9C2CC"/></left>' +
-                '<right style="thin"><color rgb="FFB9C2CC"/></right>' +
-                '<top style="thin"><color rgb="FFB9C2CC"/></top>' +
-                '<bottom style="thin"><color rgb="FFB9C2CC"/></bottom>' +
-                '<diagonal/></border></borders>' +
+                '<borders count="13">' + bd + '</borders>' +
                 '<cellStyleXfs count="1">' +
                 '<xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>' +
                 '</cellStyleXfs>' +
-                '<cellXfs count="' + (9 + colors.length) + '">' + xf +
+                '<cellXfs count="' + (st.regDate + 1) + '">' + xf +
                 '</cellXfs>' +
                 '<cellStyles count="1">' +
                 '<cellStyle name="Normal" xfId="0" builtinId="0"/>' +
@@ -44976,8 +44897,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // VM-тестов): шапка из двух строк (Task 438), сетка
         // Работник/дни/Дни/Перераб. (без «Часов», переработка —
         // только дни), цветные ячейки кодов; Task 439: работник —
-        // ФИО + Тип (второй строкой), мероприятия и коды — РЯДОМ
-        // (даты/текст в A/B, коды — в колонке D справа)
+        // ФИО + Тип (второй строкой). Task 442: столбец кодов
+        // УДАЛЁН — под сеткой только мероприятия (дата в A, текст
+        // в B); числа выходных — ЖИРНЫЕ (обычные дни — НЕ жирные,
+        // новый стиль), полосы выходных — MEDIUM-внешний контур
+        // (верх — строка чисел, бока — края полосы, низ —
+        // последняя строка сетки; края полосы — по соседям,
+        // Сб+Вс подряд — один контур)
         _wsTabelRows: function(model, colorIdx) {
             var viewLabels = { full: 'полный', shift: 'сменный',
                                day: 'дневной' };
@@ -44985,6 +44911,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                              'июнь','июль','август','сентябрь','октябрь',
                              'ноябрь','декабрь'];
             var rows = [];
+            // Task 442: карта стилей (индексы контуров/regDate)
+            var nCol = 0;
+            for (var ck in colorIdx) {
+                if (Object.prototype.hasOwnProperty.call(colorIdx, ck)) {
+                    nCol++;
+                }
+            }
+            var stMap = this._wsTabelStyleMap(nCol);
             rows.push([{ v: 'График работы', s: 2 }]);
             rows.push([{ v: monthsNom[model.month - 1] + ' ' + model.year +
                          ' г. · вид табеля: ' +
@@ -44992,10 +44926,32 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             rows.push([]);
             var head = [{ v: 'Работник', s: 1 }];
             var dows = [{ v: '', s: 6 }];
-            for (var d = 0; d < model.days.length; d++) {
+            var nDays = model.days.length;
+            // Task 442: флаги нерабочих дней + края полос — по
+            // соседям (непрерывная Сб+Вс полоса — один контур)
+            var offArr = [];
+            for (var d0 = 0; d0 < nDays; d0++) {
+                offArr[d0] = !!model.days[d0].off;
+            }
+            for (var d = 0; d < nDays; d++) {
+                var off = offArr[d];
+                var edge = off
+                    ? ((d === 0 || !offArr[d - 1]) ? 1 : 0) +
+                      ((d === nDays - 1 || !offArr[d + 1]) ? 2 : 0)
+                    : 0;
+                // Task 442: число ВЫХОДНОГО дня — ЖИРНОЕ (s=1,
+                // как прежде у всех) + medium-верх контура
+                // (headC: T/TL/TR/TLR); обычный день — НЕ жирное
+                // число (новый стиль regDate)
                 head.push({ v: String(model.days[d].d) +
-                            (model.days[d].short ? '*' : ''), s: 1 });
-                dows.push({ v: model.days[d].dow, s: 6 });
+                            (model.days[d].short ? '*' : ''),
+                            s: off ? stMap.headC + edge
+                                   : stMap.regDate });
+                // день недели в полосе выходного — medium-бока
+                // (dowsC: L/R/LR; прочие — прежний s=6)
+                dows.push({ v: model.days[d].dow,
+                            s: off && edge
+                                ? stMap.dowsC + edge - 1 : 6 });
             }
             head.push({ v: 'Дни', s: 1 });
             head.push({ v: 'Перераб.', s: 1 });
@@ -45005,6 +44961,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             rows.push(dows);
             for (var r = 0; r < model.rows.length; r++) {
                 var row = model.rows[r];
+                // Task 442: последняя строка сетки — низ контура
+                var isLast = (r === model.rows.length - 1);
                 // Task 439: работник — ФИО + Тип (перенос строки в
                 // ячейке, стиль 5 с wrapText)
                 var line = [{ v: row.fio +
@@ -45012,13 +44970,30 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 for (var c = 0; c < row.cells.length; c++) {
                     var cell = row.cells[c];
                     var st = 4;
-                    if (cell.status && cell.color) {
-                        var col = String(cell.color).replace('#', '')
-                                    .toUpperCase();
-                        // Task 440: база цветных стилей 9 (7/8 —
-                        // коды с indent)
-                        if (colorIdx[col] !== undefined) {
-                            st = 9 + colorIdx[col];
+                    var col = cell.color
+                        ? String(cell.color).replace('#', '').toUpperCase()
+                        : '';
+                    if (cell.status && col && colorIdx[col] !== undefined) {
+                        // Task 442: база цветных стилей — 7
+                        // (indent-стили кодов 7/8 из Task 440
+                        // удалены вместе со столбцом кодов)
+                        st = stMap.coloredBase + colorIdx[col];
+                    }
+                    // Task 442: ячейка в полосе выходного —
+                    // MEDIUM-контур (бока/низ): combo 1=L, 2=R,
+                    // 3=LR, 4=B, 5=BL, 6=BR, 7=BLR (0 — внутри
+                    // полосы, thin); у цветной ячейки — цветной
+                    // вариант контура (colC), у пустой — bodyC
+                    if (c < nDays && offArr[c]) {
+                        var cEdge = ((c === 0 || !offArr[c - 1]) ? 1 : 0) +
+                                    ((c === nDays - 1 || !offArr[c + 1])
+                                        ? 2 : 0);
+                        var combo = cEdge + (isLast ? 4 : 0);
+                        if (combo) {
+                            st = (cell.status && col &&
+                                  colorIdx[col] !== undefined)
+                                ? stMap.colC + colorIdx[col] * 7 + (combo - 1)
+                                : stMap.bodyC + (combo - 1);
                         }
                     }
                     line.push({ v: cell.status || '', s: st });
@@ -45029,45 +45004,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             s: 5 });
                 rows.push(line);
             }
-            // Task 439 (заявка: «блок с кодами размести справа от
-            // мероприятий»): секции — РЯДОМ: мероприятия в колонках
-            // A (дата) + B (текст), коды — в колонке D (C — зазор),
-            // заголовки «Мероприятия · …» и «Коды:» на одной строке;
-            // пустой месяц — заглушка в A (как в печати).
-            // Task 441 (заявка: «коды сделай в один столбец»):
-            // коды — ОДИН столбец D (строка на код; двух
-            // колонок в Excel и не было — семантика сохранена)
+            // Task 442: столбец кодов D и заголовок «Коды:»
+            // УДАЛЕНЫ (заявка) — под сеткой только список
+            // мероприятий: дата в A, текст в B (Task 439);
+            // пустой месяц — заглушка в A (как в печати)
             rows.push([]);
-            var evRowsOut = [];
-            if (model.events.length) {
-                for (var e2 = 0; e2 < model.events.length; e2++) {
-                    evRowsOut.push({ a: model.events[e2].range,
-                                     b: model.events[e2].text, as: 5, bs: 0 });
-                }
-            } else {
-                evRowsOut.push({ a: 'нет мероприятий в этом месяце',
-                                 b: '', as: 0, bs: 0 });
-            }
-            var codeLines = [];
-            for (var k = 0; k < model.codes.length; k++) {
-                var cd = model.codes[k];
-                codeLines.push(cd.code
-                    ? (cd.label ? cd.code + ' — ' + cd.label : cd.code)
-                    : (cd.label || ''));
-            }
-            var botRows = Math.max(evRowsOut.length, codeLines.length, 1);
             rows.push([{ v: 'Мероприятия · ' +
                          monthsNom[model.month - 1] + ' ' + model.year +
                          (model.events.length
-                             ? ' · ' + model.events.length : ''), s: 1 },
-                       null, null, { v: 'Коды:', s: 8 }]);
-            for (var b = 0; b < botRows; b++) {
-                var bev = evRowsOut[b];
-                rows.push([bev ? { v: bev.a || '', s: bev.as } : null,
-                           bev && bev.b ? { v: bev.b, s: bev.bs } : null,
-                           null,
-                           codeLines[b] !== undefined
-                               ? { v: codeLines[b], s: 7 } : null]);
+                             ? ' · ' + model.events.length : ''), s: 1 }]);
+            if (model.events.length) {
+                for (var e2 = 0; e2 < model.events.length; e2++) {
+                    rows.push([{ v: model.events[e2].range, s: 5 },
+                               { v: model.events[e2].text, s: 0 }]);
+                }
+            } else {
+                rows.push([{ v: 'нет мероприятий в этом месяце', s: 0 }]);
             }
             return rows;
         },
@@ -45134,21 +45086,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Task 438: КНИГА .xlsx «Табель» (чистая — те же помощники
         // Task 430: _wsXlsZip/_wsXlsBytes; имя — «График_работы_
-        // ‹Месяц›_‹год›.xlsx»); цвета кодов → динамические стили
+        // ‹Месяц›_‹год›.xlsx»); цвета кодов → динамические стили.
+        // Task 442: перечень кодов из модели удалён — цвета
+        // собираются ТОЛЬКО из ячеек сетки (цвета статусов месяца)
         _buildTabelWorkbook: function(viewEmps, agg) {
             var model = this._printModel(viewEmps, agg);
             var colors = [];
             var colorIdx = {};
-            for (var c = 0; c < model.codes.length; c++) {
-                var col = String(model.codes[c].color || '')
-                    .replace('#', '').toUpperCase();
-                if (!col || colorIdx[col] !== undefined) continue;
-                colorIdx[col] = colors.length;
-                colors.push(col);
-            }
-            // ячейки сетки могут нести цвет кода, которого нет в
-            // легенде (легаси без цвета — пустой, не бывает), но на
-            // всякий случай индексируем и их
             for (var r = 0; r < model.rows.length; r++) {
                 var cells = model.rows[r].cells;
                 for (var k = 0; k < cells.length; k++) {
@@ -45224,10 +45168,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 name: 'График_работы_' + months[mIdx - 1] + '_' +
                       this._year + '.xlsx',
                 bytes: this._wsXlsZip(files),
+                // Task 442: counts.codes удалён вместе со столбцом
                 counts: {
                     rows: model.rows.length,
                     events: model.events.length,
-                    codes: model.codes.length,
                     colors: colors.length
                 }
             };
@@ -45475,13 +45419,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // раскладки _renderGrid: шапка дней с днём недели/выходными/
         // праздниками/«*» сокращённых, строки сотрудников вида, в
         // ячейках — ЭФФЕКТИВНЫЕ записи (запись + локальная правка,
-        // __delete — ячейка пустая), план отпуска пунктиром;
-        // Task 361: бейджи мероприятий в ячейках печати ВЕРНУТЫ
-        // (см. _printCell). В конце каждой строки — «Дни»/
-        // «Перераб.» (Task 438: только дни), внизу — Task 360:
-        // список мероприятий
-        // текущего месяца (один столбик) и перечень кодов ТОЛЬКО
-        // этого месяца (Task 343: итоговая строка agg.grand убрана)
+        // __delete — ячейка пустая), план отпуска пунктиром.
+        // Task 442 (заявка: «На распечатываемом графике работы убери мини значки мероприятий в шахматке и столбец с кодами…»): бейджи мероприятий
+        // в ячейках печати УДАЛЕНЫ (Task 361 их возвращал), столбец
+        // кодов под таблицей УДАЛЕН (Tasks 360–441), полосы выходных
+        // — ТОЛСТЫЙ внешний контур без заливки, числа выходных —
+        // ЖИРНЫЕ. В конце каждой строки — «Дни»/«Перераб.»
+        // (Task 438: только дни), внизу — список мероприятий текущего
+        // месяца (Task 343: итоговая строка agg.grand убрана)
         _buildPrintHtml: function(viewEmps, agg) {
             var months = ['Январь','Февраль','Март','Апрель','Май','Июнь',
                           'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
@@ -45569,17 +45514,30 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // раскладка делит остаток поровну (таблица крупнее)
             html += '<table class="wsp-grid"><thead><tr>';
             html += '<th class="wsp-emp" style="width:' + empWmm + 'mm">Работник</th>';
+            // Task 442: флаги нерабочих дней собираются ЗАРАНЕЕ —
+            // краям полосы выходных (wsp-off-edge-l/r в шапке и
+            // wsp-cell-off/wsp-off-edge-* в теле) нужен взгляд на
+            // СОСЕДЕЙ: непрерывная полоса Сб+Вс — ОДИН контур
+            var offArr = [], feastArr = [], shortArr = [], dowArr = [];
             for (var d = 1; d <= daysInMonth; d++) {
                 var dt = new Date(this._year, this._month - 1, d);
                 var dInfo = (typeof ProdCalendar !== 'undefined' && ProdCalendar.dayInfo)
                     ? ProdCalendar.dayInfo(this._year, this._month, d) : null;
-                var isOff = dInfo ? dInfo.off
+                offArr[d] = dInfo ? !!dInfo.off
                           : (dt.getDay() === 0 || dt.getDay() === 6);
-                var isFeast = dInfo ? !!dInfo.holiday : false;
-                var isShort = dInfo ? !!dInfo.short : false;
+                feastArr[d] = dInfo ? !!dInfo.holiday : false;
+                shortArr[d] = dInfo ? !!dInfo.short : false;
+                dowArr[d] = dows[dt.getDay()];
+            }
+            for (var d = 1; d <= daysInMonth; d++) {
+                var isOff = offArr[d];
                 html += '<th class="wsp-day' + (isOff ? ' wsp-off' : '') +
-                        (isFeast ? ' wsp-feast' : '') + '">' + d +
-                        (isShort ? '*' : '') + '<span>' + dows[dt.getDay()] +
+                        (isOff && (d === 1 || !offArr[d - 1])
+                            ? ' wsp-off-edge-l' : '') +
+                        (isOff && (d === daysInMonth || !offArr[d + 1])
+                            ? ' wsp-off-edge-r' : '') +
+                        (feastArr[d] ? ' wsp-feast' : '') + '">' + d +
+                        (shortArr[d] ? '*' : '') + '<span>' + dowArr[d] +
                         '</span></th>';
             }
             // Task 438 (заявка): колонка «Часы» УДАЛЕНА, в
@@ -45591,23 +45549,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // строки сотрудников: эффективные записи + итоги
             var entryIdx = this._buildEntryIndex();
             var pend = this._PENDING || {};
-            // Task 360: статусы, ПРИСУТСТВУЮЩИЕ в этом месяце (по
-            // ЭФФЕКТИВНЫМ записям ПЕЧАТАЕМЫХ строк — как в сетке:
-            // локальные правки учитываются, __delete исключается),
-            // для перечня кодов под списком мероприятий: печатаются
-            // только коды этого месяца, а не весь справочник.
-            // «.» и коды мероприятий (И/ОБ/ПЗ/ПР/*) — тоже коды
-            // месяца: «.» виден в ячейках, коды мероприятий —
-            // раскрываются в списке мероприятий выше. Task 362
-            // (заявка: «не отобразилось наименование кода проверки
-            // знаний ПЗ, хотя он есть в мероприятиях у дневного
-            // сотрудника»): коды мероприятий добавляются в
-            // usedCodes и из СПИСКА МЕРОПРИЯТИЙ месяца (см. цикл
-            // evList ниже) — у дневного персонала мероприятие живёт
-            // только в «Инструктажах», записи сетки нет, а бейдж в
-            // ячейке печати ставится — перечень обязан объяснять
-            // и его
-            var usedCodes = {};
+            // Task 442: сбор usedCodes для перечня кодов УДАЛЕН —
+            // столбца кодов под таблицей больше нет (заявка);
+            // коды статусов остаются В ЯЧЕЙКАХ шахматки с цветами
+            // справочника
             for (var ei = 0; ei < viewEmps.length; ei++) {
                 var emp = viewEmps[ei];
                 // Task 439: под ФИО — только Тип (_empTipLine:
@@ -45634,12 +45579,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                                      { 'источник': 'руч' });
                         }
                     }
-                    html += this._printCell(day, isoDate, emp, effEntry);
-                    // Task 360: помечаем код месяца (эффективный
-                    // статус ячейки)
-                    if (effEntry && effEntry['статус']) {
-                        usedCodes[effEntry['статус']] = true;
-                    }
+                    // Task 442: isLastRow — низ толстого контура
+                    // полосы выходных (последняя строка таблицы)
+                    html += this._printCell(day, isoDate, emp, effEntry,
+                                            ei === viewEmps.length - 1);
                 }
                 var a = (agg && agg.byTab)
                     ? agg.byTab[String(emp['таб_номер'] || '')] : null;
@@ -45709,19 +45652,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 return String(a['дата_начала']).localeCompare(String(b['дата_начала'])) ||
                        String(a['таб_номер']).localeCompare(String(b['таб_номер']));
             });
-            // Task 362 (заявка: «не отобразилось наименование кода
-            // проверки знаний ПЗ, хотя он есть в мероприятиях у
-            // дневного сотрудника»): коды мероприятий отфильтрован-
-            // ного списка тоже помечаются в usedCodes — бейджи в
-            // ячейках печати строятся по «Инструктажам» БЕЗ записей
-            // сетки, сноска листа ссылается на перечень выше; коды
-            // событий сетки (статус-мероприятия) уже учтены в цикле
-            // строк шахматки
-            for (var eci = 0; eci < evList.length; eci++) {
-                var evCd = (typeof this._trainingCodeOf === 'function')
-                    ? this._trainingCodeOf(evList[eci]['тип']) : '';
-                if (evCd) usedCodes[evCd] = true;
-            }
+            // Task 442: пометка кодов мероприятий для перечня кодов
+            // УДАЛЕНА — столбца кодов под таблицей больше нет
             // ФИО по таб. номеру (сотрудник мог быть удалён/в
             // архиве — показываем таб. номер)
             var fioIdx = {};
@@ -45729,20 +45661,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             for (var fi = 0; fi < evEmps.length; fi++) {
                 fioIdx[evEmps[fi]['таб_номер']] = evEmps[fi]['ФИО'];
             }
-            // Task 364: обёртка wsp-bottom — мероприятия и коды
-            // под таблицей. Task 439: внутри обёртки — РЯД:
-            // мероприятия слева, коды СПРАВА от них (CSS flex).
-            // Task 433 (заявка: «расположение кодов в печати верни
-            // обратно, я имел в виду, что бы правая часть блока
-            // растянулась вправо до конца листа, и если текст не
-            // будет вмещаться в одну строку, тогда переносить его на
-            // следующую строку»): нижняя секция снова ВЕРТИКАЛЬНАЯ
-            // (флоат Task 432 и flex-ряд Task 364–431 сняты):
-            // ПЕРВЫМ в DOM — список мероприятий (записи-блоки
+            // Task 364: обёртка wsp-bottom под таблицей.
+            // Task 442 (заявка: «убери … столбец с кодами»):
+            // ЛЕГЕНДА КОДОВ УДАЛЕНА — в нижней секции остался
+            // ТОЛЬКО список мероприятий (Task 433: записи-блоки
             // [точка][дата][текст], текст растянут до конца листа,
-            // перенос — только когда не вмещается в одну строку),
-            // ВТОРЫМ — коды ЕДИНОЙ СТРОКОЙ-АБЗАЦЕМ «Коды: …»
-            // (исходное расположение до Task 360), сноска — ниже
+            // перенос — только когда не вмещается в одну строку)
             html += '<div class="wsp-bottom">';
             html += '<div class="wsp-mev"><span class="wsp-mev-t">' +
                     'Мероприятия · ' + monthsNom[this._month - 1] + ' ' + this._year +
@@ -45790,76 +45714,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         '</span>';
             }
             html += '</div>';
-            // Task 360 (заявка: «а под списком, в один столбик
-            // перечень кодов с их наименованием только которые есть
-            // в этом месяце»): в печать идут ТОЛЬКО коды,
-            // ПРИСУТСТВУЮЩИЕ в этом месяце (usedCodes — эффективные
-            // записи печатаемых строк, см. выше). Порядок —
-            // справочник _STATUS_CODES (единственный источник имён);
-            // легаси-код, удалённый из справочника, попадает в
-            // конец без цвета и имени (только код).
-            // Task 433 (заявка: «расположение кодов в печати верни
-            // обратно»): ВЕРНУЛИ ИСХОДНУЮ ФОРМУ «в одну строку"
-            // (как до Task 360; столбик Task 360–431 и флоат Task 432
-            // сняты). Task 434 (заявка: «коды на печати сделать в
-            // две колонки под названием "Коды:""): заголовок —
-            // ОТДЕЛЬНОЙ строкой, под ним колонка кодов; Task 441 (заявка:
-            // «коды сделай в один столбец»): ОДНА колонка
-            // (.wsp-legend-cols, grid 1fr) на всю ширину блока:
-            // каждый код — своя строка, длинное название
-            // переносится ВНУТРИ колонки (запись не рвётся)
-            var codes = this._STATUS_CODES || [];
-            html += '<div class="wsp-legend"><span class="wsp-legend-t">Коды:</span>' +
-                    '<div class="wsp-legend-cols">';
-            for (var ci = 0; ci < codes.length; ci++) {
-                // Task 387: «.» в данных = выходной — раскрывается
-                // строкой «Выходного» (пустой код) БЕЗ кода-символа
-                if (!usedCodes[codes[ci].code] &&
-                    !(codes[ci].code === '' && usedCodes['.'])) continue;
-                if (codes[ci].code === '') {
-                    html += '<span class="wsp-lg"><i style="background:' +
-                            (codes[ci].color || '#ffffff') + ';"></i>' +
-                            this._esc(codes[ci].name || 'Выходной') +
-                            '</span>';
-                    continue;
-                }
-                // Task 438 (заявка: «список кодов — в сокращённом
-                // виде»): после кода — КОРОТКОЕ обозначение
-                // (short из справочника, Task 388), у самодельных
-                // кодов вне канона short нет — фолбэк на name
-                var lgShort = codes[ci].short || codes[ci].name || '';
-                html += '<span class="wsp-lg"><i style="background:' +
-                        (codes[ci].color || '#ffffff') + ';"></i>' +
-                        this._esc(codes[ci].code) +
-                        (lgShort ? ' — ' + this._esc(lgShort) : '') +
-                        '</span>';
-            }
-            // легаси-коды месяца, которых нет в справочнике.
-            // Task 438: «.» пропускается — точка уже раскрыта слотом
-            // «Выходной» (пустой код) выше, дублирующая голая «.»
-            // в перечне не нужна
-            var legacy = [];
-            for (var lk in usedCodes) {
-                if (!Object.prototype.hasOwnProperty.call(usedCodes, lk)) continue;
-                if (lk === '.') continue;
-                var known = false;
-                for (var cj = 0; cj < codes.length; cj++) {
-                    if (codes[cj].code === lk) { known = true; break; }
-                }
-                if (!known) legacy.push(lk);
-            }
-            legacy.sort();
-            for (var li = 0; li < legacy.length; li++) {
-                html += '<span class="wsp-lg">' + this._esc(legacy[li]) + '</span>';
-            }
-            // Task 434: закрытие ДВУХ уровней — сетка-колонки
-            // .wsp-legend-cols и сама легенда .wsp-legend
+            // Task 442: легенда кодов (wsp-legend/wsp-lg, Tasks
+            // 360–441) УДАЛЕНА по заявке — закрывается только
+            // обёртка wsp-bottom; перечень кодов месяца больше
+            // не печатается
             html += '</div>';
-            html += '</div>';
-            html += '</div>';
-            // Task 438 (заявка): пояснительная сноска wsp-foot
-            // («* — сокращённый предпраздничный…») УДАЛЕНА — лист
-            // заканчивается перечнем кодов
+            // Task 438 (заявка): пояснительная сноска wsp_foot
+            // («* — сокращённый предпраздничный…») УДАЛЕНА; Task
+            // 442: лист заканчивается списком мероприятий
             return html;
         },
 
@@ -45867,15 +45729,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // без экранных фич (клики/подсветки/сегодня), цвета — inline
         // из справочника (печать фонов — print-color-adjust: exact):
         // основной код фоном; «.» — пустая; план отпуска — пунктир;
-        // переработка — красная точка; пустые нерабочие — серая
-        // заливка (wsp-cell-off, как розовая в сетке — только ПУСТЫЕ
-        // ячейки, статусные сохраняют свой цвет). Task 361 (заявка:
-        // «сделай отображение на печати значков мероприятий в
-        // ячейках шахматки»): бейджи мероприятий ВЕРНУТЫ в печать
-        // (Task 343 их убирал) — статус-мероприятие печатается
-        // ПУСТОЙ ячейкой + бейдж в углу, события дня — бейджами
-        // (как в экранной сетке, Task 314)
-        _printCell: function(day, isoDate, emp, entry) {
+        // переработка — красная точка. Task 442 (заявка: «На распечатываемом графике работы убери мини значки мероприятий в шахматке и столбец с кодами,
+        // и внешний контур линий выходных календарных дней в шахматке
+        // сделай толще, а выделять их фоном не нужно»): бейджи
+        // мероприятий в печати УДАЛЕНЫ (Task 361 их возвращал) —
+        // статус-мероприятия (И/ОБ/ПЗ/ПР/*) печатаются ПУСТЫМИ
+        // ячейками (события месяца — списком под таблицей);
+        // серая заливка нерабочих дней снята — вместо неё ТОЛСТЫЙ
+        // ВНЕШНИЙ КОНТУР полосы выходных (wsp-cell-off — маркер
+        // колонки выходного дня, wsp-off-edge-l/r — края полосы
+        // по соседям, wsp-off-edge-b — низ последней строки)
+        _printCell: function(day, isoDate, emp, entry, isLastRow) {
             var status = entry ? entry.статус : '';
             var isOvertime = !!(entry && entry.переработка === 1);
             var isDotCode = (status === '.');
@@ -45889,59 +45753,30 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var meta = this._statusMeta(status) || {};
                 if (meta.color) style += 'background:' + meta.color + ';';
             }
-            // нерабочие дни (производственный календарь): заливка —
-            // только ПУСТЫМ ячейкам без плана (статусные — свой цвет)
-            var dayOff = this._calDayOff(day);
             // план отпуска в пустой ячейке — пунктирная рамка
-            var vacPlan = null;
-            if (!status) {
-                vacPlan = this._vacationAt(isoDate, emp['таб_номер']);
-                if (vacPlan) classes.push('wsp-vac');
+            if (!status && this._vacationAt(isoDate, emp['таб_номер'])) {
+                classes.push('wsp-vac');
             }
-            if (dayOff && !showMainCode && !vacPlan) classes.push('wsp-cell-off');
+            // Task 442: нерабочий день (производственный календарь)
+            // — БЕЗ заливки: ВСЕ ячейки колонки получают маркер
+            // wsp-cell-off (толстый внешний контур полосы выходных);
+            // края полосы — по соседям (Сб+Вс подряд — один
+            // контур), низ — у последней строки таблицы
+            if (this._calDayOff(day)) {
+                classes.push('wsp-cell-off');
+                var dim = new Date(this._year, this._month, 0).getDate();
+                var prevOff = day > 1 && this._calDayOff(day - 1);
+                var nextOff = day < dim && this._calDayOff(day + 1);
+                if (!prevOff) classes.push('wsp-off-edge-l');
+                if (!nextOff) classes.push('wsp-off-edge-r');
+                if (isLastRow) classes.push('wsp-off-edge-b');
+            }
 
             var content = showMainCode ? this._esc(status) : '';
             if (isOvertime) content += '<i class="wsp-over"></i>';
-
-            // Task 361 (заявка: «сделай отображение на печати
-            // значков мероприятий в ячейках шахматки»): бейджи
-            // мероприятий в печати ВЕРНУТЫ (Task 343 их убирал).
-            // Формат — как в экранной сетке (Task 314/388): события
-            // дня из листа «Инструктажи» (_eventsAt) — ВСЕГДА сплошные
-            // бейджи с inline-цветом кода (Task 388: пунктирные
-            // wsp-ev-plan у пустой ячейки/плана отпуска удалены);
-            // статус-мероприятие (И/ОБ/ПЗ/ПР/*) без строки в
-            // «Инструктажах» — виртуальный бейдж, чтобы день не
-            // «потерял» мероприятие. Точка переработки — правый
-            // ВЕРХНИЙ угол, бейджи — правый нижний (без конфликтов)
-            var events = (typeof this._eventsAt === 'function')
-                ? (this._eventsAt(isoDate, emp['таб_номер']) || []) : [];
-            if (isEventStatus) {
-                var covered = false;
-                for (var ci = 0; ci < events.length; ci++) {
-                    if (events[ci].code === status) { covered = true; break; }
-                }
-                if (!covered) {
-                    events = events.concat([{ code: status, training: null }]);
-                }
-            }
-            var evHtml = '';
-            if (events.length) {
-                // Task 388: бейдж печати ВСЕГДА сплошной с цветом
-                // кода (как экранная сетка; прежде пустая/план
-                // ячейка давала пунктирный wsp-ev-plan без заливки)
-                var chips = '';
-                for (var evj = 0; evj < events.length; evj++) {
-                    var evMeta = this._statusMeta(events[evj].code) || {};
-                    chips += '<span class="wsp-ev"' +
-                             (evMeta.color ? ' style="background:' + evMeta.color + ';"' : '') +
-                             '>' + this._esc(events[evj].code) + '</span>';
-                }
-                evHtml = '<span class="wsp-ev-wrap">' + chips + '</span>';
-            }
             return '<td class="' + classes.join(' ') + '"' +
                    (style ? ' style="' + style + '"' : '') + '>' +
-                   content + evHtml + '</td>';
+                   content + '</td>';
         },
 
         // force (Task 314): true — сеть обязательно (кнопка «Обновить»
