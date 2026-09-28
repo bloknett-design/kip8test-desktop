@@ -4766,7 +4766,7 @@
            в одну строку; (2) КОДЫ — Task 434 (заявка: «коды
            на печати сделать в две колонки под названием
            "Коды:"»): заголовок «Коды:» сверху, под ним
-           ДВЕ-КОЛОНКИ .wsp-legend-cols (grid 1fr 1fr) до
+           ОДНА-КОЛОНКА .wsp-legend-cols (grid 1fr; Task 441) до
            конца листа, ПОД списком мероприятий; сноска
            wsp-foot — ниже обеих секций */
         #wsPrintSheet .wsp-bottom {
@@ -4844,11 +4844,12 @@
            строка-абзац «Коды: …» под списком мероприятий).
            Task 434 (заявка: «коды на печати сделать в ДВЕ
            КОЛОНКИ под названием "Коды:"»): заголовок «Коды:» —
-           ОТДЕЛЬНОЙ строкой СВЕРХУ, под ним сетка-ДВЕ-КОЛОНКИ
-           .wsp-legend-cols (grid 1fr 1fr) на всю ширину листа
-           ДО КОНЦА; каждая запись-код — своя строка колонки
-           (длинное наименование переносится ВНУТРИ колонки,
-           запись не рвётся между колонками/страницами) */
+           ОТДЕЛЬНОЙ строкой СВЕРХУ, под ним сетка .wsp-legend-cols;
+           Task 441 (заявка: «коды сделай в один столбец»):
+           ОДНА колонка (grid 1fr; прежде ДВЕ равные, Task 434)
+           на всю ширину блока кодов ДО КОНЦА; каждая запись-код
+           — своя строка (длинное наименование переносится
+           ВНУТРИ колонки, запись не рвётся между страницами) */
         #wsPrintSheet .wsp-legend {
             margin-top: 0;
             font-size: 11px;
@@ -4865,8 +4866,10 @@
         }
         #wsPrintSheet .wsp-legend-cols {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            column-gap: 6mm;
+            /* Task 441 (заявка: «коды сделай в один столбец»):
+               ОДНА колонка — прежде ДВЕ равные (Task 434);
+               межколоночный зазор снят — колонок больше нет */
+            grid-template-columns: 1fr;
             row-gap: 0.8mm;
             align-items: start;
         }
@@ -44351,8 +44354,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var contentH = H - 2 * M;
             var evList = (model.events || []).length
                 ? model.events : [{ placeholder: true }];
+            // Task 441 (заявка: «коды сделай в один столбец»):
+            // ОДНА колонка — строк на код не делим (прежде
+            // ДВЕ колонки: ceil(n/2) строк, Task 434/439)
             var codeRows = Math.max(1,
-                Math.ceil((model.codes || []).length / 2));
+                (model.codes || []).length);
             // оценка числа строк записи мероприятия (тексты
             // краткие — обычно 1 строка; оценка консервативная
             // ~4.6pt/символ, реальная укладка по словам — в
@@ -44813,8 +44819,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 y += lay.gapH;
             }
 
-            // коды — ПРАВАЯ зона, две колонки (как в печати,
-            // Task 434); общая верхняя линия с мероприятиями
+            // коды — ПРАВАЯ зона, ОДНА колонка (Task 441: «коды
+            // сделай в один столбец»; прежде две — Task 434);
+            // общая верхняя линия с мероприятиями
             if (page.codes) {
                 y = botY;
                 // Task 440: коды — за фактическим краем мероприятий
@@ -44828,12 +44835,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 ctx.font = '700 9px Arial';
                 ctx.fillText('Коды:', codeX, y + 8);
                 y += lay.secH;
-                var colW2 = codeW / 2;
-                var perCol = Math.max(1,
-                    Math.ceil(page.codes.length / 2));
+                // Task 441: ОДИН столбец — все коды друг под
+                // другом от codeX (прежде: две колонки со
+                // сдвигом colW2 и разбивкой perCol)
                 for (var lc = 0; lc < page.codes.length; lc++) {
-                    var lx = codeX + (lc < perCol ? 0 : colW2);
-                    var ly = y + (lc % perCol) * lay.codeRowH;
+                    var lx = codeX;
+                    var ly = y + lc * lay.codeRowH;
                     var code = page.codes[lc];
                     if (code.color) {
                         ctx.fillStyle = code.color;
@@ -45026,7 +45033,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // мероприятий»): секции — РЯДОМ: мероприятия в колонках
             // A (дата) + B (текст), коды — в колонке D (C — зазор),
             // заголовки «Мероприятия · …» и «Коды:» на одной строке;
-            // пустой месяц — заглушка в A (как в печати)
+            // пустой месяц — заглушка в A (как в печати).
+            // Task 441 (заявка: «коды сделай в один столбец»):
+            // коды — ОДИН столбец D (строка на код; двух
+            // колонок в Excel и не было — семантика сохранена)
             rows.push([]);
             var evRowsOut = [];
             if (model.events.length) {
@@ -45793,10 +45803,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // (как до Task 360; столбик Task 360–431 и флоат Task 432
             // сняты). Task 434 (заявка: «коды на печати сделать в
             // две колонки под названием "Коды:""): заголовок —
-            // ОТДЕЛЬНОЙ строкой, под ним ДВЕ КОЛОНКИ
-            // (.wsp-legend-cols, grid 1fr 1fr) на всю ширину листа:
-            // каждый код — своя строка колонки, длинное название
-            // переносится ВНУТРИ своей колонки (запись не рвётся)
+            // ОТДЕЛЬНОЙ строкой, под ним колонка кодов; Task 441 (заявка:
+            // «коды сделай в один столбец»): ОДНА колонка
+            // (.wsp-legend-cols, grid 1fr) на всю ширину блока:
+            // каждый код — своя строка, длинное название
+            // переносится ВНУТРИ колонки (запись не рвётся)
             var codes = this._STATUS_CODES || [];
             html += '<div class="wsp-legend"><span class="wsp-legend-t">Коды:</span>' +
                     '<div class="wsp-legend-cols">';
