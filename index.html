@@ -4774,17 +4774,28 @@
             /* Task 439 (заявка: «блок с кодами размести справа от
                мероприятий»): нижняя секция — ГИБКИЙ РЯД: список
                мероприятий слева (растягивается на остаток), блок
-               кодов — справа фиксированной ширины, зазор 6mm */
+               кодов — справа фиксированной ширины. Task 440 (заявка:
+               «коды справа от мероприятий на расстоянии друг от
+               друга 10px»): зазор между блоками — РОВНО 10px (прежде
+               6mm ≈ 23px) */
             display: flex;
             align-items: flex-start;
-            gap: 6mm;
+            gap: 10px;
         }
         #wsPrintSheet .wsp-mev {
             margin-top: 0;
             font-size: 11px;
             line-height: 1.6;
-            /* Task 439: мероприятия — ЛЕВАЯ часть ряда */
-            flex: 1 1 auto;
+            /* Task 431 → Task 440 (заявка: «коды справа от
+               мероприятий на расстоянии друг от друга 10px»; ранее
+               в 431 — «сейчас между ними очень большое расстояние»):
+               столбик мероприятий НЕ растягивается (flex-grow снят,
+               было 1 1 auto Task 439) — блок кодов встаёт в 10px от
+               ПРАВОГО КРАЯ ТЕКСТА мероприятий (самой широкой строки),
+               а не прижатым к правому краю листа; длинные тексты —
+               по-прежнему переносятся (зона усечена flex-shrink +
+               min-width: 0: лист − 92мм кодов − 10px зазор) */
+            flex: 0 1 auto;
             min-width: 0;
         }
         #wsPrintSheet .wsp-mev-t { font-weight: 700; }
@@ -42176,6 +42187,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _VACATIONS: [],
         _VAC_PAGE: [],
         _vacYear: null,
+        // Task 440: ПУЛ отпусков ПО ГОДАМ — {год: [записи]} для
+        // навигации ‹год› блока «Отпуска» карточки: год шахматки
+        // свежий (обновляет _loadVacations), соседние годы — лениво
+        // (_vacYearEnsure, окно ±3 года), живут в локальной копии
+        // (_cacheWrite/_restoreCachedView); CRUD/«Обновить» сбрасывают
+        _VAC_YEARS: {},
         // Task 392: СИЗ — средства индивидуальной защиты работников
         // (лист «СИЗ» табель_КИП_ИОС: наименование, дата выдачи,
         // срок годности, АВТО-дата окончания = выдача + срок,
@@ -43152,11 +43169,63 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     self._VACATIONS = data.vacations || [];
                     self._VAC_PAGE = self._VACATIONS;
                     self._vacYear = self._year;
+                    // Task 440: год шахматки в пуле годов — всегда
+                    // свежий (соседние годы — лениво, _vacYearEnsure)
+                    if (!self._VAC_YEARS) self._VAC_YEARS = {};
+                    self._VAC_YEARS[self._year] = self._VACATIONS;
                 })
                 .catch(function() {
                     self._VACATIONS = [];
                     self._VAC_PAGE = [];
+                    if (!self._VAC_YEARS) self._VAC_YEARS = {};
+                    self._VAC_YEARS[self._year] = [];
                 });
+        },
+
+        // Task 440: ленивая подгрузка СОСЕДНИХ годов отпусков для
+        // навигации ‹год› блока «Отпуска» (сервер listVacations отдаёт
+        // план ТОЛЬКО по одному году): недостающие годы тянутся
+        // ПАРАЛЛЕЛЬНО и складываются в пул _VAC_YEARS; год уже в пуле
+        // или уже качается — пропускается (повторный рендер не
+        // зацикливается); ошибка года = «известно пусто» (стрелки по
+        // факту, без спама повторными запросами). Возврат —
+        // Promise<boolean>: подтянулись ли НОВЫЕ годы (звавший может
+        // перерисовать страницу «Работники» — стрелки по записям)
+        _vacYearEnsure: function(years) {
+            var self = this;
+            if (!this._VAC_YEARS) this._VAC_YEARS = {};
+            if (!this._VAC_FETCHING) this._VAC_FETCHING = {};
+            var need = [];
+            for (var i = 0; i < (years || []).length; i++) {
+                var y = parseInt(years[i], 10);
+                if (!y || y < 1900 || y > 2999) continue;
+                if (this._VAC_YEARS[y] || this._VAC_FETCHING[y]) continue;
+                if (!this._api) continue;
+                need.push(y);
+            }
+            if (!need.length) return Promise.resolve(false);
+            var got = false;
+            var jobs = [];
+            for (var j = 0; j < need.length; j++) {
+                (function(year) {
+                    self._VAC_FETCHING[year] = true;
+                    jobs.push(self._api('workSchedule.listVacations',
+                                        { year: year })
+                        .then(function(data) {
+                            self._VAC_YEARS[year] =
+                                (data && data.vacations) || [];
+                            got = true;
+                        })
+                        .catch(function() {
+                            self._VAC_YEARS[year] = [];
+                            got = true;
+                        })
+                        .then(function() {
+                            delete self._VAC_FETCHING[year];
+                        }));
+                })(need[j]);
+            }
+            return Promise.all(jobs).then(function() { return got; });
         },
 
         // Task 392: СИЗ работников (лист «СИЗ» табель_КИП_ИОС) —
@@ -43233,6 +43302,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._VACATIONS = vacs;
             this._VAC_PAGE = vacs;
             this._vacYear = this._year;
+            // Task 440: пул годов отпусков — ВСЕ годы локальной копии
+            // (соседние годы прошлых сессий сразу дают правильные
+            // стрелки ‹› блока «Отпуска» без сети)
+            this._VAC_YEARS = {};
+            var cVac = c.vacations || {};
+            for (var cvy in cVac) {
+                if (cVac.hasOwnProperty(cvy) && Array.isArray(cVac[cvy])) {
+                    this._VAC_YEARS[parseInt(cvy, 10)] = cVac[cvy];
+                }
+            }
             // Task 392: СИЗ — в кэше прошлых версий поля ppe могло
             // не быть (до Task 392) — пустой список, до серверного
             // деплоя он и будет пустым
@@ -43269,6 +43348,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 c.employees = this._EMPLOYEES;
                 if (!c.vacations || typeof c.vacations !== 'object') c.vacations = {};
                 c.vacations[String(this._year)] = this._VACATIONS;
+                // Task 440: соседние годы пула отпусков (навигация
+                // блока «Отпуска») — тоже в локальную копию
+                var poolW = this._VAC_YEARS || {};
+                for (var py in poolW) {
+                    if (poolW.hasOwnProperty(py) && poolW[py]) {
+                        c.vacations[py] = poolW[py];
+                    }
+                }
                 // Task 392: СИЗ — единый список (не по годам)
                 c.ppe = this._PPE;
                 // Task 407: шаблон инструктажей + все записи
@@ -44255,9 +44342,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var codeRowH = opts.codeRowH || 14;
             var gapH = opts.gapH || 8;
             // Task 439: коды — СПРАВА от мероприятий: ширина
-            // правой зоны кодов и зазор между блоками
+            // правой зоны кодов и зазор между блоками. Task 440
+            // (заявка: «на расстоянии друг от друга 10px»): зазор
+            // 12pt → 7.5pt — РОВНО 10 CSS-px (1px = 0.75pt), как в
+            // печатной HTML-форме (gap: 10px)
             var codeW = opts.codeW || 235;
-            var colGap = opts.colGap || 12;
+            var colGap = opts.colGap || 7.5;
             var contentH = H - 2 * M;
             var evList = (model.events || []).length
                 ? model.events : [{ placeholder: true }];
@@ -44638,19 +44728,29 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // (codeX..правый край), заголовки блоков на одной
             // верхней линии
             var codeW = lay.codeW || 235;
-            var colGap = lay.colGap || 12;
+            // Task 440: зазор мероприятий↔коды — 7.5pt (= 10px)
+            var colGap = lay.colGap || 7.5;
             var evZoneW = CW - codeW - colGap;
-            var codeX = x0 + CW - codeW;
+            // Task 440 (как в HTML flex 0 1 auto): блок кодов — за
+            // ФАКТИЧЕСКИМ правым краем строк мероприятий (+colGap),
+            // не прижат к правому краю листа; страницы без
+            // мероприятий — коды от левого края (+colGap);
+            // кодыX вычисляется ПОСЛЕ отрисовки мероприятий
+            // (evRightMax), ограничение — правый край листа
+            var codeX = x0 + colGap;
+            var evRightMax = 0;
             var botY = y;
             // мероприятия (заголовок — как в печати: счётчик месяца)
             if (page.events) {
                 ctx.fillStyle = '#1b1f24';
                 ctx.font = '700 9px Arial';
-                ctx.fillText('Мероприятия · ' +
+                var evHead = 'Мероприятия · ' +
                              monthsNom[model.month - 1] + ' ' + model.year +
                              (model.events.length
-                                 ? ' · ' + model.events.length : ''),
-                             x0, y + 8);
+                                 ? ' · ' + model.events.length : '');
+                ctx.fillText(evHead, x0, y + 8);
+                evRightMax = Math.max(evRightMax,
+                    x0 + ctx.measureText(evHead).width);
                 y += lay.secH;
                 var evs = page.events.length ? page.events
                     : [{ range: '', color: '',
@@ -44695,11 +44795,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             evLine = evCand;
                         } else {
                             ctx.fillText(evLine, ex, evLy);
+                            evRightMax = Math.max(evRightMax,
+                                ex + ctx.measureText(evLine).width);
                             evLy += lay.evRowH;
                             evLine = evWords[ewi];
                         }
                     }
-                    if (evLine) ctx.fillText(evLine, ex, evLy);
+                    if (evLine) {
+                        ctx.fillText(evLine, ex, evLy);
+                        evRightMax = Math.max(evRightMax,
+                            ex + ctx.measureText(evLine).width);
+                    }
                     // шаг — по ФАКТИЧЕСКИ уложенным строкам
                     y += lay.evRowH *
                          (1 + Math.round((evLy - (y + 7)) / lay.evRowH));
@@ -44711,6 +44817,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Task 434); общая верхняя линия с мероприятиями
             if (page.codes) {
                 y = botY;
+                // Task 440: коды — за фактическим краем мероприятий
+                // (в пределах листа); лист пуст от мероприятий — от
+                // левого края (+colGap)
+                if (page.events && evRightMax > 0) {
+                    codeX = Math.min(evRightMax + colGap,
+                                     x0 + CW - codeW);
+                }
                 ctx.fillStyle = '#1b1f24';
                 ctx.font = '700 9px Arial';
                 ctx.fillText('Коды:', codeX, y + 8);
@@ -44810,6 +44923,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                   '<alignment wrapText="1" vertical="top"/></xf>';
             xf += '<xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1">' +
                   '<alignment horizontal="center"/></xf>';
+            // Task 440 (заявка: «коды справа от мероприятий на
+            // расстоянии друг от друга 10px»): Excel-эквивалент
+            // зазора — ОТСТУП indent="1" (~7px = ширина символа
+            // Arial 11) у ячеек КОДОВ в колонке D: текст мероприятий
+            // (A/B) переполнением через пустую C обрезается у левой
+            // кромки D, а текст кодов начинается на ~7px ПРАВЕЕ
+            // кромки — видимый зазор между блоками (10px точно
+            // недостижимы: колонка-разделитель C общая с сеткой дней
+            // табеля, сузить её нельзя). Стиль 7 — строка кода,
+            // стиль 8 — заголовок «Коды:» (шапка как s=1 + отступ)
+            xf += '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1">' +
+                  '<alignment horizontal="left" indent="1"/></xf>';
+            xf += '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1">' +
+                  '<alignment horizontal="left" indent="1"/></xf>';
             for (var k = 0; k < colors.length; k++) {
                 xf += '<xf numFmtId="0" fontId="0" fillId="' + (3 + k) +
                       '" borderId="1" xfId="0" applyFill="1" ' +
@@ -44831,7 +44958,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 '<cellStyleXfs count="1">' +
                 '<xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>' +
                 '</cellStyleXfs>' +
-                '<cellXfs count="' + (7 + colors.length) + '">' + xf +
+                '<cellXfs count="' + (9 + colors.length) + '">' + xf +
                 '</cellXfs>' +
                 '<cellStyles count="1">' +
                 '<cellStyle name="Normal" xfId="0" builtinId="0"/>' +
@@ -44881,8 +45008,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     if (cell.status && cell.color) {
                         var col = String(cell.color).replace('#', '')
                                     .toUpperCase();
+                        // Task 440: база цветных стилей 9 (7/8 —
+                        // коды с indent)
                         if (colorIdx[col] !== undefined) {
-                            st = 7 + colorIdx[col];
+                            st = 9 + colorIdx[col];
                         }
                     }
                     line.push({ v: cell.status || '', s: st });
@@ -44921,14 +45050,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                          monthsNom[model.month - 1] + ' ' + model.year +
                          (model.events.length
                              ? ' · ' + model.events.length : ''), s: 1 },
-                       null, null, { v: 'Коды:', s: 1 }]);
+                       null, null, { v: 'Коды:', s: 8 }]);
             for (var b = 0; b < botRows; b++) {
                 var bev = evRowsOut[b];
                 rows.push([bev ? { v: bev.a || '', s: bev.as } : null,
                            bev && bev.b ? { v: bev.b, s: bev.bs } : null,
                            null,
                            codeLines[b] !== undefined
-                               ? { v: codeLines[b], s: 0 } : null]);
+                               ? { v: codeLines[b], s: 7 } : null]);
             }
             return rows;
         },
@@ -45819,7 +45948,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // увольнение/сотрудник/генерация) — годовой кэш итогов
             // устарел: сбрасываем, вкладка «Год» перезагрузится при
             // следующем показе
-            if (force) this._YEAR_DATA = null;
+            if (force) {
+                this._YEAR_DATA = null;
+                // Task 440: соседние годы пула отпусков могли
+                // измениться (CRUD отпусков / «Обновить») — сброс;
+                // подтянутся заново при следующем рендере страницы
+                // «Работники» (_vacYearEnsure)
+                this._VAC_YEARS = {};
+            }
             if (!force && this._restoreCachedView()) {
                 this._renderGrid();
                 // Task 260: чип норм месяца в тулбаре
@@ -50371,12 +50507,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             //     «Отпуска»; _VACATIONS уже отфильтрованы по году
             //     сервером listVacations, дополнительно сверяем
             //     пересечение с годом — период 29.12–11.01 попадает
-            //     в оба, дни года считает _vacDaysInYear) ---
+            //     в оба, дни года считает _vacDaysInYear).
+            //     Task 440 (заявка: «такой же функционал просмотра
+            //     предыдущего или следующего годов … в блоках Отпуска
+            //     и Мероприятия»): у блока — СВОИ стрелки ‹год› (fam 2,
+            //     хранилище _wtabYearVac): год просмотра не зависит от
+            //     шахматки и соседних блоков; записи — пул годов
+            //     _VAC_YEARS (год шахматки — свежий _VACATIONS,
+            //     соседние годы — listVacations по году, лениво,
+            //     _vacYearEnsure); попап ячейки — по-прежнему год
+            //     шахматки, без навигатора ---
+            var wYearVac = asBlocks ? this._wtabYearOf(tabNo, 2)
+                                    : this._year;
+            var vacPoolYear = ((this._VAC_YEARS || {})[wYearVac]) ||
+                (wYearVac === this._year ? (this._VACATIONS || []) : []);
             var vacs = [];
-            for (var vi = 0; vi < (this._VACATIONS || []).length; vi++) {
-                var v = this._VACATIONS[vi];
+            for (var vi = 0; vi < vacPoolYear.length; vi++) {
+                var v = vacPoolYear[vi];
                 if (v['таб_номер'] !== tabNo) continue;
-                if (this._vacDaysInYear(v, this._year) <= 0) continue;
+                if (this._vacDaysInYear(v, wYearVac) <= 0) continue;
                 vacs.push(v);
             }
             vacs.sort(function(a, b) {
@@ -50388,7 +50537,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // .ws-popup-sec, строка добавления — внизу блока
             var b2 = asBlocks
                 ? '<div class="ws-whead"><div class="ws-whead-t">Отпуска · ' +
-                  this._year + '</div><div class="ws-whead-a">' +
+                  wYearVac + this._wtabYearNav(tabNo, wYearVac, 2) +
+                  '</div><div class="ws-whead-a">' +
                   (withEdit ? '<button type="button" class="ws-wbtn ws-emp-addvac"' +
                   ' title="Добавить период отпуска этому работнику"' +
                   ' onclick="WorkSchedule.onEmpAddVacation(\'' +
@@ -50400,8 +50550,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             } else {
                 for (var vk = 0; vk < vacs.length; vk++) {
                     var vv = vacs[vk];
-                    var vNet = this._vacNetDaysInYear(vv, this._year);
-                    var vCal = this._vacDaysInYear(vv, this._year);
+                    // Task 440: дни периода — по ГОДУ БЛОКА (не году
+                    // шахматки): архивный год считает свои дни
+                    var vNet = this._vacNetDaysInYear(vv, wYearVac);
+                    var vCal = this._vacDaysInYear(vv, wYearVac);
                     var pNo = parseInt(vv.часть, 10);
                     // Task 384: ✎ — правка периода (шторка «Правка
                     // отпуска», сервер updateVacation), ✕ — удаление
@@ -50821,9 +50973,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // строка срока, без красного «просрочено»
         // Task 435: fam 1 — год блока «Повторные инструктажи…»
         // (хранилище _wtabYearInstr), fam 0/не задан — год блока
-        // «Мероприятия» (хранилище _wtabYear, прежнее поведение)
+        // «Мероприятия» (хранилище _wtabYear, прежнее поведение).
+        // Task 440: fam 2 — год блока «Отпуска» (хранилище
+        // _wtabYearVac) — третий независимый год карточки
         _wtabYearOf: function(tabNo, fam) {
-            var store = (fam === 1) ? this._wtabYearInstr : this._wtabYear;
+            var store = (fam === 1) ? this._wtabYearInstr
+                       : (fam === 2) ? this._wtabYearVac : this._wtabYear;
             var y = store && store[String(tabNo)];
             y = parseInt(y, 10);
             if (y && y >= 1900 && y <= 2999) return y;
@@ -50838,6 +50993,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // fam не задан — по всем записям (попап, прежнее поведение)
         _wtabYearMin: function(tabNo, fam) {
             tabNo = String(tabNo);
+            // Task 440: fam 2 — блок «Отпуска»: нижняя граница по
+            // годам пула _VAC_YEARS с записями работника (сервер
+            // listVacations отдаёт план по ОДНОМУ году — пул
+            // собирается соседними годами, _vacYearEnsure)
+            if (fam === 2) {
+                var vr = this._vacYearRange(tabNo);
+                return vr ? vr.min
+                    : (this._year || new Date().getFullYear());
+            }
             var famFilter = (fam === 0 || fam === 1);
             var wantInstr = (fam === 1);
             var min = null;
@@ -50858,6 +51022,72 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return min || (this._year || new Date().getFullYear());
         },
 
+        // Task 440: годы с записями ОТПУСКОВ работника в пуле
+        // _VAC_YEARS (listVacations по одному году — пул собирает
+        // соседние годы лениво, _vacYearEnsure): {min, max} или null,
+        // если записей работника в известных годах нет. Пересечение
+        // года и периода — _vacDaysInYear (период через границу года
+        // попадает в оба года, как на сервере)
+        _vacYearRange: function(tabNo) {
+            tabNo = String(tabNo);
+            var pool = this._VAC_YEARS || {};
+            var min = null, max = null;
+            for (var vy in pool) {
+                if (!pool.hasOwnProperty(vy)) continue;
+                var y = parseInt(vy, 10);
+                if (!y) continue;
+                var arr = pool[vy] || [];
+                for (var i = 0; i < arr.length; i++) {
+                    if (String(arr[i]['таб_номер']) !== tabNo) continue;
+                    if (this._vacDaysInYear(arr[i], y) <= 0) continue;
+                    if (min === null || y < min) min = y;
+                    if (max === null || y > max) max = y;
+                }
+            }
+            return (min === null) ? null : { min: min, max: max };
+        },
+
+        // Task 440 (заявка: «не активна кнопка просмотра следующего
+        // года, если в таблице Инструктажи … есть записи на следующий
+        // год, а на предыдущий год при наличии записей активна»):
+        // ВЕРХНЯЯ граница навигации — по ЗАПИСАМ раздела (симметрично
+        // нижней _wtabYearMin): самый поздний год записи работника;
+        // учитывает и дата_окончания — период 27.12.2026–15.01.2027
+        // открывает и следующий год. fam 0/1 — instrAll/eventsAll/
+        // trainings с фильтром СВОЕГО раздела (как _wtabYearMin),
+        // fam 2 — пул отпусков _vacYearRange, fam не задан — все
+        // записи; нет записей — null (звавший подставляет текущий и
+        // год табеля)
+        _wtabYearMax: function(tabNo, fam) {
+            tabNo = String(tabNo);
+            if (fam === 2) {
+                var vr2 = this._vacYearRange(tabNo);
+                return vr2 ? vr2.max : null;
+            }
+            var famFilter = (fam === 0 || fam === 1);
+            var wantInstr = (fam === 1);
+            var max = null;
+            var pools = [this._INSTR_ALL, this._EVENTS_ALL,
+                         this._TRAININGS];
+            for (var p = 0; p < pools.length; p++) {
+                var arr = pools[p] || [];
+                for (var i = 0; i < arr.length; i++) {
+                    if (String(arr[i]['таб_номер']) !== tabNo) continue;
+                    if (famFilter &&
+                        (this._isInstrType(arr[i].тип) !== wantInstr)) continue;
+                    var sM = String(arr[i].дата_начала || '');
+                    var eM = String(arr[i].дата_окончания || sM);
+                    var yS = sM.length >= 4
+                        ? parseInt(sM.slice(0, 4), 10) : 0;
+                    var yE = eM.length >= 4
+                        ? parseInt(eM.slice(0, 4), 10) : 0;
+                    var y = Math.max(yS || 0, yE || 0);
+                    if (y && (max === null || y > max)) max = y;
+                }
+            }
+            return max;
+        },
+
         // стрелка ‹/› — смена года работника и перерисовка страницы
         // «Работники»; границы клампятся (раньше записей нельзя,
         // выше максимума(текущий; год табеля) нельзя); возврат к
@@ -50871,10 +51101,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var now = new Date().getFullYear();
             var y = this._wtabYearOf(tabNo, fam) + (delta || 0);
             var min = this._wtabYearMin(tabNo, fam);
-            var max = Math.max(now, this._year || now);
+            // Task 440: верх — и по ЗАПИСЯМ раздела (кнопка › активна,
+            // когда есть записи следующего года — заявка «не активна
+            // кнопка просмотра следующего года…»)
+            var max = Math.max(now, this._year || now,
+                               this._wtabYearMax(tabNo, fam) || 0);
             if (y < min) y = min;
             if (y > max) y = max;
-            var store = (fam === 1) ? '_wtabYearInstr' : '_wtabYear';
+            var store = (fam === 1) ? '_wtabYearInstr'
+                       : (fam === 2) ? '_wtabYearVac' : '_wtabYear';
             if (!this[store]) this[store] = {};
             if (y === (this._year || now)) delete this[store][tabNo];
             else this[store][tabNo] = y;
@@ -50891,8 +51126,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _wtabYearNav: function(tabNo, year, fam) {
             var min = this._wtabYearMin(tabNo, fam);
             var now = new Date().getFullYear();
-            var max = Math.max(now, this._year || now);
-            var famArg = (fam === 1) ? ', 1' : '';
+            // Task 440: правая стрелка активна и при записях
+            // СЛЕДУЮЩЕГО года (верх — по записям раздела), не только
+            // до текущего/года табеля
+            var max = Math.max(now, this._year || now,
+                               this._wtabYearMax(tabNo, fam) || 0);
+            var famArg = (fam === 1 || fam === 2) ? ', ' + fam : '';
             var left = (year > min)
                 ? '<span class="ws-ynav-btn" role="button" title="Предыдущий год"' +
                   ' onclick="event.stopPropagation(); WorkSchedule._wtabYearShift(\'' +
@@ -51183,9 +51422,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // (стрелки ‹год›; не выбран — год шахматки). Task 435: годы
         // блоков РАЗДЕЛЬНЫЕ — «Мероприятия» (_wtabYear, fam 0) и
         // «Повторные инструктажи…» (_wtabYearInstr, fam 1) не
-        // влияют друг на друга
+        // влияют друг на друга. Task 440: + «Отпуска» (fam 2,
+        // _wtabYearVac) — третий независимый год (заявка: «такой же
+        // функционал просмотра предыдущего или следующего годов … в
+        // блоках Отпуска и Мероприятия»)
         _wtabYear: {},
         _wtabYearInstr: {},
+        _wtabYearVac: {},
 
         // клик по ярлыку вкладки (inline onclick ярлыка): выбор
         // вкладки + перерисовка страницы
@@ -51227,6 +51470,28 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
             }
             if (!found) { tab = 'general'; this._workersTab = 'general'; }
+
+            // Task 440: навигация ‹год› блока «Отпуска» — границы
+            // стрелок по записям серверной таблицы «Отпуска»: сервер
+            // отдаёт план по одному году — при показе КАРТОЧКИ лениво
+            // подтягиваем окно [год табеля ±3] и соседей выбранного
+            // года работника; подтянулись новые годы — перерисовка
+            // (стрелки по факту записей; повторный проход найдёт все
+            // годы в пуле — цикла нет)
+            if (tab !== 'general' && this._api &&
+                typeof this._wtabYearOf === 'function' &&
+                typeof this._vacYearEnsure === 'function') {
+                var vacNeed = [];
+                for (var vy2 = this._year - 3; vy2 <= this._year + 3; vy2++) {
+                    vacNeed.push(vy2);
+                }
+                var navVacY = this._wtabYearOf(tab, 2);
+                vacNeed.push(navVacY - 1, navVacY + 1);
+                var selfVac = this;
+                this._vacYearEnsure(vacNeed).then(function(got) {
+                    if (got) selfVac._renderWorkersPage();
+                });
+            }
 
             // ярлыки-вкладки: «Общая» + работники по фамильно
             var tabsHtml = '<button type="button" class="ws-wtab ws-wtab-general' +
