@@ -6787,7 +6787,8 @@
     /* Task 430 (заявка: «в общей карте работников добавь кнопку
        сохранить архив, при нажатии на которую весь архив по
        работникам должен сохраняться в формате таблицы excel»):
-       кнопка «Сохранить архив» — ВТОРАЯ в ряду действий шапки
+       кнопка «Скачать архив» (Task 445 — прежде «Сохранить архив»)
+       — ВТОРАЯ в ряду действий шапки
        «Общей» вкладки (рядом с «Добавить работника», контейнер
        .ws-wgen-actions). В отличие от акцентной «Добавить» —
        ВТОРИЧНАЯ контурная: выгрузка архива — фича ПРОСМОТРА,
@@ -7021,6 +7022,14 @@
         font-size: 14px;
         font-weight: 600;
         opacity: 0.95;
+    }
+    /* Task 445: скролл-обёртка сводной таблицы — на узких
+       экранах (мобайл) таблица ШИРЕ вьюпорта: свайп по горизонтали
+       (прежде колонки справа были недостижимы — обрезка); на
+       десктопе таблица помещается — скроллбар не возникает */
+    .ws-wgen-tscroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
     .ws-wgen-table {
         width: 100%;
@@ -51497,9 +51506,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Task 388: ОБЩАЯ вкладка — сводная информация по ВСЕМ
         // работникам (по фамильно по алфавиту): таб. №, ФИО, режим
-        // работы (тип/смена), должность, дата приёма, отпуск года
-        // («чистые» дни — праздники ст. 120 ТК РФ вычтены) и число
-        // мероприятий ГОДА (Task 394: годовой список listTrainings).
+        // работы (тип/смена), должность, дата приёма. Task 445
+        // (заявка): колонки отпуска/мероприятий/инструктажей года
+        // УДАЛЕНЫ (прежде — «чистые» дни отпуска и счётчики записей
+        // года, Tasks 394/405); в «Группе допуска» — дата последней
+        // проверки до 1000 В, как в профиле карточки.
         // Task 389 (заявка): кнопка «Добавить работника» ПЕРЕНЕСЕНА
         // сюда из шапки страницы (id wsWorkersAddBtn сохранён;
         // только у редакторов — _canEdit).
@@ -51536,13 +51547,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // СКОБОК — «Работников на текущий момент 12 (2 мастера,
             // 5 дневных, 5 сменных).» (заявка: «12 без скобок»)
             var totalN = masterN + dayN + shiftN;
-            // Task 430 (заявка): «Сохранить архив» — вторая кнопка
-            // действий шапки (контурная): выгрузка архива по всем
-            // работникам в Excel (фича просмотра — видна уровням
-            // edit И view, как «Печать»; контейнер .ws-wgen-actions
-            // держит кнопки шапки рядом, flex-wrap шапки переносит
-            // их вместе)
-            var archBtn = '<button type="button" id="wsWorkersArchiveBtn" class="ws-workers-archive" onclick="WorkSchedule.saveWorkersArchive()" aria-label="Сохранить архив по работникам в Excel" title="Весь архив по работникам (инструктажи + мероприятия, все годы) — файл Excel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" fill="currentColor"/></svg>Сохранить архив</button>';
+            // Task 430 (заявка): «Скачать архив» (Task 445 —
+            // прежде «Сохранить архив») — вторая кнопка действий
+            // шапки (контурная): выгрузка архива по работникам в
+            // Excel (фича просмотра — видна уровням edit И view, как
+            // «Печать»; контейнер .ws-wgen-actions держит кнопки
+            // шапки рядом, flex-wrap шапки переносит их вместе).
+            // Task 445 (заявка): книга — ПЯТЬ листов: «Работники» /
+            // «Отпуска» (предыдущий + текущий годы) / «Инструктажи»
+            // (предыдущий + текущий + следующий годы) / «СИЗ» /
+            // «Мероприятия» (текущий год) — годы относительно
+            // ТЕКУЩЕГО календарного года
+            var archBtn = '<button type="button" id="wsWorkersArchiveBtn" class="ws-workers-archive" onclick="WorkSchedule.saveWorkersArchive()" aria-label="Скачать архив по работникам в Excel" title="Архив по работникам в Excel — листы: Работники, Отпуска (предыдущий и текущий годы), Инструктажи (предыдущий, текущий и следующий годы), СИЗ, Мероприятия (текущий год)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" fill="currentColor"/></svg>Скачать архив</button>';
             var addBtn = this._canEdit
                 ? '<button type="button" id="wsWorkersAddBtn" class="ws-workers-add" onclick="WorkSchedule.openEmployeeForm()" aria-label="Добавить работника">Добавить работника</button>'
                 : '';
@@ -51562,13 +51578,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 html += '<div class="ws-tt-empty">Нет активных работников — добавьте первого кнопкой «Добавить работника».</div>';
                 return html;
             }
-            html += '<table class="ws-wgen-table"><thead><tr>' +
+            // Task 445 (заявка): колонки «Отпуск · год» /
+            // «Мероприятия · год» / «Инструктажи · год» УДАЛЕНЫ —
+            // сводка стала компактнее (6 колонок), события/отпуска
+            // смотрят в карточках и в листах архива Excel
+            html += '<div class="ws-wgen-tscroll">' +
+                    '<table class="ws-wgen-table"><thead><tr>' +
                     '<th>Таб. №</th><th>ФИО</th><th>Режим работы</th>' +
                     '<th>Должность</th><th>Группа допуска</th>' +
                     '<th>Дата приёма</th>' +
-                    '<th>Отпуск · ' + this._year + '</th>' +
-                    '<th>Мероприятия · ' + this._year + '</th>' +
-                    '<th>Инструктажи · ' + this._year + '</th>' +
                     '</tr></thead><tbody>';
             for (var i = 0; i < list.length; i++) {
                 var emp = list[i];
@@ -51577,33 +51595,28 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var tipVal = tip === 'сменный'
                     ? ('сменный' + (smena >= 1 && smena <= 5 ? ', смена №' + smena : ''))
                     : (tip || '—');
-                var vacDays = 0;
-                for (var vi = 0; vi < (this._VACATIONS || []).length; vi++) {
-                    var v = this._VACATIONS[vi];
-                    if (v['таб_номер'] !== emp['таб_номер']) continue;
-                    vacDays += this._vacNetDaysInYear(v, this._year);
+                // Task 445 (заявка): в колонке «Группа допуска»
+                // СПРАВА от знака группы — дата последней выполненной
+                // «проверки знаний до 1000 В» в формате «от дд.мм.гггг»
+                // («IV от 15.03.2026»), ТАК ЖЕ, как в блоке профиля
+                // карточки работника (Task 434): нет выполненной
+                // проверки — только знак группы; нет группы — «—»
+                var grpVal = String(emp['группа_допуска'] || '').trim();
+                if (grpVal) {
+                    var examIso = this._lastExam1000Date(emp['таб_номер']);
+                    if (examIso) grpVal += ' от ' + this._fmtDateRu(examIso);
                 }
-                // Task 405 (разделение таблицы): «Мероприятия» —
-                // только обучение/примечание/прогул; инструктажи и
-                // проверки знаний — своя колонка «Инструктажи · год»
-                var trN = 0, insN = 0;
-                for (var ti = 0; ti < (this._TRAININGS || []).length; ti++) {
-                    if (this._TRAININGS[ti]['таб_номер'] !== emp['таб_номер']) continue;
-                    if (this._isInstrType(this._TRAININGS[ti].тип)) insN++;
-                    else trN++;
-                }
+                // Task 445: колонки отпуска/мероприятий/инструктажей
+                // удалены (заявка) — их данные в карточках и в листах
+                // архива Excel
                 html += '<tr><td>' + this._esc(emp['таб_номер']) + '</td>' +
                         '<td class="ws-wgen-fio">' + this._esc(emp['ФИО']) + '</td>' +
                         '<td>' + this._esc(tipVal) + '</td>' +
                         '<td>' + this._esc(String(emp['должность'] || '').trim() || '—') + '</td>' +
-                        '<td>' + this._esc(String(emp['группа_допуска'] || '').trim() || '—') + '</td>' +
-                        '<td>' + (emp['дата_приёма'] ? this._fmtDateRu(emp['дата_приёма']) : '—') + '</td>' +
-                        '<td>' + (vacDays ? vacDays + ' ' +
-                            this._plural(vacDays, ['день', 'дня', 'дней']) : '—') + '</td>' +
-                        '<td>' + (trN || '—') + '</td>' +
-                        '<td>' + (insN || '—') + '</td></tr>';
+                        '<td>' + this._esc(grpVal || '—') + '</td>' +
+                        '<td>' + (emp['дата_приёма'] ? this._fmtDateRu(emp['дата_приёма']) : '—') + '</td></tr>';
             }
-            html += '</tbody></table>';
+            html += '</tbody></table></div>';
             // Task 390: сноска «Сводка по всем работникам…» удалена
             // (заявка) — категории теперь в шапке сводки
             return html;
@@ -51620,17 +51633,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // (не sharedStrings — меньше файлов), шапки жирным на синем
         // (styles.xml с 2 cellXfs), ширины колонок, закреплённая
         // строка заголовков. Данные — уже загруженные пулы карточки:
-        // _EMPLOYEES (справочник) + _INSTR_ALL (все «Инструктажи»,
-        // Task 407) + _EVENTS_ALL (все «Мероприятия», Task 408) +
-        // годовой срез _TRAININGS (старый сервер без eventsAll);
-        // дедуп — по СЕМЕЙСТВУ типа (Task 427: i+id / e+id), как
-        // в _wtabYearRecords. КНИГА = ТРИ листа (независимые разделы
-        // — по правилу Task 429 раздельно):
-        //   1) «Работники» — справочник (таб/ФИО/тип/смена/
-        //      должность/группа допуска/дата приёма);
-        //   2) «Инструктажи» — ВСЕ записи всех лет (+дата проведения/
-        //      выполнение/просрочен, Task 418);
-        //   3) «Мероприятия» — ВСЕ записи всех лет (период/
+        // _EMPLOYEES (справочник) + _VAC_YEARS (план отпусков по
+        // годам, Task 440) + _INSTR_ALL (все «Инструктажи», Task 407)
+        // + _EVENTS_ALL (все «Мероприятия», Task 408) + _PPE (все
+        // «СИЗ», Task 392) + годовой срез _TRAININGS (старый сервер
+        // без eventsAll); дедуп — по СЕМЕЙСТВУ типа (Task 427:
+        // i+id / e+id), как в _wtabYearRecords. Task 445 (заявка):
+        // КНИГА = ПЯТЬ листов, годы записей — относительно ТЕКУЩЕГО
+        // календарного года (не года шахматки):
+        //   1) «Работники» — справочник профилей (таб/ФИО/тип/смена/
+        //      должность/группа допуска/дата приёма) — без фильтра;
+        //   2) «Отпуска» — даты отпусков ПРЕДЫДУЩЕГО и ТЕКУЩЕГО
+        //      годов (пул _VAC_YEARS; соседние годы лениво
+        //      подтягивает saveWorkersArchive через _vacYearEnsure);
+        //   3) «Инструктажи» — инструктажи и проверки знаний
+        //      ПРЕДЫДУЩЕГО + ТЕКУЩЕГО + СЛЕДУЮЩЕГО годов (+дата
+        //      проведения/выполнение/просрочен, Task 418);
+        //   4) «СИЗ» — ВСЕ записи (выдача/изготовление/срок/
+        //      окончание/примечание, Tasks 392/443);
+        //   5) «Мероприятия» — ТОЛЬКО ТЕКУЩИЙ год (период/
         //      длительность).
         // Записи без id и без даты — пропускаются (мусорные строки
         // листа не читаются сервером). VM-тесты зовут
@@ -51851,7 +51872,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // СБОРКА ДАННЫХ АРХИВА (чистая функция — без DOM, для
-        // VM-тестов): три набора строк (шапка + данные)
+        // VM-тестов): ПЯТЬ наборов строк (шапка + данные), Task 445
         _workersArchiveData: function() {
             var list = (this._EMPLOYEES || []).slice().sort(function(a, b) {
                 return String(a['ФИО'] || '').localeCompare(
@@ -51869,13 +51890,77 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var p = String(iso || '').split('-');
                 return p.length === 3 ? (p[2] + '.' + p[1] + '.' + p[0]) : '';
             };
-            // единый пул записей (как _wtabYearRecords, но БЕЗ
-            // фильтра года — ВЕСЬ архив всех лет); дедуп по
-            // семейству типа (Task 427: раздельные id листов)
+            // Task 445: годы архива — ТЕКУЩИЙ календарный год (не год
+            // шахматки): отпуска — предыдущий+текущий, инструктажи —
+            // предыдущий+текущий+следующий, мероприятия — текущий
+            var nowY = new Date().getFullYear();
+            var prevY = nowY - 1, nextY = nowY + 1;
+            // --- Лист «Отпуска» (Task 445): план ПРЕДЫДУЩЕГО и
+            // ТЕКУЩЕГО годов. Сервер listVacations отдаёт план ПО
+            // ОДНОМУ году — годы берутся из пула _VAC_YEARS (соседние
+            // годы лениво подтягивает saveWorkersArchive ДО сборки
+            // книги); период через границу года входит в списки ОБЕИХ
+            // лет — дедуп по id / v-ключу. Год шахматки (_VACATIONS +
+            // _vacYear) — резервный источник, если в пуле года ещё нет
+            var vacSeen = {}, vacs = [];
+            var vacPush = function(v) {
+                if (!v || !v['дата_начала']) return;
+                var vId = parseInt(v.id, 10);
+                var vk = vId
+                    ? ('v' + vId)
+                    : ('v' + String(v['таб_номер'] || '') + '|' +
+                       String(v['дата_начала']) + '|' +
+                       String(v['дата_окончания'] || v['дата_начала']));
+                if (vacSeen[vk]) return;
+                vacSeen[vk] = true;
+                vacs.push(v);
+            };
+            var vacPool = this._VAC_YEARS || {};
+            for (var vy = prevY; vy <= nowY; vy++) {
+                var arrV = vacPool[vy];
+                if (!arrV && this._vacYear === vy) arrV = this._VACATIONS;
+                if (arrV) {
+                    for (var va = 0; va < arrV.length; va++) vacPush(arrV[va]);
+                }
+            }
+            // сортировка: ФИО работника → дата начала периода
+            vacs.sort(function(a, b) {
+                var f = fioOf(a['таб_номер']).localeCompare(
+                    fioOf(b['таб_номер']), 'ru');
+                if (f) return f;
+                return String(a['дата_начала'] || '')
+                    .localeCompare(String(b['дата_начала'] || ''));
+            });
+            var vacations = [['id', 'Таб. №', 'ФИО', 'Часть',
+                              'Дата начала', 'Дата окончания', 'Дней',
+                              'Комментарий']];
+            for (var n2 = 0; n2 < vacs.length; n2++) {
+                var w = vacs[n2];
+                vacations.push([
+                    parseInt(w.id, 10) || '',
+                    String(w['таб_номер'] || ''),
+                    fioOf(w['таб_номер']),
+                    parseInt(w.часть, 10) || '',
+                    dateRu(w['дата_начала']),
+                    dateRu(w['дата_окончания'] || w['дата_начала']),
+                    parseInt(w.дней, 10) || '',
+                    String(w.комментарий || '')
+                ]);
+            }
+
+            // единый пул записей «Инструктажей»/«Мероприятий» (как
+            // _wtabYearRecords); дедуп по семейству типа (Task 427:
+            // раздельные id листов). Task 445: ГОДОВЫЕ ФИЛЬТРЫ —
+            // инструктажи/проверки знаний: предыдущий+текущий+
+            // следующий годы (дата проведения — точечная запись);
+            // мероприятия: ТОЛЬКО текущий год (период пересекает
+            // год — как _wtabYearRecords)
             var pool = [].concat(this._INSTR_ALL || [],
                                  this._EVENTS_ALL || [],
                                  this._TRAININGS || []);
             var seen = {}, ins = [], evs = [];
+            var iFrom = prevY + '-01-01', iTo = nextY + '-12-31';
+            var eS = nowY + '-01-01', eE = nowY + '-12-31';
             for (var p = 0; p < pool.length; p++) {
                 var r = pool[p];
                 if (!r) continue;
@@ -51887,7 +51972,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                        String(r.тема || ''));
                 if (seen[k]) continue;
                 seen[k] = true;
-                (isInstr ? ins : evs).push(r);
+                if (isInstr) {
+                    var dI = String(r.дата_проведения ||
+                                    r['дата_начала'] || '');
+                    if (!dI || dI < iFrom || dI > iTo) continue;
+                    ins.push(r);
+                } else {
+                    var s0 = String(r['дата_начала'] || '');
+                    if (!s0) continue;
+                    var e0 = String(r['дата_окончания'] || s0);
+                    if (e0 < eS || s0 > eE) continue;
+                    evs.push(r);
+                }
             }
             var byDate = function(a, b) {
                 var d = String(a['дата_начала'] || '')
@@ -51949,19 +52045,58 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     String(m.комментарий || '')
                 ]);
             }
-            return { employees: employees, instr: instr, events: events };
+            // --- Лист «СИЗ» (Task 445): ВСЕ записи листа «СИЗ»
+            // (не по годам — карточка показывает всё выданное);
+            // дата окончания — ISO → dd.mm.yyyy, «До износа» и
+            // прочие текстовые значения — как есть; сортировка:
+            // таб. № → наименование
+            var ppes = (this._PPE || []).slice().sort(function(a, b) {
+                var t = String(a['таб_номер'] || '').localeCompare(
+                    String(b['таб_номер'] || ''), 'ru');
+                if (t) return t;
+                return String(a.наименование || '').localeCompare(
+                    String(b.наименование || ''), 'ru');
+            });
+            var ppe = [['id', 'Таб. №', 'Работник', 'Должность',
+                        'Наименование', 'Дата выдачи',
+                        'Дата изготовления', 'Срок годности',
+                        'Дата окончания', 'Примечание']];
+            for (var q = 0; q < ppes.length; q++) {
+                var pz = ppes[q];
+                var pExpS = String(pz.дата_окончания || '').trim();
+                ppe.push([
+                    parseInt(pz.id, 10) || '',
+                    String(pz['таб_номер'] || ''),
+                    String(pz.работник || '').trim() ||
+                        fioOf(pz['таб_номер']),
+                    String(pz.должность || ''),
+                    String(pz.наименование || ''),
+                    dateRu(pz.дата_выдачи),
+                    dateRu(pz.дата_изготовления),
+                    String(pz.срок_годности || ''),
+                    (/^\d{4}-\d{2}-\d{2}$/.test(pExpS) ? dateRu(pExpS) : pExpS),
+                    String(pz.примечание || '')
+                ]);
+            }
+
+            return { employees: employees, vacations: vacations,
+                     instr: instr, ppe: ppe, events: events };
         },
 
-        // КНИГА .xlsx: [Content_Types], rels, workbook, 3 листа,
-        // styles — ZIP (stored) → Uint8Array; имя файла — с датой
-        // выгрузки
+        // КНИГА .xlsx: [Content_Types], rels, workbook, 5 листов
+        // (Task 445), styles — ZIP (stored) → Uint8Array; имя файла —
+        // с датой выгрузки
         _buildArchiveWorkbook: function() {
             var d = this._workersArchiveData();
             var sheets = [
                 { name: 'Работники', rows: d.employees, active: true,
                   widths: [9, 32, 12, 8, 36, 15, 14] },
+                { name: 'Отпуска', rows: d.vacations,
+                  widths: [6, 9, 32, 8, 14, 14, 8, 30] },
                 { name: 'Инструктажи', rows: d.instr,
                   widths: [6, 9, 32, 17, 50, 17, 12, 12, 42] },
+                { name: 'СИЗ', rows: d.ppe,
+                  widths: [6, 9, 32, 24, 44, 14, 16, 14, 14, 30] },
                 { name: 'Мероприятия', rows: d.events,
                   widths: [6, 9, 32, 15, 50, 15, 15, 16, 42] }
             ];
@@ -52027,7 +52162,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 bytes: this._wsXlsZip(files),
                 counts: {
                     employees: Math.max(0, d.employees.length - 1),
+                    vacations: Math.max(0, d.vacations.length - 1),
                     instr: Math.max(0, d.instr.length - 1),
+                    ppe: Math.max(0, d.ppe.length - 1),
                     events: Math.max(0, d.events.length - 1)
                 }
             };
@@ -52059,42 +52196,65 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
         },
 
-        // КНОПКА «Сохранить архив» (Общая вкладка): собрать книгу,
-        // скачать, тост с составом. Доступ — edit/view (как
-        // «Печать»: страница карточек и так закрыта для null/min)
+        // КНОПКА «Скачать архив» (Общая вкладка; Task 445 — прежде
+        // «Сохранить архив», Task 430): собрать книгу, скачать, тост
+        // с составом. Доступ — edit/view (как «Печать»: страница
+        // карточек и так закрыта для null/min). Task 445: ПЕРЕД
+        // сборкой книги лениво подтягиваем отпуска ПРЕДЫДУЩЕГО и
+        // ТЕКУЩЕГО годов (_vacYearEnsure; годы уже в пуле — мгновенно;
+        // ошибка года = «известно пусто» — книга собирается по
+        // имеющимся данным, деградация как у стрелок ‹год› блока
+        // «Отпуска»). В VM-окружении без _vacYearEnsure — сборка
+        // сразу (синхронно), самодостаточность мок-тестов
         saveWorkersArchive: function() {
             var lvl = (this._viewLevel === undefined)
                 ? (this._canEdit ? 'edit' : 'view')
                 : this._viewLevel;
             if (lvl !== 'edit' && lvl !== 'view') return;
-            var wb;
-            try {
-                wb = this._buildArchiveWorkbook();
-            } catch (e) {
-                if (typeof KipToast !== 'undefined' && KipToast.show) {
-                    KipToast.show('Не удалось собрать архив: ' +
-                                  ((e && e.message) ? e.message : String(e)));
+            var self = this;
+            var build = function() {
+                var wb;
+                try {
+                    wb = self._buildArchiveWorkbook();
+                } catch (e) {
+                    if (typeof KipToast !== 'undefined' && KipToast.show) {
+                        KipToast.show('Не удалось собрать архив: ' +
+                                      ((e && e.message) ? e.message : String(e)));
+                    }
+                    return;
                 }
-                return;
+                var ok = self._wsDownload(
+                    wb.bytes,
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    wb.name);
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show(ok
+                        ? ('Архив скачан — «' + wb.name + '»: ' +
+                           wb.counts.employees + ' ' +
+                           self._plural(wb.counts.employees,
+                                        ['работник', 'работника', 'работников']) +
+                           ', ' + wb.counts.vacations + ' ' +
+                           self._plural(wb.counts.vacations,
+                                        ['отпуск', 'отпуска', 'отпусков']) +
+                           ', ' + wb.counts.instr + ' ' +
+                           self._plural(wb.counts.instr,
+                                        ['инструктаж', 'инструктажа', 'инструктажей']) +
+                           ', ' + wb.counts.ppe + ' СИЗ' +
+                           ', ' + wb.counts.events + ' ' +
+                           self._plural(wb.counts.events,
+                                        ['мероприятие', 'мероприятия', 'мероприятий']))
+                        : 'Не удалось сохранить файл архива');
+                }
+            };
+            var nowY = new Date().getFullYear();
+            var pre = (typeof this._vacYearEnsure === 'function')
+                ? this._vacYearEnsure([nowY - 1, nowY]) : null;
+            if (pre && typeof pre.then === 'function') {
+                // промис возвращается наружу (кнопка onclick его не
+                // использует; VM-тесты ждут завершения сборки)
+                return pre.then(build, build);
             }
-            var ok = this._wsDownload(
-                wb.bytes,
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                wb.name);
-            if (typeof KipToast !== 'undefined' && KipToast.show) {
-                KipToast.show(ok
-                    ? ('Архив сохранён — «' + wb.name + '»: ' +
-                       wb.counts.employees + ' ' +
-                       this._plural(wb.counts.employees,
-                                    ['работник', 'работника', 'работников']) +
-                       ', ' + wb.counts.instr + ' ' +
-                       this._plural(wb.counts.instr,
-                                    ['инструктаж', 'инструктажа', 'инструктажей']) +
-                       ', ' + wb.counts.events + ' ' +
-                       this._plural(wb.counts.events,
-                                    ['мероприятие', 'мероприятия', 'мероприятий']))
-                    : 'Не удалось сохранить файл архива');
-            }
+            build();
         },
 
         // Серверная запись по ключу (без pending-наложения)
