@@ -51579,8 +51579,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // «Явки (дни)» итогов — _totalsAgg.work), талоны
         // предзаполняются = дням явки, перед печатью допускается
         // РУЧНАЯ ПРАВКА (карта _TALONS_EDIT — память сессии; архив
-        // раздела НЕ нужен по заявке). Печать — строго по форме
-        // отчёта: A4 КНИЖНАЯ (инжект-стиль @page перекрывает
+        // раздела НЕ нужен по заявке). Печать — СТРОГО по присланной
+        // форме Excel (Task 448: ООО ПО "Токем", талоны Л.П.П.,
+        // группы 12/8 часовых, часы = талоны × 12/8, ИТОГО (шт.),
+        // три подписи): A4 КНИЖНАЯ (инжект-стиль @page перекрывает
         // альбомную ориентацию печати графика), Times New Roman.
         // Доступ — ТОЛЬКО уровню edit (право workschedule.edit
         // «График работы — внесение» из матрицы KIP8_Access):
@@ -51949,79 +51951,179 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // перекрывает альбомную @page печати графика; снимается
         // закрытием предпросмотра). Предпросмотр — свой диалог (как
         // Task 430, но без «Сохранить PDF/Excel»: форма строгая,
-        // только печать)
+        // только печать).
+        // Task 448: вёрстка приведена СТРОГО к присланной форме Excel
+        // (лист «Отчет»): шапка «Наименование предприятия ООО ПО
+        // "Токем"» / «ОТЧЕТ» / «на выдачу талонов Л.П.П.
+        // (лечебно-профилактическое питание) за месяц год г.» / «Цех
+        // № 8 пр-во ИОС» (14pt); таблица СЕМЬ колонок — № п/п /
+        // Табельный номер / Ф.И.О. / Должность / Кол-во отработан-ных
+        // часов / Кол-во выданных талонов / Роспись о получении
+        // (12pt, шапка НЕ жирная — как в форме); группы «12 часовые»
+        // (тип «сменный») и «8 часовые» (прочие), часы = талоны ×
+        // 12/8 (формула листа E=F×12/8); ИТОГО по группам (шт.) —
+        // суммы КУРСИВОМ с подчёркиванием; три подписи (Рук.
+        // подразделения — Игушов Н.В.; С табелем сверено —
+        // Котельникова И.А., материально-ответственное лицо;
+        // Руководитель СОТ и ПБ — Фензель В.П.), подсказки 8pt.
+        // Меняется ТОЛЬКО печатная вёрстка — модель данных,
+        // экранная страница, инжект @page и диалог предпросмотра
+        // не тронуты
         // ============================================================
+        // Вёрстка СТРОГОЙ формы (Task 448, лист «Отчет» Excel):
+        // шапка 14pt («ОТЧЕТ» — жирная), таблица 12pt c шапкой БЕЗ
+        // жирного (как в форме); сетка 7 колонок едина для таблицы,
+        // блока ИТОГО и подписей — <col class="wst-c1…c7">
+        // (проценты из ширины столбцов Excel: 4.2 / 12 / 18.2 / 20 /
+        // 11.9 / 11.5 / 22.2). Многостраничность: повтор шапки
+        // таблицы (table-header-group), строки не рвутся, ярлык
+        // группы не отрывается от своей первой строки
         _TALONS_PRINT_CSS:
-            '#wsPrintSheet.wst-sheet .wst-rep { font-family: Times New Roman, Times, serif; color: #000; } ' +
-            '#wsPrintSheet.wst-sheet .wst-rep-title { text-align: center; font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; } ' +
-            '#wsPrintSheet.wst-sheet .wst-rep-sub { text-align: center; font-size: 14px; margin-top: 1.5mm; } ' +
-            '#wsPrintSheet.wst-sheet .wst-rep-period { text-align: center; font-size: 14px; font-weight: 700; margin: 1mm 0 5mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-rep { font-family: Times New Roman, Times, serif; color: #000; font-size: 12pt; } ' +
+            '#wsPrintSheet.wst-sheet .wst-rep-org { font-size: 14pt; } ' +
+            '#wsPrintSheet.wst-sheet .wst-rep-title { text-align: center; font-size: 14pt; font-weight: 700; margin-top: 4.5mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-rep-sub { text-align: center; font-size: 14pt; margin-top: 1mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-rep-dept { text-align: center; font-size: 14pt; margin: 1mm 0 4mm; } ' +
             '#wsPrintSheet.wst-sheet .wst-rep-table { width: 100%; border-collapse: collapse; table-layout: fixed; } ' +
             '#wsPrintSheet.wst-sheet .wst-rep-table thead { display: table-header-group; } ' +
             '#wsPrintSheet.wst-sheet .wst-rep-table tr { page-break-inside: avoid; } ' +
-            '#wsPrintSheet.wst-sheet .wst-rep-table th, ' +
-            '#wsPrintSheet.wst-sheet .wst-rep-table td { border: 1px solid #000; text-align: center; vertical-align: middle; padding: 1mm 1.5mm; font-size: 13px; height: 7mm; overflow: hidden; } ' +
-            '#wsPrintSheet.wst-sheet .wst-rep-table th { font-weight: 700; height: auto; } ' +
+            '#wsPrintSheet.wst-sheet .wst-r-group { page-break-after: avoid; } ' +
+            '#wsPrintSheet.wst-sheet .wst-rep-table th { border: 1px solid #000; font-weight: 400; text-align: center; vertical-align: middle; padding: 1mm; font-size: 12pt; height: 14mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-rep-table td { border: 1px solid #000; text-align: center; vertical-align: middle; padding: 1mm; font-size: 12pt; height: 9mm; overflow: hidden; } ' +
             '#wsPrintSheet.wst-sheet .wst-r-fio, ' +
             '#wsPrintSheet.wst-sheet .wst-r-pos { text-align: left; } ' +
-            '#wsPrintSheet.wst-sheet .wst-r-n { width: 7%; } ' +
-            '#wsPrintSheet.wst-sheet .wst-r-tab { width: 10%; } ' +
-            '#wsPrintSheet.wst-sheet .wst-r-fio { width: 33%; } ' +
-            '#wsPrintSheet.wst-sheet .wst-r-pos { width: 27%; } ' +
-            '#wsPrintSheet.wst-sheet .wst-r-num { width: 11.5%; } ' +
-            '#wsPrintSheet.wst-sheet .wst-r-total { font-weight: 700; text-align: right; } ' +
-            '#wsPrintSheet.wst-sheet .wst-r-num.wst-r-total { text-align: center; } ' +
-            '#wsPrintSheet.wst-sheet .wst-rep-sign { margin-top: 12mm; font-size: 13px; } ' +
-            '#wsPrintSheet.wst-sheet .wst-sign-row { display: flex; align-items: flex-start; gap: 4mm; margin-top: 8mm; } ' +
-            '#wsPrintSheet.wst-sheet .wst-sign-label { flex: none; font-weight: 700; } ' +
-            '#wsPrintSheet.wst-sheet .wst-sign-hint { font-size: 9.5px; text-align: center; margin-top: 0.5mm; opacity: 0.85; }',
+            '#wsPrintSheet.wst-sheet .wst-r-group td { height: 6mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-tot-table { width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 2.5mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-tot-table td { border: none; padding: 0.5mm 1mm; font-size: 12pt; height: 6mm; vertical-align: middle; } ' +
+            '#wsPrintSheet.wst-sheet .wst-t-itog { text-align: right; } ' +
+            '#wsPrintSheet.wst-sheet .wst-t-grp { text-align: right; } ' +
+            '#wsPrintSheet.wst-sheet .wst-tot-table td.wst-t-val { text-align: center; font-style: italic; border-bottom: 1px solid #000; } ' +
+            '#wsPrintSheet.wst-sheet .wst-t-unit { text-align: left; } ' +
+            '#wsPrintSheet.wst-sheet .wst-sign-table { width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 9mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-sign-table td { border: none; padding: 0 1mm; font-size: 12pt; height: 7mm; vertical-align: bottom; } ' +
+            '#wsPrintSheet.wst-sheet .wst-s-name { white-space: nowrap; } ' +
+            '#wsPrintSheet.wst-sheet .wst-s-hint { font-size: 8pt; height: 4.5mm; vertical-align: top; text-align: center; padding-top: 0.3mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-s-gap { height: 5.5mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-c1 { width: 4.2%; } ' +
+            '#wsPrintSheet.wst-sheet .wst-c2 { width: 12%; } ' +
+            '#wsPrintSheet.wst-sheet .wst-c3 { width: 18.2%; } ' +
+            '#wsPrintSheet.wst-sheet .wst-c4 { width: 20%; } ' +
+            '#wsPrintSheet.wst-sheet .wst-c5 { width: 11.9%; } ' +
+            '#wsPrintSheet.wst-sheet .wst-c6 { width: 11.5%; } ' +
+            '#wsPrintSheet.wst-sheet .wst-c7 { width: 22.2%; }',
 
-        // Печатная форма отчёта (строго): шапка «ОТЧЁТ / по талонам
-        // питания, выданным работникам / за месяц год», таблица
-        // № п/п/Таб. №/ФИО/Должность/Дней явки/Выдано талонов, строка
-        // «Итого», подпись составителя и дата
+        // Печатная форма отчёта — СТРОГО по форме Excel (лист
+        // «Отчет», Task 448): шапка предприятия/«ОТЧЕТ»/Л.П.П./цех,
+        // таблица СЕМЬ колонок с группами «12 часовые» (тип
+        // «сменный») и «8 часовые» (прочие: дневной/без типа),
+        // часы = талоны × 12/8 (формула листа E=F×12/8), сквозная
+        // нумерация, ИТОГО по группам (шт.) и три подписи
         _buildTalonsPrintHtml: function(model) {
             var mi = model.month;
-            var html = '<div class="wst-rep">' +
-                '<div class="wst-rep-title">Отчёт</div>' +
-                '<div class="wst-rep-sub">по талонам питания, выданным работникам</div>' +
-                '<div class="wst-rep-period">за ' + this._esc(mi.name) + ' ' + mi.y + ' г.</div>' +
-                '<table class="wst-rep-table"><thead><tr>' +
-                '<th class="wst-r-n">№ п/п</th>' +
-                '<th class="wst-r-tab">Таб. №</th>' +
-                '<th class="wst-r-fio">ФИО работника</th>' +
-                '<th class="wst-r-pos">Должность</th>' +
-                '<th class="wst-r-num">Дней явки</th>' +
-                '<th class="wst-r-num">Выдано талонов</th>' +
-                '</tr></thead><tbody>';
+            var self = this;
+            var g12 = [], g8 = [];
             for (var i = 0; i < model.rows.length; i++) {
                 var row = model.rows[i];
-                html += '<tr>' +
-                    '<td class="wst-r-n">' + (i + 1) + '</td>' +
-                    '<td class="wst-r-tab">' + this._esc(row.tab) + '</td>' +
-                    '<td class="wst-r-fio">' + this._esc(row.emp['ФИО'] || '') + '</td>' +
-                    '<td class="wst-r-pos">' + this._esc(String(row.emp['должность'] || '').trim() || '—') + '</td>' +
-                    '<td class="wst-r-num">' + row.days + '</td>' +
-                    '<td class="wst-r-num">' + row.talons + '</td>' +
-                    '</tr>';
+                var tip = String((row.emp && row.emp['тип']) || '').trim();
+                if (tip === 'сменный') g12.push(row); else g8.push(row);
             }
-            html += '</tbody><tfoot><tr>' +
-                '<td colspan="4" class="wst-r-total">Итого</td>' +
-                '<td class="wst-r-num wst-r-total">' + model.totals.days + '</td>' +
-                '<td class="wst-r-num wst-r-total">' + model.totals.talons + '</td>' +
-                '</tr></tfoot></table>';
-            html += '<div class="wst-rep-sign">' +
-                '<div class="wst-sign-row">' +
-                    '<span class="wst-sign-label">Отчёт составил:</span>' +
-                    '<span>__________________________<span class="wst-sign-hint">(подпись)</span></span>' +
-                    '<span>________________________________<span class="wst-sign-hint">(расшифровка)</span></span>' +
-                '</div>' +
-                '<div class="wst-sign-row">' +
-                    '<span class="wst-sign-label">Дата:</span>' +
-                    '<span>«______» ______________________ ' + mi.y + ' г.</span>' +
-                '</div>' +
-                '</div></div>';
+            var groupSum = function(list) {
+                var sum = 0;
+                for (var j = 0; j < list.length; j++) {
+                    sum += (list[j].talons || 0);
+                }
+                return sum;
+            };
+            var n = 0;
+            var rowsOf = function(list, per) {
+                var html = '';
+                for (var j = 0; j < list.length; j++) {
+                    var r = list[j];
+                    n++;
+                    var talons = r.talons || 0;
+                    html += '<tr>' +
+                        '<td class="wst-r-n">' + n + '</td>' +
+                        '<td class="wst-r-tab">' + self._esc(r.tab) + '</td>' +
+                        '<td class="wst-r-fio">' + self._esc(r.emp['ФИО'] || '') + '</td>' +
+                        '<td class="wst-r-pos">' + self._esc(String(r.emp['должность'] || '').trim() || '—') + '</td>' +
+                        '<td class="wst-r-hrs">' + (talons * per) + '</td>' +
+                        '<td class="wst-r-tal">' + talons + '</td>' +
+                        '<td class="wst-r-sign"></td>' +
+                        '</tr>';
+                }
+                return html;
+            };
+            var CG = '<colgroup><col class="wst-c1"><col class="wst-c2">' +
+                '<col class="wst-c3"><col class="wst-c4"><col class="wst-c5">' +
+                '<col class="wst-c6"><col class="wst-c7"></colgroup>';
+            var html = '<div class="wst-rep">' +
+                '<div class="wst-rep-org">Наименование предприятия ООО ПО "Токем"</div>' +
+                '<div class="wst-rep-title">ОТЧЕТ</div>' +
+                '<div class="wst-rep-sub">на выдачу талонов Л.П.П. (лечебно-профилактическое питание) за ' +
+                this._esc(mi.name) + ' ' + mi.y + ' г.</div>' +
+                '<div class="wst-rep-dept">Цех № 8 пр-во ИОС</div>' +
+                '<table class="wst-rep-table">' + CG + '<thead><tr>' +
+                '<th class="wst-r-n">№ п/п</th>' +
+                '<th class="wst-r-tab">Табельный номер</th>' +
+                '<th class="wst-r-fio">Ф.И.О.</th>' +
+                '<th class="wst-r-pos">Должность</th>' +
+                '<th class="wst-r-hrs">Кол-во отработан-ных часов</th>' +
+                '<th class="wst-r-tal">Кол-во выданных талонов</th>' +
+                '<th class="wst-r-sign">Роспись о получении</th>' +
+                '</tr></thead><tbody>' +
+                '<tr class="wst-r-group"><td colspan="3"></td>' +
+                '<td class="wst-r-glab">12 часовые</td>' +
+                '<td colspan="3"></td></tr>' +
+                rowsOf(g12, 12) +
+                '<tr class="wst-r-group"><td colspan="3"></td>' +
+                '<td class="wst-r-glab">8 часовые</td>' +
+                '<td colspan="3"></td></tr>' +
+                rowsOf(g8, 8) +
+                '</tbody></table>';
+            // ИТОГО по группам: суммы талонов (шт.) — КУРСИВ с
+            // подчёркиванием (как в форме)
+            html += '<table class="wst-tot-table">' + CG +
+                '<tr><td colspan="3"></td>' +
+                '<td class="wst-t-itog">ИТОГО:</td>' +
+                '<td class="wst-t-grp">12 часовые</td>' +
+                '<td class="wst-t-val">' + groupSum(g12) + '</td>' +
+                '<td class="wst-t-unit">(шт.)</td></tr>' +
+                '<tr><td colspan="3"></td><td></td>' +
+                '<td class="wst-t-grp">8 часовые</td>' +
+                '<td class="wst-t-val">' + groupSum(g8) + '</td>' +
+                '<td class="wst-t-unit">(шт.)</td></tr>' +
+                '</table>';
+            // подписи строго по форме (таблица той же сетки)
+            html += '<table class="wst-sign-table">' + CG +
+                this._talonsSignBlock('Рук. подразделения', 'Игушов Н.В.',
+                                      '(подпись)') +
+                '<tr class="wst-s-gap"><td colspan="7"></td></tr>' +
+                this._talonsSignBlock('С табелем сверено:', 'Котельникова И.А.',
+                                      '(подпись материально-ответственного лица)') +
+                '<tr class="wst-s-gap"><td colspan="7"></td></tr>' +
+                this._talonsSignBlock('Руководитель СОТ и ПБ', 'Фензель В.П.',
+                                      '(подпись)') +
+                '</table></div>';
             return html;
+        },
+
+        // Блок подписи строгой формы (Task 448): ярлык (колонки
+        // 1–3), линия из подчёркиваний (колонка 4), Ф.И.О. (колонки
+        // 6–7, как перелив в форме); подсказки 8pt — под линией и
+        // под именем
+        _talonsSignBlock: function(label, name, hint) {
+            return '<tr>' +
+                '<td colspan="3" class="wst-s-label">' + this._esc(label) + '</td>' +
+                '<td class="wst-s-line">_________________</td>' +
+                '<td></td>' +
+                '<td colspan="2" class="wst-s-name">' + this._esc(name) + '</td>' +
+                '</tr>' +
+                '<tr>' +
+                '<td colspan="3"></td>' +
+                '<td class="wst-s-hint">' + this._esc(hint) + '</td>' +
+                '<td></td>' +
+                '<td colspan="2" class="wst-s-hint">(ф.и.о.)</td>' +
+                '</tr>';
         },
 
         // Инжект-стиль книжной ориентации в <head> (позже стилей
@@ -52034,7 +52136,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             st.id = 'wsTalonsPrintStyle';
             st.textContent = '@media print { ' +
                 '@page { size: A4 portrait; margin: 12mm 10mm; } ' +
-                '#wsPrintSheet.wst-sheet { font: 13px/1.35 Times New Roman, Times, serif; color: #000; } ' +
+                '#wsPrintSheet.wst-sheet { font: 12pt/1.3 Times New Roman, Times, serif; color: #000; } ' +
                 this._TALONS_PRINT_CSS + ' }';
             var head = document.head || document.documentElement;
             if (head && head.appendChild) head.appendChild(st);
@@ -52100,7 +52202,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 'body { margin: 0; padding: 6mm 0; display: flex; justify-content: center; } ' +
                 '#wsPrintSheet { background: #fff; box-shadow: 0 1mm 4mm rgba(0,0,0,0.45); ' +
                 'padding: 12mm 10mm; width: 190mm; ' +
-                'font: 13px/1.35 Times New Roman, Times, serif; color: #000; } ' +
+                'font: 12pt/1.3 Times New Roman, Times, serif; color: #000; } ' +
                 this._TALONS_PRINT_CSS +
                 '</style></head><body>' +
                 '<div id="wsPrintSheet" class="wst-sheet">' + printHtml + '</div>' +
