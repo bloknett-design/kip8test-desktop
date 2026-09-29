@@ -51653,6 +51653,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         //      окончание/примечание, Tasks 392/443);
         //   5) «Мероприятия» — ТОЛЬКО ТЕКУЩИЙ год (период/
         //      длительность).
+        // Task 446 (заявка): листы «Отпуска»/«Инструктажи»/«СИЗ»/
+        // «Мероприятия» БЕЗ колонок id и «Таб. №» (работник виден
+        // по ФИО/«Работнику», технические ключи выгрузке не нужны);
+        // «Инструктажи» сортируются по ФАМИЛИЯМ; на ВСЕХ листах
+        // (вкл. «Работники») ЗЕБРА — заливка чередуется по ГРУППАМ
+        // строк одного работника (_wsXlsZebraGroups, стиль s="2").
         // Записи без id и без даты — пропускаются (мусорные строки
         // листа не читаются сервером). VM-тесты зовут
         // _workersArchiveData/_buildArchiveWorkbook напрямую —
@@ -51785,7 +51791,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // inlineStr, число => числовая ячейка); строка 1 — шапка
         // (стиль s="1": жирный белый на синем); opts: widths —
         // ширины колонок, freeze — закрепить строк заголовка,
-        // active — tabSelected. Пустые ячейки пропускаются (sparse)
+        // active — tabSelected, zebra — карта заливки групп строк
+        // (Task 446: массив bool по строкам, true = стиль s="2").
+        // Пустые ячейки НЕзебры пропускаются (sparse); пустая
+        // ячейка зебры НЕ пропускается — ячейка с одним стилем,
+        // иначе в полосе заливки будут «дыры» на пустых полях
         _wsXlsSheetXml: function(rows, opts) {
             opts = opts || {};
             var maxCol = 0;
@@ -51818,9 +51828,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 x += '<row r="' + (r + 1) + '">';
                 for (var c = 0; c < row.length; c++) {
                     var v = row[c];
-                    if (v === null || v === undefined || v === '') continue;
                     var ref = this._wsXlsColName(c) + (r + 1);
-                    var hs = (r === 0) ? ' s="1"' : '';
+                    // Task 446: шапка — s="1", строки зебры — s="2"
+                    var hs = (r === 0) ? ' s="1"'
+                        : ((opts.zebra && opts.zebra[r]) ? ' s="2"' : '');
+                    if (v === null || v === undefined || v === '') {
+                        // пустая ячейка СТРОКИ ЗЕБРЫ не пропускается —
+                        // заливка группы должна быть непрерывной
+                        if (hs) x += '<c r="' + ref + '"' + hs + '/>';
+                        continue;
+                    }
                     if (typeof v === 'number' && isFinite(v)) {
                         x += '<c r="' + ref + '"' + hs + '><v>' + v + '</v></c>';
                     } else {
@@ -51839,7 +51856,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // минимальный styles.xml: шрифт Arial 11 (обычный + жирный
         // белый), заливка шапки #4472C4, cellXf 0 — обычный,
-        // 1 — шапка. Больше таблице не нужно
+        // 1 — шапка, 2 — заливка зебры #F2F2F2 (Task 446).
+        // Больше таблице не нужно
         _wsXlsStylesXml: function() {
             return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
                 '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
@@ -51847,11 +51865,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 '<font><sz val="11"/><color rgb="FF1B1F24"/><name val="Arial"/></font>' +
                 '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>' +
                 '</fonts>' +
-                '<fills count="3">' +
+                '<fills count="4">' +
                 '<fill><patternFill patternType="none"/></fill>' +
                 '<fill><patternFill patternType="gray125"/></fill>' +
                 '<fill><patternFill patternType="solid">' +
                 '<fgColor rgb="FF4472C4"/><bgColor indexed="64"/>' +
+                '</patternFill></fill>' +
+                '<fill><patternFill patternType="solid">' +
+                '<fgColor rgb="FFF2F2F2"/><bgColor indexed="64"/>' +
                 '</patternFill></fill>' +
                 '</fills>' +
                 '<borders count="1">' +
@@ -51860,15 +51881,43 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 '<cellStyleXfs count="1">' +
                 '<xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>' +
                 '</cellStyleXfs>' +
-                '<cellXfs count="2">' +
+                '<cellXfs count="3">' +
                 '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
                 '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" ' +
                 'applyFont="1" applyFill="1"/>' +
+                '<xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0" ' +
+                'applyFill="1"/>' +
                 '</cellXfs>' +
                 '<cellStyles count="1">' +
                 '<cellStyle name="Normal" xfId="0" builtinId="0"/>' +
                 '</cellStyles>' +
                 '</styleSheet>';
+        },
+
+        // Task 446: карта заливки «зебра» ПО ГРУППАМ строк одного
+        // работника (колонка «ФИО»/«Работник»): при СМЕНЕ фамилии
+        // цвет чередуется, внутри группы строки одной заливки;
+        // первая группа — БЕЗ заливки (классическая зебра:
+        // белая → серая → белая…). rows — лист целиком (строка 0 —
+        // шапка), personHeader — заголовок колонки работника.
+        // Возврат — массив bool по строкам листа (true = s="2");
+        // колонка не найдена / только шапка — без заливки
+        _wsXlsZebraGroups: function(rows, personHeader) {
+            var out = [];
+            rows = rows || [];
+            var col = -1;
+            var hdr = rows[0] || [];
+            for (var h = 0; h < hdr.length; h++) {
+                if (hdr[h] === personHeader) { col = h; break; }
+            }
+            var on = true, prev = null;
+            for (var r = 0; r < rows.length; r++) {
+                if (r === 0 || col < 0) { out.push(false); continue; }
+                var nm = String((rows[r] || [])[col] || '');
+                if (nm !== prev) { on = !on; prev = nm; }
+                out.push(on);
+            }
+            return out;
         },
 
         // СБОРКА ДАННЫХ АРХИВА (чистая функция — без DOM, для
@@ -51931,14 +51980,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 return String(a['дата_начала'] || '')
                     .localeCompare(String(b['дата_начала'] || ''));
             });
-            var vacations = [['id', 'Таб. №', 'ФИО', 'Часть',
+            // Task 446: колонки id и «Таб. №» из листа УДАЛЕНЫ
+            // (заявка) — работник виден по ФИО, технические ключи
+            // выгрузке не нужны
+            var vacations = [['ФИО', 'Часть',
                               'Дата начала', 'Дата окончания', 'Дней',
                               'Комментарий']];
             for (var n2 = 0; n2 < vacs.length; n2++) {
                 var w = vacs[n2];
                 vacations.push([
-                    parseInt(w.id, 10) || '',
-                    String(w['таб_номер'] || ''),
                     fioOf(w['таб_номер']),
                     parseInt(w.часть, 10) || '',
                     dateRu(w['дата_начала']),
@@ -51991,7 +52041,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (d) return d;
                 return (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0);
             };
-            ins.sort(byDate);
+            // Task 446: «Инструктажи» — сортировка по ФАМИЛИИ →
+            // дата (заявка; приём сортировки «Отпусков»),
+            // «Мероприятия» — прежняя сортировка по дате
+            ins.sort(function(a, b) {
+                var f = fioOf(a['таб_номер']).localeCompare(
+                    fioOf(b['таб_номер']), 'ru');
+                if (f) return f;
+                return byDate(a, b);
+            });
             evs.sort(byDate);
 
             var employees = [['Таб. №', 'ФИО', 'Тип', 'Смена',
@@ -52010,14 +52068,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 ]);
             }
 
-            var instr = [['id', 'Таб. №', 'ФИО', 'Тип', 'Тема',
+            // Task 446: колонки id и «Таб. №» УДАЛЕНЫ, порядок
+            // строк — по фамилиям (сортировка выше)
+            var instr = [['ФИО', 'Тип', 'Тема',
                           'Дата проведения', 'Выполнено', 'Просрочен',
                           'Комментарий']];
             for (var n = 0; n < ins.length; n++) {
                 var t = ins[n];
                 instr.push([
-                    parseInt(t.id, 10) || '',
-                    String(t['таб_номер'] || ''),
                     fioOf(t['таб_номер']),
                     String(t.тип || ''),
                     String(t.тема || ''),
@@ -52028,14 +52086,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 ]);
             }
 
-            var events = [['id', 'Таб. №', 'ФИО', 'Тип', 'Тема',
+            // Task 446: колонки id и «Таб. №» УДАЛЕНЫ (сортировка
+            // по дате — прежняя, группы работника чередуются зеброй)
+            var events = [['ФИО', 'Тип', 'Тема',
                            'Дата начала', 'Дата окончания',
                            'Длительность, дн', 'Комментарий']];
             for (var v = 0; v < evs.length; v++) {
                 var m = evs[v];
                 events.push([
-                    parseInt(m.id, 10) || '',
-                    String(m['таб_номер'] || ''),
                     fioOf(m['таб_номер']),
                     String(m.тип || ''),
                     String(m.тема || ''),
@@ -52057,7 +52115,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 return String(a.наименование || '').localeCompare(
                     String(b.наименование || ''), 'ru');
             });
-            var ppe = [['id', 'Таб. №', 'Работник', 'Должность',
+            // Task 446: колонки id и «Таб. №» УДАЛЕНЫ (сортировка
+            // по таб. № → наименование — прежняя, все записи одного
+            // работника идут ПОДРЯД — зебра красит их одной полосой)
+            var ppe = [['Работник', 'Должность',
                         'Наименование', 'Дата выдачи',
                         'Дата изготовления', 'Срок годности',
                         'Дата окончания', 'Примечание']];
@@ -52065,8 +52126,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var pz = ppes[q];
                 var pExpS = String(pz.дата_окончания || '').trim();
                 ppe.push([
-                    parseInt(pz.id, 10) || '',
-                    String(pz['таб_номер'] || ''),
                     String(pz.работник || '').trim() ||
                         fioOf(pz['таб_номер']),
                     String(pz.должность || ''),
@@ -52084,21 +52143,24 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // КНИГА .xlsx: [Content_Types], rels, workbook, 5 листов
-        // (Task 445), styles — ZIP (stored) → Uint8Array; имя файла —
-        // с датой выгрузки
+        // (Task 445; Task 446 — листы Отпуска/Инструктажи/СИЗ/
+        // Мероприятия без id/«Таб. №», ВСЕ листы с зеброй по группам
+        // строк одного работника — person: колонка ФИО/«Работник»),
+        // styles — ZIP (stored) → Uint8Array; имя файла — с датой
+        // выгрузки
         _buildArchiveWorkbook: function() {
             var d = this._workersArchiveData();
             var sheets = [
                 { name: 'Работники', rows: d.employees, active: true,
-                  widths: [9, 32, 12, 8, 36, 15, 14] },
-                { name: 'Отпуска', rows: d.vacations,
-                  widths: [6, 9, 32, 8, 14, 14, 8, 30] },
-                { name: 'Инструктажи', rows: d.instr,
-                  widths: [6, 9, 32, 17, 50, 17, 12, 12, 42] },
-                { name: 'СИЗ', rows: d.ppe,
-                  widths: [6, 9, 32, 24, 44, 14, 16, 14, 14, 30] },
-                { name: 'Мероприятия', rows: d.events,
-                  widths: [6, 9, 32, 15, 50, 15, 15, 16, 42] }
+                  person: 'ФИО', widths: [9, 32, 12, 8, 36, 15, 14] },
+                { name: 'Отпуска', rows: d.vacations, person: 'ФИО',
+                  widths: [32, 8, 14, 14, 8, 30] },
+                { name: 'Инструктажи', rows: d.instr, person: 'ФИО',
+                  widths: [32, 17, 50, 17, 12, 12, 42] },
+                { name: 'СИЗ', rows: d.ppe, person: 'Работник',
+                  widths: [32, 24, 44, 14, 16, 14, 14, 30] },
+                { name: 'Мероприятия', rows: d.events, person: 'ФИО',
+                  widths: [32, 15, 50, 15, 15, 16, 42] }
             ];
             var files = [];
             var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -52121,7 +52183,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     name: 'xl/worksheets/sheet' + (i + 1) + '.xml',
                     data: this._wsXlsBytes(this._wsXlsSheetXml(
                         sheets[i].rows, { widths: sheets[i].widths,
-                                          freeze: 1, active: sheets[i].active }))
+                                          freeze: 1, active: sheets[i].active,
+                                          zebra: this._wsXlsZebraGroups(
+                                              sheets[i].rows,
+                                              sheets[i].person) }))
                 });
             }
             var relN = sheets.length + 1;
