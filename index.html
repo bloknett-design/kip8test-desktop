@@ -5765,17 +5765,33 @@
         flex: 1;
     }
     .ws-ppe-name {
-        color: var(--text-primary, #e0e0e0);
-        font-weight: 600;
+        /* Task 444 (заявка): наименование СИЗ — НЕ яркое
+           (приглушённый secondary, вес 500), акцент блока —
+           на датах и сроках (мета-строка ниже) */
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+        font-weight: 500;
         overflow-wrap: break-word;
     }
     .ws-ppe-meta {
-        font-size: 10.5px;
-        color: var(--text-secondary, rgba(255,255,255,0.55));
+        /* Task 444 (заявка): текст с ДАТАМИ и СРОКАМИ — нормальный
+           ЯРКИЙ (primary) и крупнее (10.5 → 11.5px) — лучше
+           читается (прежде — тусклый secondary) */
+        font-size: 11.5px;
+        color: var(--text-primary, #e0e0e0);
         margin-top: 1px;
     }
-    [data-theme="light"] .ws-ppe-name { color: #222; }
-    [data-theme="light"] .ws-ppe-meta { color: #777; }
+    [data-theme="light"] .ws-ppe-name { color: #777; }
+    [data-theme="light"] .ws-ppe-meta { color: #333; }
+    /* Task 444 (заявка): дата окончания «до дд.мм.гггг» — КРУПНЕЕ
+       остальной мета-строки (1.15em, 700) и ЦВЕТНАЯ: ЗЕЛЁНЫЙ — срок
+       действует, ОРАНЖЕВО-КРАСНЫЙ — просрочен. Класс ok/bad ставит
+       рендер (сравнение ISO-строк с «сегодня» — приём Task 380);
+       «До износа»/без даты — обычная мета, без выделения */
+    .ws-ppe-exp { font-size: 1.15em; font-weight: 700; }
+    .ws-ppe-exp-ok { color: #81c784; }
+    .ws-ppe-exp-bad { color: #ff7043; }
+    [data-theme="light"] .ws-ppe-exp-ok { color: #2e7d32; }
+    [data-theme="light"] .ws-ppe-exp-bad { color: #e64a19; }
     /* Task 407: блок «Повторные инструктажи и периодическая проверка
        знаний» по ШАБЛОНУ «Список_И_и_ПЗ» — ГРУППЫ (Task 414: только
        попап ячейки; карточка — плоский список записей): шапка пункта
@@ -6502,7 +6518,9 @@
         margin: 0 -16px;
     }
     .ws-wcard .ws-ppe-name { font-size: 14px; }
-    .ws-wcard .ws-ppe-meta { font-size: 12.5px; }
+    /* Task 444: мета-строка (даты/сроки) в карточке — 13px,
+       «до …» — 1.15em ≈ 15px, заметно крупнее */
+    .ws-wcard .ws-ppe-meta { font-size: 13px; }
     /* Task 415 (заявка): в блоках КАРТЫ работника записи, не
        помещающиеся в одну строку, ПЕРЕНОСЯТСЯ на следующую
        (прежде — обрезались многоточием). Темы мероприятий и
@@ -50752,7 +50770,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     if (pTerm) pMeta.push('срок ' + pTerm);
                     var pExp = String(pz.дата_окончания || '').trim();
                     if (pExp && pExp !== 'До износа') {
-                        pMeta.push('до ' + this._fmtDateRu(pExp));
+                        // Task 444 (заявка): «до дд.мм.гггг» — КРУПНЕЕ
+                        // + цвет: ЗЕЛЁНЫЙ (ws-ppe-exp-ok) — срок
+                        // действует, ОРАНЖЕВО-КРАСНЫЙ (ws-ppe-exp-bad)
+                        // — ПРОСРОЧЕНА. Граница — ISO «сегодня»
+                        // (лексикографическое сравнение строк, приём
+                        // Task 380; дата ровно «сегодня» — ещё
+                        // действует). Дата считается инлайн — без
+                        // зависимости от _isoDate (самодостаточность
+                        // рендера в мок-тестах)
+                        var pNow = new Date();
+                        var pToday = pNow.getFullYear() + '-' +
+                            ('0' + (pNow.getMonth() + 1)).slice(-2) + '-' +
+                            ('0' + pNow.getDate()).slice(-2);
+                        pMeta.push('<span class="ws-ppe-exp ' +
+                            ((pExp < pToday) ? 'ws-ppe-exp-bad' : 'ws-ppe-exp-ok') +
+                            '">до ' + this._fmtDateRu(pExp) + '</span>');
                     }
                     if (String(pz.примечание || '').trim()) {
                         pMeta.push('«' + this._esc(String(pz.примечание).trim()) + '»');
