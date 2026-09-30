@@ -51663,15 +51663,63 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return out;
         },
 
+        // Task 452: агрегация месяца ДЛЯ ТАЛОНОВ — ПО-ДНЁВНАЯ
+        // классификация (заявка: «дни переработки должны учитывать-
+        // ся при учёте количества дней явки и, соответственно,
+        // количества выданных талонов»; «в отличие от итогов учёта
+        // в табеле здесь необходимо разделять рабочие дни по
+        // талонам: 7,2 и 8 — это 8-часовые талоны, 12 — это
+        // 12-часовые»; замечание: у Чиркова в сентябре 2026 шесть
+        // 12-часовых смен не учлись). КАЖДАЯ запись месяца = один
+        // день: часы дня → категория талона (12 ч и больше —
+        // 12-часовой талон, меньше 12 (7,2/8/…) — 8-часовой);
+        // ПЕРЕРАБОТКА — коды «д»/«н» (работа в вых./праздник) —
+        // УЧИТЫВАЕТСЯ и в днях явки, и в талонах (в отличие от
+        // _totalsAgg табеля, где переработка идёт отдельной
+        // строкой и в явки не попадает): часы _overHours (сменному
+        // — 12, дневному — из правки ячейки, иначе 8). Тип
+        // работника («сменный»/«дневной») категорию НЕ определяет
+        // — только часы каждого дня.
+        // Возвращает { byTab: {таб_номер: {days, t12, t8}} }
+        _talonsAgg: function(entries, empTypeMap) {
+            var types = empTypeMap || {};
+            var byTab = {};
+            var list = entries || [];
+            for (var i = 0; i < list.length; i++) {
+                var e = list[i];
+                var tab = String(e['таб_номер'] || '');
+                if (!tab) continue;
+                var a = byTab[tab];
+                if (!a) a = byTab[tab] = { days: 0, t12: 0, t8: 0 };
+                var code = String(e['статус'] || '');
+                var h;
+                if (code === 'д' || code === 'н') {
+                    // переработка — в талонах УЧИТЫВАЕТСЯ (заявка)
+                    h = this._overHours(e, types);
+                } else {
+                    var meta = this._statusMeta(code);
+                    h = this._codeHours(code, meta ? meta.name : '');
+                }
+                if (h > 0) {
+                    a.days++;
+                    // 12 ч и больше — 12-часовой талон, меньше
+                    // (7,2/8/…) — 8-часовой
+                    if (h >= 12) a.t12++; else a.t8++;
+                }
+            }
+            return { byTab: byTab };
+        },
+
         // Модель отчёта: строки по ВСЕМ активным работникам,
         // ОТСОРТИРОВАННЫЕ ПО АЛФАВИТУ ФАМИЛИЙ (Task 451: фамилия —
         // первое слово ФИО, localeCompare 'ru', вторичный ключ —
         // полное ФИО; экранная страница и печать получают один
-        // порядок). «Дней явки» — счётчик «Явки (дни)» итогов учёта
-        // (_totalsAgg.work: коды Д/Н/Д8/Д7,2 и NN-час); «Выдано
-        // 12/8 ч. талонов» (Task 451): авто = дням явки своей
-        // категории (сменный → 12 ч., дневной/прочий → 8 ч.),
-        // чужой — 0; ручная правка перекрывает. Источник записей:
+        // порядок). «Дней явки» — дни с рабочими часами ВКЛЮЧАЯ
+        // ПЕРЕРАБОТКУ («д»/«н», Task 452); «Выдано 12/8 ч.
+        // талонов»: авто — ПО-ДНЁВНАЯ классификация _talonsAgg
+        // (Task 452: 7,2/8 ч → 8 ч. талон, 12 ч → 12 ч. талон,
+        // переработка — по часам; тип работника категорию НЕ
+        // определяет); ручная правка перекрывает. Источник записей:
         // сетка на текущем месяце — её живые данные; иначе кэш
         // _TALONS_CACHE; кэша нет — ready=false (страница покажет
         // загрузку и подтянет месяц запросом)
@@ -51689,18 +51737,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var totals = { t12: 0, t8: 0, edited: 0 };
             if (entries) {
                 var eff = this._talonsEffectiveEntries(entries, mi.y, mi.m);
-                var agg = this._totalsAgg(eff, this._empTypeMap(this._EMPLOYEES));
+                var agg = this._talonsAgg(eff, this._empTypeMap(this._EMPLOYEES));
                 var list = this._EMPLOYEES || [];
                 for (var i = 0; i < list.length; i++) {
                     var emp = list[i];
                     var tab = String(emp['таб_номер'] || '');
                     var a = agg.byTab[tab];
-                    var days = a ? a.work : 0;
-                    // авто-количество: сменные — 12ч талоны по
-                    // явкам, дневные/прочие — 8ч (Task 451)
-                    var is12 = String(emp['тип'] || '').trim() === 'сменный';
-                    var auto12 = is12 ? days : 0;
-                    var auto8 = is12 ? 0 : days;
+                    var days = a ? a.days : 0;
+                    // авто-количество ПО ДНЯМ МЕСЯЦА (Task 452,
+                    // _talonsAgg): 7,2/8 ч → 8ч талоны, 12 ч →
+                    // 12ч; переработка («д»/«н») — учитывается;
+                    // тип работника категорию НЕ определяет
+                    // (заявка: шесть 12-часовых смен Чиркова —
+                    // дневному с 12-часовыми днями теперь 12ч)
+                    var auto12 = a ? a.t12 : 0;
+                    var auto8 = a ? a.t8 : 0;
                     var edit = this._TALONS_EDIT[tab] || {};
                     var t12 = auto12, t8 = auto8;
                     var e12 = false, e8 = false;
@@ -51860,7 +51911,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var html = '<div class="wst-head"><div class="wst-info">' +
                 '<span class="wst-title">Отчёт по талонам питания — ' +
                 this._esc(mi.name) + ' ' + mi.y + ' г.</span>' +
-                '<span class="wst-sub">Талонов выдано работникам за текущий месяц. 12 ч. талоны предзаполнены по дням явки сменным, 8 ч. — дневным (итоги учёта шахматки); при необходимости правьте перед печатью — можно указать работнику обе категории, в отчёт он попадёт в обе группы. Правки не сохраняются.</span>' +
+                '<span class="wst-sub">Талонов выдано работникам за текущий месяц. Талоны предзаполнены по дням месяца: смена 7,2/8 ч — 8 ч. талон, смена 12 ч — 12 ч. талон; дни переработки (д/н) учитываются — у дневного по часам правки ячейки, в отличие от итогов табеля. При необходимости правьте перед печатью — можно указать работнику обе категории, в отчёт он попадёт в обе группы. Правки не сохраняются.</span>' +
                 chipsHtml +
                 '</div>' + actionsHtml + '</div>';
             html += '<div class="wst-tscroll"><table class="wst-table"><thead><tr>' +
@@ -51926,7 +51977,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!inp) return;
             var tab = String(inp.getAttribute('data-tab') || '');
             if (!tab) return;
-            // категория талонов: 12ч (сменные) / 8ч (дневные)
+            // категория талонов: t12 (12-часовые) / t8 (8-часовые)
             var cat = String(inp.getAttribute('data-cat') || '');
             if (cat !== 't12' && cat !== 't8') return;
             var auto = parseInt(inp.getAttribute('data-auto'), 10) || 0;
@@ -51934,8 +51985,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var val = parseInt(raw, 10);
             if (!isFinite(val) || val < 0) val = 0;
             // «правка» = значение ОТЛИЧАЕТСЯ от авто-количества
-            // категории (сменные: авто 12ч = явкам, 8ч = 0; и
-            // наоборот)
+            // категории (авто — ПО ДНЯМ месяца: 7,2/8 ч → 8ч,
+            // 12 ч → 12ч, переработка учтена; Task 452)
             if (val === auto) {
                 var cur = this._TALONS_EDIT[tab];
                 if (cur) {
@@ -51998,12 +52049,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (resetBtn) resetBtn.hidden = !model.totals.edited;
         },
 
-        // Сброс ручных правок: талоны снова = дням явки
+        // Сброс ручных правок: талоны снова = авто-подсчёту по
+        // дням месяца (с переработкой — Task 452)
         talonsResetEdits: function() {
             this._TALONS_EDIT = {};
             this._renderTalonsPage();
             if (typeof KipToast !== 'undefined' && KipToast.show) {
-                KipToast.show('Правки сброшены — талоны посчитаны по дням явки');
+                KipToast.show('Правки сброшены — талоны посчитаны по дням месяца');
             }
         },
 
