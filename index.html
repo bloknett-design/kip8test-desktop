@@ -53657,11 +53657,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // Применить статус к ячейке ЛОКАЛЬНО (накопление в _PENDING).
-        // code === '' — «выходной» (очистка ячейки):
+        // code === '' — «Выходной, плановый выходной день» (слот канона
+        // «Коды_статусов» с ПУСТЫМ кодом — визуально пустая белая
+        // ячейка):
+        //   • серверная АВТО-запись (Task 453) → НЕ очистка, а РУЧНАЯ
+        //     запись «.» — плановый выходной ПОВЕРХ авто-смены (прежде —
+        //     тост «Нельзя очистить авто-запись»; заявка: статус обязан
+        //     ставиться вручную, как остальные из таблицы);
         //   • серверная ручная запись → планируем удаление (__delete);
-        //   • авто-запись → нельзя очистить (сервер запрещает deleteEntry
-        //     для авто) — тост, как в прежнем submitCellForm;
-        //   • была только локальная правка → правка снимается.
+        //   • была только локальная правка → правка снимается (выходной
+        //     = пустая ячейка, запись не нужна);
+        //   • пустая ячейка — пустой и остаётся.
         // code !== '' — новая локальная правка (доп. поля сохраняются из
         // эффективного состояния ячейки).
         // Task 322: hours — часы переработки кода «д»/«н» (дневной
@@ -53688,22 +53694,34 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 };
                 return;
             }
-            // Очистка («выходной»)
-            if (pending && !server) {
+            // «Выходной» (очистка / плановый выходной поверх авто)
+            if (server && server.источник === 'авто') {
+                // Task 453: ручной плановый выходной ПОВЕРХ авто-смены —
+                // запись «.» (легаси-код «Выходного»; слот канона несёт
+                // пустой код — Task 387). Удалить авто нельзя (deleteEntry
+                // отказывает), но и оставить смену нельзя: статус из
+                // «Коды_статусов» обязан ставиться вручную, как остальные
+                // (заявка Task 453). Рендерится ПУСТОЙ белой ячейкой
+                // (Task 314/356), в Итогах/Талонах/печати — НЕ рабочий
+                // день, а регенерация («Сформировать») существующие
+                // записи не трогает — выходной живёт поверх графика.
+                // Чистые поля: у планового выходного нет переработки,
+                // замещения, часов и комментария. Уже стоявшая правка
+                // (любой код) заменяется — последнее действие выигрывает.
+                this._PENDING[key] = {
+                    'статус': '.',
+                    'переработка': 0,
+                    'замещает': null,
+                    'комментарий': '',
+                    'часы': null
+                };
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Выходной поставлен поверх авто-записи. Нажмите «Сохранить»');
+                }
+            } else if (pending && !server) {
                 delete this._PENDING[key]; // локальная правка снимается — ячейка пустая
-            } else if (pending && server && server.источник === 'руч') {
-                this._PENDING[key] = { __delete: true }; // вернуть к удалению записи
-            } else if (pending && server && server.источник === 'авто') {
-                delete this._PENDING[key]; // откат локальной правки — снова авто-запись
-                if (typeof KipToast !== 'undefined' && KipToast.show) {
-                    KipToast.show('Нельзя очистить авто-запись. Установите статус вручную.');
-                }
             } else if (server && server.источник === 'руч') {
-                this._PENDING[key] = { __delete: true };
-            } else if (server && server.источник === 'авто') {
-                if (typeof KipToast !== 'undefined' && KipToast.show) {
-                    KipToast.show('Нельзя очистить авто-запись. Установите статус вручную.');
-                }
+                this._PENDING[key] = { __delete: true }; // удалить ручную запись — ячейка пустая
             } else {
                 delete this._PENDING[key]; // ячейка и так пустая
             }
@@ -53744,6 +53762,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var okCount = 0;
             var failCount = 0;
             var firstErr = null;
+            // Task 453: «.» (Выходной поверх авто) отклонён старым
+            // сервером (unknown_статус: .) — показать ПОДСКАЗКУ, а не
+            // только сухой код ошибки
+            var failDot = false;
             var chain = Promise.resolve();
             keys.forEach(function(key) {
                 chain = chain.then(function() {
@@ -53772,6 +53794,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     }).catch(function(err) {
                         failCount++;
                         if (!firstErr) firstErr = err;
+                        // Task 453: ручной «Выходной» не принят — старый
+                        // Apps Script без «.»-валидации (DEPLOY-Task453)
+                        if (p['статус'] === '.' &&
+                                String((err && err.message) || err)
+                                    .indexOf('unknown_статус') !== -1) {
+                            failDot = true;
+                        }
                     });
                 });
             });
@@ -53786,8 +53815,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     if (failCount === 0) {
                         KipToast.show('Сохранено записей: ' + okCount);
                     } else {
-                        KipToast.show('Сохранено ' + okCount + ' из ' + (okCount + failCount) +
-                                      '. Ошибка: ' + ((firstErr && (firstErr.message || firstErr)) || 'неизвестная'));
+                        var saveMsg = 'Сохранено ' + okCount + ' из ' + (okCount + failCount) +
+                                      '. Ошибка: ' + ((firstErr && (firstErr.message || firstErr)) || 'неизвестная');
+                        // Task 453: понятная подсказка для «Выходного»
+                        if (failDot) {
+                            saveMsg += '. Код «.» («Выходной») не принят сервером — ' +
+                                       'обновите WorkSchedule.gs в Apps Script ' +
+                                       '(см. DEPLOY-Task453) или верните «.» в колонку A ' +
+                                       'листа «Коды_статусов»';
+                        }
+                        KipToast.show(saveMsg);
                     }
                 }
             };
@@ -53947,15 +53984,35 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Task 251: удаление записи — тоже локально (в _PENDING),
         // фактическое удаление на сервере — при saveAll.
+        // Task 453: «Удалить запись» на правке ПОВЕРХ авто-записи
+        // («.»-выходной или любой код поверх авто-смены) снимает
+        // ПРАВКУ — ячейка возвращается к авто-смене: саму авто-запись
+        // сервер удалять запрещает (deleteEntry: cannot_delete_auto),
+        // а __delete по ней упал бы при сохранении. Откат правки —
+        // чисто локальный, «Сохранить» не нужен.
         deleteCell: function() {
             if (!this._editingCell || !this._editingCell.entry) return;
-            if (this._editingCell.entry.источник !== 'руч') {
+            var cell = this._editingCell;
+            var key = cell.date + '|' + cell['таб_номер'];
+            var server = this._serverEntry(cell.date, cell['таб_номер']);
+            var pending = this._PENDING[key];
+            if (server && server.источник !== 'руч' && !pending) {
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
                     KipToast.show('Можно удалять только ручные записи');
                 }
                 return;
             }
-            this._applyCellStatus(this._editingCell.date, this._editingCell['таб_номер'], '');
+            if (server && server.источник === 'авто' && pending) {
+                delete this._PENDING[key]; // снять правку — снова авто-запись
+                this.closeCellForm();
+                this._renderGrid();
+                this._updateSaveBtn();
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Правка снята — снова авто-запись');
+                }
+                return;
+            }
+            this._applyCellStatus(cell.date, cell['таб_номер'], '');
             this.closeCellForm();
             this._renderGrid();
             this._updateSaveBtn();
