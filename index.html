@@ -7229,9 +7229,11 @@
     [data-theme="light"] .wst-table tbody tr:nth-child(even) { background: rgba(0, 0, 0, 0.045); }
     [data-theme="light"] .wst-table tfoot td { border-top-color: rgba(0, 0, 0, 0.25); }
     [data-theme="light"] .wst-count { background: #ffffff; color: #333333; }
-    /* предпросмотр талонов: КНИЖНЫЙ лист (190мм печатной области
-       A4 портрета @96dpi), не 1063px альбомного графика */
-    .wspprev-frame.wst-prev-frame { width: 718px; }
+    /* предпросмотр талонов: КНИЖНЫЙ лист ПОЛЯМИ НАРУЖУ — 210мм
+       (контент 190мм + поля листа 2×10мм content-box) @96dpi =
+       794px; при 718px flex СЖИМАЛ лист (Task 449) и колонки были
+       уже печатных — «Слесарь по КИП и А» переносился на экране */
+    .wspprev-frame.wst-prev-frame { width: 794px; }
     @media (max-width: 1023px) {
         .wst-head { flex-direction: column; align-items: stretch; }
         .wst-actions { justify-content: flex-end; }
@@ -51971,39 +51973,51 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // не тронуты
         // ============================================================
         // Вёрстка СТРОГОЙ формы (Task 448, лист «Отчет» Excel):
-        // шапка 14pt («ОТЧЕТ» — жирная), таблица 12pt c шапкой БЕЗ
-        // жирного (как в форме); сетка 7 колонок едина для таблицы,
-        // блока ИТОГО и подписей — <col class="wst-c1…c7">
-        // (проценты из ширины столбцов Excel: 4.2 / 12 / 18.2 / 20 /
-        // 11.9 / 11.5 / 22.2). Многостраничность: повтор шапки
-        // таблицы (table-header-group), строки не рвутся, ярлык
-        // группы не отрывается от своей первой строки
+        // сетка 7 колонок едина для таблицы, блока ИТОГО и подписей
+        // — <col class="wst-c1…c7"> (проценты из ширины столбцов
+        // Excel: 4.2 / 12 / 18.2 / 20 / 11.9 / 11.5 / 22.2).
+        // Многостраничность: повтор шапки таблицы
+        // (table-header-group), строки не рвутся, ярлык группы не
+        // отрывается от своей первой строки.
+        // Task 449: форма УПЛОТНЕНА до ОДНОГО листа А4 (шапка 12pt
+        // («ОТЧЕТ» 13pt), th 10.5pt/9мм, td 11pt/6.3мм, ИТОГО и
+        // подписи 11pt, подсказки 7pt, межблочные поля сокращены);
+        // «№ п/п» — в две строчки (№<br>п/п); названия групп «12
+        // часовые»/«8 часовые» — в ОБЪЕДИНЁННЫХ ячейках на всю
+        // ширину (colspan 7); ИТОГО — по ОДНОЙ строке на группу
+        // («ИТОГО: 12 часовые» / «8 часовые», сумма — в колонке
+        // талонов, nowrap); ФИО и Должность — по ЛЕВОМУ краю, а
+        // также подсказки подписей: правила усилены до
+        // специфичности 1,3,1 (td-класс) — базовое td-правило
+        // (1,2,1) ранее перебивало и левое выравнивание, и 7-8pt
+        // подсказок; должности — в формате строгой формы «Слесарь
+        // по КИП и А» (хелпер _talonsPosition)
         _TALONS_PRINT_CSS:
-            '#wsPrintSheet.wst-sheet .wst-rep { font-family: Times New Roman, Times, serif; color: #000; font-size: 12pt; } ' +
-            '#wsPrintSheet.wst-sheet .wst-rep-org { font-size: 14pt; } ' +
-            '#wsPrintSheet.wst-sheet .wst-rep-title { text-align: center; font-size: 14pt; font-weight: 700; margin-top: 4.5mm; } ' +
-            '#wsPrintSheet.wst-sheet .wst-rep-sub { text-align: center; font-size: 14pt; margin-top: 1mm; } ' +
-            '#wsPrintSheet.wst-sheet .wst-rep-dept { text-align: center; font-size: 14pt; margin: 1mm 0 4mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-rep { font-family: Times New Roman, Times, serif; color: #000; font-size: 11pt; } ' +
+            '#wsPrintSheet.wst-sheet .wst-rep-org { font-size: 12pt; } ' +
+            '#wsPrintSheet.wst-sheet .wst-rep-title { text-align: center; font-size: 13pt; font-weight: 700; margin-top: 2mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-rep-sub { text-align: center; font-size: 12pt; margin-top: 0.5mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-rep-dept { text-align: center; font-size: 12pt; margin: 0.5mm 0 2.5mm; } ' +
             '#wsPrintSheet.wst-sheet .wst-rep-table { width: 100%; border-collapse: collapse; table-layout: fixed; } ' +
             '#wsPrintSheet.wst-sheet .wst-rep-table thead { display: table-header-group; } ' +
             '#wsPrintSheet.wst-sheet .wst-rep-table tr { page-break-inside: avoid; } ' +
             '#wsPrintSheet.wst-sheet .wst-r-group { page-break-after: avoid; } ' +
-            '#wsPrintSheet.wst-sheet .wst-rep-table th { border: 1px solid #000; font-weight: 400; text-align: center; vertical-align: middle; padding: 1mm; font-size: 12pt; height: 14mm; } ' +
-            '#wsPrintSheet.wst-sheet .wst-rep-table td { border: 1px solid #000; text-align: center; vertical-align: middle; padding: 1mm; font-size: 12pt; height: 9mm; overflow: hidden; } ' +
-            '#wsPrintSheet.wst-sheet .wst-r-fio, ' +
-            '#wsPrintSheet.wst-sheet .wst-r-pos { text-align: left; } ' +
-            '#wsPrintSheet.wst-sheet .wst-r-group td { height: 6mm; } ' +
-            '#wsPrintSheet.wst-sheet .wst-tot-table { width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 2.5mm; } ' +
-            '#wsPrintSheet.wst-sheet .wst-tot-table td { border: none; padding: 0.5mm 1mm; font-size: 12pt; height: 6mm; vertical-align: middle; } ' +
-            '#wsPrintSheet.wst-sheet .wst-t-itog { text-align: right; } ' +
-            '#wsPrintSheet.wst-sheet .wst-t-grp { text-align: right; } ' +
+            '#wsPrintSheet.wst-sheet .wst-rep-table th { border: 1px solid #000; font-weight: 400; text-align: center; vertical-align: middle; padding: 0.6mm 1mm; font-size: 10.5pt; height: 9mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-rep-table td { border: 1px solid #000; text-align: center; vertical-align: middle; padding: 0.5mm 1mm; font-size: 11pt; height: 6mm; overflow: hidden; } ' +
+            '#wsPrintSheet.wst-sheet .wst-rep-table td.wst-r-fio, ' +
+            '#wsPrintSheet.wst-sheet .wst-rep-table td.wst-r-pos { text-align: left; } ' +
+            '#wsPrintSheet.wst-sheet .wst-rep-table td.wst-r-glab { text-align: left; padding-left: 2mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-r-group td { height: 4.2mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-tot-table { width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 2mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-tot-table td { border: none; padding: 0.4mm 1mm; font-size: 11pt; height: 5.2mm; vertical-align: middle; } ' +
+            '#wsPrintSheet.wst-sheet .wst-tot-table td.wst-t-itog { text-align: right; white-space: nowrap; } ' +
             '#wsPrintSheet.wst-sheet .wst-tot-table td.wst-t-val { text-align: center; font-style: italic; border-bottom: 1px solid #000; } ' +
-            '#wsPrintSheet.wst-sheet .wst-t-unit { text-align: left; } ' +
-            '#wsPrintSheet.wst-sheet .wst-sign-table { width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 9mm; } ' +
-            '#wsPrintSheet.wst-sheet .wst-sign-table td { border: none; padding: 0 1mm; font-size: 12pt; height: 7mm; vertical-align: bottom; } ' +
+            '#wsPrintSheet.wst-sheet .wst-tot-table td.wst-t-unit { text-align: left; } ' +
+            '#wsPrintSheet.wst-sheet .wst-sign-table { width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 3.5mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-sign-table td { border: none; padding: 0 1mm; font-size: 11pt; height: 5.5mm; vertical-align: bottom; } ' +
             '#wsPrintSheet.wst-sheet .wst-s-name { white-space: nowrap; } ' +
-            '#wsPrintSheet.wst-sheet .wst-s-hint { font-size: 8pt; height: 4.5mm; vertical-align: top; text-align: center; padding-top: 0.3mm; } ' +
-            '#wsPrintSheet.wst-sheet .wst-s-gap { height: 5.5mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-sign-table td.wst-s-hint { font-size: 7pt; height: 3.5mm; vertical-align: top; text-align: center; padding-top: 0.3mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-s-gap { height: 2.2mm; } ' +
             '#wsPrintSheet.wst-sheet .wst-c1 { width: 4.2%; } ' +
             '#wsPrintSheet.wst-sheet .wst-c2 { width: 12%; } ' +
             '#wsPrintSheet.wst-sheet .wst-c3 { width: 18.2%; } ' +
@@ -52045,7 +52059,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         '<td class="wst-r-n">' + n + '</td>' +
                         '<td class="wst-r-tab">' + self._esc(r.tab) + '</td>' +
                         '<td class="wst-r-fio">' + self._esc(r.emp['ФИО'] || '') + '</td>' +
-                        '<td class="wst-r-pos">' + self._esc(String(r.emp['должность'] || '').trim() || '—') + '</td>' +
+                        '<td class="wst-r-pos">' + self._esc(self._talonsPosition(r.emp['должность'])) + '</td>' +
                         '<td class="wst-r-hrs">' + (talons * per) + '</td>' +
                         '<td class="wst-r-tal">' + talons + '</td>' +
                         '<td class="wst-r-sign"></td>' +
@@ -52063,7 +52077,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 this._esc(mi.name) + ' ' + mi.y + ' г.</div>' +
                 '<div class="wst-rep-dept">Цех № 8 пр-во ИОС</div>' +
                 '<table class="wst-rep-table">' + CG + '<thead><tr>' +
-                '<th class="wst-r-n">№ п/п</th>' +
+                '<th class="wst-r-n">№<br>п/п</th>' +
                 '<th class="wst-r-tab">Табельный номер</th>' +
                 '<th class="wst-r-fio">Ф.И.О.</th>' +
                 '<th class="wst-r-pos">Должность</th>' +
@@ -52071,25 +52085,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 '<th class="wst-r-tal">Кол-во выданных талонов</th>' +
                 '<th class="wst-r-sign">Роспись о получении</th>' +
                 '</tr></thead><tbody>' +
-                '<tr class="wst-r-group"><td colspan="3"></td>' +
-                '<td class="wst-r-glab">12 часовые</td>' +
-                '<td colspan="3"></td></tr>' +
+                '<tr class="wst-r-group">' +
+                '<td colspan="7" class="wst-r-glab">12 часовые</td></tr>' +
                 rowsOf(g12, 12) +
-                '<tr class="wst-r-group"><td colspan="3"></td>' +
-                '<td class="wst-r-glab">8 часовые</td>' +
-                '<td colspan="3"></td></tr>' +
+                '<tr class="wst-r-group">' +
+                '<td colspan="7" class="wst-r-glab">8 часовые</td></tr>' +
                 rowsOf(g8, 8) +
                 '</tbody></table>';
-            // ИТОГО по группам: суммы талонов (шт.) — КУРСИВ с
-            // подчёркиванием (как в форме)
+            // ИТОГО по группам — ОДНА строка на группу (Task 449):
+            // «ИТОГО: 12 часовые» / «8 часовые» целиком в объединённой
+            // ячейке (colspan 5, right + nowrap — без переносов),
+            // сумма — в колонке талонов, КУРСИВ с подчёркиванием
             html += '<table class="wst-tot-table">' + CG +
-                '<tr><td colspan="3"></td>' +
-                '<td class="wst-t-itog">ИТОГО:</td>' +
-                '<td class="wst-t-grp">12 часовые</td>' +
+                '<tr><td colspan="5" class="wst-t-itog">ИТОГО: 12 часовые</td>' +
                 '<td class="wst-t-val">' + groupSum(g12) + '</td>' +
                 '<td class="wst-t-unit">(шт.)</td></tr>' +
-                '<tr><td colspan="3"></td><td></td>' +
-                '<td class="wst-t-grp">8 часовые</td>' +
+                '<tr><td colspan="5" class="wst-t-itog">8 часовые</td>' +
                 '<td class="wst-t-val">' + groupSum(g8) + '</td>' +
                 '<td class="wst-t-unit">(шт.)</td></tr>' +
                 '</table>';
@@ -52105,6 +52116,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                       '(подпись)') +
                 '</table></div>';
             return html;
+        },
+
+        // Должность в формате строгой формы (Task 449): лист «Данные
+        // работников» знает только «Слесарь по КИП и А» и «Мастер по
+        // КИП и А» — «КИПиА»/«КИП и А» из профиля приводятся к
+        // каноническому «КИП и А» с предлогом «по»; должности без
+        // «КИП» — как есть; пустая — прочерк
+        _talonsPosition: function(raw) {
+            var s = String(raw || '').trim();
+            if (!s) return '—';
+            var m = s.replace(/кип\s*и\s*а/gi, 'КИП и А');
+            if (m === s && !/кип/i.test(s)) return s;
+            if (!/по\s+КИП и А/.test(m)) {
+                m = m.replace(/КИП и А/, 'по КИП и А');
+            }
+            return m;
         },
 
         // Блок подписи строгой формы (Task 448): ярлык (колонки
@@ -52136,7 +52163,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             st.id = 'wsTalonsPrintStyle';
             st.textContent = '@media print { ' +
                 '@page { size: A4 portrait; margin: 12mm 10mm; } ' +
-                '#wsPrintSheet.wst-sheet { font: 12pt/1.3 Times New Roman, Times, serif; color: #000; } ' +
+                '#wsPrintSheet.wst-sheet { font: 11pt/1.25 Times New Roman, Times, serif; color: #000; } ' +
                 this._TALONS_PRINT_CSS + ' }';
             var head = document.head || document.documentElement;
             if (head && head.appendChild) head.appendChild(st);
@@ -52201,8 +52228,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 'html { background: #566170; } ' +
                 'body { margin: 0; padding: 6mm 0; display: flex; justify-content: center; } ' +
                 '#wsPrintSheet { background: #fff; box-shadow: 0 1mm 4mm rgba(0,0,0,0.45); ' +
-                'padding: 12mm 10mm; width: 190mm; ' +
-                'font: 12pt/1.3 Times New Roman, Times, serif; color: #000; } ' +
+                'padding: 12mm 10mm; width: 190mm; flex: none; ' +
+                'font: 11pt/1.25 Times New Roman, Times, serif; color: #000; } ' +
                 this._TALONS_PRINT_CSS +
                 '</style></head><body>' +
                 '<div id="wsPrintSheet" class="wst-sheet">' + printHtml + '</div>' +
@@ -52349,7 +52376,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var paper = overlay.querySelector('.wspprev-paper');
             var frame = overlay.querySelector('.wspprev-frame');
             if (!body || !paper || !frame) return;
-            var W = 718;
+            var W = 794;
             var avail = (body.clientWidth || 0) - 28;
             if (!(avail > 0)) avail = W;
             var k = Math.min(1, avail / W);
