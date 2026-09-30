@@ -52136,6 +52136,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // текст longest в .wst-s-gh задаёт ширину бокса .wst-s-nbox
         // (border-bottom — черта), фамилия — абсолютно поверх
         // призрака по центру черты у ВСЕХ трёх блоков;
+        // Task 454: ширины колонок по заявке — «Должность» (c4)
+        // ПО ШИРИНЕ САМОГО ШИРОКОГО текста в ней (в ОДНУ строку),
+        // «Ф.И.О.» (c3) — ТОЙ ЖЕ шириной, «Роспись о получении»
+        // (c7) — ОСТАТОК сетки (уже на величину прироста c3+c4;
+        // ширина листа 190мм сохраняется): colgroup строится
+        // ДИНАМИЧЕСКИ (_talonsColgroup) — canvas-замер текста
+        // (Times New Roman 11pt) + паддинги → инлайн-ширины c3/c4
+        // (px), c7 — width:auto (table-layout:fixed отдаёт колонке
+        // без ширины весь остаток); canvas недоступен — фолбэк на
+        // проценты Excel (.wst-c3/.wst-c4/.wst-c7 ниже). Строки
+        // работников — ВЫСОТОЙ В ДВЕ СТРОКИ текста (height 2.5em
+        // = 2 × 11pt × 1.25 + паддинги), текст — по вертикали ПО
+        // ЦЕНТРУ (vertical-align: middle).
         _TALONS_PRINT_CSS:
             '#wsPrintSheet.wst-sheet .wst-rep { font-family: Times New Roman, Times, serif; color: #000; font-size: 11pt; } ' +
             '#wsPrintSheet.wst-sheet .wst-rep-org { font-size: 12pt; } ' +
@@ -52147,7 +52160,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             '#wsPrintSheet.wst-sheet .wst-rep-table tr { page-break-inside: avoid; } ' +
             '#wsPrintSheet.wst-sheet .wst-r-group { page-break-after: avoid; } ' +
             '#wsPrintSheet.wst-sheet .wst-rep-table th { border: 1px solid #000; font-weight: 400; text-align: center; vertical-align: middle; padding: 0.6mm 1mm; font-size: 10.5pt; height: 9mm; } ' +
-            '#wsPrintSheet.wst-sheet .wst-rep-table td { border: 1px solid #000; text-align: center; vertical-align: middle; padding: 0.5mm 1mm; font-size: 11pt; height: 6mm; overflow: hidden; } ' +
+            // Task 454: строки данных — ВЫСОТА В ДВЕ строки текста
+            // (2.5em = 2 × 11pt × 1.25 + паддинги; было 6мм),
+            // содержимое — по вертикали ПО ЦЕНТРУ (middle)
+            '#wsPrintSheet.wst-sheet .wst-rep-table td { border: 1px solid #000; text-align: center; vertical-align: middle; padding: 0.5mm 1mm; font-size: 11pt; height: 2.5em; overflow: hidden; } ' +
             '#wsPrintSheet.wst-sheet .wst-rep-table td.wst-r-fio, ' +
             '#wsPrintSheet.wst-sheet .wst-rep-table td.wst-r-pos { text-align: left; } ' +
             '#wsPrintSheet.wst-sheet .wst-rep-table td.wst-r-glab { text-align: center; } ' +
@@ -52175,11 +52191,88 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             '#wsPrintSheet.wst-sheet .wst-s-gap { height: 2.2mm; } ' +
             '#wsPrintSheet.wst-sheet .wst-c1 { width: 4.2%; } ' +
             '#wsPrintSheet.wst-sheet .wst-c2 { width: 12%; } ' +
+            // Task 454: c3/c4/c7 — ФОЛБЭК-проценты Excel (печать
+            // без canvas-замера, моки тестов); рабочий путь —
+            // инлайн-ширины colgroup из _talonsColgroup
             '#wsPrintSheet.wst-sheet .wst-c3 { width: 18.2%; } ' +
             '#wsPrintSheet.wst-sheet .wst-c4 { width: 20%; } ' +
             '#wsPrintSheet.wst-sheet .wst-c5 { width: 11.9%; } ' +
             '#wsPrintSheet.wst-sheet .wst-c6 { width: 11.5%; } ' +
             '#wsPrintSheet.wst-sheet .wst-c7 { width: 22.2%; }',
+
+        // Task 454: ширина самого широкого текста из списка —
+        // canvas measureText (px). Canvas недоступен (моки
+        // тестов, экзотические окружения) → null — печатная
+        // сетка уходит на фолбэк-проценты Excel. Замер и ячейка
+        // используют одну пару шрифт-размер — «в одну строку»
+        // держится при том же рендеринге, что и замерено.
+        _talonsTextWidth: function(texts, font) {
+            if (typeof document === 'undefined' ||
+                !document.createElement) return null;
+            var cv;
+            try { cv = document.createElement('canvas'); }
+            catch (e) { return null; }
+            if (!cv || typeof cv.getContext !== 'function') return null;
+            var ctx;
+            try { ctx = cv.getContext('2d'); } catch (e) { return null; }
+            if (!ctx || typeof ctx.measureText !== 'function') return null;
+            try {
+                ctx.font = font ||
+                    '11pt Times New Roman, Times, serif';
+            } catch (e) { return null; }
+            var max = 0;
+            for (var i = 0; i < texts.length; i++) {
+                var t = String(texts[i] || '');
+                if (!t) continue;
+                var w = ctx.measureText(t).width;
+                if (w > max) max = w;
+            }
+            return max;
+        },
+
+        // Task 454: colgroup печатной формы (сетка 190мм ≈ 718px):
+        // «Должность» (c4) — по самому широкому тексту (значения
+        // 11pt и шапка 10.5pt + паддинги 2×1мм и запас на
+        // границы — НЕ переносится), «Ф.И.О.» (c3) — той же
+        // шириной (заявка), «Роспись о получении» (c7) — ОСТАТОК
+        // (width:auto — table-layout:fixed отдаёт колонке без
+        // ширины весь остаток, т.е. уже ровно на прирост c3+c4).
+        // Ограничители: c3/c4 не уже 12% (шапка/эстетика) и не
+        // шире, чем оставит «Росписи» 8% сетки. positions —
+        // ОТОБРАЖАЕМЫЕ должности (после _talonsPosition).
+        // Canvas недоступен → проценты Excel (фолбэк, как до
+        // Task 454 — инлайн-стилей нет, классы .wst-c3/.wst-c4/
+        // .wst-c7 в _TALONS_PRINT_CSS).
+        _talonsColgroup: function(positions) {
+            var FALLBACK = '<colgroup><col class="wst-c1">' +
+                '<col class="wst-c2"><col class="wst-c3">' +
+                '<col class="wst-c4"><col class="wst-c5">' +
+                '<col class="wst-c6"><col class="wst-c7"></colgroup>';
+            var vals = [];
+            for (var i = 0; i < positions.length; i++) {
+                var p = String(positions[i] || '');
+                if (p && vals.indexOf(p) === -1) vals.push(p);
+            }
+            var valW = this._talonsTextWidth(vals,
+                '11pt Times New Roman, Times, serif');
+            var headW = this._talonsTextWidth(['Должность'],
+                '10.5pt Times New Roman, Times, serif');
+            if (valW === null || headW === null) return FALLBACK;
+            var w = Math.ceil(Math.max(valW, headW)) + 10;
+            var TABLE_PX = 718.4;  // 190мм печатной области @96dpi
+            var REST = 0.396;      // c1+c2+c5+c6 — проценты Excel
+            var wMin = Math.ceil(TABLE_PX * 0.12);
+            var wMax = Math.floor(
+                (TABLE_PX * 0.92 - TABLE_PX * REST) / 2);
+            if (w < wMin) w = wMin;
+            if (w > wMax) w = wMax;
+            return '<colgroup><col class="wst-c1">' +
+                '<col class="wst-c2">' +
+                '<col class="wst-c3" style="width:' + w + 'px">' +
+                '<col class="wst-c4" style="width:' + w + 'px">' +
+                '<col class="wst-c5"><col class="wst-c6">' +
+                '<col class="wst-c7" style="width:auto"></colgroup>';
+        },
 
         // Печатная форма отчёта — СТРОГО по форме Excel (лист
         // «Отчет», Task 448): шапка предприятия/«ОТЧЕТ»/Л.П.П./цех,
@@ -52193,6 +52286,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // не пропадают); порядок строк — алфавит фамилий (модель
         // _talonsRows); черта подписи — по длине самой длинной
         // фамилии (longest → призрак .wst-s-gh)
+        // Task 454: сетка колонок — ДИНАМИЧЕСКИЙ colgroup
+        // (_talonsColgroup): «Должность» по самому широкому
+        // тексту (в одну строку), «Ф.И.О.» — той же шириной,
+        // «Роспись» — остаток сетки; строки работников — высотой
+        // в ДВЕ строки текста, по вертикали по центру (CSS)
         _buildTalonsPrintHtml: function(model) {
             var mi = model.month;
             var self = this;
@@ -52236,9 +52334,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
                 return html;
             };
-            var CG = '<colgroup><col class="wst-c1"><col class="wst-c2">' +
-                '<col class="wst-c3"><col class="wst-c4"><col class="wst-c5">' +
-                '<col class="wst-c6"><col class="wst-c7"></colgroup>';
+            // Task 454: сетка — ДИНАМИЧЕСКАЯ: должности собираются
+            // по ОТОБРАЖАЕМОМУ тексту (после _talonsPosition, как
+            // в rowsOf), «Должность» — по самому широкому (одна
+            // строка), «Ф.И.О.» — той же шириной, «Роспись» —
+            // остаток; дубликаты (обе группы) на замер не влияют
+            var positions = [];
+            for (var pi = 0; pi < model.rows.length; pi++) {
+                var pos = self._talonsPosition(
+                    model.rows[pi].emp['должность']);
+                if (positions.indexOf(pos) === -1) positions.push(pos);
+            }
+            var CG = self._talonsColgroup(positions);
             var html = '<div class="wst-rep">' +
                 '<div class="wst-rep-org">Наименование предприятия ООО ПО "Токем"</div>' +
                 '<div class="wst-rep-title">ОТЧЕТ</div>' +
