@@ -51591,11 +51591,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // кнопка тулбара скрыта остальным, прямой переход по URL
         // уходит в табель, правка полей — той же воронкой
         // ============================================================
-        // Ручные правки талонов: {таб_номер: число}. Значение РАВНОЕ
-        // дням явки правкой не считается (строка возвращается к
-        // авто-подсчёту). Переживают перерисовки страницы, живут до
-        // «Сбросить правки»/закрытия сессии — НЕ localStorage (архив
-        // не нужен по заявке)
+        // Ручные правки талонов: {таб_номер: {t12: число, t8: число}}
+        // — только ПРАВЛЕННЫЕ категории (авто: сменные — t12 = дням
+        // явки, t8 = 0; дневные/прочие — t8 = дням явки, t12 = 0).
+        // Значение РАВНОЕ авто-количеству категории правкой не
+        // считается (поле снимается; пустой объект — ключ целиком:
+        // строка возвращается к авто-подсчёту). Переживают
+        // перерисовки страницы, живут до «Сбросить правки»/закрытия
+        // сессии — НЕ localStorage (архив не нужен по заявке).
+        // Task 451: правка ОБЕИХ категорий у одного работника → он
+        // попадает в ОБОИХ группах «12/8 часовые» печатного отчёта
         _TALONS_EDIT: {},
         // Записи текущего месяца, когда шахматка открыта на ДРУГОМ
         // месяце: {year, month, entries} — ленивая подтяжка
@@ -51658,14 +51663,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return out;
         },
 
-        // Модель отчёта: строки по ВСЕМ активным работникам (порядок
-        // шахматки: сменные по сменам → дневные по алфавиту),
-        // «Дней явки» — счётчик «Явки (дни)» итогов учёта
-        // (_totalsAgg.work: коды Д/Н/Д8/Д7,2 и NN-час), «Выдано
-        // талонов» — явка по умолчанию / ручная правка. Источник
-        // записей: сетка на текущем месяце — её живые данные; иначе
-        // кэш _TALONS_CACHE; кэша нет — ready=false (страница
-        // покажет загрузку и подтянет месяц запросом)
+        // Модель отчёта: строки по ВСЕМ активным работникам,
+        // ОТСОРТИРОВАННЫЕ ПО АЛФАВИТУ ФАМИЛИЙ (Task 451: фамилия —
+        // первое слово ФИО, localeCompare 'ru', вторичный ключ —
+        // полное ФИО; экранная страница и печать получают один
+        // порядок). «Дней явки» — счётчик «Явки (дни)» итогов учёта
+        // (_totalsAgg.work: коды Д/Н/Д8/Д7,2 и NN-час); «Выдано
+        // 12/8 ч. талонов» (Task 451): авто = дням явки своей
+        // категории (сменный → 12 ч., дневной/прочий → 8 ч.),
+        // чужой — 0; ручная правка перекрывает. Источник записей:
+        // сетка на текущем месяце — её живые данные; иначе кэш
+        // _TALONS_CACHE; кэша нет — ready=false (страница покажет
+        // загрузку и подтянет месяц запросом)
         _talonsRows: function() {
             var mi = this._talonsMonthInfo();
             var entries = null;
@@ -51677,7 +51686,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 entries = this._TALONS_CACHE.entries;
             }
             var rows = [];
-            var totals = { days: 0, talons: 0, edited: 0 };
+            var totals = { t12: 0, t8: 0, edited: 0 };
             if (entries) {
                 var eff = this._talonsEffectiveEntries(entries, mi.y, mi.m);
                 var agg = this._totalsAgg(eff, this._empTypeMap(this._EMPLOYEES));
@@ -51687,14 +51696,41 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var tab = String(emp['таб_номер'] || '');
                     var a = agg.byTab[tab];
                     var days = a ? a.work : 0;
-                    var edited = Object.prototype.hasOwnProperty.call(this._TALONS_EDIT, tab);
-                    var talons = edited ? this._TALONS_EDIT[tab] : days;
+                    // авто-количество: сменные — 12ч талоны по
+                    // явкам, дневные/прочие — 8ч (Task 451)
+                    var is12 = String(emp['тип'] || '').trim() === 'сменный';
+                    var auto12 = is12 ? days : 0;
+                    var auto8 = is12 ? 0 : days;
+                    var edit = this._TALONS_EDIT[tab] || {};
+                    var t12 = auto12, t8 = auto8;
+                    var e12 = false, e8 = false;
+                    if (edit.t12 !== undefined && edit.t12 !== auto12) {
+                        t12 = edit.t12; e12 = true;
+                    }
+                    if (edit.t8 !== undefined && edit.t8 !== auto8) {
+                        t8 = edit.t8; e8 = true;
+                    }
+                    var edited = e12 || e8;
                     if (edited) totals.edited++;
-                    totals.days += days;
-                    totals.talons += talons;
+                    totals.t12 += t12;
+                    totals.t8 += t8;
                     rows.push({ emp: emp, tab: tab, days: days,
-                                talons: talons, edited: edited });
+                                t12: t12, t8: t8,
+                                auto12: auto12, auto8: auto8,
+                                edited12: e12, edited8: e8, edited: edited });
                 }
+                // сортировка ПО АЛФАВИТУ ФАМИЛИЙ (Task 451)
+                var famOf = function(r) {
+                    var s = String((r.emp && r.emp['ФИО']) || '').trim();
+                    var sp = s.indexOf(' ');
+                    return sp === -1 ? s : s.slice(0, sp);
+                };
+                rows.sort(function(a, b) {
+                    var c = famOf(a).localeCompare(famOf(b), 'ru');
+                    if (c) return c;
+                    return String(a.emp['ФИО'] || '')
+                        .localeCompare(String(b.emp['ФИО'] || ''), 'ru');
+                });
             }
             return { rows: rows, totals: totals, month: mi, ready: !!entries };
         },
@@ -51778,7 +51814,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Рендер страницы: шапка сводки (месяц/подсказка/чипы +
         // действия) + таблица (№/Таб. №/ФИО/Должность/Дней явки/
-        // Выдано талонов — input) + итоговая строка
+        // Выдано 12 ч. талонов — input/Выдано 8 ч. талонов — input;
+        // Task 451: категория одна — колонка на каждую) + итоговая
+        // строка (ИТОГИ ПО КАТЕГОРИЯМ 12/8 ч.; общий итог дней
+        // явки НЕ показывается — по заявке)
         _renderTalonsPage: function() {
             var body = document.getElementById('wsTalonsBody');
             if (!body) return;
@@ -51806,8 +51845,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var mi = model.month;
             var chipsHtml = '<div class="wst-chips">' +
                 '<span class="wst-chip">Работников: <b>' + model.rows.length + '</b></span>' +
-                '<span class="wst-chip">Дней явки: <b id="wstTotalDaysChip">' + model.totals.days + '</b></span>' +
-                '<span class="wst-chip">Талонов: <b id="wstTotalTalonsChip">' + model.totals.talons + '</b></span>' +
+                '<span class="wst-chip">12 ч. талонов: <b id="wstTotalT12Chip">' + model.totals.t12 + '</b></span>' +
+                '<span class="wst-chip">8 ч. талонов: <b id="wstTotalT8Chip">' + model.totals.t8 + '</b></span>' +
                 '<span class="wst-chip wst-chip-edit" id="wstChipEdit"' +
                     (model.totals.edited ? '' : ' hidden') + '>Правок: <b id="wstEditCount">' +
                     model.totals.edited + '</b></span>' +
@@ -51821,69 +51860,107 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var html = '<div class="wst-head"><div class="wst-info">' +
                 '<span class="wst-title">Отчёт по талонам питания — ' +
                 this._esc(mi.name) + ' ' + mi.y + ' г.</span>' +
-                '<span class="wst-sub">Талонов выдано работникам за текущий месяц. Количество предзаполнено по дням явки из шахматки табеля (итоги учёта) — при необходимости правьте перед печатью; правки не сохраняются.</span>' +
+                '<span class="wst-sub">Талонов выдано работникам за текущий месяц. 12 ч. талоны предзаполнены по дням явки сменным, 8 ч. — дневным (итоги учёта шахматки); при необходимости правьте перед печатью — можно указать работнику обе категории, в отчёт он попадёт в обе группы. Правки не сохраняются.</span>' +
                 chipsHtml +
                 '</div>' + actionsHtml + '</div>';
             html += '<div class="wst-tscroll"><table class="wst-table"><thead><tr>' +
                 '<th class="wst-c-n">№</th><th>Таб. №</th><th>ФИО</th>' +
                 '<th>Должность</th><th class="wst-c-days">Дней явки</th>' +
-                '<th class="wst-c-tal">Выдано талонов</th>' +
+                '<th class="wst-c-tal">Выдано 12 ч. талонов</th>' +
+                '<th class="wst-c-tal">Выдано 8 ч. талонов</th>' +
                 '</tr></thead><tbody>';
+            var self = this;
+            // ячейка категории талонов (Task 451): input + бейдж
+            // разницы с авто-количеством; cat = 't12' | 't8'
+            var talCell = function(row, cat) {
+                var val = (cat === 't12') ? row.t12 : row.t8;
+                var auto = (cat === 't12') ? row.auto12 : row.auto8;
+                var editedCat = (cat === 't12') ? row.edited12 : row.edited8;
+                var diff = val - auto;
+                return '<td class="wst-c-tal">' +
+                    '<input type="number" class="wst-count' +
+                        (editedCat ? ' wst-count-edited' : '') + '" min="0" step="1" value="' +
+                        val + '" data-tab="' + self._escAttr(row.tab) +
+                        '" data-cat="' + cat + '" data-auto="' + auto +
+                        '" oninput="WorkSchedule.onTalonsInput(this)" aria-label="Выдано ' +
+                        (cat === 't12' ? '12' : '8') + ' ч. талонов: ' +
+                        self._esc(row.emp['ФИО'] || '') + '">' +
+                    '<span class="wst-diff' + (editedCat
+                        ? (diff > 0 ? ' wst-diff-up' : (diff < 0 ? ' wst-diff-down' : ''))
+                        : '') + '"' + (editedCat ? '' : ' hidden') + '>' +
+                        (editedCat ? (diff > 0 ? '+' + diff : diff) : '') + '</span>' +
+                    '</td>';
+            };
             for (var r = 0; r < model.rows.length; r++) {
                 var row = model.rows[r];
-                var diff = row.talons - row.days;
                 html += '<tr>' +
                     '<td class="wst-c-n">' + (r + 1) + '</td>' +
                     '<td>' + this._esc(row.tab) + '</td>' +
                     '<td class="wst-fio">' + this._esc(row.emp['ФИО'] || '') + '</td>' +
                     '<td>' + this._esc(String(row.emp['должность'] || '').trim() || '—') + '</td>' +
                     '<td class="wst-c-days">' + row.days + '</td>' +
-                    '<td class="wst-c-tal">' +
-                        '<input type="number" class="wst-count' +
-                            (row.edited ? ' wst-count-edited' : '') + '" min="0" step="1" value="' +
-                            row.talons + '" data-tab="' + this._escAttr(row.tab) +
-                            '" data-days="' + row.days + '" oninput="WorkSchedule.onTalonsInput(this)" aria-label="Выдано талонов: ' +
-                            this._esc(row.emp['ФИО'] || '') + '">' +
-                        '<span class="wst-diff' + (row.edited
-                            ? (diff > 0 ? ' wst-diff-up' : (diff < 0 ? ' wst-diff-down' : ''))
-                            : '') + '"' + (row.edited ? '' : ' hidden') + '>' +
-                            (row.edited ? (diff > 0 ? '+' + diff : diff) : '') + '</span>' +
-                    '</td></tr>';
+                    talCell(row, 't12') +
+                    talCell(row, 't8') +
+                    '</tr>';
             }
+            // итоговая строка: ИТОГИ ОТДЕЛЬНО 12/8 ч. (Task 451),
+            // общий итог дней явки НЕ показывается (заявка);
+            // ячейка «Дней явки» — пустая
             html += '</tbody><tfoot><tr>' +
                 '<td colspan="4" class="wst-total-name">Итого</td>' +
-                '<td class="wst-c-days" id="wstTotalDays">' + model.totals.days + '</td>' +
-                '<td class="wst-c-tal" id="wstTotalTalons">' + model.totals.talons + '</td>' +
+                '<td class="wst-c-days"></td>' +
+                '<td class="wst-c-tal" id="wstTotalT12">' + model.totals.t12 + '</td>' +
+                '<td class="wst-c-tal" id="wstTotalT8">' + model.totals.t8 + '</td>' +
                 '</tr></tfoot></table></div>';
             body.innerHTML = html;
         },
 
-        // Живая правка «Выдано талонов» (oninput): значение — в
-        // _TALONS_EDIT (равное явке снимает правку), бейдж разницы и
-        // итоги — ТОЧЕЧНЫМИ обновлениями DOM (полный ре-рендер НЕ
-        // зовётся — фокус в поле не теряется)
+        // Живая правка «Выдано 12/8 ч. талонов» (oninput, Task 451):
+        // категория — data-cat ('t12'|'t8'), авто-количество —
+        // data-auto; значение — в _TALONS_EDIT[таб][категория]
+        // (равное авто снимает правку; пустой объект — ключ
+        // целиком), бейдж разницы и итоги — ТОЧЕЧНЫМИ обновлениями
+        // DOM (полный ре-рендер НЕ зовётся — фокус в поле не
+        // теряется)
         onTalonsInput: function(inp) {
             if (!inp) return;
             var tab = String(inp.getAttribute('data-tab') || '');
             if (!tab) return;
-            var days = parseInt(inp.getAttribute('data-days'), 10) || 0;
+            // категория талонов: 12ч (сменные) / 8ч (дневные)
+            var cat = String(inp.getAttribute('data-cat') || '');
+            if (cat !== 't12' && cat !== 't8') return;
+            var auto = parseInt(inp.getAttribute('data-auto'), 10) || 0;
             var raw = String(inp.value === undefined ? '' : inp.value).trim();
             var val = parseInt(raw, 10);
             if (!isFinite(val) || val < 0) val = 0;
-            // «правка» = значение ОТЛИЧАЕТСЯ от дней явки
-            if (val === days) {
-                delete this._TALONS_EDIT[tab];
+            // «правка» = значение ОТЛИЧАЕТСЯ от авто-количества
+            // категории (сменные: авто 12ч = явкам, 8ч = 0; и
+            // наоборот)
+            if (val === auto) {
+                var cur = this._TALONS_EDIT[tab];
+                if (cur) {
+                    delete cur[cat];
+                    if (Object.keys(cur).length === 0) {
+                        delete this._TALONS_EDIT[tab];
+                    }
+                }
             } else {
-                this._TALONS_EDIT[tab] = val;
+                var e = this._TALONS_EDIT[tab];
+                if (!e || typeof e !== 'object') {
+                    e = {};
+                    this._TALONS_EDIT[tab] = e;
+                }
+                e[cat] = val;
             }
-            var edited = Object.prototype.hasOwnProperty.call(this._TALONS_EDIT, tab);
+            var edit = this._TALONS_EDIT[tab] || {};
+            var edited = Object.prototype.hasOwnProperty.call(edit, cat);
             var cls = 'wst-count' + (edited ? ' wst-count-edited' : '');
             if (inp.className !== cls) inp.className = cls;
-            // бейдж разницы с явками
+            // бейдж разницы с авто-количеством категории
             var badge = (inp.parentNode && inp.parentNode.querySelector)
                 ? inp.parentNode.querySelector('.wst-diff') : null;
             if (badge) {
-                var diff = val - days;
+                var diff = val - auto;
                 if (edited) {
                     badge.textContent = (diff > 0 ? '+' + diff : String(diff));
                     badge.className = 'wst-diff' + (diff > 0 ? ' wst-diff-up'
@@ -51900,7 +51977,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // Пересчёт чипов и итогов страницы по _talonsRows (точечно,
-        // без ре-рендера — поля ввода не теряют фокус)
+        // без ре-рендера — поля ввода не теряют фокус): итоги
+        // талонов ОТДЕЛЬНО 12/8 ч., общий итог дней явки НЕ
+        // показывается (Task 451)
         _talonsUpdateTotals: function() {
             var model = this._talonsRows();
             var el;
@@ -51908,10 +51987,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 el = document.getElementById(id);
                 if (el) el.textContent = String(v);
             };
-            set('wstTotalDaysChip', model.totals.days);
-            set('wstTotalTalonsChip', model.totals.talons);
-            set('wstTotalDays', model.totals.days);
-            set('wstTotalTalons', model.totals.talons);
+            set('wstTotalT12Chip', model.totals.t12);
+            set('wstTotalT8Chip', model.totals.t8);
+            set('wstTotalT12', model.totals.t12);
+            set('wstTotalT8', model.totals.t8);
             set('wstEditCount', model.totals.edited);
             var chip = document.getElementById('wstChipEdit');
             if (chip) chip.hidden = !model.totals.edited;
@@ -52000,6 +52079,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // пояснение — по центру черты); разряды в должностях
         // убираются («Слесарь по КИП и А 5 разряда» → «Слесарь
         // по КИП и А», хелпер _talonsPosition)
+        // Task 451: черта под фамилиями — ПО ДЛИНЕ САМОЙ ДЛИННОЙ
+        // фамилии («Котельникова И.А.»): «призрак» — невидимый
+        // текст longest в .wst-s-gh задаёт ширину бокса .wst-s-nbox
+        // (border-bottom — черта), фамилия — абсолютно поверх
+        // призрака по центру черты у ВСЕХ трёх блоков;
         _TALONS_PRINT_CSS:
             '#wsPrintSheet.wst-sheet .wst-rep { font-family: Times New Roman, Times, serif; color: #000; font-size: 11pt; } ' +
             '#wsPrintSheet.wst-sheet .wst-rep-org { font-size: 12pt; } ' +
@@ -52025,7 +52109,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             '#wsPrintSheet.wst-sheet .wst-sign-table td { border: none; padding: 0 1mm; font-size: 11pt; height: 5.5mm; vertical-align: bottom; } ' +
             '#wsPrintSheet.wst-sheet .wst-s-name { white-space: nowrap; } ' +
             '#wsPrintSheet.wst-sheet .wst-sign-table td.wst-s-line { text-align: center; } ' +
-            '#wsPrintSheet.wst-sheet .wst-sign-table td.wst-s-fio { border-top: 1px solid #000; } ' +
+            // Task 451 (продолжение описания выше): черта под
+            // фамилией — border-bottom бокса .wst-s-nbox, ширина
+            // бокса задаётся невидимым «призраком» .wst-s-gh (текст
+            // самой длинной фамилии), фамилия .wst-s-nm — абсолютно
+            // поверх призрака, по центру черты; «(ф.и.о.)» — по
+            // центру колонок 6–7 (= центру черты)
+            '#wsPrintSheet.wst-sheet .wst-sign-table td.wst-s-name { text-align: center; } ' +
+            '#wsPrintSheet.wst-sheet .wst-s-nbox { position: relative; display: inline-block; border-bottom: 1px solid #000; padding: 0 0.6mm; } ' +
+            '#wsPrintSheet.wst-sheet .wst-s-gh { visibility: hidden; white-space: nowrap; } ' +
+            '#wsPrintSheet.wst-sheet .wst-s-nm { position: absolute; left: 0; right: 0; top: 0; text-align: center; white-space: nowrap; } ' +
             '#wsPrintSheet.wst-sheet .wst-sign-table td.wst-s-hint { font-size: 7pt; height: 3.5mm; vertical-align: top; text-align: center; padding-top: 0.3mm; } ' +
             '#wsPrintSheet.wst-sheet .wst-s-gap { height: 2.2mm; } ' +
             '#wsPrintSheet.wst-sheet .wst-c1 { width: 4.2%; } ' +
@@ -52038,33 +52131,47 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Печатная форма отчёта — СТРОГО по форме Excel (лист
         // «Отчет», Task 448): шапка предприятия/«ОТЧЕТ»/Л.П.П./цех,
-        // таблица СЕМЬ колонок с группами «12 часовые» (тип
-        // «сменный») и «8 часовые» (прочие: дневной/без типа),
-        // часы = талоны × 12/8 (формула листа E=F×12/8), сквозная
-        // нумерация, ИТОГО по группам (шт.) и три подписи
+        // таблица СЕМЬ колонок с группами «12 часовые» и «8
+        // часовые», часы = талоны × 12/8 (формула листа E=F×12/8),
+        // сквозная нумерация, ИТОГО по группам (шт.) и три подписи.
+        // Task 451: группа определяется НЕНАЛЕВЫМ количеством
+        // талонов категории (t12 > 0 → «12 часовые», t8 > 0 → «8
+        // часовые»; обе > 0 — работник В ОБОИХ группах — заявка);
+        // оба нуля — прежний признак типа «сменный» (пустые строки
+        // не пропадают); порядок строк — алфавит фамилий (модель
+        // _talonsRows); черта подписи — по длине самой длинной
+        // фамилии (longest → призрак .wst-s-gh)
         _buildTalonsPrintHtml: function(model) {
             var mi = model.month;
             var self = this;
             var g12 = [], g8 = [];
             for (var i = 0; i < model.rows.length; i++) {
                 var row = model.rows[i];
-                var tip = String((row.emp && row.emp['тип']) || '').trim();
-                if (tip === 'сменный') g12.push(row); else g8.push(row);
+                var t12 = row.t12 || 0;
+                var t8 = row.t8 || 0;
+                if (t12 > 0) g12.push(row);
+                if (t8 > 0) g8.push(row);
+                if (!t12 && !t8) {
+                    // обе категории нулевые — прежний признак типа
+                    // (сменный → «12 часовые», прочие → «8 часовые»)
+                    var tip = String((row.emp && row.emp['тип']) || '').trim();
+                    if (tip === 'сменный') g12.push(row); else g8.push(row);
+                }
             }
-            var groupSum = function(list) {
+            var groupSum = function(list, field) {
                 var sum = 0;
                 for (var j = 0; j < list.length; j++) {
-                    sum += (list[j].talons || 0);
+                    sum += (list[j][field] || 0);
                 }
                 return sum;
             };
             var n = 0;
-            var rowsOf = function(list, per) {
+            var rowsOf = function(list, per, field) {
                 var html = '';
                 for (var j = 0; j < list.length; j++) {
                     var r = list[j];
                     n++;
-                    var talons = r.talons || 0;
+                    var talons = r[field] || 0;
                     html += '<tr>' +
                         '<td class="wst-r-n">' + n + '</td>' +
                         '<td class="wst-r-tab">' + self._esc(r.tab) + '</td>' +
@@ -52097,33 +52204,45 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 '</tr></thead><tbody>' +
                 '<tr class="wst-r-group">' +
                 '<td colspan="7" class="wst-r-glab">12 часовые</td></tr>' +
-                rowsOf(g12, 12) +
+                rowsOf(g12, 12, 't12') +
                 '<tr class="wst-r-group">' +
                 '<td colspan="7" class="wst-r-glab">8 часовые</td></tr>' +
-                rowsOf(g8, 8) +
+                rowsOf(g8, 8, 't8') +
                 '</tbody></table>';
             // ИТОГО по группам — ОДНА строка на группу (Task 449):
             // «ИТОГО: 12 часовые» / «8 часовые» целиком в объединённой
             // ячейке (colspan 5, right + nowrap — без переносов),
-            // сумма — в колонке талонов, КУРСИВ с подчёркиванием
+            // сумма — в колонке талонов, КУРСИВ с подчёркиванием;
+            // суммы — ПО КАТЕГОРИЯМ t12/t8 (Task 451: работник в
+            // обеих группах считается в каждой своей категорией)
             html += '<table class="wst-tot-table">' + CG +
                 '<tr><td colspan="5" class="wst-t-itog">ИТОГО: 12 часовые</td>' +
-                '<td class="wst-t-val">' + groupSum(g12) + '</td>' +
+                '<td class="wst-t-val">' + groupSum(g12, 't12') + '</td>' +
                 '<td class="wst-t-unit">(шт.)</td></tr>' +
                 '<tr><td colspan="5" class="wst-t-itog">8 часовые</td>' +
-                '<td class="wst-t-val">' + groupSum(g8) + '</td>' +
+                '<td class="wst-t-val">' + groupSum(g8, 't8') + '</td>' +
                 '<td class="wst-t-unit">(шт.)</td></tr>' +
                 '</table>';
-            // подписи строго по форме (таблица той же сетки)
+            // подписи строго по форме (таблица той же сетки); Task
+            // 451: черта под фамилией — ПО ДЛИНЕ САМОЙ ДЛИННОЙ
+            // фамилии подписантов (призрак задаёт ширину черты у
+            // ВСЕХ блоков одинаковой)
+            var signNames = ['Игушов Н.В.', 'Котельникова И.А.', 'Фензель В.П.'];
+            var longest = signNames[0];
+            for (var si = 1; si < signNames.length; si++) {
+                if (signNames[si].length > longest.length) {
+                    longest = signNames[si];
+                }
+            }
             html += '<table class="wst-sign-table">' + CG +
                 this._talonsSignBlock('Рук. подразделения', 'Игушов Н.В.',
-                                      '(подпись)') +
+                                      '(подпись)', longest) +
                 '<tr class="wst-s-gap"><td colspan="7"></td></tr>' +
                 this._talonsSignBlock('С табелем сверено:', 'Котельникова И.А.',
-                                      '(подпись материально-ответственного лица)') +
+                                      '(подпись материально-ответственного лица)', longest) +
                 '<tr class="wst-s-gap"><td colspan="7"></td></tr>' +
                 this._talonsSignBlock('Руководитель СОТ и ПБ', 'Фензель В.П.',
-                                      '(подпись)') +
+                                      '(подпись)', longest) +
                 '</table></div>';
             return html;
         },
@@ -52165,21 +52284,28 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // под именем.
         // Task 450: линия подписи — по ЦЕНТРУ колонки (подсказка
         // «(подпись)» выровнена по центру линии, прежде линия
-        // прижималась влево); над «(ф.и.о.)» — ЧЕРТА на всю ширину
-        // колонок 6–7 (класс wst-s-fio, border-top): разделяет
-        // фамилию и пояснение, пояснение — по центру черты
-        _talonsSignBlock: function(label, name, hint) {
+        // прижималась влево); черта над «(ф.и.о.)» (пояснение — по
+        // центру черты).
+        // Task 451: черта — ПО ДЛИНЕ САМОЙ ДЛИННОЙ фамилии (параметр
+        // longest): невидимый «призрак» .wst-s-gh (текст longest)
+        // задаёт ширину бокса .wst-s-nbox — черта (border-bottom)
+        // у ВСЕХ блоков одинаковой длины; фамилия .wst-s-nm —
+        // абсолютно поверх призрака, по центру черты; «(ф.и.о.)» —
+        // по центру колонок 6–7 (= центру черты)
+        _talonsSignBlock: function(label, name, hint, longest) {
             return '<tr>' +
                 '<td colspan="3" class="wst-s-label">' + this._esc(label) + '</td>' +
                 '<td class="wst-s-line">_________________</td>' +
                 '<td></td>' +
-                '<td colspan="2" class="wst-s-name">' + this._esc(name) + '</td>' +
+                '<td colspan="2" class="wst-s-name"><span class="wst-s-nbox">' +
+                '<span class="wst-s-gh">' + this._esc(longest || name) + '</span>' +
+                '<span class="wst-s-nm">' + this._esc(name) + '</span></span></td>' +
                 '</tr>' +
                 '<tr>' +
                 '<td colspan="3"></td>' +
                 '<td class="wst-s-hint">' + this._esc(hint) + '</td>' +
                 '<td></td>' +
-                '<td colspan="2" class="wst-s-hint wst-s-fio">(ф.и.о.)</td>' +
+                '<td colspan="2" class="wst-s-hint">(ф.и.о.)</td>' +
                 '</tr>';
         },
 
