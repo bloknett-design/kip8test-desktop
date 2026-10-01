@@ -42479,12 +42479,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // комментарий} либо {__delete: true} (запланировано удаление).
         // Отправка на сервер — ТОЛЬКО пакетно, кнопкой saveAll().
         _PENDING: {},
-        // Task 456: АВТО-«д»/«н» — плановая работа в выходной при
-        // замещении отпуска сменного персонала (производный слой,
-        // НЕ записи): «ISO-дата|таб_номер» → «д»|«н». Пересчитывается
-        // каждым _renderGrid (_autoDnPlan), на сервер не пишется, в
-        // Итоги/Талоны/печать не входит (см. комментарий метода)
+        // Task 456→458: АВТО-«д»/«н» — плановая работа в выходной
+        // при замещении отпуска сменного персонала: «ISO-дата|
+        // таб_номер» → «д»|«н» (пересчёт каждым _renderGrid,
+        // _autoDnPlan). Task 458: план МАТЕРИАЛИЗУЕТСЯ в записи
+        // (_autoDnMaterialize — правки _PENDING как ручной ввод,
+        // «Сохранить» → setManualEntry, источник «руч») — сервер,
+        // архивы, «Год» и другие устройства видят их как обычные
+        // ручные записи
         _AUTO_DN: {},
+        // Task 458: РЕЕСТР материализованных авто-«д»/«н» —
+        // { 'YYYY-MM': { 'ISO-дата|таб_номер': 1 } }: «в» поверх
+        // такой ячейки = «.»-надгробие (как поверх авто-записей
+        // Task 453), иначе план расставит код заново; месяц —
+        // ключ localStorage ws_auto_dn_keys (префикс репозитория
+        // ставит isolateLocalStorage)
+        _AUTO_DN_KEYS: {},
         // Task 251: ячейка, у которой открыт попап выбора статуса
         _popupCell: null,
         // Task 251: флаг идущего пакетного сохранения (блокирует правки)
@@ -44253,14 +44263,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             // итоги месяца — те же счётчики, что во вкладке
             // «Итоги учёта» (эффективные записи + типы персонала);
-            // Task 457: + виртуальные записи авто-«д»/«н» замещения
-            // отпуска — переработка over/overDays (в явки/часы НЕ
-            // попадает, как у ручных «д»/«н» Task 322); гвард
-            // typeof — старые VM-харнессы без метода не падают
+            // Task 458: авто-«д»/«н» — уже записи (правки _PENDING
+            // материализации в _totalsEffectiveEntries), отдельного
+            // подмешивания слоя больше нет
             var agg = this._totalsAgg(
-                this._totalsEffectiveEntries()
-                    .concat((typeof this._autoDnEntries === 'function')
-                        ? this._autoDnEntries(this._year, this._month) : []),
+                this._totalsEffectiveEntries(),
                 this._empTypeMap(this._EMPLOYEES));
             // Task 447: снять класс талонного отчёта (wst-sheet) —
             // печать графика использует БАЗОВЫЕ правила листа
@@ -44431,13 +44438,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         }
                     }
                     var status = eff ? eff.статус : '';
-                    // Task 457: авто-«д»/«н» замещения отпуска —
-                    // в PDF/Excel как ручной код: цвет справочника,
-                    // ячейка не «пустая» и не план отпуска
-                    if (!status) {
-                        var autoDn = (this._AUTO_DN || {})[key] || '';
-                        if (autoDn) status = autoDn;
-                    }
+                    // Task 458: авто-«д»/«н» — записи (материализация
+                    // в _PENDING): eff уже несёт код и цвет
+                    // справочника штатно — подстановка слоя Task 457
+                    // удалена
                     var isDot = (status === '.');
                     var isEvSt = !!status &&
                         this._EVENT_CODES.indexOf(status) !== -1;
@@ -46074,15 +46078,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // колонки выходного дня, wsp-off-edge-l/r — края полосы
         // по соседям, wsp-off-edge-b — низ последней строки)
         _printCell: function(day, isoDate, emp, entry, isLastRow) {
-            // Task 457: авто-«д»/«н» замещения отпуска — в печати
-            // КАК РУЧНОЙ код (заявка: «в печать входит»): пустой
-            // ячейке с авто-кодом строится псевдо-запись (код слоя,
-            // фон справочника); точки переработки у слоя нет (флаг
-            // «переработка» отсутствует — не запись)
-            if (!entry) {
-                var autoDn = (this._AUTO_DN || {})[isoDate + '|' + emp['таб_номер']] || '';
-                if (autoDn) entry = { 'статус': autoDn };
-            }
+            // Task 458: авто-«д»/«н» — записи (материализация в
+            // _PENDING): печать получает эффективную запись
+            // (правка/сервер) штатным путём — псевдо-запись слоя
+            // Task 457 удалена
             var status = entry ? entry.статус : '';
             var isOvertime = !!(entry && entry.переработка === 1);
             var isDotCode = (status === '.');
@@ -46606,18 +46605,29 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         //     нескольких отпускников на один день закрывают максимум
         //     ОДНА «д» и ОДНА «н» (по типам смен).
         //
-        // Слой ПРОИЗВОДНЫЙ (как бейдж плановой смены Task 305 и план
-        // отпусков Task 274): НЕ пишется в «Записи_графика», НЕ
-        // сохраняется, пересчитывается каждым _renderGrid; Task 457:
-        // отображается КАК РУЧНОЙ код и ВХОДИТ в Итоги учёта/
-        // Талоны/печать (виртуальные записи _autoDnEntries). Записи,
-        // локальные правки (_PENDING) и план отпуска слой не перекрывает —
-        // ячейки с ними кандидатами не бывают; авто-код кандидата
+        // Task 458: план МАТЕРИАЛИЗУЕТСЯ в записи (_autoDnMaterialize
+        // — правки _PENDING, как ручной ввод; «Сохранить» →
+        // setManualEntry, источник «руч»): сервер, архивы, «Год» и
+        // другие устройства видят авто-«д»/«н» как обычные ручные
+        // записи; Итоги/Талоны/печать/PDF/Excel читают их штатно
+        // (Task 322/452 — правки _PENDING в эффективных записях).
+        // Записи, локальные правки (_PENDING) и план отпуска план
+        // не перекрывает — ячейки с ними кандидатами не бывают;
+        // авто-код кандидата (материализованная правка в силе)
         // учитывается в примыкании последующих дней (блок смен
-        // продолжается). Границы: расчёт в пределах открытого месяца,
-        // соседи за его краем — по плану цикла; история «последних
-        // д/н» — по записям месяца (прошлые месяцы записями не
-        // владеют — у кого их нет, приоритет максимальный).
+        // продолжается). ПОКРЫТИЕ дня (Task 458): «д»/«н» этого
+        // дня — ручная запись ИЛИ материализованный авто-код
+        // прошлого прохода — закрывает смену своего типа:
+        // повторного назначения НЕТ (идемпотентность — повторный
+        // рендер/сохранение не порождает новых кодов; максимум
+        // одна «д» и одна «н» на день по типам — глобально, как
+        // у нескольких отпускников). «.»-надгробие покрытия НЕ
+        // даёт — смена отпускника требует ЗАМЕНЫ, план назначит
+        // другого кандидата. Границы: расчёт в пределах открытого
+        // месяца, соседи за его краем — по плану цикла; история
+        // «последних д/н» — по эффективным записям месяца (прошлые
+        // месяцы записями не владеют — у кого их нет, приоритет
+        // максимальный).
         _autoDnPlan: function() {
             var plan = {};
             if (!this._EMPLOYEES || !this._EMPLOYEES.length) return plan;
@@ -46643,6 +46653,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var eff = this._totalsEffectiveEntries();
             var recIdx = {};
             var lastDn = {};
+            // Task 458: ПОКРЫТИЕ дня — «д»/«н» (ручные и
+            // материализованные авто прошлых проходов) закрывают
+            // смену своего типа: день → { day: 1, night: 1 }
+            var covered = {};
             for (var k = 0; k < eff.length; k++) {
                 var en = eff[k];
                 var isoK = String(en['дата'] || '');
@@ -46651,6 +46665,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 recIdx[isoK + '|' + tabK] = en;
                 var stK = String(en['статус'] || '');
                 var dayK = parseInt(isoK.split('-')[2], 10) || 0;
+                if ((stK === 'д' || stK === 'н') && dayK) {
+                    if (!covered[dayK]) covered[dayK] = {};
+                    covered[dayK][(stK === 'д') ? 'day' : 'night'] = 1;
+                }
                 if ((stK === 'д' || stK === 'н') && dayK &&
                     (!(tabK in lastDn) || dayK > lastDn[tabK])) {
                     lastDn[tabK] = dayK;
@@ -46723,10 +46741,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var ps = this._plannedShiftAt(iso, shifts[a]);
                     if (ps === 'Д' || ps === 'Н') need[ps] = true;
                 }
-                if (!need['Д'] && !need['Н']) continue;
                 var types = [];
-                if (need['Д']) types.push('Д');
-                if (need['Н']) types.push('Н');
+                // Task 458: тип смены уже закрыт «д»/«н» этого
+                // дня (покрытие) — повторное назначение НЕ нужно
+                if (need['Д'] && !(covered[day] && covered[day].day)) {
+                    types.push('Д');
+                }
+                if (need['Н'] && !(covered[day] && covered[day].night)) {
+                    types.push('Н');
+                }
+                if (!types.length) continue;
                 for (var t = 0; t < types.length; t++) {
                     var want = (types[t] === 'Д') ? 'day' : 'night';
                     var cands = [];
@@ -46764,31 +46788,134 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return plan;
         },
 
-        // Task 457 (заявка: «сделай отображение этих кодов как
-        // ручные, в Итоги/Талоны/печать входит»): ВИРТУАЛЬНЫЕ записи
-        // авто-«д»/«н» производного слоя (_AUTO_DN, месяц сетки) для
-        // агрегации отчётов — Итоги учёта (переработка over/overDays,
-        // Task 322), Талоны (день явки + 12-часовой талон — получатели
-        // слоя всегда сменные, _overHours = 12), печать/PDF/Excel
-        // (колонка «Перераб./дни»). Записи НЕ создаются: в
-        // «Записи_графика» слой по-прежнему не пишется — это строки
-        // только для счётчиков, источник «авто», без переработки/
-        // часов/замещения. y/m — фильтр месяца (слой живёт в месяце
-        // сетки; чужой месяц — пусто), ключи «ISO|таб» как у _PENDING
-        _autoDnEntries: function(y, m) {
-            var out = [];
+        // Task 458 (заявка: «поверх авто-«д»/«н» не ставится в
+        // ручную код "Выходной, плановый выходной день"; авто-«д»/
+        // «н» должны функционировать в приложении и на сервере, в
+        // архивах полностью так же, как и ручные-«д»/«н»»):
+        // МАТЕРИАЛИЗАЦИЯ плана в записи: пустые ячейки плана
+        // становятся правками _PENDING — в точности как ручной ввод
+        // «д»/«н» (Task 309: у правки источник «руч» — рамка
+        // ws-manual-dn сразу; часы не указываются — получатели
+        // всегда сменные, переработка 12 ч по типу, Task 322).
+        // «Сохранить» отправляет их обычным путём (saveAll →
+        // setManualEntry, источник «руч») — Итоги/Талоны/печать/
+        // PDF/Excel читают _PENDING штатно, «Год» и архивы видят
+        // их после сохранения как обычные ручные записи. ЗРИТЕЛЯМ
+        // материализация не нужна: правок они не создают (кнопки
+        // «Сохранить» нет) — сетка покажет серверные записи.
+        // Возвращает число добавленных правок (0 — план пуст/
+        // всё занято/нет права правки). Идемпотентно: занятые
+        // ячейки (запись/правка) планом не бывают — повторный
+        // вызов не дублирует (максимум одна «д» и одна «н» на
+        // день — план)
+        _autoDnMaterialize: function() {
+            if (!this._canEdit) return 0;
             var plan = this._AUTO_DN || {};
-            var pref = y + '-' + ((m < 10 ? '0' : '') + m) + '-';
             var keys = Object.keys(plan);
+            if (!keys.length) return 0;
+            var pend = this._PENDING || (this._PENDING = {});
+            var mk = this._year + '-' +
+                     ((this._month < 10 ? '0' : '') + this._month);
+            var reg = this._AUTO_DN_KEYS || (this._AUTO_DN_KEYS = {});
+            if (!reg[mk]) reg[mk] = {};
+            var added = 0;
             for (var i = 0; i < keys.length; i++) {
                 var k = keys[i];
-                if (String(k).indexOf(pref) !== 0) continue;
-                var parts = k.split('|');
+                var parts = String(k).split('|');
                 if (parts.length !== 2) continue;
-                out.push({ 'дата': parts[0], 'таб_номер': parts[1],
-                           'статус': plan[k], 'источник': 'авто' });
+                // только ПОЛНОСТЬЮ пустые ячейки (план их уже
+                // проверил — защита от вызова вне _renderGrid)
+                if (pend[k]) continue;
+                if (typeof this._serverEntry === 'function' &&
+                        this._serverEntry(parts[0], parts[1])) continue;
+                pend[k] = {
+                    'статус': plan[k],
+                    'переработка': 0,
+                    'замещает': null,
+                    'комментарий': '',
+                    'часы': null
+                };
+                reg[mk][k] = 1;
+                added++;
             }
-            return out;
+            if (added && typeof this._autoDnKeysSave === 'function') {
+                this._autoDnKeysSave(mk);
+            }
+            return added;
+        },
+
+        // Task 458: реестр месяца из localStorage — авто-«д»/«н»,
+        // сохранённые прошлой сессией (после «Сохранить» это
+        // записи «руч», по данным сервера не отличимые от ручных):
+        // «в» поверх них — «.»-надгробие (иначе после удаления
+        // план расставит код заново). Живыми остаются только
+        // ключи с действующим «д»/«н» (прочее — правка
+        // пользователя поверх, реестр больше не нужен); слияние
+        // с памятью (in-memory — рабочая копия, localStorage —
+        // хранилище)
+        _autoDnKeysLoad: function() {
+            var mk = this._year + '-' +
+                     ((this._month < 10 ? '0' : '') + this._month);
+            var reg = this._AUTO_DN_KEYS || (this._AUTO_DN_KEYS = {});
+            if (!reg[mk]) reg[mk] = {};
+            var raw = null;
+            try { raw = localStorage.getItem('ws_auto_dn_keys'); }
+            catch (e) { raw = null; }
+            var data = null;
+            try { data = raw ? JSON.parse(raw) : null; }
+            catch (e) { data = null; }
+            var saved = (data && data[mk]) ? data[mk] : {};
+            var kk = Object.keys(saved);
+            for (var i = 0; i < kk.length; i++) {
+                var key = kk[i];
+                var pp = String(key).split('|');
+                if (pp.length !== 2) continue;
+                var st = '';
+                if (typeof this._effectiveEntry === 'function') {
+                    var eff = this._effectiveEntry(pp[0], pp[1]);
+                    st = eff ? String(eff['статус'] || '') : '';
+                }
+                if (st !== 'д' && st !== 'н') continue;
+                reg[mk][key] = 1;
+            }
+        },
+
+        // Task 458: сохранение реестра месяца в localStorage
+        // (изменения: материализация/снятие метки); другие месяцы
+        // не трогаем — переключение месяцев реестры не теряет;
+        // приватный режим/квота — молча, реестр живёт в памяти
+        _autoDnKeysSave: function(mk) {
+            try {
+                var raw = localStorage.getItem('ws_auto_dn_keys');
+                var data = raw ? JSON.parse(raw) : {};
+                if (!data || typeof data !== 'object') data = {};
+                data[mk] = (this._AUTO_DN_KEYS || {})[mk] || {};
+                localStorage.setItem('ws_auto_dn_keys',
+                                     JSON.stringify(data));
+            } catch (e) { /* хранилище недоступно — реестр в памяти */ }
+        },
+
+        // Task 458: ячейка сейчас держит материализованный
+        // авто-«д»/«н»? (реестр месяца сетки; вызовы из рендера/
+        // попапа/правок — гвард typeof на вызывающих)
+        _autoDnIsKey: function(key) {
+            var mk = this._year + '-' +
+                     ((this._month < 10 ? '0' : '') + this._month);
+            var reg = this._AUTO_DN_KEYS || {};
+            return !!(reg[mk] && reg[mk][key]);
+        },
+
+        // Task 458: снять авто-метку (ручная правка поверх —
+        // ячейка пользовательская; «д»/«н» метку СОХРАНЯЮТ —
+        // защита «в»-надгробия от цикла удалить → расставить
+        // заново)
+        _autoDnUnmark: function(key) {
+            var mk = this._year + '-' +
+                     ((this._month < 10 ? '0' : '') + this._month);
+            var reg = this._AUTO_DN_KEYS || {};
+            if (!reg[mk] || !reg[mk][key]) return;
+            delete reg[mk][key];
+            this._autoDnKeysSave(mk);
         },
 
         // Длительность периода в календарных днях (включительно)
@@ -46956,11 +47083,32 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             var entryIdx = this._buildEntryIndex();
             // Task 456: авто-«д»/«н» (замещение отпуска) — пересчёт
-            // производного слоя на КАЖДЫЙ рендер: правки ячеек
-            // (onPopupStatus → _renderGrid) сразу меняют кандидатов и
-            // примыкание соседей, кэш не нужен (месяц × сменные —
-            // дёшево)
+            // плана на КАЖДЫЙ рендер: правки ячеек (onPopupStatus →
+            // _renderGrid) сразу меняют кандидатов и примыкание
+            // соседей, кэш не нужен (месяц × сменные — дёшево).
+            // Task 458: план МАТЕРИАЛИЗУЕТСЯ в записи — пустые
+            // ячейки плана становятся правками _PENDING (как ручной
+            // ввод, _autoDnMaterialize; только редакторам — зрители
+            // правок не создают), реестр месяца восстановлен из
+            // localStorage (сохранённые прошлой сессией — для «в»
+            // поверх: «.»-надгробие)
             this._AUTO_DN = this._autoDnPlan();
+            if (this._canEdit &&
+                    typeof this._autoDnMaterialize === 'function') {
+                if (typeof this._autoDnKeysLoad === 'function') {
+                    this._autoDnKeysLoad();
+                }
+                var autoAdded = this._autoDnMaterialize();
+                if (autoAdded > 0) {
+                    this._updateSaveBtn();
+                    if (typeof KipToast !== 'undefined' &&
+                            KipToast.show) {
+                        KipToast.show('Авто: ' + autoAdded +
+                                      ' кодов «д»/«н» (замещение отпуска)' +
+                                      ' — нажмите «Сохранить»');
+                    }
+                }
+            }
             var daysInMonth = new Date(this._year, this._month, 0).getDate();
             // Task 313: ISO сегодняшней даты — маркер колонки «сегодня»
             // (шапка ws-today-col + ячейки ws-today в _renderCell);
@@ -48810,14 +48958,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!body) return;
             this._setTtWarn('');
             var entries = this._totalsEffectiveEntries();
-            // Task 457: авто-«д»/«н» замещения отпуска — в Итогах
-            // учёта месяца (заявка: «в Итоги/Талоны/печать входит»):
-            // переработка (over/overDays — Task 322), в явки/часы
-            // НЕ попадает; гвард typeof — старые VM-харнессы
-            if (typeof this._autoDnEntries === 'function') {
-                entries = entries.concat(
-                    this._autoDnEntries(this._year, this._month));
-            }
+            // Task 458: авто-«д»/«н» замещения отпуска — записи
+            // (материализация в _PENDING): переработка over/overDays
+            // (Task 322) — штатный путь эффективных записей, без
+            // подмешивания виртуального слоя
             // Task 322: типы персонала — переработка д/н (сменный 12,
             // дневной — часы правки ячейки)
             var agg = this._totalsAgg(entries, this._empTypeMap(this._EMPLOYEES));
@@ -49866,28 +50010,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 vacPlan = this._vacationAt(isoDate, emp['таб_номер']);
                 if (vacPlan) classes.push('ws-vac-plan');
             }
-            // Task 456: авто-«д»/«н» — плановая работа в выходной при
-            // замещении отпуска сменного персонала (_autoDnPlan —
-            // производный слой, как бейдж смены Task 305): в ПУСТОЙ
-            // планово-выходной ячейке код показывается ОСНОВНЫМ
-            // (фон справочника). Task 457 (заявка: «сделай отображение
-            // этих кодов как ручные»): рамка ws-manual-dn + метка
-            // источника ws-source-manual — в точности как у ручной
-            // записи «д»/«н» (Task 309); ws-auto-dn — ИНЕРТНЫЙ
-            // маркер слоя (собственных стилей больше не имеет —
-            // селекторы/тесты отличают слой по нему).
-            // Записи/правки/план отпуска слой не перекрывает (в
-            // _autoDnPlan такие ячейки кандидатами не бывают)
-            var autoDn = (!status && !isPending)
-                ? ((this._AUTO_DN || {})[isoDate + '|' + emp['таб_номер']] || '')
-                : '';
-            if (autoDn) {
-                showMainCode = true;
-                classes.push('ws-source-manual');
-                classes.push('ws-manual-dn');
+            // Task 456→458: авто-«д»/«н» замещения отпуска — РЕАЛЬНЫЕ
+            // записи: материализация плана (_autoDnMaterialize)
+            // создаёт правку _PENDING с источником «руч» — ячейка
+            // рендерится штатно КАК РУЧНОЙ «д»/«н» (рамка
+            // ws-manual-dn + метка ws-source-manual, Task 309/457;
+            // после «Сохранить» — обычная серверная запись «руч»).
+            // ws-auto-dn — ИНЕРТНЫЙ маркер реестра слоя (селекторы/
+            // тесты отличают авто-происхождение, собственных
+            // стилей у класса нет); гвард typeof — старые
+            // VM-харнессы _renderCell
+            if ((status === 'д' || status === 'н') &&
+                    typeof this._autoDnIsKey === 'function' &&
+                    this._autoDnIsKey(isoDate + '|' + emp['таб_номер'])) {
                 classes.push('ws-auto-dn');
-                var adMeta = this._statusMeta(autoDn);
-                if (adMeta && adMeta.color) color = adMeta.color;
             }
             // Task 314: «пустой» вид — и для настоящих пустых, и для «.»/
             // статуса-мероприятия (без vacPlan): тот же фон/выходной
@@ -50086,7 +50222,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                    // как выходные после Task 355; событие видно бейджем,
                    // «.» — в попапе клика. Заполненные ячейки (коды
                    // смен/неявок, планы «ОТ») и бейджи — прежний вид.
-                   (showMainCode ? (status || autoDn) : (vacPlan ? 'ОТ' : '')) + evHtml + shiftWrap +
+                   (showMainCode ? status : (vacPlan ? 'ОТ' : '')) + evHtml + shiftWrap +
                    '</td>';
         },
 
@@ -50340,23 +50476,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             var html = '<div class="ws-popup-title">' + this._esc(popupDate) + ' · ' +
                        this._esc(emp ? emp['ФИО'] : 'таб. №' + tabNo) + '</div>';
-            // Task 456/457: авто-«д»/«н» в ПУСТОЙ ячейке — подсказка
-            // о природе кода (замещение отпуска; записи нет, но в
-            // Итогах/Талонах/печати учитывается — Task 457) и АКТИВНАЯ
-            // строка «д»/«н» — как у ручной записи (отображение
-            // «как ручные»); ручная установка любого статуса поверх —
-            // как в любой пустой ячейке (запись/правка убирает
-            // авто-слой)
-            if (!current) {
-                var autoCode = (this._AUTO_DN || {})[isoDate + '|' + tabNo] || '';
-                if (autoCode) {
-                    current = autoCode;
-                    var am = this._statusMeta(autoCode);
-                    html += '<div class="ws-popup-auto">Авто: «' +
-                            this._esc(autoCode) + '» — ' +
-                            this._esc(am ? (am.short || am.name) : '') +
-                            ' (замещение отпуска, учитывается в Итогах/Талонах/печати)</div>';
-                }
+            // Task 456/457/458: авто-«д»/«н» — записи/правки
+            // (материализация Task 458): current = эффективный
+            // статус (активная строка «д»/«н» — штатный путь ручной
+            // записи), ячейка реестра слоя — подсказка о
+            // происхождении кода; «Выходной» поверх —
+            // «.»-надгробие (_applyCellStatus)
+            if ((current === 'д' || current === 'н') &&
+                    typeof this._autoDnIsKey === 'function' &&
+                    this._autoDnIsKey(isoDate + '|' + tabNo)) {
+                var am = this._statusMeta(current);
+                html += '<div class="ws-popup-auto">Авто: «' +
+                        this._esc(current) + '» — ' +
+                        this._esc(am ? (am.short || am.name) : '') +
+                        ' (замещение отпуска; правка — как у ручной записи)</div>';
             }
             // Task 439: есть ли в справочнике канонический слот
             // «Выходного» (пустой код) — для дедупликации легаси-«.»
@@ -52055,14 +52188,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var totals = { t12: 0, t8: 0, edited: 0 };
             if (entries) {
                 var eff = this._talonsEffectiveEntries(entries, mi.y, mi.m);
-                // Task 457: авто-«д»/«н» замещения отпуска — в
-                // Талонах (заявка: «в Итоги/Талоны/печать входит»):
-                // день явки + 12-часовой талон (получатели слоя —
-                // всегда сменные, _overHours = 12); гвард typeof —
-                // старые VM-харнессы без метода не падают
-                if (typeof this._autoDnEntries === 'function') {
-                    eff = eff.concat(this._autoDnEntries(mi.y, mi.m));
-                }
+                // Task 458: авто-«д»/«н» замещения отпуска — записи
+                // (материализация в _PENDING): день явки + 12-часовой
+                // талон — штатная агрегация _talonsAgg по эффективным
+                // записям, без подмешивания виртуального слоя
                 var agg = this._talonsAgg(eff, this._empTypeMap(this._EMPLOYEES));
                 var list = this._EMPLOYEES || [];
                 for (var i = 0; i < list.length; i++) {
@@ -54048,6 +54177,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // code === '' — «Выходной, плановый выходной день» (слот канона
         // «Коды_статусов» с ПУСТЫМ кодом — визуально пустая белая
         // ячейка):
+        //   • авто-«д»/«н» слоя замещения (Task 458, реестр
+        //     _autoDnIsKey — правка или сохранённая запись) → «.»
+        //     (как поверх авто-записи Task 453): иначе план
+        //     расставит код заново;
         //   • серверная АВТО-запись (Task 453) → НЕ очистка, а РУЧНАЯ
         //     запись «.» — плановый выходной ПОВЕРХ авто-смены (прежде —
         //     тост «Нельзя очистить авто-запись»; заявка: статус обязан
@@ -54067,6 +54200,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var key = isoDate + '|' + tabNo;
             var server = this._serverEntry(isoDate, tabNo);
             var pending = this._PENDING[key];
+            // Task 458: ячейка держит материализованный авто-«д»/«н»
+            // (реестр слоя; гвард typeof — старые VM-харнессы)
+            var autoCell = (typeof this._autoDnIsKey === 'function') &&
+                           this._autoDnIsKey(key);
             if (code) {
                 var base = pending || server || {};
                 var dnHours = (code === 'д' || code === 'н')
@@ -54080,10 +54217,44 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     'комментарий': base.комментарий || '',
                     'часы': dnHours
                 };
+                // Task 458: ручной код поверх авто — метка реестра
+                // снята (ячейка пользовательская); «д»/«н» метку
+                // СОХРАНЯЮТ — защита «в»-надгробия от цикла
+                // удалить → расставить заново
+                if (autoCell && code !== 'д' && code !== 'н' &&
+                        typeof this._autoDnUnmark === 'function') {
+                    this._autoDnUnmark(key);
+                }
                 return;
             }
             // «Выходной» (очистка / плановый выходной поверх авто)
-            if (server && server.источник === 'авто') {
+            if (autoCell) {
+                // Task 458 (заявка: «поверх авто-«д»/«н» не ставится в
+                // ручную код "Выходной, плановый выходной день"»):
+                // «в» поверх авто-«д»/«н» (правка или сохранённая
+                // запись «руч») — ручной плановый выходной «.»
+                // (паттерн авто-записей Task 453): запись-надгробие
+                // занимает ячейку — план повторно код НЕ расставит;
+                // рендерится пустой белой (Task 314/356), в Итогах/
+                // Талонах/печати — не рабочий день. Чистые поля: у
+                // планового выходного нет переработки, замещения,
+                // часов и комментария. Уже стоявшая правка (любой
+                // код) заменяется — последнее действие выигрывает
+                this._PENDING[key] = {
+                    'статус': '.',
+                    'переработка': 0,
+                    'замещает': null,
+                    'комментарий': '',
+                    'часы': null
+                };
+                if (typeof this._autoDnUnmark === 'function') {
+                    this._autoDnUnmark(key);
+                }
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Выходной поставлен поверх авто-«д»/«н».' +
+                                  ' Нажмите «Сохранить»');
+                }
+            } else if (server && server.источник === 'авто') {
                 // Task 453: ручной плановый выходной ПОВЕРХ авто-смены —
                 // запись «.» (легаси-код «Выходного»; слот канона несёт
                 // пустой код — Task 387). Удалить авто нельзя (deleteEntry
@@ -54361,6 +54532,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     'комментарий': comment,
                     'часы': hours
                 });
+                // Task 458: правка «Дополнительно…» поверх
+                // авто-«д»/«н» — метка реестра снята (ячейка
+                // пользовательская); «д»/«н» метку СОХРАНЯЮТ —
+                // защита «в»-надгробия (см. _applyCellStatus)
+                if (status !== 'д' && status !== 'н' &&
+                        typeof this._autoDnIsKey === 'function' &&
+                        this._autoDnIsKey(cell.date + '|' + cell['таб_номер']) &&
+                        typeof this._autoDnUnmark === 'function') {
+                    this._autoDnUnmark(cell.date + '|' + cell['таб_номер']);
+                }
             }
             this.closeCellForm();
             this._renderGrid();
