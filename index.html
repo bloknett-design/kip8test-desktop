@@ -8570,22 +8570,14 @@
     [data-theme="light"] .ws-grid tbody td.ws-cell.ws-manual-dn::before {
         border-color: rgba(38, 50, 56, 0.75);
     }
-    /* Task 456: авто-«д»/«н» — плановая работа в выходной при
-       замещении отпуска сменного персонала (производный слой,
-       _autoDnPlan). Пунктирная рамка ЦВЕТА АВТО-СЛОЯ (индиго) —
-       отличима от янтарной несохранённой правки (ws-pending) и
-       синего плана отпуска (ws-vac-plan); рамка — outline (не
-       ::before): у авто-кода нет точки переработки, конфликтов
-       нет. Код/фон — цвет справочника «д»/«н» inline (как у
-       настоящих статусов — Task 252), шрифт жирнее пустого центра */
-    .ws-grid tbody td.ws-cell.ws-auto-dn {
-        outline: 2px dashed rgba(121, 134, 203, 0.95);
-        outline-offset: -2px;
-        font-weight: 700;
-    }
-    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-auto-dn {
-        outline-color: rgba(81, 97, 192, 0.85);
-    }
+    /* Task 457 (заявка: «сделай отображение этих кодов как
+       ручные»): авто-«д»/«н» замещения отпуска рендерится КАК
+       РУЧНАЯ запись — рамка ws-manual-dn + метка ws-source-manual
+       (ставятся в _renderCell вместе с маркером ws-auto-dn).
+       Собственных стилей у ws-auto-dn БОЛЬШЕ НЕТ — инертный
+       маркер слоя для селекторов/тестов: индиго-пунктир Task 456
+       удалён, ячейка визуально неотличима от ручной записи «д»/«н»
+       (жирность кода — базовая .ws-grid tbody td). */
     /* Task 417: подсветка НАВЕДЕНИЯ колонки ФИО удалена вместе с
        попапом карточки (клика по фамилии больше нет — подсветка без
        действия вводила в заблуждение). Зебра чётных строк колонки —
@@ -44260,9 +44252,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 document.body.appendChild(sheet);
             }
             // итоги месяца — те же счётчики, что во вкладке
-            // «Итоги учёта» (эффективные записи + типы персонала)
+            // «Итоги учёта» (эффективные записи + типы персонала);
+            // Task 457: + виртуальные записи авто-«д»/«н» замещения
+            // отпуска — переработка over/overDays (в явки/часы НЕ
+            // попадает, как у ручных «д»/«н» Task 322); гвард
+            // typeof — старые VM-харнессы без метода не падают
             var agg = this._totalsAgg(
-                this._totalsEffectiveEntries(),
+                this._totalsEffectiveEntries()
+                    .concat((typeof this._autoDnEntries === 'function')
+                        ? this._autoDnEntries(this._year, this._month) : []),
                 this._empTypeMap(this._EMPLOYEES));
             // Task 447: снять класс талонного отчёта (wst-sheet) —
             // печать графика использует БАЗОВЫЕ правила листа
@@ -44433,6 +44431,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         }
                     }
                     var status = eff ? eff.статус : '';
+                    // Task 457: авто-«д»/«н» замещения отпуска —
+                    // в PDF/Excel как ручной код: цвет справочника,
+                    // ячейка не «пустая» и не план отпуска
+                    if (!status) {
+                        var autoDn = (this._AUTO_DN || {})[key] || '';
+                        if (autoDn) status = autoDn;
+                    }
                     var isDot = (status === '.');
                     var isEvSt = !!status &&
                         this._EVENT_CODES.indexOf(status) !== -1;
@@ -46069,6 +46074,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // колонки выходного дня, wsp-off-edge-l/r — края полосы
         // по соседям, wsp-off-edge-b — низ последней строки)
         _printCell: function(day, isoDate, emp, entry, isLastRow) {
+            // Task 457: авто-«д»/«н» замещения отпуска — в печати
+            // КАК РУЧНОЙ код (заявка: «в печать входит»): пустой
+            // ячейке с авто-кодом строится псевдо-запись (код слоя,
+            // фон справочника); точки переработки у слоя нет (флаг
+            // «переработка» отсутствует — не запись)
+            if (!entry) {
+                var autoDn = (this._AUTO_DN || {})[isoDate + '|' + emp['таб_номер']] || '';
+                if (autoDn) entry = { 'статус': autoDn };
+            }
             var status = entry ? entry.статус : '';
             var isOvertime = !!(entry && entry.переработка === 1);
             var isDotCode = (status === '.');
@@ -46594,9 +46608,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         //
         // Слой ПРОИЗВОДНЫЙ (как бейдж плановой смены Task 305 и план
         // отпусков Task 274): НЕ пишется в «Записи_графика», НЕ
-        // сохраняется, пересчитывается каждым _renderGrid; в Итоги
-        // учёта/Талоны/печать табеля НЕ входит. Записи, локальные
-        // правки (_PENDING) и план отпуска слой не перекрывает —
+        // сохраняется, пересчитывается каждым _renderGrid; Task 457:
+        // отображается КАК РУЧНОЙ код и ВХОДИТ в Итоги учёта/
+        // Талоны/печать (виртуальные записи _autoDnEntries). Записи,
+        // локальные правки (_PENDING) и план отпуска слой не перекрывает —
         // ячейки с ними кандидатами не бывают; авто-код кандидата
         // учитывается в примыкании последующих дней (блок смен
         // продолжается). Границы: расчёт в пределах открытого месяца,
@@ -46747,6 +46762,33 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
             }
             return plan;
+        },
+
+        // Task 457 (заявка: «сделай отображение этих кодов как
+        // ручные, в Итоги/Талоны/печать входит»): ВИРТУАЛЬНЫЕ записи
+        // авто-«д»/«н» производного слоя (_AUTO_DN, месяц сетки) для
+        // агрегации отчётов — Итоги учёта (переработка over/overDays,
+        // Task 322), Талоны (день явки + 12-часовой талон — получатели
+        // слоя всегда сменные, _overHours = 12), печать/PDF/Excel
+        // (колонка «Перераб./дни»). Записи НЕ создаются: в
+        // «Записи_графика» слой по-прежнему не пишется — это строки
+        // только для счётчиков, источник «авто», без переработки/
+        // часов/замещения. y/m — фильтр месяца (слой живёт в месяце
+        // сетки; чужой месяц — пусто), ключи «ISO|таб» как у _PENDING
+        _autoDnEntries: function(y, m) {
+            var out = [];
+            var plan = this._AUTO_DN || {};
+            var pref = y + '-' + ((m < 10 ? '0' : '') + m) + '-';
+            var keys = Object.keys(plan);
+            for (var i = 0; i < keys.length; i++) {
+                var k = keys[i];
+                if (String(k).indexOf(pref) !== 0) continue;
+                var parts = k.split('|');
+                if (parts.length !== 2) continue;
+                out.push({ 'дата': parts[0], 'таб_номер': parts[1],
+                           'статус': plan[k], 'источник': 'авто' });
+            }
+            return out;
         },
 
         // Длительность периода в календарных днях (включительно)
@@ -48768,6 +48810,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!body) return;
             this._setTtWarn('');
             var entries = this._totalsEffectiveEntries();
+            // Task 457: авто-«д»/«н» замещения отпуска — в Итогах
+            // учёта месяца (заявка: «в Итоги/Талоны/печать входит»):
+            // переработка (over/overDays — Task 322), в явки/часы
+            // НЕ попадает; гвард typeof — старые VM-харнессы
+            if (typeof this._autoDnEntries === 'function') {
+                entries = entries.concat(
+                    this._autoDnEntries(this._year, this._month));
+            }
             // Task 322: типы персонала — переработка д/н (сменный 12,
             // дневной — часы правки ячейки)
             var agg = this._totalsAgg(entries, this._empTypeMap(this._EMPLOYEES));
@@ -49820,8 +49870,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // замещении отпуска сменного персонала (_autoDnPlan —
             // производный слой, как бейдж смены Task 305): в ПУСТОЙ
             // планово-выходной ячейке код показывается ОСНОВНЫМ
-            // (фон справочника) + пунктирная рамка авто ws-auto-dn —
-            // отличима от ручных «д»/«н» (яркая рамка ws-manual-dn).
+            // (фон справочника). Task 457 (заявка: «сделай отображение
+            // этих кодов как ручные»): рамка ws-manual-dn + метка
+            // источника ws-source-manual — в точности как у ручной
+            // записи «д»/«н» (Task 309); ws-auto-dn — ИНЕРТНЫЙ
+            // маркер слоя (собственных стилей больше не имеет —
+            // селекторы/тесты отличают слой по нему).
             // Записи/правки/план отпуска слой не перекрывает (в
             // _autoDnPlan такие ячейки кандидатами не бывают)
             var autoDn = (!status && !isPending)
@@ -49829,6 +49883,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 : '';
             if (autoDn) {
                 showMainCode = true;
+                classes.push('ws-source-manual');
+                classes.push('ws-manual-dn');
                 classes.push('ws-auto-dn');
                 var adMeta = this._statusMeta(autoDn);
                 if (adMeta && adMeta.color) color = adMeta.color;
@@ -50284,19 +50340,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             var html = '<div class="ws-popup-title">' + this._esc(popupDate) + ' · ' +
                        this._esc(emp ? emp['ФИО'] : 'таб. №' + tabNo) + '</div>';
-            // Task 456: авто-«д»/«н» в ПУСТОЙ ячейке — подсказка, что
-            // код расставлен автоматически (замещение отпуска сменного
-            // персонала) и в «Записи_графика» НЕ сохранён; ручная
-            // установка любого статуса поверх — как в любой пустой
-            // ячейке (запись/правка убирает авто-слой)
+            // Task 456/457: авто-«д»/«н» в ПУСТОЙ ячейке — подсказка
+            // о природе кода (замещение отпуска; записи нет, но в
+            // Итогах/Талонах/печати учитывается — Task 457) и АКТИВНАЯ
+            // строка «д»/«н» — как у ручной записи (отображение
+            // «как ручные»); ручная установка любого статуса поверх —
+            // как в любой пустой ячейке (запись/правка убирает
+            // авто-слой)
             if (!current) {
                 var autoCode = (this._AUTO_DN || {})[isoDate + '|' + tabNo] || '';
                 if (autoCode) {
+                    current = autoCode;
                     var am = this._statusMeta(autoCode);
                     html += '<div class="ws-popup-auto">Авто: «' +
                             this._esc(autoCode) + '» — ' +
                             this._esc(am ? (am.short || am.name) : '') +
-                            ' (замещение отпуска, в записи не сохранён)</div>';
+                            ' (замещение отпуска, учитывается в Итогах/Талонах/печати)</div>';
                 }
             }
             // Task 439: есть ли в справочнике канонический слот
@@ -51996,6 +52055,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var totals = { t12: 0, t8: 0, edited: 0 };
             if (entries) {
                 var eff = this._talonsEffectiveEntries(entries, mi.y, mi.m);
+                // Task 457: авто-«д»/«н» замещения отпуска — в
+                // Талонах (заявка: «в Итоги/Талоны/печать входит»):
+                // день явки + 12-часовой талон (получатели слоя —
+                // всегда сменные, _overHours = 12); гвард typeof —
+                // старые VM-харнессы без метода не падают
+                if (typeof this._autoDnEntries === 'function') {
+                    eff = eff.concat(this._autoDnEntries(mi.y, mi.m));
+                }
                 var agg = this._talonsAgg(eff, this._empTypeMap(this._EMPLOYEES));
                 var list = this._EMPLOYEES || [];
                 for (var i = 0; i < list.length; i++) {
