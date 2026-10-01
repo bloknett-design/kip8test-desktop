@@ -5380,6 +5380,20 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
+    /* Task 456: строка авто-«д»/«н» в попапе ПУСТОЙ ячейки —
+       плановая подстановка замещения отпуска (производный слой,
+       в записи не сохраняется); курсив, вторичный цвет — читается
+       как подсказка, не как действие */
+    .ws-popup-auto {
+        padding: 6px 10px;
+        font-size: 11px;
+        font-style: italic;
+        line-height: 1.4;
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+        border-bottom: 1px solid var(--card-border, rgba(255,255,255,0.08));
+        margin-bottom: 2px;
+    }
+    [data-theme="light"] .ws-popup-auto { color: #777; }
     .ws-popup-row {
         display: flex;
         align-items: center;
@@ -8555,6 +8569,22 @@
     }
     [data-theme="light"] .ws-grid tbody td.ws-cell.ws-manual-dn::before {
         border-color: rgba(38, 50, 56, 0.75);
+    }
+    /* Task 456: авто-«д»/«н» — плановая работа в выходной при
+       замещении отпуска сменного персонала (производный слой,
+       _autoDnPlan). Пунктирная рамка ЦВЕТА АВТО-СЛОЯ (индиго) —
+       отличима от янтарной несохранённой правки (ws-pending) и
+       синего плана отпуска (ws-vac-plan); рамка — outline (не
+       ::before): у авто-кода нет точки переработки, конфликтов
+       нет. Код/фон — цвет справочника «д»/«н» inline (как у
+       настоящих статусов — Task 252), шрифт жирнее пустого центра */
+    .ws-grid tbody td.ws-cell.ws-auto-dn {
+        outline: 2px dashed rgba(121, 134, 203, 0.95);
+        outline-offset: -2px;
+        font-weight: 700;
+    }
+    [data-theme="light"] .ws-grid tbody td.ws-cell.ws-auto-dn {
+        outline-color: rgba(81, 97, 192, 0.85);
     }
     /* Task 417: подсветка НАВЕДЕНИЯ колонки ФИО удалена вместе с
        попапом карточки (клика по фамилии больше нет — подсветка без
@@ -42457,6 +42487,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // комментарий} либо {__delete: true} (запланировано удаление).
         // Отправка на сервер — ТОЛЬКО пакетно, кнопкой saveAll().
         _PENDING: {},
+        // Task 456: АВТО-«д»/«н» — плановая работа в выходной при
+        // замещении отпуска сменного персонала (производный слой,
+        // НЕ записи): «ISO-дата|таб_номер» → «д»|«н». Пересчитывается
+        // каждым _renderGrid (_autoDnPlan), на сервер не пишется, в
+        // Итоги/Талоны/печать не входит (см. комментарий метода)
+        _AUTO_DN: {},
         // Task 251: ячейка, у которой открыт попап выбора статуса
         _popupCell: null,
         // Task 251: флаг идущего пакетного сохранения (блокирует правки)
@@ -46530,6 +46566,189 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return '';
         },
 
+        // Task 456: АВТО-расстановка «д»/«н» — плановая работа в
+        // выходной при замещении отпуска сменного персонала. Заявка:
+        // «Если какой то из работников из сменного персонала в
+        // отпуске - код статуса "ОТ", то у сменного персонала,
+        // который не в отпуске, в шахматке также должны автоматически
+        // расставляться коды статусов "д" (день 12ч, 7:30–19:30,
+        // работа в выходной/праздник) и "н" (ночь 12ч, 19:30–7:30)».
+        //
+        // ПРАВИЛА (по заявке):
+        //   • «потенциальная смена» отпускника — плановая смена дня
+        //     по циклу «Дни_цикла» (_plannedShiftAt): «Д» или «Н»;
+        //     она должна попасть на ВЫХОДНОЙ день (плановый выходной
+        //     цикла — пустая ячейка) другого работника не в отпуске;
+        //   • примыкание: выходной день кандидата примыкает с ОБОИХ
+        //     сторон к выходным, ЛИБО с одной стороны — выходной, с
+        //     другой — рабочий день, совпадающий с потенциальной
+        //     сменой по времени суток (дневные Д/Д8/Д7,2/д ↔ «д»,
+        //     ночные Н/н ↔ «н»); день отсутствия (ОТ/Б/…) или
+        //     мероприятие соседом НЕ бывает — правило не выполнено;
+        //   • очерёдность: «д»/«н» устанавливаются поочерёдно,
+        //     приоритет — работники, чей ПОСЛЕДНИЙ «д»/«н» (запись
+        //     или уже назначенный авто-код) ДАЛЬШЕ от даты
+        //     расстановки (кто дольше не работал в выходной);
+        //     нескольких отпускников на один день закрывают максимум
+        //     ОДНА «д» и ОДНА «н» (по типам смен).
+        //
+        // Слой ПРОИЗВОДНЫЙ (как бейдж плановой смены Task 305 и план
+        // отпусков Task 274): НЕ пишется в «Записи_графика», НЕ
+        // сохраняется, пересчитывается каждым _renderGrid; в Итоги
+        // учёта/Талоны/печать табеля НЕ входит. Записи, локальные
+        // правки (_PENDING) и план отпуска слой не перекрывает —
+        // ячейки с ними кандидатами не бывают; авто-код кандидата
+        // учитывается в примыкании последующих дней (блок смен
+        // продолжается). Границы: расчёт в пределах открытого месяца,
+        // соседи за его краем — по плану цикла; история «последних
+        // д/н» — по записям месяца (прошлые месяцы записями не
+        // владеют — у кого их нет, приоритет максимальный).
+        _autoDnPlan: function() {
+            var plan = {};
+            if (!this._EMPLOYEES || !this._EMPLOYEES.length) return plan;
+            // сменный персонал с шаблоном ротации и стартом цикла —
+            // без них расписание (смены/выходные/соседи) неизвестно
+            var shifts = [];
+            for (var i = 0; i < this._EMPLOYEES.length; i++) {
+                var e = this._EMPLOYEES[i];
+                if (String(e['тип'] || '').trim() !== 'сменный') continue;
+                if (!e.шаблон_ротации || !e.старт_цикла) continue;
+                shifts.push(e);
+            }
+            // нужен хотя бы отпускник и кандидат
+            if (shifts.length < 2) return plan;
+
+            var self = this;
+            var pend = this._PENDING || {};
+            var daysInMonth = new Date(this._year, this._month, 0).getDate();
+
+            // Эффективные записи месяца (сервер + правки _PENDING —
+            // _totalsEffectiveEntries): индекс «ISO|таб» + последние
+            // «д»/«н» для очерёдности
+            var eff = this._totalsEffectiveEntries();
+            var recIdx = {};
+            var lastDn = {};
+            for (var k = 0; k < eff.length; k++) {
+                var en = eff[k];
+                var isoK = String(en['дата'] || '');
+                var tabK = String(en['таб_номер'] || '');
+                if (!isoK || !tabK) continue;
+                recIdx[isoK + '|' + tabK] = en;
+                var stK = String(en['статус'] || '');
+                var dayK = parseInt(isoK.split('-')[2], 10) || 0;
+                if ((stK === 'д' || stK === 'н') && dayK &&
+                    (!(tabK in lastDn) || dayK > lastDn[tabK])) {
+                    lastDn[tabK] = dayK;
+                }
+            }
+
+            // Категория КОДА дня: 'off' — выходной (пусто/«.»),
+            // 'day' — дневная смена (Д/Д8/Д7,2/д), 'night' — ночная
+            // (Н/н), 'x' — прочее (отсутствие/мероприятие)
+            function catOf(code) {
+                if (code === '' || code === '.') return 'off';
+                if (code === 'Д' || code === 'Д8' || code === 'Д7,2' ||
+                    code === 'д') return 'day';
+                if (code === 'Н' || code === 'н') return 'night';
+                return 'x';
+            }
+
+            // День отпуска работника: эффективная запись с кодом
+            // семейства отпусков (_VAC_CODES — как vacMain Task 305)
+            // ИЛИ план листа «Отпуска» в пустой ячейке
+            function vacDay(emp, iso) {
+                var rec = recIdx[iso + '|' + emp['таб_номер']];
+                if (rec) {
+                    var st = String(rec['статус'] || '');
+                    for (var v = 0; v < self._VAC_CODES.length; v++) {
+                        if (st === self._VAC_CODES[v]) return true;
+                    }
+                    return false;
+                }
+                return !!self._vacationAt(iso, emp['таб_номер']);
+            }
+
+            // Категория ДНЯ работника: запись/правка → их код, авто
+            // этого прогона → его код, план отпуска → 'x', иначе план
+            // цикла (пусто = плановый выходной; до старта — 'x')
+            var startTs = {};
+            var tsCache = {};
+            function tsOf(iso) {
+                if (!(iso in tsCache)) {
+                    var d = self._parseIsoLocal(iso);
+                    tsCache[iso] = d ? d.getTime() : 0;
+                }
+                return tsCache[iso];
+            }
+            for (var s = 0; s < shifts.length; s++) {
+                var stD = this._parseIsoLocal(shifts[s].старт_цикла);
+                startTs[shifts[s]['таб_номер']] = stD ? stD.getTime() : 0;
+            }
+            function dayCat(emp, iso) {
+                var tab = emp['таб_номер'];
+                var rec = recIdx[iso + '|' + tab];
+                if (rec) return catOf(String(rec['статус'] || ''));
+                var auto = plan[iso + '|' + tab];
+                if (auto) return catOf(auto);
+                if (self._vacationAt(iso, tab)) return 'x';
+                if (tsOf(iso) < (startTs[tab] || 0)) return 'x';
+                return catOf(self._plannedShiftAt(iso, emp) || '');
+            }
+
+            // Проход по дням месяца: потенциальные смены отпускников
+            // → назначение кандидату по приоритету очерёдности
+            for (var day = 1; day <= daysInMonth; day++) {
+                var iso = this._isoDate(new Date(this._year, this._month - 1, day));
+                var isoPrev = this._isoDate(new Date(this._year, this._month - 1, day - 1));
+                var isoNext = this._isoDate(new Date(this._year, this._month - 1, day + 1));
+                // типы потенциальных смен отпускников дня (уникальные)
+                var need = {};
+                for (var a = 0; a < shifts.length; a++) {
+                    if (!vacDay(shifts[a], iso)) continue;
+                    var ps = this._plannedShiftAt(iso, shifts[a]);
+                    if (ps === 'Д' || ps === 'Н') need[ps] = true;
+                }
+                if (!need['Д'] && !need['Н']) continue;
+                var types = [];
+                if (need['Д']) types.push('Д');
+                if (need['Н']) types.push('Н');
+                for (var t = 0; t < types.length; t++) {
+                    var want = (types[t] === 'Д') ? 'day' : 'night';
+                    var cands = [];
+                    for (var b = 0; b < shifts.length; b++) {
+                        var empB = shifts[b];
+                        var tabB = empB['таб_номер'];
+                        var keyB = iso + '|' + tabB;
+                        if (vacDay(empB, iso)) continue;
+                        // ячейка занята записью/правкой/планом —
+                        // только полностью пустая (правка в процессе
+                        // удаления __delete тоже «занята» — не трогаем)
+                        if (recIdx[keyB] || pend[keyB] || plan[keyB]) continue;
+                        if (dayCat(empB, iso) !== 'off') continue;
+                        // примыкание выходного дня (по заявке)
+                        var cp = dayCat(empB, isoPrev);
+                        var cn = dayCat(empB, isoNext);
+                        if (!((cp === 'off' && cn === 'off') ||
+                              (cp === 'off' && cn === want) ||
+                              (cn === 'off' && cp === want))) continue;
+                        var lastDay = (tabB in lastDn) ? lastDn[tabB] : 0;
+                        cands.push({ emp: empB, idx: b,
+                                     dist: lastDay ? (day - lastDay) : 9999 });
+                    }
+                    if (!cands.length) continue;
+                    // приоритет: последний «д»/«н» дальше от даты —
+                    // первый; равные расстояния — порядок списка
+                    cands.sort(function(x, y) {
+                        return (y.dist - x.dist) || (x.idx - y.idx);
+                    });
+                    var winTab = cands[0].emp['таб_номер'];
+                    plan[iso + '|' + winTab] = (types[t] === 'Д') ? 'д' : 'н';
+                    lastDn[winTab] = day;
+                }
+            }
+            return plan;
+        },
+
         // Длительность периода в календарных днях (включительно)
         _vacDays: function(v) {
             var s = this._parseIsoLocal(v.дата_начала);
@@ -46694,6 +46913,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
 
             var entryIdx = this._buildEntryIndex();
+            // Task 456: авто-«д»/«н» (замещение отпуска) — пересчёт
+            // производного слоя на КАЖДЫЙ рендер: правки ячеек
+            // (onPopupStatus → _renderGrid) сразу меняют кандидатов и
+            // примыкание соседей, кэш не нужен (месяц × сменные —
+            // дёшево)
+            this._AUTO_DN = this._autoDnPlan();
             var daysInMonth = new Date(this._year, this._month, 0).getDate();
             // Task 313: ISO сегодняшней даты — маркер колонки «сегодня»
             // (шапка ws-today-col + ячейки ws-today в _renderCell);
@@ -49591,6 +49816,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 vacPlan = this._vacationAt(isoDate, emp['таб_номер']);
                 if (vacPlan) classes.push('ws-vac-plan');
             }
+            // Task 456: авто-«д»/«н» — плановая работа в выходной при
+            // замещении отпуска сменного персонала (_autoDnPlan —
+            // производный слой, как бейдж смены Task 305): в ПУСТОЙ
+            // планово-выходной ячейке код показывается ОСНОВНЫМ
+            // (фон справочника) + пунктирная рамка авто ws-auto-dn —
+            // отличима от ручных «д»/«н» (яркая рамка ws-manual-dn).
+            // Записи/правки/план отпуска слой не перекрывает (в
+            // _autoDnPlan такие ячейки кандидатами не бывают)
+            var autoDn = (!status && !isPending)
+                ? ((this._AUTO_DN || {})[isoDate + '|' + emp['таб_номер']] || '')
+                : '';
+            if (autoDn) {
+                showMainCode = true;
+                classes.push('ws-auto-dn');
+                var adMeta = this._statusMeta(autoDn);
+                if (adMeta && adMeta.color) color = adMeta.color;
+            }
             // Task 314: «пустой» вид — и для настоящих пустых, и для «.»/
             // статуса-мероприятия (без vacPlan): тот же фон/выходной
             // розовый/цвет точки. Маркер ws-dot-code — для селекторов/тестов
@@ -49774,6 +50016,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                    // Task 305: рядом — бейдж плановой смены по циклу.
                    // Task 314: «.» и статус-мероприятие БЕЗ большого кода —
                    // ячейка выглядит пустой (событие — бейджем в углу)
+                   // Task 456: авто-«д»/«н» замещения отпуска — код как
+                   // основной (showMainCode поднят, фон справочника)
                    // Task 355 (заявка): в НЕРАБОЧИХ днях (выходные/
                    // праздники по производственному календарю — dayOff,
                    // класс ws-weekend) точка «·» по центру НЕ выводится —
@@ -49786,7 +50030,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                    // как выходные после Task 355; событие видно бейджем,
                    // «.» — в попапе клика. Заполненные ячейки (коды
                    // смен/неявок, планы «ОТ») и бейджи — прежний вид.
-                   (showMainCode ? status : (vacPlan ? 'ОТ' : '')) + evHtml + shiftWrap +
+                   (showMainCode ? (status || autoDn) : (vacPlan ? 'ОТ' : '')) + evHtml + shiftWrap +
                    '</td>';
         },
 
@@ -50040,6 +50284,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             var html = '<div class="ws-popup-title">' + this._esc(popupDate) + ' · ' +
                        this._esc(emp ? emp['ФИО'] : 'таб. №' + tabNo) + '</div>';
+            // Task 456: авто-«д»/«н» в ПУСТОЙ ячейке — подсказка, что
+            // код расставлен автоматически (замещение отпуска сменного
+            // персонала) и в «Записи_графика» НЕ сохранён; ручная
+            // установка любого статуса поверх — как в любой пустой
+            // ячейке (запись/правка убирает авто-слой)
+            if (!current) {
+                var autoCode = (this._AUTO_DN || {})[isoDate + '|' + tabNo] || '';
+                if (autoCode) {
+                    var am = this._statusMeta(autoCode);
+                    html += '<div class="ws-popup-auto">Авто: «' +
+                            this._esc(autoCode) + '» — ' +
+                            this._esc(am ? (am.short || am.name) : '') +
+                            ' (замещение отпуска, в записи не сохранён)</div>';
+                }
+            }
             // Task 439: есть ли в справочнике канонический слот
             // «Выходного» (пустой код) — для дедупликации легаси-«.»
             var hasEmptySlot = false;
