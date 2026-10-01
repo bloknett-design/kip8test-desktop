@@ -16104,7 +16104,9 @@
                     <button type="button" id="wsWorkersBtn" class="ws-refresh-btn ws-workers-btn" onclick="WorkSchedule.openWorkersPage()" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" fill="currentColor"/></svg>Работники</button>
                     <!-- Task 447 (заявка): кнопка «Талоны» — переход на
                          страницу формирования отчёта по талонам питания,
-                         выданным работникам за ТЕКУЩИЙ месяц (количество
+                         выданным работникам за месяц ОТКРЫТОЙ шахматки
+                         табеля (Task 455; до — за текущий месяц)
+                         (количество
                          предзаполняется по дням явки из итогов учёта
                          шахматки, перед печатью — ручная правка). Доступ —
                          ТОЛЬКО редакторам (право workschedule.edit
@@ -28366,7 +28368,7 @@
         // (крошки: … / Табель учёта рабочего времени / Обозначения)
         'ws-legend':                'work-schedule',
         // Task 447: страница «Талоны» — дочь табеля (отчёт по
-        // талонам питания за текущий месяц)
+        // талонам питания за месяц открытой шахматки — Task 455)
         'ws-talons':                'work-schedule',
         // Инженерные калькуляторы
         'calc-kipa':        'calculators',
@@ -51602,25 +51604,31 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 451: правка ОБЕИХ категорий у одного работника → он
         // попадает в ОБОИХ группах «12/8 часовые» печатного отчёта
         _TALONS_EDIT: {},
-        // Записи текущего месяца, когда шахматка открыта на ДРУГОМ
-        // месяце: {year, month, entries} — ленивая подтяжка
-        // listEntries отдельным запросом; сбрасывается «Обновить
-        // данные» раздела
-        _TALONS_CACHE: null,
-        _talonsLoading: false,
         // Сетка уже отрисовывалась (loadGrid завершился) — различаем
         // «данные ещё в полёте» и «работников правда нет»
-        // (ставится хуком _renderTalonsIfOpen из _renderGrid)
+        // (ставится хуком _renderTalonsIfOpen из _renderGrid).
+        // Task 455: кэш _TALONS_CACHE и подтяжка _talonsFetchMonth
+        // УДАЛЕНЫ — месяц отчёта следует за шахматкой, записи
+        // всегда живые данные сетки, отдельные запросы месяца
+        // не нужны
         _talonsGridReady: false,
 
-        // Календарный месяц отчёта — ВСЕГДА текущий (заявка:
-        // «на текущий месяц»), независимо от месяца шахматки
+        // Календарный месяц отчёта — МЕСЯЦ ОТКРЫТОЙ ШАХМАТКИ
+        // (Task 455, заявка: «данные формирования отчёта должны
+        // быть в зависимости от того, на какой месяц открыта
+        // шахматка табеля»): this._year/_month — селекты тулбара
+        // табеля. Сетка не инициализирована (deep link до init) —
+        // текущий календарный (init открывает его же)
         _talonsMonthInfo: function() {
             var months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
                           'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
-            var now = new Date();
-            var m = now.getMonth() + 1;
-            return { y: now.getFullYear(), m: m, name: months[m - 1] };
+            var y = this._year, m = this._month;
+            if (!y || !m) {
+                var now = new Date();
+                y = now.getFullYear();
+                m = now.getMonth() + 1;
+            }
+            return { y: y, m: m, name: months[m - 1] };
         },
 
         // Эффективные записи месяца отчёта: переданный список +
@@ -51719,20 +51727,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // талонов»: авто — ПО-ДНЁВНАЯ классификация _talonsAgg
         // (Task 452: 7,2/8 ч → 8 ч. талон, 12 ч → 12 ч. талон,
         // переработка — по часам; тип работника категорию НЕ
-        // определяет); ручная правка перекрывает. Источник записей:
-        // сетка на текущем месяце — её живые данные; иначе кэш
-        // _TALONS_CACHE; кэша нет — ready=false (страница покажет
-        // загрузку и подтянет месяц запросом)
+        // определяет); ручная правка перекрывает. Источник записей
+        // (Task 455): ЖИВАЯ сетка _ENTRIES — месяц отчёта следует
+        // за месяцем шахматки, отдельная подтяжка месяца НЕ нужна
         _talonsRows: function() {
             var mi = this._talonsMonthInfo();
-            var entries = null;
-            if (this._year === mi.y && this._month === mi.m) {
-                entries = this._ENTRIES;
-            } else if (this._TALONS_CACHE &&
-                       this._TALONS_CACHE.year === mi.y &&
-                       this._TALONS_CACHE.month === mi.m) {
-                entries = this._TALONS_CACHE.entries;
-            }
+            var entries = this._ENTRIES;
             var rows = [];
             var totals = { t12: 0, t8: 0, edited: 0 };
             if (entries) {
@@ -51783,7 +51783,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         .localeCompare(String(b.emp['ФИО'] || ''), 'ru');
                 });
             }
-            return { rows: rows, totals: totals, month: mi, ready: !!entries };
+            return { rows: rows, totals: totals, month: mi };
         },
 
         // Кнопка «Талоны» тулбара (ряд 1): двойная защита — раздел
@@ -51833,36 +51833,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
         },
 
-        // Подтяжка записей текущего месяца, когда шахматка открыта на
-        // другом: listEntries → кэш _TALONS_CACHE → повторный рендер
-        // (только пока страница активна)
-        _talonsFetchMonth: function() {
-            if (this._talonsLoading) return;
-            var self = this;
-            var mi = this._talonsMonthInfo();
-            this._talonsLoading = true;
-            this._api('workSchedule.listEntries', { year: mi.y, month: mi.m })
-                .then(function(data) {
-                    self._TALONS_CACHE = {
-                        year: mi.y, month: mi.m,
-                        entries: (data && data.entries) || []
-                    };
-                    self._talonsLoading = false;
-                    self._renderTalonsIfOpen();
-                })
-                .catch(function(err) {
-                    self._talonsLoading = false;
-                    var pg = document.getElementById('wsTalonsBody');
-                    if (pg) {
-                        pg.innerHTML = '<div class="admin-empty">Ошибка загрузки: ' +
-                            self._apiErrText(err) + '</div>';
-                    }
-                    if (typeof KipToast !== 'undefined' && KipToast.show) {
-                        KipToast.show('Ошибка загрузки данных: ' + self._apiErrText(err));
-                    }
-                });
-        },
-
         // Рендер страницы: шапка сводки (месяц/подсказка/чипы +
         // действия) + таблица (№/Таб. №/ФИО/Должность/Дней явки/
         // Выдано 12 ч. талонов — input/Выдано 8 ч. талонов — input;
@@ -51887,12 +51857,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     : '<div class="flow-loading"><div class="flow-loading-text">Загрузка<span class="flow-loading-dots"><span>.</span><span>.</span><span>.</span></span></div></div>';
                 return;
             }
-            if (!model.ready) {
-                // шахматка на другом месяце — подтягиваем текущий
-                body.innerHTML = '<div class="flow-loading"><div class="flow-loading-text">Загрузка<span class="flow-loading-dots"><span>.</span><span>.</span><span>.</span></span></div></div>';
-                this._talonsFetchMonth();
-                return;
-            }
             var mi = model.month;
             var chipsHtml = '<div class="wst-chips">' +
                 '<span class="wst-chip">Работников: <b>' + model.rows.length + '</b></span>' +
@@ -51911,7 +51875,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var html = '<div class="wst-head"><div class="wst-info">' +
                 '<span class="wst-title">Отчёт по талонам питания — ' +
                 this._esc(mi.name) + ' ' + mi.y + ' г.</span>' +
-                '<span class="wst-sub">Талонов выдано работникам за текущий месяц. Талоны предзаполнены по дням месяца: смена 7,2/8 ч — 8 ч. талон, смена 12 ч — 12 ч. талон; дни переработки (д/н) учитываются — у дневного по часам правки ячейки, в отличие от итогов табеля. При необходимости правьте перед печатью — можно указать работнику обе категории, в отчёт он попадёт в обе группы. Правки не сохраняются.</span>' +
+                '<span class="wst-sub">Талонов выдано работникам за месяц, открытый в шахматке табеля. Талоны предзаполнены по дням месяца: смена 7,2/8 ч — 8 ч. талон, смена 12 ч — 12 ч. талон; дни переработки (д/н) учитываются — у дневного по часам правки ячейки, в отличие от итогов табеля. При необходимости правьте перед печатью — можно указать работнику обе категории, в отчёт он попадёт в обе группы. Правки не сохраняются.</span>' +
                 chipsHtml +
                 '</div>' + actionsHtml + '</div>';
             html += '<div class="wst-tscroll"><table class="wst-table"><thead><tr>' +
@@ -52059,21 +52023,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
         },
 
-        // «Обновить данные»: сетка на текущем месяце — перечитать её
-        // (refreshData, тост + перерисовка страницы хуком сетки);
-        // иначе — перезалить кэш текущего месяца запросом
+        // «Обновить данные» (Task 455: месяц отчёта = месяцу сетки —
+        // ВСЕГДА): перечитать сетку (refreshData: статус-коды +
+        // записи месяца + перерисовка; хук _renderGrid перерисует и
+        // открытую страницу «Талоны», тост «Данные графика
+        // обновлены»); без refreshData (тестовый хост) — прямой
+        // ре-рендер страницы
         talonsRefresh: function() {
-            var mi = this._talonsMonthInfo();
-            if (this._year === mi.y && this._month === mi.m) {
-                if (typeof this.refreshData === 'function') {
-                    this.refreshData();
-                } else {
-                    this._renderTalonsPage();
-                }
-                return;
+            if (typeof this.refreshData === 'function') {
+                this.refreshData();
+            } else {
+                this._renderTalonsPage();
             }
-            this._TALONS_CACHE = null;
-            this._renderTalonsPage();
         },
 
         // ============================================================
@@ -52500,12 +52461,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         printTalonsReport: function() {
             if (this._viewLevel !== 'edit') return;
             var model = this._talonsRows();
-            if (!model.ready) {
-                if (typeof KipToast !== 'undefined' && KipToast.show) {
-                    KipToast.show('Данные месяца ещё загружаются — дождитесь завершения');
-                }
-                return;
-            }
             if (!model.rows.length) {
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
                     KipToast.show('Нет работников для отчёта');
