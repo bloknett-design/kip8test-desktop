@@ -34329,11 +34329,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                          'cable-journal-edit',
                          'cable-journal-add',
                          'cable-journal-view',
-                         'plan-114', 'plan-114-view',
-                         // Task 460: «Плановые мероприятия» —
-                         // статичная страница-таблица (доступ =
-                         // «Документация ИОС», отдельного права нет)
-                         'plan-events'],
+                         'plan-114', 'plan-114-view'],
+        // Task 462: «Плановые мероприятия» — СВОЯ группа доступа:
+        // право plan.events в матрице KIP8_Access (лист matrix; колонка
+        // добавляется одноразовым скриптом RoleMatrixTask462Init.gs).
+        // До Task 462 (Task 460) страница следовала за «Документацией
+        // ИОС» без отдельного права; легаси-карта (матрица недоступна)
+        // сохраняет то же поведение — PLAN_EVENTS входит в уровни,
+        // где раздел был (ИТР ТОКЕМ / КИП ИОС / ИТР8+ / КИП8 pro).
+        _PLAN_EVENTS_PAGES: ['plan-events'],
         // Расходомеры хозрасчётные — отдельная группа доступа
         // (просмотр: ИТР8+, КИП ИОС дежурный; НЕ входит в базовый КИП ИОС)
         _FLOWMETER_PAGES: ['flowmeter-data', 'flowmeter-detail'],
@@ -34381,6 +34385,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             const FLOWMETER = this._FLOWMETER_PAGES;
             const CHARTS = this._CHARTS_PAGES;
             const WORK_SCHEDULE = this._WORK_SCHEDULE_PAGES;
+            const PLAN_EVENTS = this._PLAN_EVENTS_PAGES; // Task 462
 
             const LVL_OBSHCHIJ = [].concat(BASE, CALC);
             // Task 113: ИТР ТОКЕМ — фильтр 4 (ограниченные данные КИП ИОС)
@@ -34389,7 +34394,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Не включает FLOWMETER, CHARTS, SECRET, LIBRARY (билеты/библиотека).
             // Task 114: добавлен 'docs' — чтобы кнопка «Документация» на дашборде вела
             // на страницу docs (где видны только «КИП ИОС» и «Документация ИОС»).
-            const LVL_ITR_TOKEM = [].concat(BASE, CALC, ['docs'], KIP_IOS, WHATS_NEW);
+            const LVL_ITR_TOKEM = [].concat(BASE, CALC, ['docs'], KIP_IOS, WHATS_NEW, PLAN_EVENTS);
             const LVL_KIP8 = [].concat(BASE, CALC, LIB, SECRET, WHATS_NEW);
             // Task 116: КИП8 pro — как КИП8, но + расходомеры (фильтр 10 = да в карте ролей)
             // Task 117: добавлен 'docs-ios' — страница «Документация ИОС», где находится
@@ -34397,13 +34402,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // (приборы, блокировки, клапаны, регуляторы, проекты, каб. журнал, план 114)
             // скрыты, т.к. KIP_IOS не включён в allowed.
             // Task 460: вместе с хабом «Документация ИОС» КИП8 pro
-            // получает статичную страницу «Плановые мероприятия»
-            const LVL_KIP8_PRO = [].concat(BASE, CALC, LIB, SECRET, WHATS_NEW, FLOWMETER, ['docs-ios', 'plan-events']);
+            // получает статичную страницу «Плановые мероприятия»;
+            // Task 462: раздел переведён на отдельное право (PLAN_EVENTS)
+            const LVL_KIP8_PRO = [].concat(BASE, CALC, LIB, SECRET, WHATS_NEW, FLOWMETER, PLAN_EVENTS, ['docs-ios']);
             // Task 201/204: КИП ИОС — базовый уровень (без графика работы)
             // Task 204: WORK_SCHEDULE убран из всех уровней, кроме 'Админ' (через ['*'])
-            const LVL_KIP_IOS = [].concat(BASE, CALC, LIB, KIP_IOS, SECRET, WHATS_NEW);
+            const LVL_KIP_IOS = [].concat(BASE, CALC, LIB, KIP_IOS, SECRET, WHATS_NEW, PLAN_EVENTS);
             // ИТР8+ и КИП ИОС дежурный: КИП ИОС + расходомеры (просмотр)
-            const LVL_KIP_IOS_WITH_FLOW = [].concat(BASE, CALC, LIB, KIP_IOS, FLOWMETER, SECRET, WHATS_NEW);
+            const LVL_KIP_IOS_WITH_FLOW = [].concat(BASE, CALC, LIB, KIP_IOS, FLOWMETER, SECRET, WHATS_NEW, PLAN_EVENTS);
 
             this.ROLE_ACCESS = {
                 'Запрет': BASE,                   // только главная
@@ -35106,6 +35112,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
          *   flowmeter.view         → расходомеры (+ «Документация ИОС»
          *                            для ролей без КИП ИОС — КИП8 pro)
          *   workschedule.view      → график работы
+         *   plan.events            → «Плановые мероприятия» (Task 462;
+         *                            пока колонки в матрице нет —
+         *                            переходное поведение Task 460)
          * Админ ('*') не трогаем: сервер принудительно даёт админу все
          * права матрицы (RoleMatrix.gs), текущее поведение сохраняется.
          */
@@ -35147,6 +35156,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             _drop(this._CHARTS_PAGES);
             _drop(this._FLOWMETER_PAGES);
             _drop(this._WORK_SCHEDULE_PAGES);
+            _drop(this._PLAN_EVENTS_PAGES); // Task 462
             if (perm('calc.view')) _add(this._CALC_PAGES);
             if (perm('library.view')) _add(this._LIBRARY_PAGES);
             if (kipios) _add(this._KIP_IOS_PAGES);
@@ -35159,9 +35169,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // «Документация ИОС» — вход к расходомерам для ролей без
                 // доступа к КИП ИОС (КИП8 pro, Task 117); ролям с КИП ИОС
                 // docs-ios уже добавлен через _KIP_IOS_PAGES.
-                // Task 460: вместе с хабом идёт статичная страница
-                // «Плановые мероприятия» (отдельного права НЕ имеет).
-                if (!kipios) _add(['docs-ios', 'plan-events']);
+                // Task 462: «Плановые мероприятия» больше не следует за
+                // хабом — отдельное право plan.events (блок ниже).
+                if (!kipios) _add(['docs-ios']);
             }
             // Task 340: раздел «График работы» дают ЛЮБОЕ из трёх прав
             // (workschedule.view / workschedule.view.min / workschedule.
@@ -35170,6 +35180,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (perm('workschedule.view') || perm('workschedule.view.min') ||
                     perm('workschedule.edit')) {
                 _add(this._WORK_SCHEDULE_PAGES);
+            }
+            // Task 462: «Плановые мероприятия» — отдельное право
+            // plan.events (колонка matrix; добавляется одноразовым
+            // скриптом RoleMatrixTask462Init.gs). Колонка УЖЕ есть в
+            // матрице → доступ строго по галочке. Матрица получена
+            // (found), но колонки ещё нет (переходный период: клиент
+            // обновился раньше таблицы) → прежнее поведение Task 460:
+            // раздел следует за «Документацией ИОС» (КИП ИОС /
+            // расходомеры), чтобы никто не потерял доступ до запуска
+            // скрипта. found=false → не возвращаем (fail-closed).
+            if (found && acc && acc.permissions &&
+                    Object.prototype.hasOwnProperty.call(acc.permissions, 'plan.events')) {
+                if (perm('plan.events')) _add(this._PLAN_EVENTS_PAGES);
+            } else if (found) {
+                if (kipios || perm('flowmeter.view')) _add(this._PLAN_EVENTS_PAGES);
             }
             this.ROLE_ACCESS[role] = list;
         },
