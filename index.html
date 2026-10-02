@@ -15681,10 +15681,13 @@
         width: max-content;
         min-width: 100%;
     }
-    /* Пропорции образца: колонка наименований широкая (49,7 Excel),
-       месяцы — одинаковые узкие (8,9) */
-    .pe-col-name { width: 300px; }
+    /* Task 464: ширина колонки наименований — ПО ТЕКСТУ (заявка
+       пользователя): без фиксированной ширины и без переносов —
+       по самому длинному наименованию строки; месяцы — одинаковые
+       узкие (8,9 образца) */
+    .pe-col-name { width: auto; }
     .pe-col-month { width: 46px; }
+    .pe-name, .pe-th-name { white-space: nowrap; }
     .pe-table th, .pe-table td {
         border: 1px solid rgba(140, 158, 188, 0.35);
     }
@@ -15756,13 +15759,6 @@
     .pe-m-done .pe-ic-check { stroke: #43a047; }
     [data-theme="light"] .pe-ic-cross { stroke: rgba(55, 65, 81, 0.55); }
     [data-theme="light"] .pe-m-done .pe-ic-check { stroke: #2e7d32; }
-    /* Подсказка над таблицей */
-    .pe-hint {
-        padding: 10px 12px 0;
-        font-size: 12px;
-        line-height: 1.45;
-        color: var(--text-secondary, rgba(255, 255, 255, 0.55));
-    }
     /* Кнопка «Обновить» в шапке страницы (паттерн #flowFavBtn) */
     .pe-refresh-btn {
         position: absolute;
@@ -15794,6 +15790,90 @@
         text-align: left;
     }
     .pe-dialog-date { width: 100%; box-sizing: border-box; }
+    /* Task 464: «Отмена» диалога ПОДТВЕРЖДЕНИЯ отметки — слегка
+       подкрашена в красный (заявка: «кнопку "Отмена" подкрась
+       немного в красный») */
+    .pe-dialog .kip-dialog-cancel.pe-cancel-red {
+        background: rgba(220, 80, 80, 0.14);
+        color: #d98484;
+    }
+    .pe-dialog .kip-dialog-cancel.pe-cancel-red:active {
+        background: rgba(220, 80, 80, 0.26);
+    }
+    [data-theme="light"] .pe-dialog .kip-dialog-cancel.pe-cancel-red {
+        background: rgba(180, 40, 40, 0.09);
+        color: #b04a4a;
+    }
+    [data-theme="light"] .pe-dialog .kip-dialog-cancel.pe-cancel-red:active {
+        background: rgba(180, 40, 40, 0.18);
+    }
+    /* Task 464: кнопка «Удалить отметку» в диалоге правки —
+       опасная (красная, по образцу .kip-dialog-ok.danger) */
+    .pe-dialog .kip-dialog-btn.pe-unmark-btn {
+        background: rgba(220, 80, 80, 0.2);
+        color: #e07070;
+        font-weight: 600;
+    }
+    .pe-dialog .kip-dialog-btn.pe-unmark-btn:active {
+        background: rgba(220, 80, 80, 0.35);
+    }
+    [data-theme="light"] .pe-dialog .kip-dialog-btn.pe-unmark-btn {
+        background: rgba(180, 40, 40, 0.12);
+        color: #a83030;
+    }
+    [data-theme="light"] .pe-dialog .kip-dialog-btn.pe-unmark-btn:active {
+        background: rgba(180, 40, 40, 0.22);
+    }
+    /* ====== Task 464: мобильная компактность ======
+       На экранах <= 1023px показываются только столбец мероприятий
+       и ОДИН выбранный месяц (по умолчанию текущий; заявка:
+       «оставляй только столбец с мероприятиями и текущий месяц,
+       с возможностью выбора месяца»). Полоса выбора .pe-month-bar
+       видна только на мобайле; неактивные месяцы получают класс
+       pe-mo-off (ставит JS _applyMonth) и скрываются. */
+    .pe-month-bar {
+        display: none;              /* десктоп: все 12 месяцев */
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px 0;
+    }
+    .pe-month-bar-label {
+        font-size: 12px;
+        color: var(--text-secondary, rgba(255, 255, 255, 0.55));
+    }
+    .pe-month-select {
+        flex: 1;
+        max-width: 220px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--card-border, rgba(74, 143, 199, 0.25));
+        background: rgba(20, 26, 34, 0.65);
+        color: var(--text-primary, #e0e0e0);
+        font-size: 13px;
+        -webkit-appearance: none; appearance: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+    [data-theme="light"] .pe-month-select {
+        background: rgba(0, 0, 0, 0.04);
+        color: #1a1a1a;
+        border-color: rgba(0, 0, 0, 0.15);
+    }
+    @media (max-width: 1023px) {
+        .pe-month-bar { display: flex; }
+        /* Скрытие неактивных месяцев — только на мобайле (на
+           десктопе класс ни на что не влияет) */
+        .pe-table .pe-mo-off { display: none; }
+        /* Компактность: таблица на всю ширину экрана, наименования
+           мероприятий ПЕРЕНОСЯТСЯ (десктопный nowrap «по тексту»
+           на 375px не оставляет места столбцу месяца — 352+46px) */
+        .pe-table { width: 100%; }
+        .pe-name, .pe-th-name { white-space: normal; }
+        /* col месяцев (span=12, width 46px) резервировал пустые
+           слоты скрытых месяцев → пустой столбец у правого края;
+           нулевая ширина — видимая ячейка месяца задаёт ширину
+           сама (иконка + отступы, ~36px) */
+        .pe-table col.pe-col-month { width: 0; }
+    }
     /* Зебра строк — ориентир «чья это строка» при горизонтальной
        прокрутке (мобайл). Alpha-зебра НАД фоном карточки: полупрозрачные
        строки-переменные глушатся двойной прозрачностью (карточка + строка),
@@ -16215,8 +16295,15 @@
             </div>
             <div class="pe-body">
                 <div class="pe-card">
-                    <!-- Task 463: подсказка интерактивности ячеек -->
-                    <div class="pe-hint" id="peHint">Нажмите на ячейку месяца, чтобы отметить выполнение мероприятия — отметка с датой сохраняется в архив файла Мероприятия_КИП_ИОС</div>
+                    <!-- Task 464: мобильный выбор месяца — на экранах
+                         <= 1023px показываются только столбец мероприятий
+                         и один выбранный месяц (по умолчанию текущий);
+                         на десктопе полоса скрыта (все 12 месяцев).
+                         Подсказка над таблицей удалена по заявке Task 464 -->
+                    <div class="pe-month-bar">
+                        <label class="pe-month-bar-label" for="peMonthSel">Месяц</label>
+                        <select id="peMonthSel" class="pe-month-select" aria-label="Месяц для отображения"></select>
+                    </div>
                     <div class="pe-grid-wrap">
                         <table class="pe-table" id="peTable">
                             <colgroup>
@@ -42582,7 +42669,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
     // ============================================================
     // PlanEventsData — модуль «Плановые мероприятия»: отметки
-    // выполнения (Task 463)
+    // выполнения (Task 463) + правка/снятие отметок и мобильный
+    // выбор месяца (Task 464)
     // ============================================================
     // Раздел «Плановые мероприятия» (таблица-образец Task 460)
     // становится ИНТЕРАКТИВНЫМ: клик по ячейке месяца → диалог
@@ -42596,6 +42684,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     // проект на kip8 и kip8test):
     //   planEvents.list — отметки года {token, year}
     //   planEvents.mark — отметить {token, year, month, event, date}
+    //   planEvents.update — изменить дату (Task 464)
+    //   planEvents.unmark — снять отметку (Task 464)
     // Доступ — право plan.events матрицы KIP8_Access (Task 462):
     // и просмотр, и отметка — одним правом.
     //
@@ -42659,6 +42749,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (!table) return;
             if (!this._initialized) {
                 this._buildCells(table);
+                this._tagColumns(table);        // Task 464: классы pe-mo-N
+                this._initMonthSelect();        // Task 464: мобайл-выбор месяца
                 var self = this;
                 // Делегированный клик: один обработчик на таблицу
                 table.addEventListener('click', function(e) {
@@ -42670,6 +42762,59 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 this._initialized = true;
             }
             this.loadMarks(true);
+        },
+
+        // Task 464: классы колонок месяцев pe-mo-1..12 на шапке и
+        // ячейках — для мобильного показа одного выбранного месяца
+        // (классы ставит JS, разметку 96 ячеек не трогаем)
+        _tagColumns: function(table) {
+            var ths = table.querySelectorAll('tr.pe-head-months th');
+            for (var i = 0; i < ths.length; i++) {
+                ths[i].classList.add('pe-mo-' + (i + 1));
+            }
+            var rows = table.querySelectorAll('tbody tr.pe-row');
+            for (var r = 0; r < rows.length; r++) {
+                var tds = rows[r].querySelectorAll('td.pe-m');
+                for (var j = 0; j < tds.length; j++) {
+                    tds[j].classList.add('pe-mo-' + (j + 1));
+                }
+            }
+        },
+
+        // Task 464: мобильный селектор месяца — опции из MONTHS,
+        // по умолчанию текущий месяц; смена выбора скрывает прочие
+        // столбцы (на десктопе селектор скрыт — CSS .pe-month-bar)
+        _initMonthSelect: function() {
+            var sel = document.getElementById('peMonthSel');
+            if (!sel) return;
+            var html = '';
+            for (var i = 0; i < this.MONTHS.length; i++) {
+                html += '<option value="' + (i + 1) + '">' +
+                        this.MONTHS[i] + '</option>';
+            }
+            sel.innerHTML = html;
+            sel.value = String(new Date().getMonth() + 1);
+            var self = this;
+            sel.addEventListener('change', function() {
+                self._applyMonth(parseInt(sel.value, 10) || 1);
+            });
+            this._applyMonth(parseInt(sel.value, 10) || 1);
+        },
+
+        // Показ одного месяца на мобайле: всем колонкам, кроме
+        // выбранной, ставится pe-mo-off (display:none — только
+        // <= 1023px; на десктопе класс ни на что не влияет)
+        _applyMonth: function(month) {
+            var table = document.getElementById('peTable');
+            if (!table) return;
+            var cells = table.querySelectorAll('[class*="pe-mo-"]');
+            var re = /pe-mo-(\d+)/;
+            for (var i = 0; i < cells.length; i++) {
+                var m = re.exec(cells[i].className || '');
+                if (!m) continue;
+                cells[i].classList.toggle('pe-mo-off',
+                    parseInt(m[1], 10) !== month);
+            }
         },
 
         // Начальный вид ячеек: тусклый крестик в каждой
@@ -42713,17 +42858,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             };
         },
 
-        // Клик по ячейке: отмеченная → подсказка с датой; пустая →
-        // диалог подтверждения → сохранение отметки на сервере
+        // Клик по ячейке: пустая → диалог подтверждения → сохранение
+        // отметки; ОТМЕЧЕННАЯ → диалог правки (Task 464): изменить
+        // дату выполнения или снять отметку
         _cellClick: function(td) {
             var info = this._cellInfo(td);
             if (!info || !info.event) return;
+            var self = this;
             if (info.mark) {
-                showToast('Уже отмечено: выполнено ' +
-                          this._ruDate(info.mark['дата_выполнения']));
+                this._editDialog(info.event, info.month, info.mark)
+                    .then(function(res) {
+                    if (!res) return; // отмена
+                    if (res.action === 'unmark') {
+                        self._unmarkCell(td, info);
+                    } else {
+                        self._saveDate(td, info, res.date);
+                    }
+                });
                 return;
             }
-            var self = this;
             this._confirmDialog(info.event, info.month).then(function(res) {
                 if (!res) return; // отмена
                 self._markCell(td, info, res.date);
@@ -42733,6 +42886,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Диалог подтверждения отметки: наименование + месяц + дата
         // выполнения (input type=date, по умолчанию сегодня).
         // Промис: null (отмена) | {date: 'yyyy-mm-dd'}
+        // Task 464: кнопка подтверждения «Подтвердить» (была
+        // «Отметить»), «Отмена» слегка подкрашена в красный
+        // (класс pe-cancel-red)
         _confirmDialog: function(eventName, month) {
             var self = this;
             return new Promise(function(resolve) {
@@ -42747,8 +42903,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         '<label class="pe-dialog-label" for="peDialogDate">Дата выполнения</label>' +
                         '<input type="date" id="peDialogDate" class="kip-dialog-input pe-dialog-date" value="' + self._todayIso() + '">' +
                         '<div class="kip-dialog-btns">' +
-                            '<button type="button" class="kip-dialog-btn kip-dialog-cancel">Отмена</button>' +
-                            '<button type="button" class="kip-dialog-btn kip-dialog-ok">Отметить</button>' +
+                            '<button type="button" class="kip-dialog-btn kip-dialog-cancel pe-cancel-red">Отмена</button>' +
+                            '<button type="button" class="kip-dialog-btn kip-dialog-ok">Подтвердить</button>' +
                         '</div></div>';
                 var settled = false;
                 var done = function(v) {
@@ -42768,6 +42924,121 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     done({ date: d });
                 };
                 requestAnimationFrame(function() { ov.classList.add('active'); });
+            });
+        },
+
+        // Диалог правки ВЫПОЛНЕННОЙ отметки (Task 464): изменить дату
+        // выполнения или снять отметку (архив файла
+        // Мероприятия_КИП_ИОС — planEvents.update / planEvents.unmark).
+        // Промис: null (отмена) | {action: 'save', date} |
+        // {action: 'unmark'}
+        _editDialog: function(eventName, month, mark) {
+            var self = this;
+            return new Promise(function(resolve) {
+                var ov = _kipDialogOverlay();
+                var m = self.MONTHS[month - 1] || ('Месяц ' + month);
+                var curDate = mark['дата_выполнения'] || self._todayIso();
+                ov.innerHTML =
+                    '<div class="kip-dialog pe-dialog">' +
+                        '<div class="kip-dialog-title">Изменение отметки</div>' +
+                        '<div class="kip-dialog-msg">' +
+                            eventName.replace(/</g, '&lt;') +
+                            ' — ' + m + ' ' + self.YEAR +
+                            ' (выполнено ' +
+                            self._ruDate(curDate) + ')</div>' +
+                        '<label class="pe-dialog-label" for="peDialogDate">Дата выполнения</label>' +
+                        '<input type="date" id="peDialogDate" class="kip-dialog-input pe-dialog-date" value="' + curDate + '">' +
+                        '<div class="kip-dialog-btns with-alt">' +
+                            '<button type="button" class="kip-dialog-btn kip-dialog-cancel">Отмена</button>' +
+                            '<button type="button" class="kip-dialog-btn pe-unmark-btn">Удалить отметку</button>' +
+                            '<button type="button" class="kip-dialog-btn kip-dialog-ok">Сохранить дату</button>' +
+                        '</div></div>';
+                var settled = false;
+                var done = function(v) {
+                    if (settled) return;
+                    settled = true;
+                    ov.classList.remove('active');
+                    setTimeout(function() { ov.innerHTML = ''; }, 250);
+                    resolve(v);
+                };
+                ov.querySelector('.kip-dialog-cancel').onclick = function() { done(null); };
+                ov.querySelector('.pe-unmark-btn').onclick = function() {
+                    done({ action: 'unmark' });
+                };
+                ov.querySelector('.kip-dialog-ok').onclick = function() {
+                    var d = ov.querySelector('#peDialogDate').value;
+                    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+                        showToast('Укажите дату выполнения');
+                        return;
+                    }
+                    done({ action: 'save', date: d });
+                };
+                requestAnimationFrame(function() { ov.classList.add('active'); });
+            });
+        },
+
+        // Правка даты выполненной отметки (Task 464):
+        // planEvents.update → новая дата в ячейке (title).
+        // Ошибка сети/сервера → тост, дата не меняется
+        _saveDate: function(td, info, date) {
+            var self = this;
+            var token = (typeof KipAuth !== 'undefined') ? KipAuth.getToken() : '';
+            if (!token) { showToast('Нужен вход в приложение'); return; }
+            td.classList.add('pe-m-busy');
+            KipAuth.api('planEvents.update', {
+                token: token,
+                year: this.YEAR,
+                month: info.month,
+                event: info.event,
+                date: date
+            }).then(function(data) {
+                td.classList.remove('pe-m-busy');
+                var mk = data && data.mark ? data.mark : null;
+                if (!mk) { showToast('Сервер не вернул отметку'); return; }
+                self._marks = (self._marks || []).filter(function(x) {
+                    return self._key(x['год'], x['месяц'], x['мероприятие']) !==
+                           self._key(mk['год'], mk['месяц'], mk['мероприятие']);
+                });
+                self._marks.push(mk);
+                self._rebuildIndex();
+                self._setCell(td, mk);
+                showToast('Дата отметки обновлена');
+            }).catch(function(err) {
+                td.classList.remove('pe-m-busy');
+                showToast('Не удалось сохранить дату: ' +
+                          (err && err.serverMessage ? err.serverMessage :
+                           (err && err.message ? err.message : 'ошибка сети')));
+            });
+        },
+
+        // Снятие отметки (Task 464): planEvents.unmark — строка
+        // архива удаляется, ячейка возвращается к крестику.
+        // Ошибка сети/сервера → тост, галочка остаётся
+        _unmarkCell: function(td, info) {
+            var self = this;
+            var token = (typeof KipAuth !== 'undefined') ? KipAuth.getToken() : '';
+            if (!token) { showToast('Нужен вход в приложение'); return; }
+            td.classList.add('pe-m-busy');
+            KipAuth.api('planEvents.unmark', {
+                token: token,
+                year: this.YEAR,
+                month: info.month,
+                event: info.event
+            }).then(function(data) {
+                td.classList.remove('pe-m-busy');
+                var key = self._key(self.YEAR, info.month, info.event);
+                self._marks = (self._marks || []).filter(function(x) {
+                    return self._key(x['год'], x['месяц'], x['мероприятие']) !== key;
+                });
+                self._rebuildIndex();
+                self._setCell(td, null);
+                showToast(data && data.removed ?
+                          'Отметка снята' : 'Отметки уже не было');
+            }).catch(function(err) {
+                td.classList.remove('pe-m-busy');
+                showToast('Не удалось снять отметку: ' +
+                          (err && err.serverMessage ? err.serverMessage :
+                           (err && err.message ? err.message : 'ошибка сети')));
             });
         },
 
