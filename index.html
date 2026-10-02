@@ -19914,7 +19914,11 @@
      (если указана — окончание = изготовление + срок, дата выдачи
      носит информационный характер; фильтрующие коробки противогазов
      и т.п.), иначе дата выдачи + срок годности. Наименование — ввод
-     со списком стандартных позиций (datalist) или свободный текст. -->
+     со списком позиций (datalist) или свободный текст. Task 461:
+     подсказки datalist — ДИНАМИЧЕСКИ из листа «СИЗ» табель_КИП_ИОС
+     (уникальные «наименование_СИЗ» без повторов,
+     _fillPpeNameOptions при каждом открытии шторки); статичный
+     набор из 8 позиций в HTML — запасной при пустом листе. -->
 <div id="wsPpeOverlay" class="pin-sheet-overlay" onclick="WorkSchedule.closePpeForm()"></div>
 <div id="wsPpeSheet" class="flow-input-sheet" style="max-height: 90vh; overflow-y: auto;">
     <div class="flow-input-sheet-handle"></div>
@@ -19929,8 +19933,12 @@
         <div class="flow-input-group" style="flex:1 1 65%;">
             <label class="flow-input-label" for="wsPpeName">Наименование СИЗ</label>
             <input type="text" id="wsPpeName" class="flow-input-field-small" list="wsPpeNameList" placeholder="Костюм для защиты от растворов кислот и щелочей" maxlength="300" autocomplete="off">
-            <!-- стандартный перечень (образец файла): подсказки
-                 ввода, свободный текст не запрещён -->
+            <!-- Task 461: подсказки наименований — ДИНАМИЧЕСКИ из
+                 листа «СИЗ» (_fillPpeNameOptions при открытии шторки):
+                 уникальные «наименование_СИЗ» без повторов, по
+                 алфавиту. Ниже — ЗАПАСНОЙ статичный перечень (образец
+                 файла) на случай пустого листа; свободный текст
+                 не запрещён -->
             <datalist id="wsPpeNameList">
                 <option value="Костюм для защиты от растворов кислот и щелочей"></option>
                 <option value="Ботинки"></option>
@@ -56458,6 +56466,44 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this.openPpeForm(rec['таб_номер'], rec);
         },
 
+        // Task 461 (заявка): подсказки наименований СИЗ — ДИНАМИЧЕСКИ
+        // из листа «СИЗ» табель_КИП_ИОС. this._PPE (workSchedule.
+        // listPpe, обновляется loadGrid после каждого изменения)
+        // уже несёт ВСЕ записи листа — столбец E «наименование_СИЗ».
+        // В datalist #wsPpeNameList уходят УНИКАЛЬНЫЕ наименования
+        // БЕЗ ПОВТОРОВ (заявка: «все разные СИЗ, но в одном
+        // наименовании, без повторения»; одно и то же СИЗ у разных
+        // работников — одна строка), регистр не различается,
+        // хранится первое встреченное написание; по алфавиту
+        // localeCompare 'ru'. Пустые/пробельные — пропускаются.
+        // Если лист пуст (нет записей / офлайн до первой загрузки) —
+        // datalist НЕ трогаем: остаётся статичный набор из 8 позиций
+        // образца (Task 392, запасной). Свободный ввод не запрещён.
+        _fillPpeNameOptions: function() {
+            var nameList = document.getElementById('wsPpeNameList');
+            if (!nameList) return;
+            var seen = {};
+            var names = [];
+            var list = this._PPE || [];
+            for (var i = 0; i < list.length; i++) {
+                var n = String((list[i] || {}).наименование || '').trim();
+                if (!n) continue;
+                var k = n.toLowerCase();
+                if (seen.hasOwnProperty(k)) continue;
+                seen[k] = true;
+                names.push(n);
+            }
+            // пустой лист — НЕ трогаем: в HTML остаётся запасной
+            // статичный перечень образца (8 позиций, Task 392)
+            if (!names.length) return;
+            names.sort(function(a, b) { return a.localeCompare(b, 'ru'); });
+            var html = '';
+            for (var j = 0; j < names.length; j++) {
+                html += '<option value="' + this._escAttr(names[j]) + '"></option>';
+            }
+            nameList.innerHTML = html;
+        },
+
         // шторка «Новое СИЗ» / «Правка СИЗ». tabNo (необяз.) —
         // префилл работника из карточки; editPpe (необяз.) — запись
         // из _PPE: режим ПРАВКИ (id в _ppeEditId, submit уходит в
@@ -56500,6 +56546,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 termSel.innerHTML = tHtml;
                 termSel.value = curTerm;
             }
+            // Task 461: подсказки наименований — ДИНАМИЧЕСКИЙ datalist
+            // из листа «СИЗ» (уникальные «наименование_СИЗ» без
+            // повторов); при пустом листе — статичный набор HTML
+            this._fillPpeNameOptions();
             this._ppeEditId = null;
             if (editPpe && editPpe.id) {
                 this._ppeEditId = parseInt(editPpe.id, 10);
