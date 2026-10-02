@@ -15644,6 +15644,114 @@
         }
     }
 
+    /* ====== Task 460: «Плановые мероприятия» — таблица образца ======
+       «Мероприятия × 12 месяцев» (файл «Пример таблицы мероприятий.xlsx»):
+       полная сетка рамок, стальная шапка (как у шахматки табеля,
+       Task 330), группы-строки «В начале/В конце месяца», зебра строк
+       (ориентир при горизонтальной прокрутке на мобайле). Всё на
+       теме-переменных — тёмная/светлая темы без дублирования правил. */
+    .pe-body {
+        padding: 12px 4px 8px;
+    }
+    /* Карточка-обёртка: рамка + радиус срезает углы таблицы */
+    .pe-card {
+        margin: 0 12px;
+        border: 1px solid var(--card-border, rgba(74, 143, 199, 0.25));
+        border-radius: 12px;
+        background: var(--card-bg, rgba(30, 42, 56, 0.55));
+        overflow: hidden;
+    }
+    /* Широкая сетка (наименование + 12 месяцев) на узких экранах
+       прокручивается горизонтально (паттерн .ws-grid-wrap) */
+    .pe-grid-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;      /* Firefox */
+        -ms-overflow-style: none;   /* старый Edge / IE */
+    }
+    .pe-grid-wrap::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+        display: none;
+    }
+    .pe-table {
+        border-collapse: collapse;
+        font-size: 13px;
+        color: var(--text-primary, #e0e0e0);
+        width: max-content;
+        min-width: 100%;
+    }
+    /* Пропорции образца: колонка наименований широкая (49,7 Excel),
+       месяцы — одинаковые узкие (8,9) */
+    .pe-col-name { width: 300px; }
+    .pe-col-month { width: 46px; }
+    .pe-table th, .pe-table td {
+        border: 1px solid rgba(140, 158, 188, 0.35);
+    }
+    .pe-table thead th {
+        background: #1e293b;
+        color: var(--text-secondary, rgba(255, 255, 255, 0.55));
+        font-weight: 600;
+        text-align: center;
+        padding: 7px 4px;
+        line-height: 15px;
+    }
+    .pe-th-name {
+        text-align: left;
+        padding: 7px 12px;
+        font-size: 14px;
+        color: var(--text-primary, #e0e0e0);
+    }
+    .pe-th-year { font-size: 14px; }
+    .pe-head-months th { font-size: 12px; }
+    /* Строка-группа («В начале месяца» / «В конце месяца») — жирная,
+       с фоном шапки таблиц (в образце — жирный текст 14pt) */
+    .pe-group td {
+        background: var(--table-head-bg, rgba(22, 27, 34, 0.7));
+        color: var(--text-primary, #e0e0e0);
+        font-weight: 700;
+        font-size: 14px;
+        text-align: left;
+        padding: 8px 12px;
+        letter-spacing: 0.2px;
+    }
+    .pe-name {
+        text-align: left;
+        padding: 9px 12px;
+    }
+    /* Пустая ячейка месяца (разметка периодичности в образец
+       не входит) — высота как у строки с текстом */
+    .pe-m { height: 36px; }
+    /* Зебра строк — ориентир «чья это строка» при горизонтальной
+       прокрутке (мобайл). Alpha-зебра НАД фоном карточки: полупрозрачные
+       строки-переменные глушатся двойной прозрачностью (карточка + строка),
+       поэтому тёмная тема — лёгкая БЕЛАЯ подсветка чётных, светлая —
+       лёгкая ЧЁРНАЯ (заметная в обеих темах, VLM-пруф Task 460). */
+    .pe-row:nth-child(even) td {
+        background: rgba(255, 255, 255, 0.055);
+    }
+    .pe-row:nth-child(odd) td {
+        background: transparent;
+    }
+    [data-theme="light"] .pe-row:nth-child(even) td {
+        background: rgba(20, 20, 19, 0.055);
+    }
+    [data-theme="light"] .pe-row:nth-child(odd) td {
+        background: transparent;
+    }
+    /* Светлая тема — как у сетки шахматки (Task 330/355) */
+    [data-theme="light"] .pe-table th,
+    [data-theme="light"] .pe-table td {
+        border-color: rgb(83, 96, 117);
+    }
+    [data-theme="light"] .pe-table thead th {
+        background: #bfcad5;
+        color: #333;
+    }
+    [data-theme="light"] .pe-th-name {
+        color: #333;
+    }
+
 </style>
 <!-- base target removed: not needed for SPA, causes issues with in-page navigation -->
 </head>
@@ -16004,6 +16112,88 @@
                 <div class="menu-btn-row">
                     <div id="flowmeterMenuBtn" class="menu-btn" onclick="navigateTo('flowmeter-data')" style="cursor: pointer;"><div class="menu-btn-text"><div class="menu-btn-label">Расходомеры хозрасчётные</div><div class="menu-btn-sublabel">Накопительные расходы и показания</div></div><svg class="menu-btn-arrow" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: rgba(255,255,255,0.12); fill: none; stroke-width: 2; stroke-linecap: round;"><polyline points="9 18 15 12 9 6"/></svg></div>
                     <div id="workScheduleMenuBtn" class="menu-btn" onclick="navigateTo('work-schedule')" style="cursor: pointer;"><div class="menu-btn-text"><div class="menu-btn-label">Табель учёта рабочего времени</div><div class="menu-btn-sublabel">Шахматка сменного и дневного персонала</div></div><svg class="menu-btn-arrow" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: rgba(255,255,255,0.12); fill: none; stroke-width: 2; stroke-linecap: round;"><polyline points="9 18 15 12 9 6"/></svg></div>
+                    <!-- Task 460: «Плановые мероприятия» — статичная
+                         страница-таблица периодических работ по образцу
+                         «Пример таблицы мероприятий.xlsx»; отдельного
+                         права НЕ имеет — кнопку видят все, кто видит
+                         сам раздел «Документация ИОС». -->
+                    <div id="planEventsMenuBtn" class="menu-btn" onclick="navigateTo('plan-events')" style="cursor: pointer;"><div class="menu-btn-text"><div class="menu-btn-label">Плановые мероприятия</div><div class="menu-btn-sublabel">Периодические работы по месяцам года</div></div><svg class="menu-btn-arrow" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: rgba(255,255,255,0.12); fill: none; stroke-width: 2; stroke-linecap: round;"><polyline points="9 18 15 12 9 6"/></svg></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================== ПЛАНОВЫЕ МЕРОПРИЯТИЯ ======================== -->
+        <!-- Task 460: заявка — «создать новый раздел "Плановые мероприятия"
+             в разделе Документация ИОС. На странице нового раздела необходимо
+             разместить информацию в виде таблицы по образцу, приложенному
+             в файле». Таблица по образцу «Пример таблицы мероприятий.xlsx»:
+             шапка «Мероприятия» (на 2 строки) + «2026 год» (на 12 колонок
+             месяцев), группы «В начале месяца» (3 мероприятия) и «В конце
+             месяца» (5 мероприятий), ячейки месяцев ПУСТЫЕ — разметка
+             периодичности в образец не входит. Опечатка образца «Феф.»
+             исправлена на «Фев.». Страница СТАТИЧНАЯ (справочная):
+             серверных запросов НЕТ, работает офлайн; доступ — как у
+             страницы «Документация ИОС» (без отдельного права). -->
+        <div id="page-plan-events" class="page-content">
+            <div class="page-inline-header">
+                <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
+                <div class="page-inline-header-title">Плановые мероприятия</div>
+            </div>
+            <div class="pe-body">
+                <div class="pe-card">
+                    <div class="pe-grid-wrap">
+                        <table class="pe-table">
+                            <colgroup>
+                                <col class="pe-col-name">
+                                <col class="pe-col-month" span="12">
+                            </colgroup>
+                            <thead>
+                                <tr class="pe-head-top">
+                                    <th class="pe-th-name" rowspan="2">Мероприятия</th>
+                                    <th class="pe-th-year" colspan="12">2026 год</th>
+                                </tr>
+                                <tr class="pe-head-months">
+                                    <th>Янв.</th><th>Фев.</th><th>Мар.</th><th>Апр.</th><th>Май</th><th>Июн.</th><th>Июл.</th><th>Авг.</th><th>Сен.</th><th>Окт.</th><th>Ноя</th><th>Дек.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="pe-group"><td colspan="13">В начале месяца</td></tr>
+                                <tr class="pe-row">
+                                    <td class="pe-name">Проверка электроинструмента (приспособлений)</td>
+                                    <td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td>
+                                </tr>
+                                <tr class="pe-row">
+                                    <td class="pe-name">Проверка СИЗ в электроустановках</td>
+                                    <td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td>
+                                </tr>
+                                <tr class="pe-row">
+                                    <td class="pe-name">Проверка огнетушителей</td>
+                                    <td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td>
+                                </tr>
+                                <tr class="pe-group"><td colspan="13">В конце месяца</td></tr>
+                                <tr class="pe-row">
+                                    <td class="pe-name">График смен на следующий месяц</td>
+                                    <td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td>
+                                </tr>
+                                <tr class="pe-row">
+                                    <td class="pe-name">Отчёт по талонам</td>
+                                    <td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td>
+                                </tr>
+                                <tr class="pe-row">
+                                    <td class="pe-name">Выписка из ППР на следующий месяц</td>
+                                    <td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td>
+                                </tr>
+                                <tr class="pe-row">
+                                    <td class="pe-name">Журнал учёта электрооборудования</td>
+                                    <td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td>
+                                </tr>
+                                <tr class="pe-row">
+                                    <td class="pe-name">Отчёт по графику ППР</td>
+                                    <td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -28379,6 +28569,10 @@
         // (Task 307/308: подразделы «Сотрудники»/«Инструктажи»/«Отпуска»
         //  удалены вместе со страницами — осталась только шахматка)
         'work-schedule':            'docs-ios',
+        // Task 460: «Плановые мероприятия» — подраздел
+        // «Документации ИОС» (крошки: «Главная / Документация /
+        // Документация ИОС / Плановые мероприятия»)
+        'plan-events':              'docs-ios',
         // Task 334: мобильная страница «Итоги учёта» — дочь табеля
         // (крошки: … / Табель учёта рабочего времени / Итоги учёта)
         'ws-totals':                'work-schedule',
@@ -28505,6 +28699,7 @@
         'docs-ios':         'Документация ИОС',
         'flowmeter-data':   'Расходомеры хозрасчётные',
         'flowmeter-detail': 'Расходомер',
+        'plan-events':      'Плановые мероприятия',
         'exam-tickets':     'Экзаменационные билеты',
         'tickets-1000v':    'Билеты до 1000 В',
         'tickets-4':        'Билеты на 4 разряд',
@@ -28725,6 +28920,9 @@
         // хозрасчётные»): wrapSubsectionItems оборачивает кнопку в
         // .subsection-cell, т.к. ключ появился в этом реестре
         'work-schedule':  { label: 'Табель учёта рабочего времени', sublabel: 'Шахматка сменного и дневного персонала',          target: 'work-schedule',  category: 'docs' },
+        // Task 460: «Плановые мероприятия» — можно закрепить на
+        // главной (кнопка на странице «Документация ИОС»)
+        'plan-events':    { label: 'Плановые мероприятия',       sublabel: 'Периодические работы по месяцам года',            target: 'plan-events',    category: 'docs' },
         // ===== КИП ИОС — подразделы (страница page-kip-ios) =====
         'devices':       { label: 'Приборы',                  sublabel: 'Перечень КИП ИОС — 1312 приборов',              target: 'devices',       category: 'docs' },
         'lockouts':      { label: 'Блокировки',               sublabel: 'По производствам',                               target: 'lockouts-prod', category: 'docs' },
@@ -34123,7 +34321,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                          'cable-journal-edit',
                          'cable-journal-add',
                          'cable-journal-view',
-                         'plan-114', 'plan-114-view'],
+                         'plan-114', 'plan-114-view',
+                         // Task 460: «Плановые мероприятия» —
+                         // статичная страница-таблица (доступ =
+                         // «Документация ИОС», отдельного права нет)
+                         'plan-events'],
         // Расходомеры хозрасчётные — отдельная группа доступа
         // (просмотр: ИТР8+, КИП ИОС дежурный; НЕ входит в базовый КИП ИОС)
         _FLOWMETER_PAGES: ['flowmeter-data', 'flowmeter-detail'],
@@ -34186,7 +34388,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // кнопка «Расходомеры хозрасчётные». Остальные кнопки на этой странице
             // (приборы, блокировки, клапаны, регуляторы, проекты, каб. журнал, план 114)
             // скрыты, т.к. KIP_IOS не включён в allowed.
-            const LVL_KIP8_PRO = [].concat(BASE, CALC, LIB, SECRET, WHATS_NEW, FLOWMETER, ['docs-ios']);
+            // Task 460: вместе с хабом «Документация ИОС» КИП8 pro
+            // получает статичную страницу «Плановые мероприятия»
+            const LVL_KIP8_PRO = [].concat(BASE, CALC, LIB, SECRET, WHATS_NEW, FLOWMETER, ['docs-ios', 'plan-events']);
             // Task 201/204: КИП ИОС — базовый уровень (без графика работы)
             // Task 204: WORK_SCHEDULE убран из всех уровней, кроме 'Админ' (через ['*'])
             const LVL_KIP_IOS = [].concat(BASE, CALC, LIB, KIP_IOS, SECRET, WHATS_NEW);
@@ -34947,7 +35151,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // «Документация ИОС» — вход к расходомерам для ролей без
                 // доступа к КИП ИОС (КИП8 pro, Task 117); ролям с КИП ИОС
                 // docs-ios уже добавлен через _KIP_IOS_PAGES.
-                if (!kipios) _add(['docs-ios']);
+                // Task 460: вместе с хабом идёт статичная страница
+                // «Плановые мероприятия» (отдельного права НЕ имеет).
+                if (!kipios) _add(['docs-ios', 'plan-events']);
             }
             // Task 340: раздел «График работы» дают ЛЮБОЕ из трёх прав
             // (workschedule.view / workschedule.view.min / workschedule.
@@ -58520,6 +58726,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
              _applyRoleToUI (как sidebarAdminBtn). -->
         <div class="sidebar-item sidebar-item-extra" id="sidebarWorkScheduleBtn" onclick="navigateTo('work-schedule'); toggleSidebar();" style="display:none;">
             <span style="color:rgba(200,112,72,0.9);">Табель учёта рабочего времени</span>
+        </div>
+        <!-- Task 460: «Плановые мероприятия» — пункт группы «Документация
+             ИОС»; видимость — общая логика _applyRoleToUI по navigateTo-
+             целевой странице (виден всем ролям с доступом к разделу),
+             счётчик группы пересчитывается динамически. -->
+        <div class="sidebar-item sidebar-item-extra" onclick="navigateTo('plan-events'); toggleSidebar();">
+            <span style="color:rgba(200,112,72,0.9);">Плановые мероприятия</span>
         </div>
         </div>
 
