@@ -15728,7 +15728,12 @@
         margin: 0;
         border: 1px solid var(--card-border, rgba(74, 143, 199, 0.25));
         border-radius: 12px;
-        background: var(--card-bg, rgba(30, 42, 56, 0.55));
+        /* Task 472: непрозрачный фон таблицы (заявка: «фон таблицы и
+           окна должны быть не прозрачными») — сплошной аналог
+           прежнего var(--card-bg) rgba(30,42,56,0.55) над #0e1621
+           (паттерн Task 254); сетка страницы и фон сети больше не
+           просвечивают сквозь таблицу */
+        background: #17212e;
         overflow: hidden;
     }
     /* Широкая сетка (наименование + 12 месяцев) на узких экранах
@@ -16012,7 +16017,9 @@
         align-self: stretch;
         border: 1px solid var(--card-border, rgba(74, 143, 199, 0.25));
         border-radius: 12px;
-        background: var(--card-bg, rgba(30, 42, 56, 0.55));
+        /* Task 472: непрозрачный фон окна (заявка) — как у карточки
+           таблицы выше: сплошной аналог rgba(30,42,56,0.55) */
+        background: #17212e;
         padding: 14px 16px;
         overflow-y: auto;
         font-size: 13px;
@@ -16111,16 +16118,25 @@
         -webkit-tap-highlight-color: transparent;
     }
     /* Выбранный месяц (клик по шапке; по умолчанию — текущий):
-       подсветка + полоса снизу — видно, за какой месяц правое окно */
+       подсветка + полоса снизу — видно, за какой месяц правое окно.
+       Task 472: бевел выпуклости (вторая внутренняя рамка) слит
+       с полосой снизу — выбранный месяц остаётся «нажимной
+       кнопкой» с акцентной подсветкой */
     .pe-head-months th.pe-mo-sel {
         background: rgba(74, 143, 199, 0.30);
         color: var(--text-primary, #e0e0e0);
-        box-shadow: inset 0 -2px 0 rgba(74, 143, 199, 0.85);
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, 0.11),
+            inset -1px -1px 0 rgba(0, 0, 0, 0.45),
+            inset 0 -2px 0 rgba(74, 143, 199, 0.85);
     }
     [data-theme="light"] .pe-head-months th.pe-mo-sel {
         background: rgba(74, 143, 199, 0.20);
         color: #1a2430;
-        box-shadow: inset 0 -2px 0 rgba(58, 108, 152, 0.8);
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, 0.8),
+            inset -1px -1px 0 rgba(83, 96, 117, 0.42),
+            inset 0 -2px 0 rgba(58, 108, 152, 0.8);
     }
     /* Наименования «Работы на следующий месяц» / «Работы на месяц» —
        кликабельны (класс ставит JS PlanWorksData._tagWorkRows, как
@@ -16148,18 +16164,30 @@
         display: flex;
         gap: 8px;
         margin-bottom: 14px;
+        /* Task 472: кнопка «Добавить» прижата к ПЕРВОЙ строке
+           растущего поля — поле ввода расширяется ВНИЗ под новые
+           строки текста (авторост _growInput) */
+        align-items: flex-start;
     }
     .pe-works-input {
         flex: 1;
         min-width: 0;
+        min-height: 35px;
         padding: 8px 10px;
         border-radius: 8px;
         border: 1px solid var(--card-border, rgba(74, 143, 199, 0.25));
         background: rgba(20, 26, 34, 0.65);
         color: var(--text-primary, #e0e0e0);
         font-size: 13px;
+        line-height: 1.4;
         font-family: inherit;
         outline: none;
+        /* Task 472: поле — textarea с авторостом: ручной ресайз
+           отключён, скроллбар не показывается (высоту под контент
+           задаёт PlanWorksData._growInput) */
+        resize: none;
+        overflow: hidden;
+        display: block;
     }
     .pe-works-input:focus {
         border-color: rgba(74, 143, 199, 0.55);
@@ -16321,6 +16349,55 @@
         overflow-wrap: anywhere;
     }
     [data-theme="light"] .pe-works-empty { color: #5a6a7d; }
+
+    /* ====== Task 472: выпуклость кликабельных ячеек таблицы ======
+       Заявка: «кликабельные ячейки таблицы мероприятий должны
+       незначительно выделяться зрительно второй рамкой внутри,
+       имитирующей выпуклость кнопки». Кликабельны: ячейки месяцев
+       (td.pe-m — диалог отметки Task 463), месяцы шапки (выбор
+       месяца правого окна Task 471), «Мероприятия» (возврат к
+       описанию) и наименования строк работ (pe-name-click).
+       Вторая рамка — внутренний бевел (inset box-shadow):
+       светлая грань сверху/слева, тёмная снизу/справа — ячейка
+       выглядит приподнятой кнопкой. У выбранного месяца шапки
+       бевел слит с полосой снизу (правило .pe-mo-sel выше). */
+    .pe-table td.pe-m,
+    .pe-head-months th,
+    .pe-table th.pe-th-name,
+    .pe-table td.pe-name.pe-name-click {
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, 0.11),
+            inset -1px -1px 0 rgba(0, 0, 0, 0.45);
+    }
+    [data-theme="light"] .pe-table td.pe-m,
+    [data-theme="light"] .pe-head-months th,
+    [data-theme="light"] .pe-table th.pe-th-name,
+    [data-theme="light"] .pe-table td.pe-name.pe-name-click {
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, 0.8),
+            inset -1px -1px 0 rgba(83, 96, 117, 0.42);
+    }
+
+    /* ====== Task 472: непрозрачные фоны + бежевое окно (светлая
+       тема). Заявка: «фон таблицы и окна должны быть не
+       прозрачными, и окно в светлой теме не белым а бежевым
+       цветом, как цвет фона бара, и с толстой рамкой с эффектом
+       выступа». Тёмная тема — сплошные аналоги прежних альфа-фонов
+       (в базовых правилах .pe-card/.pe-desc-card выше). Светлая:
+       карточка таблицы — сплошной аналог rgba(255,255,255,0.65)
+       над #F0EEE6; окно — БЕЖЕВОЕ, как фон бара (--header-bg
+       светлой темы, #F0EEE6), с ТОЛСТОЙ двухтонной рамкой-выступом
+       (светлая сверху/слева, тёмная снизу/справа) и мягкой тенью —
+       панель приподнята над страницей. */
+    [data-theme="light"] .pe-card {
+        background: #faf9f6;
+    }
+    [data-theme="light"] .pe-desc-card {
+        background: #f0eee6;
+        border: 3px solid;
+        border-color: #fffdf7 #c8c2af #c8c2af #fffdf7;
+        box-shadow: 2px 3px 6px rgba(20, 20, 19, 0.12);
+    }
 
 </style>
 <!-- base target removed: not needed for SPA, causes issues with in-page navigation -->
@@ -16721,7 +16798,15 @@
              частичного выполнения или невыполнения (planWorks.
              setStatus → лист «Работы на месяц» файла
              Мероприятия_КИП_ИОС), «Мероприятия» (шапка) — снова
-             описание раздела. -->
+             описание раздела.
+             Task 472: поле ввода работ — textarea с АВТОРОСТОМ ВНИЗ
+             под новые строки текста (PlanWorksData._growInput);
+             кликабельные ячейки таблицы (месяцы td.pe-m, месяцы
+             шапки, «Мероприятия», строки работ) — вторая
+             внутренняя рамка-бевел, имитирующая выпуклость
+             кнопки; фон таблицы и окна непрозрачный; окно в
+             светлой теме — БЕЖЕВОЕ (цвет фона бара) с толстой
+             рамкой с эффектом выступа. -->
         <div id="page-plan-events" class="page-content">
             <div class="page-inline-header">
                 <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
@@ -43995,7 +44080,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     '<div class="pe-works-target">Месяц работ: ' + mName +
                         ' ' + t.year + '</div>' +
                     '<div class="pe-works-form">' +
-                        '<input type="text" id="peWorkInput" class="pe-works-input" placeholder="Описание работы" maxlength="500" aria-label="Описание работы">' +
+                        /* Task 472: textarea с авторостом вниз (заявка:
+                           текст длиннее поля расширяет его под новые
+                           строки) — высоту под контент пересчитывает
+                           _growInput; Enter — по-прежнему «Добавить» */
+                        '<textarea id="peWorkInput" class="pe-works-input" rows="1" placeholder="Описание работы" maxlength="500" aria-label="Описание работы"></textarea>' +
                         '<button type="button" id="peWorkAddBtn" class="pe-works-add-btn">Добавить</button>' +
                     '</div>' +
                     '<div class="pe-desc-sub">Внесённые работы — ' + mName + '</div>' +
@@ -44120,9 +44209,32 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             var addBtn = document.getElementById('peWorkAddBtn');
             if (addBtn) addBtn.onclick = function() { self._add(); };
-            // Фокус в поле ввода — сразу можно вносить работы
+            // Фокус в поле ввода — сразу можно вносить работы.
+            // Task 472: поле — textarea с АВТОРОСТОМ (заявка: текст
+            // длиннее поля ввода динамически расширяет его вниз под
+            // новые строки): пересчёт высоты на каждый ввод + сразу
+            // после рендера (одна строка / восстановление высоты)
             var inp = document.getElementById('peWorkInput');
-            if (inp) { try { inp.focus(); } catch (e) { /* ignore */ } }
+            if (inp) {
+                inp.addEventListener('input', function() {
+                    self._growInput(inp);
+                });
+                this._growInput(inp);
+                try { inp.focus(); } catch (e) { /* ignore */ }
+            }
+        },
+
+        // Task 472: авторост поля ввода работ «на следующий месяц» —
+        // высота динамически подстраивается под контент: текст
+        // длиннее ширины поля переносится на новые строки (мягкий
+        // перенос textarea), поле расширяется ВНИЗ (заявка). +2px —
+        // компенсация горизонтальных границ при box-sizing:
+        // border-box (scrollHeight не включает границы); минимум —
+        // одна строка (CSS min-height 35px — как прежний input)
+        _growInput: function(inp) {
+            if (!inp) return;
+            inp.style.height = 'auto';
+            inp.style.height = (inp.scrollHeight + 2) + 'px';
         },
 
         // Добавление работы (вид «Работы на следующий месяц»)
