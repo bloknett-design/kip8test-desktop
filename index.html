@@ -5022,8 +5022,8 @@
     }
     .ws-bar-exp {
         position: absolute;
-        right: 5px;
-        top: 5px;
+        right: 2px;
+        top: 2px;
         z-index: 2;
         display: flex;
         align-items: center;
@@ -5050,10 +5050,67 @@
     }
     .ws-bar-exp.on svg { transform: rotate(180deg); }
     [data-theme="light"] .ws-bar-exp { color: #222; }
+    /* Task 465: расстояние значка от краёв окна — 3px
+       сверху и справа (CSS right/top 2px + 1px рамка окна = 3px
+       от ВНЕШНЕГО края; прежде было 5px CSS = 6px визуально). В
+       окне МЕРОПРИЯТИЙ значок раскрытия сдвинут ВЛЕВО (27px от
+       правой грани): у правого края стоит ПАРА значков —
+       [раскрытие][печать], печать — в самом углу (правее
+       раскрытия) */
+    #wsEventsPanel .ws-bar-exp { right: 27px; }
+    /* Task 465 (важно): правило Task 381 .ws-events-panel > * + *
+       { margin-top: 3px } (склейка строк) задевало и ЗНАЧОК
+       раскрытия — absolute-кнопка получала 3px сверху и висела
+       НИЖЕ, чем значок окна норм (9px против 6px от края);
+       заявка «3px сверху и справа» — сброс маржи у ОБОИХ значков
+       окна мероприятий: теперь оба окна — одинаковые 3px */
+    .ws-events-panel > .ws-bar-exp,
+    .ws-events-panel > .ws-bar-print { margin-top: 0; }
+    /* Task 465 (заявка): значок ПЕЧАТИ списка мероприятий — справа
+       от значка раскрытия, квадратная кнопка ТОГО ЖЕ размера
+       (22×22), в правом ВЕРХНЕМ углу окна мероприятий (3px от
+       краёв, как раскрытие). Клик открывает диалог
+       печати/сохранения списка мероприятий месяца (как у кнопки
+       «Печать» графика: «Печать»/«Сохранить PDF»/«Сохранить
+       Excel»/«Отмена» + предпросмотр). Стиль — пара значку
+       раскрытия: та же рамка/фон/радиус, приглушение 0.45,
+       полная контрастность при наведении/фокусе; прикол к
+       видимой грани при прокрутке — тот же translateY(scrollTop)
+       в _barExpSync. Живёт ТОЛЬКО в окне мероприятий (окно норм
+       не тронуто) */
+    .ws-bar-print {
+        position: absolute;
+        right: 2px;
+        top: 2px;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border: 1px solid rgba(127, 127, 127, 0.45);
+        border-radius: 3px;
+        background: rgba(127, 127, 127, 0.25);
+        color: var(--text-primary, #e0e0e0);
+        cursor: pointer;
+        opacity: 0.45;
+        transition: opacity 0.15s ease;
+    }
+    .ws-bar-print:hover,
+    .ws-bar-print:focus-visible { opacity: 1; }
+    .ws-bar-print svg {
+        width: 13px;
+        height: 13px;
+    }
+    [data-theme="light"] .ws-bar-print { color: #222; }
     /* Task 388: значок раскрытия — в ПРАВОМ ВЕРХНЕМ углу; плашки-
        заголовки окон (мероприятия/нормы) получают правый добор
-       паддинга — текст заголовка не прячется под значком */
-    .ws-events-panel .ws-ep-cap,
+       паддинга — текст заголовка не прячется под значком.
+       Task 465: в окне мероприятий у угла ПАРА значков
+       [раскрытие][печать] (22+3+22+2px рамки) — добор 52px;
+       окно норм — один значок, прежние 26px */
+    .ws-events-panel .ws-ep-cap { padding-right: 52px; }
     .ws-cal-panel .ws-cp-cap { padding-right: 26px; }
     /* Заголовок окна — плашка в духе столбиков календаря (Task 270),
        зелёная — «мероприятия»; в заголовке месяц, год и счётчик
@@ -46506,9 +46563,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._closePrintPreview();
             // Task 447: закрыть возможный предпросмотр ТАЛОНОВ и снять
             // его @page-оверрайд книжной ориентации — печать графика
-            // альбомная (диалоги взаимоисключающие)
+            // альбомная (диалоги взаимоисключающие).
+            // Task 465: закрыть и предпросмотр СПИСКА МЕРОПРИЯТИЙ
+            // (диалоги печати взаимоисключающие — один на экране)
             if (typeof this._closeTalonsPreview === 'function') {
                 try { this._closeTalonsPreview(); } catch (e) {}
+            }
+            if (typeof this._closeEventsPreview === 'function') {
+                try { this._closeEventsPreview(); } catch (e2) {}
             }
             var months = ['Январь','Февраль','Март','Апрель','Май','Июнь',
                           'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
@@ -46650,6 +46712,1035 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 window.addEventListener('resize', this._wsPrevResize);
             }
             return true;
+        },
+
+        // ============================================================
+        // Task 465 (заявка): ПЕЧАТЬ СПИСКА МЕРОПРИЯТИЙ месяца —
+        // значок-принтер в правом верхнем углу окна «Мероприятия»
+        // бара табеля (кнопка .ws-bar-print, создаёт _barExpSync;
+        // справа от значка раскрытия). ДИАЛОГ как у кнопки «Печать»
+        // графика (Task 430/438): «Печать» (window.print основного
+        // документа: печатная медиа-секция скрывает всё, кроме
+        // листа #wsPrintSheet) / «Сохранить PDF» / «Сохранить
+        // Excel» (клиентские генераторы, без библиотек) / «Отмена»
+        // + предпросмотр (iframe standalone-документ КНИЖНОГО
+        // листа 190мм — список узкий, альбомная не нужна; инжект
+        // @page-книжной — приём талонов Task 447). Содержимое —
+        // список ОТКРЫТОГО месяца в том же составе, что и окно
+        // «Мероприятия»: таблица мероприятий (№ / Даты /
+        // Мероприятие / Работник) + секция СИЗ с истекающим
+        // сроком; выбранный ДЕНЬ (фильтр окна Task 316) НЕ влияет
+        // — печать всегда ПОЛНОГО месяца; уровень min (Task 399) —
+        // записи мастеров скрыты (печатаются только видимые
+        // пользователю данные, как у печати графика)
+        // ============================================================
+        printEventsList: function() {
+            // прав на раздел нет вообще (раздел скрыт) — защита
+            // программных вызовов
+            if (this._viewLevel === null) return;
+            var model = this._eventsListModel();
+            if (!model.events.length && !model.ppe.length) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Нет мероприятий для печати — месяц пуст');
+                }
+                return;
+            }
+            // создать/найти печатный лист в корне <body>
+            var sheet = document.getElementById('wsPrintSheet');
+            if (!sheet) {
+                sheet = document.createElement('div');
+                sheet.id = 'wsPrintSheet';
+                document.body.appendChild(sheet);
+            }
+            sheet.className = 'wsev-sheet';
+            sheet.innerHTML = this._buildEventsPrintHtml(model);
+            this._eventsInjectPrintStyle();
+            var opened = false;
+            try {
+                opened = this._openEventsPreview(model);
+            } catch (e) { opened = false; }
+            if (!opened) window.print();
+        },
+
+        // Task 465: модель списка месяца (чистая, VM-тестируемая) —
+        // та же выборка, что рисует окно «Мероприятия»
+        // (_renderMonthEventsPanel), БЕЗ фильтра выбранного дня
+        // (Task 316): печать — всегда полный месяц. Мероприятия,
+        // пересекающие открытый месяц (сортировка: дата начала,
+        // затем таб. номер) + СИЗ с истекающим в этом месяце
+        // сроком («До износа»/без даты не попадают); уровень min —
+        // записи мастеров скрыты (Task 399); name — короткое
+        // название инструктажей/ПЗ (Task 416), точка цвета — цвет
+        // кода из справочника
+        _eventsListModel: function() {
+            var monthsNom = ['январь','февраль','март','апрель','май','июнь',
+                             'июль','август','сентябрь','октябрь','ноябрь','декабрь'];
+            var y = this._year, m = this._month;
+            var pad = function(num) { return (num < 10 ? '0' : '') + num; };
+            var mStart = y + '-' + pad(m) + '-01';
+            var mEnd = y + '-' + pad(m) + '-' +
+                       pad(new Date(y, m, 0).getDate());
+            var hideMasters = (this._viewLevel === 'min');
+            var emps = this._EMPLOYEES || [];
+            var masterTabs = {};
+            if (hideMasters) {
+                for (var mI = 0; mI < emps.length; mI++) {
+                    if (this._isMasterKipia(emps[mI])) {
+                        masterTabs[emps[mI]['таб_номер']] = true;
+                    }
+                }
+            }
+            var fioIdx = {};
+            for (var ei = 0; ei < emps.length; ei++) {
+                fioIdx[emps[ei]['таб_номер']] = emps[ei]['ФИО'];
+            }
+            // «02.09» из ISO; диапазон: один месяц — «02–05.09»,
+            // через границу — «29.09–02.10» (как в окне)
+            var fmtDay = function(iso) {
+                var pp = String(iso).split('-');
+                return pp[2] + '.' + pp[1];
+            };
+            var fmtRange = function(sIso, eIso) {
+                if (!eIso || sIso === eIso) return fmtDay(sIso);
+                if (String(sIso).slice(0, 7) === String(eIso).slice(0, 7)) {
+                    return String(sIso).slice(8) + '–' + fmtDay(eIso);
+                }
+                return fmtDay(sIso) + '–' + fmtDay(eIso);
+            };
+            // сырые записи месяца (сортировка ДО вывода — как в окне)
+            var raw = [];
+            var trs = this._TRAININGS || [];
+            for (var i = 0; i < trs.length; i++) {
+                var t = trs[i];
+                if (hideMasters && masterTabs[t['таб_номер']]) continue;
+                var s = t['дата_начала'];
+                if (!s) continue;
+                var e = t['дата_окончания'] || s;
+                if (e < mStart || s > mEnd) continue;
+                raw.push({ t: t, s: s, e: e });
+            }
+            raw.sort(function(a, b) {
+                return String(a.s).localeCompare(String(b.s)) ||
+                       String(a.t['таб_номер'])
+                           .localeCompare(String(b.t['таб_номер']));
+            });
+            var events = [];
+            for (var k = 0; k < raw.length; k++) {
+                var tr = raw[k].t;
+                var code = this._trainingCodeOf(tr['тип']);
+                var meta = this._statusMeta(code) || {};
+                events.push({
+                    range: fmtRange(raw[k].s, raw[k].e),
+                    name: (code ? code + ' · ' : '') +
+                          (this._instrShortOf(tr['тема']) || meta.name || '—'),
+                    fio: fioIdx[tr['таб_номер']] ||
+                         ('таб. №' + tr['таб_номер']),
+                    color: meta.color || '#3a3a3a'
+                });
+            }
+            // СИЗ — истекающие в этом месяце (как в окне: «До
+            // износа»/без даты не показываются)
+            var ppeRaw = [];
+            var ppeAll = this._PPE || [];
+            for (var pzI = 0; pzI < ppeAll.length; pzI++) {
+                var pRec = ppeAll[pzI];
+                if (hideMasters && masterTabs[pRec['таб_номер']]) continue;
+                var pExpIso = String(pRec['дата_окончания'] || '').trim();
+                if (!pExpIso || pExpIso === 'До износа') continue;
+                if (pExpIso < mStart || pExpIso > mEnd) continue;
+                ppeRaw.push({ rec: pRec, exp: pExpIso });
+            }
+            ppeRaw.sort(function(a, b) {
+                return String(a.exp).localeCompare(String(b.exp)) ||
+                       String(a.rec['таб_номер'])
+                           .localeCompare(String(b.rec['таб_номер']));
+            });
+            var ppe = [];
+            for (var pz = 0; pz < ppeRaw.length; pz++) {
+                var pr = ppeRaw[pz].rec;
+                ppe.push({
+                    range: 'до ' + fmtDay(ppeRaw[pz].exp),
+                    name: String(pr['наименование'] || ''),
+                    fio: fioIdx[pr['таб_номер']] ||
+                         ('таб. №' + pr['таб_номер']),
+                    color: '#f0a830'
+                });
+            }
+            return { y: y, m: m, monthName: monthsNom[m - 1],
+                     events: events, ppe: ppe };
+        },
+
+        // Task 465: HTML печатного листа списка (классы wsev-* —
+        // стиль _EVENTS_PRINT_CSS): шапка «Мероприятия / месяц год
+        // · записей», таблица мероприятий, секция СИЗ (пустая —
+        // скрыта; пустые мероприятия — строка-заглушка, как в
+        // печати графика)
+        _buildEventsPrintHtml: function(model) {
+            var html = '<div class="wsev-head">' +
+                '<div class="wsev-title">Мероприятия</div>' +
+                '<div class="wsev-sub">' +
+                this._esc(model.monthName + ' ' + model.y + ' г.') +
+                (model.events.length
+                    ? ' · записей: ' + model.events.length : '') +
+                '</div></div>';
+            html += '<table class="wsev-table"><thead><tr>' +
+                '<th class="wsev-c-n">№</th>' +
+                '<th class="wsev-c-d">Даты</th>' +
+                '<th>Мероприятие</th>' +
+                '<th class="wsev-c-w">Работник</th>' +
+                '</tr></thead><tbody>';
+            if (model.events.length) {
+                for (var k = 0; k < model.events.length; k++) {
+                    var ev = model.events[k];
+                    html += '<tr>' +
+                        '<td class="wsev-c-n">' + (k + 1) + '</td>' +
+                        '<td class="wsev-c-d">' + this._esc(ev.range) + '</td>' +
+                        '<td><span class="wsev-dot" style="background:' +
+                        ev.color + ';"></span>' +
+                        this._esc(ev.name) + '</td>' +
+                        '<td class="wsev-c-w">' + this._esc(ev.fio) + '</td>' +
+                        '</tr>';
+                }
+            } else {
+                html += '<tr><td colspan="4" class="wsev-none">' +
+                        'нет мероприятий в этом месяце</td></tr>';
+            }
+            html += '</tbody></table>';
+            if (model.ppe.length) {
+                html += '<div class="wsev-cap">СИЗ · ' +
+                        this._esc(model.monthName + ' ' + model.y) +
+                        ' · ' + model.ppe.length + '</div>';
+                html += '<table class="wsev-table"><thead><tr>' +
+                    '<th class="wsev-c-n">№</th>' +
+                    '<th class="wsev-c-d">Срок</th>' +
+                    '<th>Наименование СИЗ</th>' +
+                    '<th class="wsev-c-w">Работник</th>' +
+                    '</tr></thead><tbody>';
+                for (var q = 0; q < model.ppe.length; q++) {
+                    var pz = model.ppe[q];
+                    html += '<tr>' +
+                        '<td class="wsev-c-n">' + (q + 1) + '</td>' +
+                        '<td class="wsev-c-d">' + this._esc(pz.range) + '</td>' +
+                        '<td><span class="wsev-dot wsev-dot-ppe"></span>' +
+                        this._esc(pz.name) + '</td>' +
+                        '<td class="wsev-c-w">' + this._esc(pz.fio) + '</td>' +
+                        '</tr>';
+                }
+                html += '</tbody></table>';
+            }
+            return html;
+        },
+
+        // Task 465: CSS печатного листа списка мероприятий текстом
+        // (приём Task 430/447 _TALONS_PRINT_CSS): ОДИН набор правил
+        // работает в трёх местах — инжект-стиль печати (в <head>
+        // после стилей приложения: @page книжная перекрывает
+        // альбомную печати графика), standalone-документ
+        // предпросмотра-iframe и сохранённый файл; вёрстка
+        // гарантированно совпадает с печатью. Шрифт — Arial (семья
+        // печати графика Task 341), ширины колонок фиксированные
+        // (№ 9мм / Даты 24мм / Работник 44мм / Мероприятие —
+        // остаток 190мм)
+        _EVENTS_PRINT_CSS:
+            '#wsPrintSheet.wsev-sheet { font: 11px/1.35 Arial, Helvetica, sans-serif; color: #1b1f24; } ' +
+            '#wsPrintSheet.wsev-sheet .wsev-head { margin-bottom: 3mm; } ' +
+            '#wsPrintSheet.wsev-sheet .wsev-title { font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; } ' +
+            '#wsPrintSheet.wsev-sheet .wsev-sub { font-size: 14px; font-weight: 600; margin-top: 1mm; } ' +
+            '#wsPrintSheet.wsev-sheet .wsev-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 1mm; } ' +
+            '#wsPrintSheet.wsev-sheet .wsev-table thead { display: table-header-group; } ' +
+            '#wsPrintSheet.wsev-sheet .wsev-table tr { page-break-inside: avoid; } ' +
+            '#wsPrintSheet.wsev-sheet .wsev-table th { border: 1px solid #8f99a3; background: #eef1f4; font-weight: 700; padding: 1.4mm 1.5mm; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; } ' +
+            '#wsPrintSheet.wsev-sheet .wsev-table td { border: 1px solid #8f99a3; padding: 1.4mm 1.5mm; vertical-align: middle; overflow-wrap: break-word; } ' +
+            '#wsPrintSheet.wsev-sheet .wsev-c-n { width: 9mm; text-align: center; } ' +
+            '#wsPrintSheet.wsev-sheet .wsev-c-d { width: 24mm; text-align: center; font-weight: 700; } ' +
+            '#wsPrintSheet.wsev-sheet .wsev-c-w { width: 44mm; } ' +
+            '#wsPrintSheet.wsev-sheet .wsev-dot { display: inline-block; width: 9px; height: 9px; border: 1px solid #7a838c; margin-right: 1.5mm; vertical-align: baseline; -webkit-print-color-adjust: exact; print-color-adjust: exact; } ' +
+            '#wsPrintSheet.wsev-sheet .wsev-dot-ppe { background: #f0a830; } ' +
+            '#wsPrintSheet.wsev-sheet .wsev-cap { font-weight: 700; font-size: 13px; margin: 5mm 0 1mm; } ' +
+            '#wsPrintSheet.wsev-sheet .wsev-none { color: #4c5660; text-align: center; } ',
+
+        // Task 465: инжект-стиль книжной ориентации в <head> (приём
+        // Task 447: позже стилей приложения — каскад перекрывает
+        // альбомную @page печати графика); снимает
+        // _eventsRemovePrintStyle (закрытие диалога)
+        _eventsInjectPrintStyle: function() {
+            var st = document.getElementById('wsEventsPrintStyle');
+            if (st) return;
+            st = document.createElement('style');
+            st.id = 'wsEventsPrintStyle';
+            st.textContent = '@media print { ' +
+                '@page { size: A4 portrait; margin: 12mm 10mm; } ' +
+                this._EVENTS_PRINT_CSS + ' }';
+            var head = document.head || document.documentElement;
+            if (head && head.appendChild) head.appendChild(st);
+        },
+
+        _eventsRemovePrintStyle: function() {
+            var st = document.getElementById('wsEventsPrintStyle');
+            if (st && st.parentNode && st.parentNode.removeChild) {
+                st.parentNode.removeChild(st);
+            }
+        },
+
+        // Task 465: ДИАЛОГ ПРЕДПРОСМОТРА списка мероприятий (вёрстка
+        // классов Task 430 wspprev-*; кнопочный ряд Task 438):
+        // шапка «Предпросмотр печати / Мероприятия — Месяц год г.»,
+        // тело — iframe standalone-документ (КНИЖНЫЙ лист 190мм),
+        // низ — «Печать» + «Сохранить PDF» + «Сохранить Excel» +
+        // «Отмена» + подсказка «A4 · книжная». Esc/затемнение/«Отмена»
+        // закрывают (с инжект-стилем). Возвращает true при успехе;
+        // false — без DOM (фолбэк printEventsList: печать сразу)
+        _openEventsPreview: function(model) {
+            if (typeof document === 'undefined' ||
+                !document.createElement || !document.body ||
+                !document.body.appendChild) {
+                return false;
+            }
+            var self = this;
+            // взаимоисключающие диалоги: закрыть возможный
+            // предпросмотр графика (его альбомная печать) и талонов
+            // (строгая форма) — на экране ОДИН диалог печати
+            if (typeof this._closePrintPreview === 'function') {
+                try { this._closePrintPreview(); } catch (e) {}
+            }
+            if (typeof this._closeTalonsPreview === 'function') {
+                try { this._closeTalonsPreview(); } catch (e2) {}
+            }
+            var months = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                          'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            var mIdx = Math.min(Math.max(parseInt(model.m, 10) || 1, 1), 12);
+
+            var overlay = document.createElement('div');
+            overlay.id = 'wsEventsPrevModal';
+            overlay.className = 'wspprev-overlay';
+            if (overlay.addEventListener) {
+                overlay.addEventListener('click', function(ev) {
+                    if (ev && ev.target === overlay) {
+                        self._closeEventsPreview();
+                    }
+                });
+            }
+
+            var dlg = document.createElement('div');
+            dlg.className = 'wspprev-dialog';
+
+            var head = document.createElement('div');
+            head.className = 'wspprev-head';
+            head.innerHTML = '<span class="wspprev-title">Предпросмотр ' +
+                             'печати</span>' +
+                             '<span class="wspprev-sub">Мероприятия — ' +
+                             this._esc(months[mIdx - 1]) + ' ' + model.y +
+                             ' г.</span>';
+            var closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'wspprev-close';
+            if (closeBtn.setAttribute) {
+                closeBtn.setAttribute('aria-label', 'Закрыть предпросмотр');
+            }
+            closeBtn.innerHTML = '✕';
+            if (closeBtn.addEventListener) {
+                closeBtn.addEventListener('click', function() {
+                    self._closeEventsPreview();
+                });
+            }
+            head.appendChild(closeBtn);
+
+            var body = document.createElement('div');
+            body.className = 'wspprev-body';
+            var paper = document.createElement('div');
+            paper.className = 'wspprev-paper';
+            var frame = document.createElement('iframe');
+            frame.className = 'wspprev-frame';
+            if (frame.setAttribute) {
+                frame.setAttribute('title', 'Предпросмотр печатного листа');
+            }
+            frame.style.height = '800px';
+            frame._natH = 800;
+            paper.appendChild(frame);
+            body.appendChild(paper);
+
+            var foot = document.createElement('div');
+            foot.className = 'wspprev-foot';
+            foot.innerHTML =
+                '<button type="button" class="wspprev-btn wspprev-print">' +
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V6z" fill="currentColor"/></svg>' +
+                'Печать</button>' +
+                '<button type="button" class="wspprev-btn wspprev-pdf">' +
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6H6zm7 7V3.5L18.5 9H13z" fill="currentColor"/></svg>' +
+                'Сохранить PDF</button>' +
+                '<button type="button" class="wspprev-btn wspprev-xlsx">' +
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 19H5v-2h4v2zm0-4H5v-2h4v2zm0-4H5V9h4v2zm10 8h-4v-2h4v2zm0-4h-4v-2h4v2zm0-4h-4V9h4v2z" fill="currentColor"/></svg>' +
+                'Сохранить Excel</button>' +
+                '<button type="button" class="wspprev-btn ' +
+                'wspprev-cancel">Отмена</button>' +
+                '<span class="wspprev-hint">A4 · книжная</span>';
+
+            dlg.appendChild(head);
+            dlg.appendChild(body);
+            dlg.appendChild(foot);
+            overlay.appendChild(dlg);
+            document.body.appendChild(overlay);
+
+            // содержимое iframe: standalone-документ листа. Слушатель
+            // load — ДО srcdoc (иначе событие теряется); высота — по
+            // scrollHeight содержимого, затем масштаб под окно
+            if (frame.addEventListener) {
+                frame.addEventListener('load', function() {
+                    var h = 0;
+                    try {
+                        var doc = frame.contentDocument;
+                        if (doc && doc.documentElement) {
+                            h = doc.documentElement.scrollHeight;
+                        }
+                    } catch (e) { h = 0; }
+                    frame._natH = (h > 200) ? h : 800;
+                    try { frame.style.height = frame._natH + 'px'; }
+                    catch (e2) {}
+                    self._eventsPrevFit();
+                });
+            }
+            frame.srcdoc = this._buildEventsFileHtml(
+                this._buildEventsPrintHtml(model), model);
+            this._eventsPrevFit();
+
+            var printBtn = foot.querySelector('.wspprev-print');
+            var pdfBtn = foot.querySelector('.wspprev-pdf');
+            var xlsxBtn = foot.querySelector('.wspprev-xlsx');
+            var cancelBtn = foot.querySelector('.wspprev-cancel');
+            if (printBtn && printBtn.addEventListener) {
+                printBtn.addEventListener('click', function() {
+                    try { window.print(); } catch (e) {}
+                });
+            }
+            if (pdfBtn && pdfBtn.addEventListener) {
+                pdfBtn.addEventListener('click', function() {
+                    self._saveEventsPdf(model);
+                });
+            }
+            if (xlsxBtn && xlsxBtn.addEventListener) {
+                xlsxBtn.addEventListener('click', function() {
+                    self._saveEventsXlsx(model);
+                });
+            }
+            if (cancelBtn && cancelBtn.addEventListener) {
+                cancelBtn.addEventListener('click', function() {
+                    self._closeEventsPreview();
+                });
+            }
+
+            // Esc — закрыть; resize — перемасштабировать
+            this._evPrevEsc = function(ev) {
+                if (ev && ev.key === 'Escape') self._closeEventsPreview();
+            };
+            this._evPrevResize = function() { self._eventsPrevFit(); };
+            if (typeof window !== 'undefined' && window.addEventListener) {
+                window.addEventListener('keydown', this._evPrevEsc);
+                window.addEventListener('resize', this._evPrevResize);
+            }
+            return true;
+        },
+
+        // Task 465: масштаб предпросмотра — КНИЖНЫЙ лист 794px
+        // (190мм + поля A4 портрета @96dpi; приём _wsPrevFit —
+        // 1063px альбомного графика, _talonsPrevFit — талонов)
+        _eventsPrevFit: function() {
+            if (typeof document === 'undefined') return;
+            var overlay = document.getElementById('wsEventsPrevModal');
+            if (!overlay) return;
+            var body = overlay.querySelector('.wspprev-body');
+            var paper = overlay.querySelector('.wspprev-paper');
+            var frame = overlay.querySelector('.wspprev-frame');
+            if (!body || !paper || !frame) return;
+            var W = 794;
+            var avail = (body.clientWidth || 0) - 28;
+            if (!(avail > 0)) avail = W;
+            var k = Math.min(1, avail / W);
+            var h = frame._natH || 800;
+            try {
+                frame.style.transformOrigin = 'top left';
+                frame.style.transform = 'scale(' + k + ')';
+                paper.style.width = Math.round(W * k) + 'px';
+                paper.style.height = Math.round(h * k) + 'px';
+            } catch (e) { /* моки без style — тихо */ }
+        },
+
+        // Task 465: закрыть диалог предпросмотра списка: снять
+        // слушатели окна, удалить элемент, СНЯТЬ инжект-стиль
+        // книжной @page (печать графика снова альбомная)
+        _closeEventsPreview: function() {
+            if (typeof window !== 'undefined' && window.removeEventListener) {
+                if (this._evPrevEsc) {
+                    try { window.removeEventListener('keydown',
+                                                    this._evPrevEsc); }
+                    catch (e) {}
+                }
+                if (this._evPrevResize) {
+                    try { window.removeEventListener('resize',
+                                                    this._evPrevResize); }
+                    catch (e) {}
+                }
+            }
+            this._evPrevEsc = null;
+            this._evPrevResize = null;
+            if (typeof document !== 'undefined' &&
+                document.getElementById) {
+                var overlay = document.getElementById('wsEventsPrevModal');
+                if (overlay && overlay.parentNode &&
+                    overlay.parentNode.removeChild) {
+                    try { overlay.parentNode.removeChild(overlay); }
+                    catch (e) {}
+                }
+            }
+            this._eventsRemovePrintStyle();
+        },
+
+        // Task 465: standalone-документ предпросмотра: белый КНИЖНЫЙ
+        // лист 190мм (A4 портрет минус поля 2×10мм) на подложке;
+        // @page — те же поля (печать файла из браузера — A4 книжная)
+        _buildEventsFileHtml: function(printHtml, model) {
+            var months = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                          'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            var mIdx = Math.min(Math.max(parseInt(model.m, 10) || 1, 1), 12);
+            var title = 'Мероприятия — ' + months[mIdx - 1] + ' ' + model.y;
+            return '<!DOCTYPE html>\n<html><head>' +
+                '<meta charset="utf-8">' +
+                '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+                '<title>' + this._esc(title) + '</title>' +
+                '<style>' +
+                '@page { size: A4 portrait; margin: 12mm 10mm; } ' +
+                'html { background: #566170; } ' +
+                'body { margin: 0; padding: 6mm 0; display: flex; justify-content: center; } ' +
+                '#wsPrintSheet { background: #fff; box-shadow: 0 1mm 4mm rgba(0,0,0,0.45); ' +
+                'padding: 12mm 10mm; width: 190mm; flex: none; ' +
+                'font: 11px/1.35 Arial, Helvetica, sans-serif; color: #1b1f24; } ' +
+                this._EVENTS_PRINT_CSS +
+                '</style></head><body>' +
+                '<div id="wsPrintSheet" class="wsev-sheet">' + printHtml +
+                '</div></body></html>';
+        },
+
+        // Task 465: «Сохранить PDF» диалога списка — модель →
+        // раскладка → отрисовка страниц (canvas ×2, Arial, тот же
+        // вид, что у печати графика) → PDF в загрузки; имя —
+        // «Мероприятия_‹Месяц›_‹год›.pdf» (паттерн _savePrintPdf)
+        _saveEventsPdf: function(model) {
+            var months = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                          'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            var mIdx = Math.min(Math.max(parseInt(model.m, 10) || 1, 1), 12);
+            var name = 'Мероприятия_' + months[mIdx - 1] + '_' +
+                       model.y + '.pdf';
+            var ok = false;
+            try {
+                var lay = this._eventsPdfLayout(model);
+                var jpegs = [];
+                for (var p = 0; p < lay.pages.length; p++) {
+                    var jp = this._eventsPdfPaintPage(lay, model, p);
+                    if (jp) jpegs.push(jp);
+                }
+                if (!jpegs.length) throw new Error('нет страниц');
+                var bytes = this._buildPdfDocument(jpegs, lay.W, lay.H);
+                ok = this._wsDownload(bytes, 'application/pdf', name);
+            } catch (e) { ok = false; }
+            if (typeof KipToast !== 'undefined' && KipToast.show) {
+                KipToast.show(ok
+                    ? ('Список сохранён — файл «' + name + '»')
+                    : 'Не удалось сохранить PDF списка мероприятий');
+            }
+        },
+
+        // Task 465: раскладка PDF списка (чистая — VM-тестируемая):
+        // A4 КНИЖНАЯ 595×842pt, поля 28pt; шапка (только первая
+        // страница) 44pt, заголовок таблицы 16pt (повторяется на
+        // каждой странице — как table-header-group в HTML), строка —
+        // по числу строк текста (перенос по словам, оценка ~4.6pt
+        // на символ 8px Arial — приём _printPdfLayout графика),
+        // caption секции СИЗ 24pt. Колонки: № 26 / Даты 66 /
+        // Мероприятие (остаток 323) / Работник 120
+        _eventsPdfLayout: function(model) {
+            var W = 595, H = 842, M = 28;
+            var headH = 44, capH = 24, thH = 16, lineH = 11, rowPad = 8;
+            var nW = 26, dateW = 66, workW = 120;
+            var nameW = W - 2 * M - nW - dateW - workW;
+            var budget = H - 2 * M;
+            var estW = function(s) {
+                return String(s || '').length * 4.6;
+            };
+            var wrapN = function(s, maxW) {
+                var words = String(s || '').split(' ');
+                var lines = [], cur = '';
+                for (var i = 0; i < words.length; i++) {
+                    var cand = cur ? cur + ' ' + words[i] : words[i];
+                    if (estW(cand) <= maxW || !cur) cur = cand;
+                    else { lines.push(cur); cur = words[i]; }
+                }
+                if (cur) lines.push(cur);
+                return lines.length || 1;
+            };
+            var prep = function(rows) {
+                var out = [];
+                for (var i = 0; i < rows.length; i++) {
+                    var ln = wrapN(rows[i].name, nameW - 16);
+                    var lw = wrapN(rows[i].fio, workW - 6);
+                    out.push({ src: rows[i], lines: Math.max(ln, lw) });
+                }
+                return out;
+            };
+            // пустой список мероприятий — строка-заглушка (как в
+            // печати графика; сюда попадаем, когда есть СИЗ)
+            var evRows = model.events.length ? model.events
+                : [{ range: '', name: 'нет мероприятий в этом месяце',
+                     fio: '', color: '', none: true }];
+            var evPrep = prep(evRows);
+            var ppePrep = prep(model.ppe);
+            var rowH = function(r) { return r.lines * lineH + rowPad; };
+            var pages = [];
+            var page = null;
+            var y = 0;
+            var newPage = function(first) {
+                page = { first: !!first, ev: null, ppe: null };
+                pages.push(page);
+            };
+            newPage(true);
+            y = headH;
+            page.ev = [];
+            page.evFirst = 0;
+            var evHead = false;
+            for (var e = 0; e < evPrep.length; e++) {
+                var rh = rowH(evPrep[e]);
+                var needH = rh + (evHead ? 0 : thH);
+                if (evHead && y + needH > budget) {
+                    newPage(false);
+                    y = 0;
+                    page.ev = [];
+                    page.evFirst = e;
+                    evHead = false;
+                }
+                if (!evHead) { y += thH; evHead = true; }
+                page.ev.push(evPrep[e]);
+                y += rh;
+            }
+            if (model.ppe.length) {
+                page.ppe = { cap: false, rows: [], first: 0 };
+                var cap = false, pHead = false;
+                for (var q = 0; q < ppePrep.length; q++) {
+                    var rh2 = rowH(ppePrep[q]);
+                    var lead = (cap ? 0 : capH) + (pHead ? 0 : thH);
+                    if (y + lead + rh2 > budget) {
+                        newPage(false);
+                        y = 0;
+                        page.ppe = { cap: false, rows: [], first: q };
+                        cap = false;
+                        pHead = false;
+                        lead = capH + thH;
+                    }
+                    if (!cap) { y += capH; cap = true; page.ppe.cap = true; }
+                    if (!pHead) { y += thH; pHead = true; }
+                    page.ppe.rows.push(ppePrep[q]);
+                    y += rh2;
+                }
+            }
+            return { pages: pages, W: W, H: H, M: M, headH: headH,
+                     capH: capH, thH: thH, lineH: lineH, rowPad: rowPad,
+                     nW: nW, dateW: dateW, workW: workW, nameW: nameW };
+        },
+
+        // Task 465: ОТРИСОВКА СТРАНИЦЫ PDF списка на canvas (браузер;
+        // в VM-тестах не вызывается — раскладку строит чистый
+        // _eventsPdfLayout). Координаты — pt (595×842), canvas ×2
+        // для чёткости текста; шапка — на первой странице, шапки
+        // таблиц — на каждой своей странице (№ — сквозная нумерация
+        // page.evFirst/page.ppe.first), точка цвета у названия —
+        // цвет кода из справочника (СИЗ — янтарная, как в окне);
+        // итог — JPEG {bytes, w, h} или null
+        _eventsPdfPaintPage: function(lay, model, pi) {
+            if (typeof document === 'undefined' ||
+                !document.createElement) return null;
+            var page = lay.pages[pi];
+            if (!page) return null;
+            var cnv = document.createElement('canvas');
+            if (!cnv || !cnv.getContext) return null;
+            var scale = 2;
+            cnv.width = lay.W * scale;
+            cnv.height = lay.H * scale;
+            var ctx = cnv.getContext('2d');
+            if (!ctx || !ctx.fillText) return null;
+            try { ctx.scale(scale, scale); } catch (e) { return null; }
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, lay.W, lay.H);
+            var x0 = lay.M;
+            var y = lay.M;
+            var monthsNom = ['январь','февраль','март','апрель','май','июнь',
+                             'июль','август','сентябрь','октябрь','ноябрь','декабрь'];
+            var cols = [
+                { x: x0, w: lay.nW },
+                { x: x0 + lay.nW, w: lay.dateW },
+                { x: x0 + lay.nW + lay.dateW, w: lay.nameW },
+                { x: x0 + lay.nW + lay.dateW + lay.nameW, w: lay.workW }
+            ];
+            var line = function(x, yy, w, h) {
+                ctx.strokeStyle = '#c9d1d9';
+                ctx.lineWidth = 0.5;
+                ctx.strokeRect(x, yy, w, h);
+            };
+            var wrapDraw = function(text, x, yTop, maxW) {
+                var words = String(text || '').split(' ');
+                var cur = '', ly = yTop;
+                for (var i = 0; i < words.length; i++) {
+                    var cand = cur ? cur + ' ' + words[i] : words[i];
+                    if (ctx.measureText(cand).width <= maxW || !cur) {
+                        cur = cand;
+                    } else {
+                        ctx.fillText(cur, x, ly);
+                        ly += lay.lineH;
+                        cur = words[i];
+                    }
+                }
+                if (cur) ctx.fillText(cur, x, ly);
+            };
+            if (page.first) {
+                ctx.fillStyle = '#1b1f24';
+                ctx.font = '700 16px Arial';
+                ctx.fillText('МЕРОПРИЯТИЯ', x0, y + 14);
+                ctx.fillStyle = '#3c4650';
+                ctx.font = '600 10.5px Arial';
+                ctx.fillText(monthsNom[model.m - 1] + ' ' + model.y +
+                             ' г.' + (model.events.length
+                                 ? ' · записей: ' + model.events.length : ''),
+                             x0, y + 29);
+                y += lay.headH;
+            }
+            var drawHead = function(labels) {
+                for (var c = 0; c < 4; c++) {
+                    ctx.fillStyle = '#eef1f4';
+                    ctx.fillRect(cols[c].x, y, cols[c].w, lay.thH);
+                    line(cols[c].x, y, cols[c].w, lay.thH);
+                }
+                ctx.fillStyle = '#1b1f24';
+                ctx.font = '700 8px Arial';
+                for (var l = 0; l < 4; l++) {
+                    ctx.textAlign = 'center';
+                    ctx.fillText(labels[l], cols[l].x + cols[l].w / 2,
+                                 y + 11);
+                    ctx.textAlign = 'left';
+                }
+                y += lay.thH;
+            };
+            if (page.ev) {
+                drawHead(['№', 'Даты', 'Мероприятие', 'Работник']);
+                for (var r = 0; r < page.ev.length; r++) {
+                    var row = page.ev[r];
+                    var h = row.lines * lay.lineH + lay.rowPad;
+                    var tTop = y + lay.rowPad / 2 + 8;
+                    ctx.fillStyle = '#1b1f24';
+                    ctx.font = '8px Arial';
+                    ctx.textAlign = 'center';
+                    if (!row.src.none) {
+                        ctx.fillText(String(page.evFirst + r + 1),
+                                     cols[0].x + cols[0].w / 2, tTop);
+                    }
+                    ctx.font = '700 8px Arial';
+                    ctx.fillText(row.src.range || '',
+                                 cols[1].x + cols[1].w / 2, tTop);
+                    ctx.textAlign = 'left';
+                    var nameX = cols[2].x + (row.src.color ? 11 : 3);
+                    if (row.src.color) {
+                        ctx.fillStyle = row.src.color;
+                        ctx.beginPath();
+                        ctx.arc(cols[2].x + 4, tTop - 2.8, 2.2,
+                                0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.fillStyle = '#1b1f24';
+                    ctx.font = '8px Arial';
+                    wrapDraw(row.src.name, nameX, tTop,
+                             cols[2].w - (nameX - cols[2].x) - 3);
+                    wrapDraw(row.src.fio, cols[3].x + 3, tTop,
+                             cols[3].w - 6);
+                    for (var c2 = 0; c2 < 4; c2++) {
+                        line(cols[c2].x, y, cols[c2].w, h);
+                    }
+                    y += h;
+                }
+            }
+            if (page.ppe) {
+                if (page.ppe.cap) {
+                    ctx.fillStyle = '#1b1f24';
+                    ctx.font = '700 9px Arial';
+                    ctx.fillText('СИЗ · ' + monthsNom[model.m - 1] + ' ' +
+                                 model.y + ' · ' + model.ppe.length,
+                                 x0, y + 8);
+                    y += lay.capH;
+                }
+                drawHead(['№', 'Срок', 'Наименование СИЗ', 'Работник']);
+                for (var q2 = 0; q2 < page.ppe.rows.length; q2++) {
+                    var prow = page.ppe.rows[q2];
+                    var ph = prow.lines * lay.lineH + lay.rowPad;
+                    var pTop = y + lay.rowPad / 2 + 8;
+                    ctx.fillStyle = '#1b1f24';
+                    ctx.font = '8px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(String(page.ppe.first + q2 + 1),
+                                 cols[0].x + cols[0].w / 2, pTop);
+                    ctx.font = '700 8px Arial';
+                    ctx.fillText(prow.src.range || '',
+                                 cols[1].x + cols[1].w / 2, pTop);
+                    ctx.textAlign = 'left';
+                    ctx.fillStyle = '#f0a830';
+                    ctx.beginPath();
+                    ctx.arc(cols[2].x + 4, pTop - 2.8, 2.2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#1b1f24';
+                    ctx.font = '8px Arial';
+                    wrapDraw(prow.src.name, cols[2].x + 11, pTop,
+                             cols[2].w - 14);
+                    wrapDraw(prow.src.fio, cols[3].x + 3, pTop,
+                             cols[3].w - 6);
+                    for (var c3 = 0; c3 < 4; c3++) {
+                        line(cols[c3].x, y, cols[c3].w, ph);
+                    }
+                    y += ph;
+                }
+            }
+            var dataUrl;
+            try {
+                dataUrl = cnv.toDataURL('image/jpeg', 0.92);
+            } catch (e4) { return null; }
+            var bytes = this._wsDataUrlBytes(dataUrl);
+            if (!bytes.length) return null;
+            return { bytes: bytes, w: cnv.width, h: cnv.height };
+        },
+
+        // Task 465: «Сохранить Excel» диалога списка — книга
+        // «Мероприятия» (.xlsx) в загрузки; имя —
+        // «Мероприятия_‹Месяц›_‹год›.xlsx»
+        _saveEventsXlsx: function(model) {
+            var wb = null;
+            try {
+                wb = this._buildEventsWorkbook(model);
+            } catch (e) { wb = null; }
+            var ok = false;
+            if (wb) {
+                ok = this._wsDownload(
+                    wb.bytes,
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    wb.name);
+            }
+            if (typeof KipToast !== 'undefined' && KipToast.show) {
+                KipToast.show(ok
+                    ? ('Список сохранён — файл «' +
+                       (wb ? wb.name : '') + '»')
+                    : 'Не удалось сохранить Excel списка мероприятий');
+            }
+        },
+
+        // Task 465: XML листа «Мероприятия» (клон _wsTabelSheetXml
+        // БЕЗ закрепления панели — список короткий): ячейки —
+        // {v, s} (v — строка/число, s — индекс стиля
+        // _eventsStylesXml), ширины столбцов — opts.widths
+        _eventsSheetXml: function(rows, opts) {
+            opts = opts || {};
+            var maxCol = 1;
+            for (var i = 0; i < (rows || []).length; i++) {
+                if (rows[i].length > maxCol) maxCol = rows[i].length;
+            }
+            var x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+                '<dimension ref="A1:' + this._wsXlsColName(maxCol - 1) +
+                Math.max(rows ? rows.length : 0, 1) + '"/>' +
+                '<sheetViews><sheetView workbookViewId="0"' +
+                (opts.active ? ' tabSelected="1"' : '') +
+                '/></sheetViews>';
+            if (opts.widths && opts.widths.length) {
+                x += '<cols>';
+                for (var w = 0; w < opts.widths.length; w++) {
+                    x += '<col min="' + (w + 1) + '" max="' + (w + 1) +
+                         '" width="' + opts.widths[w] + '" customWidth="1"/>';
+                }
+                x += '</cols>';
+            }
+            x += '<sheetData>';
+            for (var r = 0; r < (rows || []).length; r++) {
+                var row = rows[r];
+                if (!row.length) {
+                    x += '<row r="' + (r + 1) + '"/>';
+                    continue;
+                }
+                x += '<row r="' + (r + 1) + '">';
+                for (var c = 0; c < row.length; c++) {
+                    var cell = row[c] || {};
+                    var ref = this._wsXlsColName(c) + (r + 1);
+                    var st = (cell.s === undefined || cell.s === null)
+                        ? '' : ' s="' + cell.s + '"';
+                    var v = cell.v;
+                    if (v === null || v === undefined) v = '';
+                    if (typeof v === 'number' && isFinite(v)) {
+                        x += '<c r="' + ref + '"' + st + '><v>' + v +
+                             '</v></c>';
+                    } else if (String(v) === '') {
+                        x += '<c r="' + ref + '"' + st + '/>';
+                    } else {
+                        x += '<c r="' + ref + '" t="inlineStr"' + st +
+                             '><is><t>' + this._wsXlsEsc(String(v)) +
+                             '</t></is></c>';
+                    }
+                }
+                x += '</row>';
+            }
+            x += '</sheetData></worksheet>';
+            return x;
+        },
+
+        // Task 465: styles.xml книги «Мероприятия» (упрощённая карта
+        // против табельной _wsTabelStylesXml — без сетки дней и
+        // цветных кодов): 0 — обычная ячейка; 1 — заголовок листа
+        // (bold 14); 2 — подзаголовок/ярлык СИЗ (bold 11); 3 —
+        // шапка таблицы (bold 10.5 белый на синем, рамка, центр);
+        // 4 — № (рамка, центр); 5 — даты (bold, рамка, центр);
+        // 6/7 — текст/работник (рамка, перенос)
+        _eventsStylesXml: function() {
+            var f = '';
+            f += '<font><sz val="11"/><color rgb="FF1B1F24"/><name val="Arial"/></font>';
+            f += '<font><b/><sz val="14"/><color rgb="FF1B1F24"/><name val="Arial"/></font>';
+            f += '<font><b/><sz val="11"/><color rgb="FF1B1F24"/><name val="Arial"/></font>';
+            f += '<font><b/><sz val="10.5"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>';
+            var fl = '<fill><patternFill patternType="none"/></fill>' +
+                     '<fill><patternFill patternType="gray125"/></fill>' +
+                     '<fill><patternFill patternType="solid">' +
+                     '<fgColor rgb="FF4472C4"/><bgColor indexed="64"/>' +
+                     '</patternFill></fill>';
+            var bd = '<border><left/><right/><top/><bottom/><diagonal/></border>' +
+                     '<border>' +
+                     '<left style="thin"><color rgb="FFB9C2CC"/></left>' +
+                     '<right style="thin"><color rgb="FFB9C2CC"/></right>' +
+                     '<top style="thin"><color rgb="FFB9C2CC"/></top>' +
+                     '<bottom style="thin"><color rgb="FFB9C2CC"/></bottom>' +
+                     '<diagonal/></border>';
+            var xf = '';
+            xf += '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>';
+            xf += '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>';
+            xf += '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>';
+            xf += '<xf numFmtId="0" fontId="3" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">' +
+                  '<alignment horizontal="center"/></xf>';
+            xf += '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1">' +
+                  '<alignment horizontal="center"/></xf>';
+            xf += '<xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1">' +
+                  '<alignment horizontal="center"/></xf>';
+            xf += '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1">' +
+                  '<alignment wrapText="1" vertical="top"/></xf>';
+            xf += '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1">' +
+                  '<alignment wrapText="1" vertical="top"/></xf>';
+            return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+                '<fonts count="4">' + f + '</fonts>' +
+                '<fills count="3">' + fl + '</fills>' +
+                '<borders count="2">' + bd + '</borders>' +
+                '<cellStyleXfs count="1">' +
+                '<xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>' +
+                '</cellStyleXfs>' +
+                '<cellXfs count="8">' + xf + '</cellXfs>' +
+                '<cellStyles count="1">' +
+                '<cellStyle name="Normal" xfId="0" builtinId="0"/>' +
+                '</cellStyles></styleSheet>';
+        },
+
+        // Task 465: КНИГА .xlsx «Мероприятия» (чистая — VM-тесты;
+        // помощники Task 430: _wsXlsZip/_wsXlsBytes/_wsXlsColName/
+        // _wsXlsEsc): заголовок + подзаголовок месяца, таблица
+        // мероприятий (№/Даты/Мероприятие/Работник), секция СИЗ;
+        // пустой список мероприятий — строка-заглушка (как в
+        // печати), пустая СИЗ — секция не пишется
+        _buildEventsWorkbook: function(model) {
+            var rows = [];
+            rows.push([{ v: 'Мероприятия', s: 1 }]);
+            rows.push([{ v: model.monthName + ' ' + model.y + ' г.' +
+                         (model.events.length
+                             ? ' · записей: ' + model.events.length : ''),
+                         s: 2 }]);
+            rows.push([]);
+            rows.push([{ v: '№', s: 3 }, { v: 'Даты', s: 3 },
+                       { v: 'Мероприятие', s: 3 },
+                       { v: 'Работник', s: 3 }]);
+            if (model.events.length) {
+                for (var k = 0; k < model.events.length; k++) {
+                    rows.push([{ v: k + 1, s: 4 },
+                               { v: model.events[k].range, s: 5 },
+                               { v: model.events[k].name, s: 6 },
+                               { v: model.events[k].fio, s: 7 }]);
+                }
+            } else {
+                rows.push([{ v: 'нет мероприятий в этом месяце', s: 6 }]);
+            }
+            if (model.ppe.length) {
+                rows.push([]);
+                rows.push([{ v: 'СИЗ · ' + model.monthName + ' ' +
+                             model.y + ' · ' + model.ppe.length, s: 2 }]);
+                rows.push([{ v: '№', s: 3 }, { v: 'Срок', s: 3 },
+                           { v: 'Наименование СИЗ', s: 3 },
+                           { v: 'Работник', s: 3 }]);
+                for (var q = 0; q < model.ppe.length; q++) {
+                    rows.push([{ v: q + 1, s: 4 },
+                               { v: model.ppe[q].range, s: 5 },
+                               { v: model.ppe[q].name, s: 6 },
+                               { v: model.ppe[q].fio, s: 7 }]);
+                }
+            }
+            var files = [];
+            var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+                '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+                '<Default Extension="xml" ContentType="application/xml"/>' +
+                '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+                '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+                '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+                '</Types>';
+            files.push({ name: '[Content_Types].xml',
+                         data: this._wsXlsBytes(ct) });
+            files.push({
+                name: '_rels/.rels',
+                data: this._wsXlsBytes(
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+                    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"' +
+                    ' Target="xl/workbook.xml"/></Relationships>')
+            });
+            files.push({
+                name: 'xl/workbook.xml',
+                data: this._wsXlsBytes(
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"' +
+                    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+                    '<sheets><sheet name="Мероприятия" sheetId="1" r:id="rId1"/>' +
+                    '</sheets></workbook>')
+            });
+            files.push({
+                name: 'xl/_rels/workbook.xml.rels',
+                data: this._wsXlsBytes(
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+                    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"' +
+                    ' Target="worksheets/sheet1.xml"/>' +
+                    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"' +
+                    ' Target="styles.xml"/></Relationships>')
+            });
+            files.push({
+                name: 'xl/worksheets/sheet1.xml',
+                data: this._wsXlsBytes(this._eventsSheetXml(rows, {
+                    widths: [5, 14, 64, 36], active: true }))
+            });
+            files.push({ name: 'xl/styles.xml',
+                         data: this._wsXlsBytes(this._eventsStylesXml()) });
+            var months = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                          'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            var mIdx = Math.min(Math.max(parseInt(model.m, 10) || 1, 1), 12);
+            return {
+                name: 'Мероприятия_' + months[mIdx - 1] + '_' +
+                      model.y + '.xlsx',
+                bytes: this._wsXlsZip(files),
+                counts: {
+                    events: model.events.length,
+                    ppe: model.ppe.length
+                }
+            };
         },
 
         // Task 341: HTML печатного листа (светлая «бумажная» вёрстка,
@@ -48500,32 +49591,60 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 btn.onclick = function() { self._barExpToggle(el); };
                 el.appendChild(btn);
             }
+            // Task 465 (заявка): значок ПЕЧАТИ списка мероприятий —
+            // ТОЛЬКО в окне мероприятий, СПРАВА от значка раскрытия
+            // (в самом правом верхнем углу; окно норм не тронуто).
+            // Квадратная кнопка ТОГО ЖЕ размера (22×22, класс
+            // .ws-bar-print), иконка принтера — та же, что у кнопки
+            // «Печать» графика; клик — диалог печати/сохранения
+            // списка мероприятий открытого месяца
+            // (printEventsList). Как и значок раскрытия — absolute
+            // ВНУТРИ скроллера и уезжает вверх вместе с
+            // прокручиваемым слоем: тот же прикол translateY
+            var prn = el.querySelector('.ws-bar-print');
+            if (!prn && el.id === 'wsEventsPanel') {
+                prn = document.createElement('button');
+                prn.type = 'button';
+                prn.className = 'ws-bar-print';
+                prn.setAttribute('aria-label',
+                                 'Печать списка мероприятий');
+                prn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V6z" fill="currentColor"/></svg>';
+                var selfP = this;
+                prn.onclick = function() { selfP.printEventsList(); };
+                el.appendChild(prn);
+            }
             // Task 381 (заявка: «при прокрутке текста в свёрнутых
             // окнах мероприятий и норм значки раскрытия должны
             // оставаться на месте»): значок — absolute ВНУТРИ
             // скроллера и БЕЗ компенсации уезжает вверх вместе с
             // прокручиваемым слоем (упор top:5px — в padding-box
-            // на scrollTop=0, Task 388: верхний угол). Компенсация
+            // на scrollTop=0, Task 388: верхний угол; Task 465:
+            // упор 2px = 3px от края окна). Компенсация
             // translateY(scrollTop) на каждый scroll — значок висит
             // в правом ВЕРХНЕМ углу ВСЕГДА, сколько текста ни крути
-            // (колесо/свайп/↑↓).
+            // (колесо/свайп/↑↓). Task 465: прикол — на ОБОИХ
+            // значках окна мероприятий (раскрытие + печать).
             // Слушатель — ОДИН раз на элемент окна (флаг _barExpPin:
             // рендеры окон заменяют innerHTML, но не сам элемент —
             // слушатель переживает перерисовки); transform ставится
-            // и при каждом _barExpSync — значок (пере)создаётся
+            // и при каждом _barExpSync — значки (пере)создаются
             // после рендеров, актуальный scrollTop учитывается.
             // РАСКРЫТОЕ окно не скроллится (высота = scrollHeight)
-            // — transform остаётся 0; transition у значка только на
+            // — transform остаётся 0; transition у значков только на
             // opacity — движение мгновенное, без отставания
             if (!el._barExpPin) {
                 el._barExpPin = true;
                 el.addEventListener('scroll', function() {
+                    var t = 'translateY(' + el.scrollTop + 'px)';
                     var b = el.querySelector('.ws-bar-exp');
-                    if (b) b.style.transform =
-                        'translateY(' + el.scrollTop + 'px)';
+                    if (b) b.style.transform = t;
+                    var p = el.querySelector('.ws-bar-print');
+                    if (p) p.style.transform = t;
                 });
             }
-            btn.style.transform = 'translateY(' + el.scrollTop + 'px)';
+            var tNow = 'translateY(' + el.scrollTop + 'px)';
+            btn.style.transform = tNow;
+            if (prn) prn.style.transform = tNow;
             var open = el.classList.contains('ws-bar-open');
             // 97 = компактная высота окон 95px (CSS) + допуск 2px:
             // scrollHeight не зависит от текущей (анимируемой) высоты
@@ -53876,8 +54995,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var self = this;
             // взаимоисключающие диалоги: закрыть возможный
             // предпросмотр графика (печать графика — альбомная)
+            // и предпросмотр списка мероприятий (Task 465)
             if (typeof this._closePrintPreview === 'function') {
                 try { this._closePrintPreview(); } catch (e) {}
+            }
+            if (typeof this._closeEventsPreview === 'function') {
+                try { this._closeEventsPreview(); } catch (e2) {}
             }
             var mi = model.month;
 
