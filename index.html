@@ -16435,7 +16435,14 @@
              периодичности в образец не входит. Опечатка образца «Феф.»
              исправлена на «Фев.». Страница СТАТИЧНАЯ (справочная):
              серверных запросов НЕТ, работает офлайн; доступ — как у
-             страницы «Документация ИОС» (без отдельного права). -->
+             страницы «Документация ИОС» (без отдельного права).
+             Task 470: точка в конце сокращения «Ноя.» (как у прочих
+             сокращённых месяцев); в группу «В конце месяца» добавлено
+             мероприятие «Работы на следующий месяц»; НОВАЯ группа
+             «На текущий месяц» с мероприятием «Работы на месяц»
+             (ячейки — пустые pe-m, отметки Task 463 работают по
+             наименованию из DOM — новые строки автоматически
+             кликабельны). -->
         <div id="page-plan-events" class="page-content">
             <div class="page-inline-header">
                 <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
@@ -16473,8 +16480,11 @@
                                     <th class="pe-th-name" rowspan="2">Мероприятия</th>
                                     <th class="pe-th-year" colspan="12">2026 год</th>
                                 </tr>
+                                <!-- Task 470: точка в конце сокращения ноября
+                                     («Ноя.» — как у прочих сокращённых месяцев;
+                                     «Май» — полное слово, без точки) -->
                                 <tr class="pe-head-months">
-                                    <th>Янв.</th><th>Фев.</th><th>Мар.</th><th>Апр.</th><th>Май</th><th>Июн.</th><th>Июл.</th><th>Авг.</th><th>Сен.</th><th>Окт.</th><th>Ноя</th><th>Дек.</th>
+                                    <th>Янв.</th><th>Фев.</th><th>Мар.</th><th>Апр.</th><th>Май</th><th>Июн.</th><th>Июл.</th><th>Авг.</th><th>Сен.</th><th>Окт.</th><th>Ноя.</th><th>Дек.</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -16510,6 +16520,23 @@
                                 </tr>
                                 <tr class="pe-row">
                                     <td class="pe-name">Отчёт по графику ППР</td>
+                                    <td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td>
+                                </tr>
+                                <!-- Task 470: новое мероприятие группы «В конце месяца»
+                                     (заявка: «К группе мероприятий в конце месяца добавь
+                                     мероприятие "Работы на следующий месяц"») -->
+                                <tr class="pe-row">
+                                    <td class="pe-name">Работы на следующий месяц</td>
+                                    <td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td>
+                                </tr>
+                                <!-- Task 470: новая группа мероприятий «На текущий месяц»
+                                     с мероприятием «Работы на месяц» (заявка: «ниже в
+                                     таблице создай новую группу мероприятий "На текущий
+                                     месяц", и добавь в эту группу новое мероприятие
+                                     "Работы на месяц"») -->
+                                <tr class="pe-group"><td colspan="13">На текущий месяц</td></tr>
+                                <tr class="pe-row">
+                                    <td class="pe-name">Работы на месяц</td>
                                     <td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td><td class="pe-m"></td>
                                 </tr>
                             </tbody>
