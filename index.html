@@ -16054,6 +16054,274 @@
         .pe-layout { flex-direction: column; }
     }
 
+    /* ====== Task 471: переключение годов + кликабельная шапка ======
+       Заявка: «помимо текущего года в оглавлении таблицы, сделай
+       кнопку просмотра предыдущих годов, и если есть архив за
+       предыдущие года, тогда кнопка переключения годов, расположенная
+       слева от текущего года, будет активна» + «месяцы в шапке
+       таблицы мероприятий должны быть кликабельны и определять за
+       какой месяц будет появляться информация в правом окне». */
+    /* Кнопка «◀» — слева от года в th.pe-th-year; СТАРТОВО
+       неактивна (disabled в разметке): JS включает её после
+       planEvents.years, если в архиве есть предыдущие годы */
+    .pe-year-btn {
+        width: 24px; height: 24px;
+        margin-right: 8px;
+        vertical-align: middle;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary, rgba(255, 255, 255, 0.55));
+        cursor: pointer;
+        border-radius: 5px;
+        display: inline-flex;
+        align-items: center; justify-content: center;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 0.12s, color 0.15s, transform 0.12s;
+    }
+    .pe-year-btn svg {
+        width: 16px; height: 16px; display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.6;
+        stroke-linecap: round; stroke-linejoin: round;
+    }
+    .pe-year-btn:hover:not(:disabled) {
+        background: rgba(74, 143, 199, 0.16);
+        color: var(--text-primary, #e0e0e0);
+    }
+    .pe-year-btn:active:not(:disabled) { transform: scale(0.88); }
+    /* Нет архива за предыдущие годы — кнопка тусклая и некликабельная */
+    .pe-year-btn:disabled { opacity: 0.28; cursor: default; }
+    [data-theme="light"] .pe-year-btn { color: #5a6a7d; }
+    /* Кликабельные месяцы шапки (выбор месяца для правого окна) и
+       «Мероприятия» (возврат к описанию раздела) — курсор + hover */
+    .pe-head-months th {
+        cursor: pointer;
+        -webkit-user-select: none; user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 0.12s;
+    }
+    .pe-head-months th:hover,
+    .pe-table thead th.pe-th-name:hover {
+        background: rgba(74, 143, 199, 0.16);
+    }
+    .pe-table thead th.pe-th-name {
+        cursor: pointer;
+        -webkit-user-select: none; user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+    /* Выбранный месяц (клик по шапке; по умолчанию — текущий):
+       подсветка + полоса снизу — видно, за какой месяц правое окно */
+    .pe-head-months th.pe-mo-sel {
+        background: rgba(74, 143, 199, 0.30);
+        color: var(--text-primary, #e0e0e0);
+        box-shadow: inset 0 -2px 0 rgba(74, 143, 199, 0.85);
+    }
+    [data-theme="light"] .pe-head-months th.pe-mo-sel {
+        background: rgba(74, 143, 199, 0.20);
+        color: #1a2430;
+        box-shadow: inset 0 -2px 0 rgba(58, 108, 152, 0.8);
+    }
+    /* Наименования «Работы на следующий месяц» / «Работы на месяц» —
+       кликабельны (класс ставит JS PlanWorksData._tagWorkRows, как
+       pe-mo-N у Task 464 — разметку таблицы не трогаем) */
+    td.pe-name.pe-name-click {
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 0.12s;
+    }
+    td.pe-name.pe-name-click:hover {
+        background: rgba(74, 143, 199, 0.16);
+    }
+
+    /* ====== Task 471: окно работ — динамичный вид правого окна ======
+       «Работы на следующий месяц» (интерфейс ввода) и «Работы на
+       месяц» (перечень + отметка полного/частичного выполнения или
+       невыполнения). Живут в #peWorksView внутри .pe-desc-card
+       (Task 468), пока скрыт #peDescView с описанием. */
+    .pe-works-target {
+        font-size: 12px;
+        color: var(--text-secondary, rgba(255, 255, 255, 0.55));
+        margin: 2px 0 12px;
+    }
+    .pe-works-form {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+    .pe-works-input {
+        flex: 1;
+        min-width: 0;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--card-border, rgba(74, 143, 199, 0.25));
+        background: rgba(20, 26, 34, 0.65);
+        color: var(--text-primary, #e0e0e0);
+        font-size: 13px;
+        font-family: inherit;
+        outline: none;
+    }
+    .pe-works-input:focus {
+        border-color: rgba(74, 143, 199, 0.55);
+    }
+    [data-theme="light"] .pe-works-input {
+        background: rgba(0, 0, 0, 0.04);
+        color: #1a1a1a;
+        border-color: rgba(0, 0, 0, 0.15);
+    }
+    .pe-works-add-btn {
+        flex: 0 0 auto;
+        padding: 8px 14px;
+        border-radius: 8px;
+        border: none;
+        background: rgba(74, 143, 199, 0.30);
+        color: var(--text-primary, #e0e0e0);
+        font-size: 13px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 0.12s, transform 0.12s;
+    }
+    .pe-works-add-btn:active { background: rgba(74, 143, 199, 0.45); }
+    .pe-works-add-btn:disabled { opacity: 0.55; cursor: default; }
+    [data-theme="light"] .pe-works-add-btn {
+        background: rgba(74, 143, 199, 0.25);
+        color: #1a2430;
+    }
+    .pe-works-list {
+        display: grid;
+        gap: 8px;
+    }
+    .pe-work-item {
+        border: 1px solid var(--card-border, rgba(74, 143, 199, 0.25));
+        border-radius: 8px;
+        padding: 8px 10px;
+        background: rgba(20, 26, 34, 0.40);
+    }
+    [data-theme="light"] .pe-work-item {
+        background: rgba(0, 0, 0, 0.03);
+    }
+    .pe-work-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .pe-work-text {
+        flex: 1;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        white-space: normal;
+        line-height: 1.45;
+        font-size: 13px;
+        color: var(--text-primary, #e0e0e0);
+    }
+    /* «×» — удалить работу (только вид ввода «на следующий месяц») */
+    .pe-work-del {
+        flex: 0 0 auto;
+        width: 26px; height: 26px;
+        margin: -2px -4px 0 0;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--text-secondary, rgba(255, 255, 255, 0.45));
+        font-size: 16px;
+        line-height: 1;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 0.12s, color 0.12s;
+    }
+    .pe-work-del:hover {
+        background: rgba(220, 80, 80, 0.18);
+        color: #e07070;
+    }
+    .pe-work-del:active { background: rgba(220, 80, 80, 0.30); }
+    [data-theme="light"] .pe-work-del { color: rgba(55, 65, 81, 0.6); }
+    [data-theme="light"] .pe-work-del:hover {
+        background: rgba(180, 40, 40, 0.10);
+        color: #b04a4a;
+    }
+    /* Бейдж текущего статуса работы («Выполнено — 05.11.2026»);
+       цвета: зелёный/жёлтый/красный — как галочка Task 463 и
+       опасные кнопки Task 464 */
+    .pe-work-status {
+        margin-top: 6px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .pe-work-status.st-done { color: #4caf50; }
+    .pe-work-status.st-partial { color: #d9b44a; }
+    .pe-work-status.st-fail { color: #e07070; }
+    [data-theme="light"] .pe-work-status.st-done { color: #2e7d32; }
+    [data-theme="light"] .pe-work-status.st-partial { color: #9c7a1e; }
+    [data-theme="light"] .pe-work-status.st-fail { color: #b04a4a; }
+    /* Кнопки отметки: Выполнено / Частично / Не выполнено */
+    .pe-work-btns {
+        display: flex;
+        gap: 6px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+    }
+    .pe-work-st-btn {
+        flex: 1 1 86px;
+        min-width: 86px;
+        padding: 7px 6px;
+        border-radius: 7px;
+        border: 1px solid var(--card-border, rgba(74, 143, 199, 0.25));
+        background: transparent;
+        color: var(--text-secondary, rgba(255, 255, 255, 0.55));
+        font-size: 12px;
+        font-family: inherit;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .pe-work-st-btn:active { transform: scale(0.97); }
+    /* Выбранный статус — подсветка соответствующим цветом */
+    .pe-work-st-btn.st-sel[data-st="выполнено"] {
+        background: rgba(67, 160, 71, 0.16);
+        border-color: rgba(67, 160, 71, 0.55);
+        color: #6fc073;
+        font-weight: 600;
+    }
+    .pe-work-st-btn.st-sel[data-st="частично"] {
+        background: rgba(217, 180, 74, 0.14);
+        border-color: rgba(217, 180, 74, 0.55);
+        color: #d9c26a;
+        font-weight: 600;
+    }
+    .pe-work-st-btn.st-sel[data-st="не выполнено"] {
+        background: rgba(220, 80, 80, 0.16);
+        border-color: rgba(220, 80, 80, 0.55);
+        color: #e08a8a;
+        font-weight: 600;
+    }
+    [data-theme="light"] .pe-work-st-btn { color: #5a6a7d; }
+    [data-theme="light"] .pe-work-st-btn.st-sel[data-st="выполнено"] {
+        background: rgba(46, 125, 50, 0.12);
+        border-color: rgba(46, 125, 50, 0.5);
+        color: #2e7d32;
+    }
+    [data-theme="light"] .pe-work-st-btn.st-sel[data-st="частично"] {
+        background: rgba(156, 122, 30, 0.12);
+        border-color: rgba(156, 122, 30, 0.5);
+        color: #9c7a1e;
+    }
+    [data-theme="light"] .pe-work-st-btn.st-sel[data-st="не выполнено"] {
+        background: rgba(180, 40, 40, 0.10);
+        border-color: rgba(180, 40, 40, 0.5);
+        color: #b04a4a;
+    }
+    /* Пустой перечень / загрузка / ошибка сервера */
+    .pe-works-empty {
+        color: var(--text-secondary, rgba(255, 255, 255, 0.55));
+        font-size: 13px;
+        line-height: 1.5;
+        padding: 8px 2px;
+        overflow-wrap: anywhere;
+    }
+    [data-theme="light"] .pe-works-empty { color: #5a6a7d; }
+
 </style>
 <!-- base target removed: not needed for SPA, causes issues with in-page navigation -->
 </head>
@@ -16442,7 +16710,18 @@
              «На текущий месяц» с мероприятием «Работы на месяц»
              (ячейки — пустые pe-m, отметки Task 463 работают по
              наименованию из DOM — новые строки автоматически
-             кликабельны). -->
+             кликабельны).
+             Task 471: кнопка просмотра предыдущих годов СЛЕВА от
+             текущего года в шапке (активна только при наличии архива
+             за предыдущие годы — planEvents.years); месяцы шапки
+             кликабельны и определяют месяц информации правого окна;
+             правое окно ДИНАМИЧНОЕ: «Работы на следующий месяц» —
+             интерфейс ввода работ (planWorks.add/remove), «Работы
+             на месяц» — перечень работ месяца с отметкой полного/
+             частичного выполнения или невыполнения (planWorks.
+             setStatus → лист «Работы на месяц» файла
+             Мероприятия_КИП_ИОС), «Мероприятия» (шапка) — снова
+             описание раздела. -->
         <div id="page-plan-events" class="page-content">
             <div class="page-inline-header">
                 <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
@@ -16478,7 +16757,12 @@
                             <thead>
                                 <tr class="pe-head-top">
                                     <th class="pe-th-name" rowspan="2">Мероприятия</th>
-                                    <th class="pe-th-year" colspan="12">2026 год</th>
+                                    <!-- Task 471: кнопка просмотра предыдущих годов —
+                                         СЛЕВА от текущего года; активна только при наличии
+                                         архива за предыдущие годы (planEvents.years);
+                                         клик — к ближайшему младшему году архива, при
+                                         исчерпании — возврат к текущему году таблицы -->
+                                    <th class="pe-th-year" colspan="12"><button type="button" id="pePrevYearBtn" class="pe-year-btn" aria-label="Предыдущий год" title="Предыдущие годы (архив)" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button><span id="peYearLabel">2026 год</span></th>
                                 </tr>
                                 <!-- Task 470: точка в конце сокращения ноября
                                      («Ноя.» — как у прочих сокращённых месяцев;
@@ -16553,8 +16837,20 @@
                          «Периодические работы на участке КИП ИОС…»
                          и четыре пункта функционала (пункт
                          «Мобильная версия» убран, «Хранение отметок»
-                         сокращён; раскладка и стили окна не менялись). -->
+                         сокращён; раскладка и стили окна не менялись).
+                         Task 471: окно стало ДИНАМИЧНЫМ — по умолчанию
+                         вид «Описание раздела» (#peDescView), при клике
+                         по ячейке «Работы на следующий месяц» —
+                         интерфейс ввода работ на следующий месяц, при
+                         клике по ячейке «Работы на месяц» — перечень
+                         работ месяца с отметкой выполнения
+                         (полное/частичное/невыполнение → лист «Работы
+                         на месяц» файла Мероприятия_КИП_ИОС); клик по
+                         «Мероприятия» (шапка) возвращает описание.
+                         Месяц для правого окна выбирается кликом по
+                         месяцу в шапке таблицы. -->
                     <aside class="pe-desc-card" aria-label="Описание раздела">
+                        <div id="peDescView" class="pe-desc-view">
                         <div class="pe-desc-title">Описание раздела</div>
                         <div class="pe-desc-lead">Периодические работы на участке КИП ИОС, выполняемые в начале и в конце каждого месяца.</div>
                         <div class="pe-desc-sub">Функционал</div>
@@ -16564,6 +16860,11 @@
                             <li><b>Правка отметки</b> — клик по отмеченной ячейке открывает диалог «Изменение отметки»: можно сохранить новую дату или удалить отметку.</li>
                             <li><b>Обновление</b> — кнопка «Обновить» в шапке страницы перезагружает отметки с сервера.</li>
                         </ul>
+                        </div>
+                        <!-- Task 471: динамичные виды работ (рендерит
+                             PlanWorksData — «Работы на следующий месяц» /
+                             «Работы на месяц») -->
+                        <div id="peWorksView" class="pe-works-view" hidden></div>
                     </aside>
                 </div>
             </div>
@@ -42917,6 +43218,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _byKey: {},
         _initialized: false,
 
+        // Task 471: отображаемый год шапки («N год»). По умолчанию —
+        // год плана (YEAR); переключается кнопкой предыдущего года
+        // по годам, которые есть в архиве (planEvents.years)
+        _viewYear: 2026,
+
+        // Task 471: годы архива (planEvents.years) — кнопка «◀»
+        // активна только при наличии архива за предыдущие годы
+        _years: [],
+
+        // Task 471: выбранный месяц (клик по месяцу в шапке
+        // таблицы / мобайл-селектор; по умолчанию текущий) —
+        // месяц информации в правом окне (PlanWorksData)
+        _selMonth: null,
+
         // Ключ отметки: год|месяц|наименование
         _key: function(year, month, event) {
             return year + '|' + month + '|' + event;
@@ -42951,24 +43266,68 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Открытие страницы: построение знаков + загрузка отметок.
         // Повторные вызовы (возврат на страницу) — только обновление
-        // данных с сервера
+        // данных с сервера. Task 471: при каждом открытии страницы
+        // показывается ТЕКУЩИЙ год плана, вид правого окна —
+        // описание раздела, выбранный месяц — текущий
         init: function() {
             var table = document.getElementById('peTable');
             if (!table) return;
             if (!this._initialized) {
                 this._buildCells(table);
                 this._tagColumns(table);        // Task 464: классы pe-mo-N
+                this._tagWorkRows(table);       // Task 471: кликабельные
+                                                // ячейки работ
                 this._initMonthSelect();        // Task 464: мобайл-выбор месяца
                 var self = this;
-                // Делегированный клик: один обработчик на таблицу
+                // Task 471: кнопка просмотра предыдущих годов — слева
+                // от текущего года; активна только при наличии архива
+                // за предыдущие годы (план.«год»)
+                var prevBtn = document.getElementById('pePrevYearBtn');
+                if (prevBtn) {
+                    prevBtn.addEventListener('click', function() {
+                        self._switchYear();
+                    });
+                }
+                // Делегированный клик: один обработчик на таблицу.
+                // Task 463: ячейка месяца → диалог отметки.
+                // Task 471: наименование мероприятия → динамичное
+                // правое окно, «Мероприятия» (шапка) → описание,
+                // месяц шапки → выбор месяца для правого окна
                 table.addEventListener('click', function(e) {
-                    var td = e.target && e.target.closest ?
-                             e.target.closest('td.pe-m') : null;
-                    if (!td) return;
-                    self._cellClick(td);
+                    var t = e.target;
+                    if (!t || !t.closest) return;
+                    var td = t.closest('td.pe-m');
+                    if (td) { self._cellClick(td); return; }
+                    var nameTd = t.closest('td.pe-name');
+                    if (nameTd) {
+                        if (typeof PlanWorksData !== 'undefined') {
+                            PlanWorksData.onNameClick(nameTd);
+                        }
+                        return;
+                    }
+                    var thName = t.closest('th.pe-th-name');
+                    if (thName) {
+                        if (typeof PlanWorksData !== 'undefined') {
+                            PlanWorksData.showDesc();
+                        }
+                        return;
+                    }
+                    var thM = t.closest('tr.pe-head-months th');
+                    if (thM) {
+                        var ths = thM.parentNode.querySelectorAll('th');
+                        var mi = Array.prototype.indexOf.call(ths, thM) + 1;
+                        if (mi >= 1 && mi <= 12) self._setSelMonth(mi);
+                    }
                 });
                 this._initialized = true;
             }
+            this._viewYear = this.YEAR;
+            if (typeof PlanWorksData !== 'undefined') {
+                PlanWorksData.resetView();
+            }
+            this._setSelMonth(new Date().getMonth() + 1);
+            this._updateYearUi();
+            this._loadYears();
             this.loadMarks(true);
         },
 
@@ -43004,7 +43363,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             sel.value = String(new Date().getMonth() + 1);
             var self = this;
             sel.addEventListener('change', function() {
-                self._applyMonth(parseInt(sel.value, 10) || 1);
+                // Task 471: селектор мобайла — тот же выбранный месяц,
+                // что и клик по месяцу шапки (правое окно + столбец)
+                self._setSelMonth(parseInt(sel.value, 10) || 1);
             });
             this._applyMonth(parseInt(sel.value, 10) || 1);
         },
@@ -43022,6 +43383,108 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (!m) continue;
                 cells[i].classList.toggle('pe-mo-off',
                     parseInt(m[1], 10) !== month);
+            }
+        },
+
+        // Task 471: наименования «Работы на следующий месяц» /
+        // «Работы на месяц» — кликабельны (открывают в правом окне
+        // интерфейс работ). Класс по тексту из DOM — как pe-mo-N
+        // у Task 464: разметку таблицы не трогаем, один источник
+        // истины
+        _tagWorkRows: function(table) {
+            var rows = table.querySelectorAll('tbody tr.pe-row td.pe-name');
+            for (var i = 0; i < rows.length; i++) {
+                var t = (rows[i].textContent || '').trim();
+                if (t === 'Работы на следующий месяц' ||
+                    t === 'Работы на месяц') {
+                    rows[i].classList.add('pe-name-click');
+                }
+            }
+        },
+
+        // Task 471: выбор месяца — клик по месяцу в шапке таблицы
+        // или мобайл-селектор. Определяет, за какой месяц показывается
+        // информация в правом окне раздела (виды «Работы на месяц» /
+        // «Работы на следующий месяц»), подсвечивает месяц в шапке
+        _setSelMonth: function(m) {
+            if (isNaN(m) || m < 1 || m > 12) return;
+            this._selMonth = m;
+            var table = document.getElementById('peTable');
+            if (table) {
+                var ths = table.querySelectorAll('tr.pe-head-months th');
+                for (var i = 0; i < ths.length; i++) {
+                    ths[i].classList.toggle('pe-mo-sel', (i + 1) === m);
+                }
+            }
+            var sel = document.getElementById('peMonthSel');
+            if (sel) sel.value = String(m);
+            this._applyMonth(m);
+            if (typeof PlanWorksData !== 'undefined') {
+                PlanWorksData.onMonthChanged();
+            }
+        },
+
+        // Task 471: годы архива (planEvents.years) — для кнопки
+        // переключения годов; тихая деградация при старом сервере
+        _loadYears: function() {
+            var self = this;
+            var token = (typeof KipAuth !== 'undefined') ? KipAuth.getToken() : '';
+            if (!token) {
+                this._years = [];
+                this._updateYearUi();
+                return;
+            }
+            KipAuth.api('planEvents.years', { token: token }).then(function(data) {
+                self._years = (data && data.years) ? data.years : [];
+                self._updateYearUi();
+            }).catch(function(err) {
+                // Старый сервер без planEvents.years (Unknown action)
+                // или ошибка сети — молча: кнопка не активируется
+                console.warn('planEvents.years:', err && err.message);
+                self._years = [];
+                self._updateYearUi();
+            });
+        },
+
+        // Обновление шапки таблицы: подпись года + состояние
+        // кнопки предыдущего года (disabled — нет куда переключаться)
+        _updateYearUi: function() {
+            var label = document.getElementById('peYearLabel');
+            if (label) label.textContent = this._viewYear + ' год';
+            var btn = document.getElementById('pePrevYearBtn');
+            if (btn) btn.disabled = !this._hasPrevYear();
+        },
+
+        // Есть ли куда переключаться: ближайший младший год архива
+        // ИЛИ возврат к текущему году (если показан не текущий)
+        _hasPrevYear: function() {
+            if (this._viewYear !== this.YEAR) return true;
+            for (var i = 0; i < (this._years || []).length; i++) {
+                if (this._years[i] < this.YEAR) return true;
+            }
+            return false;
+        },
+
+        // Кнопка «◀» слева от года: к БЛИЖАЙШЕМУ младшему году архива;
+        // если таких нет и показан не текущий год — возврат к
+        // текущему (цикл по доступным годам: 2026 → 2025 → 2024 → 2026)
+        _switchYear: function() {
+            var target = null;
+            for (var i = 0; i < (this._years || []).length; i++) {
+                var y = this._years[i];
+                if (y < this._viewYear && (target === null || y > target)) {
+                    target = y;
+                }
+            }
+            if (target === null) {
+                if (this._viewYear === this.YEAR) return;  // некуда
+                target = this.YEAR;
+            }
+            this._viewYear = target;
+            this._updateYearUi();
+            this.loadMarks(true);
+            if (typeof PlanWorksData !== 'undefined') {
+                PlanWorksData.onViewYearChanged();
             }
         },
 
@@ -43062,7 +43525,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return {
                 month: month,
                 event: event,
-                mark: this._byKey[this._key(this.YEAR, month, event)] || null
+                mark: this._byKey[this._key(this._viewYear, month, event)] || null
             };
         },
 
@@ -43195,7 +43658,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             td.classList.add('pe-m-busy');
             KipAuth.api('planEvents.update', {
                 token: token,
-                year: this.YEAR,
+                year: this._viewYear,
                 month: info.month,
                 event: info.event,
                 date: date
@@ -43229,7 +43692,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             td.classList.add('pe-m-busy');
             KipAuth.api('planEvents.unmark', {
                 token: token,
-                year: this.YEAR,
+                year: this._viewYear,
                 month: info.month,
                 event: info.event
             }).then(function(data) {
@@ -43259,7 +43722,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             td.classList.add('pe-m-busy');
             KipAuth.api('planEvents.mark', {
                 token: token,
-                year: this.YEAR,
+                year: this._viewYear,
                 month: info.month,
                 event: info.event,
                 date: date
@@ -43288,7 +43751,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Загрузка отметок года. silent=true (автозагрузка при
         // открытии страницы) — без тостов; кнопка «Обновить» —
-        // с тостом результата
+        // с тостом результата. Task 471: год — ОТОБРАЖАЕМЫЙ
+        // (_viewYear; может быть переключён на год архива)
         loadMarks: function(silent) {
             var self = this;
             var token = (typeof KipAuth !== 'undefined') ? KipAuth.getToken() : '';
@@ -43300,7 +43764,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             KipAuth.api('planEvents.list', {
                 token: token,
-                year: this.YEAR
+                year: this._viewYear
             }).then(function(data) {
                 self._marks = (data && data.marks) ? data.marks : [];
                 self._rebuildIndex();
@@ -43329,7 +43793,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var tds = rows[i].querySelectorAll('td.pe-m');
                 for (var j = 0; j < tds.length; j++) {
                     this._setCell(tds[j],
-                        this._byKey[this._key(this.YEAR, j + 1, ev)] || null);
+                        this._byKey[this._key(this._viewYear, j + 1, ev)] || null);
                 }
             }
         },
@@ -43353,17 +43817,442 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             KipAuth.api('planEvents.list', {
                 token: token,
-                year: this.YEAR
+                year: this._viewYear
             }).then(function(data) {
                 self._marks = (data && data.marks) ? data.marks : [];
                 self._rebuildIndex();
                 self._renderMarks();
                 showToast('Отметки обновлены');
+                // Task 471: вместе с отметками обновляем годы архива
+                // (кнопка «◀») и, если открыт вид работ, — его данные
+                self._loadYears();
+                if (typeof PlanWorksData !== 'undefined') {
+                    PlanWorksData.reloadIfOpen();
+                }
                 fin();
             }).catch(function(err) {
                 showToast('Не удалось загрузить отметки: ' +
                           (err && err.message ? err.message : 'ошибка сети'));
                 fin();
+            });
+        }
+    };
+
+    // ============================================================
+    // PlanWorksData — Task 471: работы месяца («Работы на следующий
+    // месяц» / «Работы на месяц») — динамичное правое окно раздела
+    // «Плановые мероприятия»
+    // ============================================================
+    // Заявка Task 471: клик по ячейке «Работы на следующий месяц»
+    // открывает в правом окне (вместо описания раздела) интерфейс
+    // ВВОДА работ на следующий месяц; клик по ячейке «Работы на
+    // месяц» — перечень работ на текущий месяц с возможностью
+    // отмечать полное/частичное выполнение или невыполнение (запись
+    // в архив на лист «Работы на месяц»); клик по «Мероприятия»
+    // (шапка) снова показывает описание раздела. Месяц для правого
+    // окна выбирается кликом по месяцу в шапке таблицы
+    // (PlanEventsData._setSelMonth).
+    //
+    // Сервер: PlanEvents.gs (Apps Script) — planWorks.list / add /
+    // remove / setStatus; данные — лист «Работы на месяц» файла
+    // Мероприятия_КИП_ИОС (создаётся scripts/PlanWorksInit.gs).
+    // Доступ — то же право plan.events (Task 462): кто видит
+    // раздел — тот вносит и отмечает работы.
+    //
+    // Виды правого окна (окно описания Task 468):
+    //   #peDescView  — описание раздела (по умолчанию, Task 469)
+    //   #peWorksView — динамичный вид работ (рендерит этот модуль)
+    // ============================================================
+    var PlanWorksData = {
+
+        // Текущий вид: 'desc' (описание) | 'next' (ввод работ на
+        // следующий месяц) | 'month' (перечень работ месяца с
+        // отметкой выполнения)
+        _mode: 'desc',
+
+        // Работы целевого месяца (planWorks.list): null — грузятся
+        // или ещё не грузились; [] — перечень пуст
+        _works: null,
+
+        // Ошибка загрузки (строка) — показывается вместо перечня
+        // (лист не создан / старый сервер / сеть)
+        _error: '',
+
+        // Делегирование кликов по #peWorksView — одна привязка
+        // (контейнер живёт в разметке, содержимое пересоздаётся)
+        _bound: false,
+
+        // Целевая пара (год, месяц) текущего вида: «next» — месяц,
+        // СЛЕДУЮЩИЙ за выбранным (декабрь → январь следующего
+        // года); «month» — выбранный месяц отображаемого года
+        // (PlanEventsData._selMonth / _viewYear)
+        _target: function() {
+            var y = (typeof PlanEventsData !== 'undefined' &&
+                     PlanEventsData._viewYear)
+                    ? PlanEventsData._viewYear : 2026;
+            var m = (typeof PlanEventsData !== 'undefined' &&
+                     PlanEventsData._selMonth)
+                    ? PlanEventsData._selMonth
+                    : (new Date().getMonth() + 1);
+            if (this._mode === 'next') {
+                return (m === 12) ? { year: y + 1, month: 1 }
+                                  : { year: y, month: m + 1 };
+            }
+            return { year: y, month: m };
+        },
+
+        // Открытие страницы: вид — описание (сброс), данные — пусто
+        resetView: function() {
+            this._mode = 'desc';
+            this._works = null;
+            this._error = '';
+            this._render();
+        },
+
+        // Клик по наименованию мероприятия (делегирован из
+        // PlanEventsData): «Работы на следующий месяц» → ввод
+        // работ, «Работы на месяц» → перечень с отметками; прочие
+        // наименования — без действия (описание не трогаем)
+        onNameClick: function(td) {
+            var t = (td && td.textContent || '').trim();
+            if (t === 'Работы на следующий месяц') {
+                this.showNext();
+            } else if (t === 'Работы на месяц') {
+                this.showMonth();
+            }
+        },
+
+        // Смена выбранного месяца (клик по шапке / мобайл-селектор)
+        // — перезагрузить вид работ под новый месяц
+        onMonthChanged: function() {
+            if (this._mode === 'desc') return;
+            this._reload();
+        },
+
+        // Смена отображаемого года (кнопка «◀») — перезагрузить вид
+        onViewYearChanged: function() {
+            if (this._mode === 'desc') return;
+            this._reload();
+        },
+
+        // Кнопка «Обновить» в шапке страницы — перезагрузить работы,
+        // если открыт вид работ (иначе — ничего)
+        reloadIfOpen: function() {
+            if (this._mode === 'desc') return;
+            this._reload();
+        },
+
+        // Общий сброс + загрузка (смена месяца/года, «Обновить»)
+        _reload: function() {
+            this._works = null;
+            this._error = '';
+            this._render();
+            this._load();
+        },
+
+        // Вид «Описание раздела» — клик по «Мероприятия» (шапка)
+        // или сброс при открытии страницы
+        showDesc: function() {
+            if (this._mode === 'desc') return;
+            this._mode = 'desc';
+            this._render();
+        },
+
+        // Вид «Работы на следующий месяц» — интерфейс ввода работ
+        showNext: function() {
+            if (this._mode === 'next') return;
+            this._mode = 'next';
+            this._reload();
+        },
+
+        // Вид «Работы на месяц» — перечень + отметка выполнения
+        showMonth: function() {
+            if (this._mode === 'month') return;
+            this._mode = 'month';
+            this._reload();
+        },
+
+        // Рендер правого окна по _mode (описание ↔ работы)
+        _render: function() {
+            var dv = document.getElementById('peDescView');
+            var wv = document.getElementById('peWorksView');
+            if (this._mode === 'desc') {
+                if (dv) dv.hidden = false;
+                if (wv) { wv.hidden = true; wv.innerHTML = ''; }
+                return;
+            }
+            if (dv) dv.hidden = true;
+            if (!wv) return;
+            wv.hidden = false;
+            var t = this._target();
+            var mName = (typeof PlanEventsData !== 'undefined')
+                ? (PlanEventsData.MONTHS[t.month - 1] ||
+                   ('Месяц ' + t.month))
+                : ('Месяц ' + t.month);
+            if (this._mode === 'next') {
+                wv.innerHTML =
+                    '<div class="pe-desc-title">Работы на следующий месяц</div>' +
+                    '<div class="pe-works-target">Месяц работ: ' + mName +
+                        ' ' + t.year + '</div>' +
+                    '<div class="pe-works-form">' +
+                        '<input type="text" id="peWorkInput" class="pe-works-input" placeholder="Описание работы" maxlength="500" aria-label="Описание работы">' +
+                        '<button type="button" id="peWorkAddBtn" class="pe-works-add-btn">Добавить</button>' +
+                    '</div>' +
+                    '<div class="pe-desc-sub">Внесённые работы — ' + mName + '</div>' +
+                    '<div class="pe-works-list">' + this._listHtml() + '</div>';
+            } else {
+                wv.innerHTML =
+                    '<div class="pe-desc-title">Работы на месяц</div>' +
+                    '<div class="pe-works-target">Месяц работ: ' + mName +
+                        ' ' + t.year + '</div>' +
+                    '<div class="pe-desc-sub">Перечень работ — отметьте выполнение</div>' +
+                    '<div class="pe-works-list">' + this._listHtml() + '</div>';
+            }
+            this._bindView();
+        },
+
+        // HTML перечня работ: ошибка / загрузка / пусто / работы
+        _listHtml: function() {
+            if (this._error) {
+                return '<div class="pe-works-empty">' +
+                       this._error + '</div>';
+            }
+            if (this._works === null) {
+                return '<div class="pe-works-empty">Загрузка…</div>';
+            }
+            if (!this._works.length) {
+                return '<div class="pe-works-empty">Работы не внесены</div>';
+            }
+            var h = '';
+            for (var i = 0; i < this._works.length; i++) {
+                var w = this._works[i];
+                var text = String(w['работа'] || '')
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                h += '<div class="pe-work-item" data-id="' + w.id + '">';
+                if (this._mode === 'next') {
+                    h += '<div class="pe-work-head">' +
+                             '<div class="pe-work-text">' + text + '</div>' +
+                             '<button type="button" class="pe-work-del" title="Удалить работу" aria-label="Удалить работу">&times;</button>' +
+                         '</div>';
+                } else {
+                    h += '<div class="pe-work-text">' + text + '</div>';
+                    if (w['статус']) {
+                        h += '<div class="pe-work-status ' +
+                             this._stClass(w['статус']) + '">' +
+                             this._stLabel(w['статус']) +
+                             ((w['дата_статуса'] &&
+                               typeof PlanEventsData !== 'undefined')
+                                ? ' — ' +
+                                  PlanEventsData._ruDate(w['дата_статуса'])
+                                : '') +
+                             '</div>';
+                    }
+                    h += '<div class="pe-work-btns">' +
+                             this._stBtn(w, 'выполнено', 'Выполнено') +
+                             this._stBtn(w, 'частично', 'Частично') +
+                             this._stBtn(w, 'не выполнено', 'Не выполнено') +
+                         '</div>';
+                }
+                h += '</div>';
+            }
+            return h;
+        },
+
+        // Кнопка статуса (подсветка выбранного — st-sel)
+        _stBtn: function(w, st, label) {
+            return '<button type="button" class="pe-work-st-btn' +
+                   (w['статус'] === st ? ' st-sel' : '') +
+                   '" data-st="' + st + '">' + label + '</button>';
+        },
+
+        // CSS-класс бейджа статуса: зелёный/жёлтый/красный
+        _stClass: function(st) {
+            return st === 'выполнено' ? 'st-done'
+                 : (st === 'частично' ? 'st-partial' : 'st-fail');
+        },
+
+        // Человекочитаемый статус (бейдж/тост)
+        _stLabel: function(st) {
+            return st === 'выполнено' ? 'Выполнено'
+                 : (st === 'частично' ? 'Выполнено частично'
+                                      : 'Не выполнено');
+        },
+
+        // Привязка событий вида: «Добавить» (пересоздаётся каждым
+        // рендером), Enter в поле, делегирование по контейнеру —
+        // один раз (контейнер постоянный, содержимое — innerHTML)
+        _bindView: function() {
+            var wv = document.getElementById('peWorksView');
+            if (!wv) return;
+            var self = this;
+            if (!this._bound) {
+                wv.addEventListener('click', function(e) {
+                    var t = e.target;
+                    if (!t || !t.closest) return;
+                    var del = t.closest('.pe-work-del');
+                    if (del) {
+                        var item = del.closest('.pe-work-item');
+                        if (item) {
+                            self._remove(parseInt(
+                                item.getAttribute('data-id'), 10));
+                        }
+                        return;
+                    }
+                    var stb = t.closest('.pe-work-st-btn');
+                    if (stb) {
+                        var it = stb.closest('.pe-work-item');
+                        if (it) {
+                            self._setStatus(
+                                parseInt(it.getAttribute('data-id'), 10),
+                                stb.getAttribute('data-st'));
+                        }
+                    }
+                });
+                wv.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && e.target &&
+                        e.target.id === 'peWorkInput') {
+                        e.preventDefault();
+                        self._add();
+                    }
+                });
+                this._bound = true;
+            }
+            var addBtn = document.getElementById('peWorkAddBtn');
+            if (addBtn) addBtn.onclick = function() { self._add(); };
+            // Фокус в поле ввода — сразу можно вносить работы
+            var inp = document.getElementById('peWorkInput');
+            if (inp) { try { inp.focus(); } catch (e) { /* ignore */ } }
+        },
+
+        // Добавление работы (вид «Работы на следующий месяц»)
+        _add: function() {
+            var inp = document.getElementById('peWorkInput');
+            if (!inp) return;
+            var val = (inp.value || '').trim();
+            if (!val) { showToast('Введите описание работы'); return; }
+            var t = this._target();
+            var self = this;
+            var token = (typeof KipAuth !== 'undefined') ? KipAuth.getToken() : '';
+            if (!token) { showToast('Нужен вход в приложение'); return; }
+            var btn = document.getElementById('peWorkAddBtn');
+            if (btn) btn.disabled = true;
+            KipAuth.api('planWorks.add', {
+                token: token,
+                year: t.year,
+                month: t.month,
+                work: val
+            }).then(function(data) {
+                var w = data && data.work ? data.work : null;
+                if (!w) { showToast('Сервер не вернул работу'); return; }
+                self._works = (self._works || []).concat([w]);
+                self._render();
+                showToast('Работа добавлена');
+            }).catch(function(err) {
+                if (btn) btn.disabled = false;
+                showToast('Не удалось добавить работу: ' +
+                          (err && err.serverMessage ? err.serverMessage :
+                           (err && err.message ? err.message : 'ошибка сети')));
+            });
+        },
+
+        // Удаление работы (вид «Работы на следующий месяц»)
+        _remove: function(id) {
+            if (isNaN(id)) return;
+            var self = this;
+            var token = (typeof KipAuth !== 'undefined') ? KipAuth.getToken() : '';
+            if (!token) { showToast('Нужен вход в приложение'); return; }
+            KipAuth.api('planWorks.remove', {
+                token: token,
+                id: id
+            }).then(function(data) {
+                self._works = (self._works || []).filter(function(w) {
+                    return w.id !== id;
+                });
+                self._render();
+                showToast(data && data.removed ? 'Работа удалена'
+                                                : 'Работы уже не было');
+            }).catch(function(err) {
+                showToast('Не удалось удалить работу: ' +
+                          (err && err.serverMessage ? err.serverMessage :
+                           (err && err.message ? err.message : 'ошибка сети')));
+            });
+        },
+
+        // Отметка выполнения работы (вид «Работы на месяц»):
+        // выполнено / частично / не выполнено → лист «Работы на
+        // месяц» файла Мероприятия_КИП_ИОС (planWorks.setStatus);
+        // дата отметки — сегодня (как диалог отметки Task 463)
+        _setStatus: function(id, status) {
+            if (isNaN(id) || !status) return;
+            var self = this;
+            var token = (typeof KipAuth !== 'undefined') ? KipAuth.getToken() : '';
+            if (!token) { showToast('Нужен вход в приложение'); return; }
+            var today = (typeof PlanEventsData !== 'undefined')
+                        ? PlanEventsData._todayIso() : '';
+            KipAuth.api('planWorks.setStatus', {
+                token: token,
+                id: id,
+                status: status,
+                date: today
+            }).then(function(data) {
+                var w = data && data.work ? data.work : null;
+                if (!w) { showToast('Сервер не вернул статус'); return; }
+                self._works = (self._works || []).map(function(x) {
+                    if (x.id !== id) return x;
+                    x['статус'] = w['статус'];
+                    x['дата_статуса'] = w['дата_статуса'];
+                    return x;
+                });
+                self._render();
+                showToast('Отмечено: ' + self._stLabel(w['статус']));
+            }).catch(function(err) {
+                showToast('Не удалось отметить работу: ' +
+                          (err && err.serverMessage ? err.serverMessage :
+                           (err && err.message ? err.message : 'ошибка сети')));
+            });
+        },
+
+        // Загрузка перечня работ целевого месяца. За время запроса
+        // месяц/год/вид могли смениться — ответ применяется только
+        // если цель та же (защита от гонок)
+        _load: function() {
+            if (this._mode === 'desc') return;
+            var t = this._target();
+            var self = this;
+            var token = (typeof KipAuth !== 'undefined') ? KipAuth.getToken() : '';
+            if (!token) {
+                this._works = [];
+                this._error = '';
+                this._render();
+                return;
+            }
+            KipAuth.api('planWorks.list', {
+                token: token,
+                year: t.year,
+                month: t.month
+            }).then(function(data) {
+                if (self._mode === 'desc') return;
+                var cur = self._target();
+                if (cur.year !== t.year || cur.month !== t.month) return;
+                self._works = (data && data.works) ? data.works : [];
+                self._error = '';
+                self._render();
+            }).catch(function(err) {
+                if (self._mode === 'desc') return;
+                var cur = self._target();
+                if (cur.year !== t.year || cur.month !== t.month) return;
+                self._works = null;
+                var msg = err && err.serverMessage ? err.serverMessage
+                         : (err && err.message ? err.message
+                                              : 'ошибка сети');
+                if (err && /Unknown action/i.test(String(err.message || ''))) {
+                    // Старый Apps Script без planWorks.* (до Task 471)
+                    msg = 'Сервер не поддерживает работы месяца — ' +
+                          'обновите Apps Script (DEPLOY Task 471)';
+                }
+                self._error = msg;
+                self._render();
             });
         }
     };
