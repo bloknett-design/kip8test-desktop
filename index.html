@@ -7308,6 +7308,13 @@
        794px; при 718px flex СЖИМАЛ лист (Task 449) и колонки были
        уже печатных — «Слесарь по КИП и А» переносился на экране */
     .wspprev-frame.wst-prev-frame { width: 794px; }
+    /* Task 467: предпросмотр СПИСКА МЕРОПРИЯТИЙ — тот же книжный
+       794px (приём wst-prev-frame Task 449): без класса iframe
+       наследовал альбомные 1063px печати графика (Task 430),
+       лист 210мм центрировался flex-ом viewport'а 1063px →
+       смещался вправо, правый край срезался границей окна
+       предпросмотра (paper overflow:hidden на 794px) */
+    .wspprev-frame.wsev-prev-frame { width: 794px; }
     @media (max-width: 1023px) {
         .wst-head { flex-direction: column; align-items: stretch; }
         .wst-actions { justify-content: flex-end; }
@@ -47054,7 +47061,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var paper = document.createElement('div');
             paper.className = 'wspprev-paper';
             var frame = document.createElement('iframe');
-            frame.className = 'wspprev-frame';
+            // Task 467: класс wsev-prev-frame — КНИЖНАЯ ширина
+            // iframe 794px (приём wst-prev-frame Task 449): без
+            // него наследовались альбомные 1063px графика (Task 430),
+            // flex центрировал лист в широком viewport'е → смещение
+            // вправо за границу окна предпросмотра (_eventsPrevFit
+            // масштабирует 794px)
+            frame.className = 'wspprev-frame wsev-prev-frame';
             if (frame.setAttribute) {
                 frame.setAttribute('title', 'Предпросмотр печатного листа');
             }
