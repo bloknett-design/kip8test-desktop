@@ -12,12 +12,25 @@
 //   4. Модуль KipCharts
 // После инъекции — повторный _applyRoleToUI (кнопка могла
 // появиться после первого прохода фильтрации ролей).
+//
+// Task 473: ППР «Приборы» — КОРЕНЬ «не отображает зрительно»: у
+// .ppr-bars-row было align-items:flex-end — ячейки не растягивались
+// на высоту ряда, height:% столбца разрешался против auto-высоты и
+// схлопывался в min-height:2px (ВСЕ столбцы 2px). Теперь stretch.
+// Плюс: значение над КАЖДЫМ столбцом (количество приборов на каждый
+// месяц видно прямо на диаграмме, включая «0» пустых месяцев —
+// подпись у основания) + ВСПОМОГАТЕЛЬНАЯ ПРАВАЯ ОСЬ для малых серий
+// (максимум серии <= 25% от общего максимума: К 13–48 и П 0–15 при
+// ТО 320–500): столбцы малых серий масштабируются по своей оси и
+// зрительно различимы по месяцам; в легенде малые серии помечены
+// «(правая ось)»; сверху графика добавлен запас под подписи
+// (padding-top 16px).
 // ============================================================
 (function () {
     'use strict';
 
     // ---------- 1. CSS ----------
-    var css = "    /* ======================== \u0413\u0420\u0410\u0424\u0418\u041a\u0418 \u041a\u0418\u041f \u0418\u041e\u0421 ======================== */\n    .charts-tabs {\n        display: flex;\n        gap: 0;\n        border-bottom: 1px solid var(--border-color);\n        background: var(--card-bg);\n        position: sticky;\n        top: 56px;\n        z-index: 5;\n        overflow-x: auto;\n        -webkit-overflow-scrolling: touch;\n    }\n    .charts-tab {\n        flex: 1;\n        min-width: 0;\n        padding: 10px 6px;\n        border: none;\n        background: transparent;\n        color: var(--text-secondary);\n        font-size: 13px;\n        font-weight: 500;\n        cursor: pointer;\n        white-space: nowrap;\n        position: relative;\n        transition: color 0.2s;\n    }\n    .charts-tab::after {\n        content: '';\n        position: absolute;\n        left: 0; right: 0; bottom: 0;\n        height: 2px;\n        background: transparent;\n        border-radius: 1px;\n        transition: background 0.2s;\n    }\n    .charts-tab-active {\n        color: #3aa288;\n        font-weight: 600;\n    }\n    .charts-tab-active::after {\n        background: #3aa288;\n    }\n    .charts-content {\n        padding: 12px 14px 24px;\n    }\n    .charts-loading {\n        text-align: center;\n        padding: 40px 20px;\n        color: var(--text-secondary);\n        font-size: 13px;\n    }\n    /* \u041a\u0430\u0440\u0442\u043e\u0447\u043a\u0430 \u0433\u0440\u0430\u0444\u0438\u043a\u0430 */\n    .chart-card {\n        background: var(--card-bg);\n        border: 1px solid var(--card-border);\n        border-radius: 10px;\n        margin-bottom: 14px;\n        overflow: hidden;\n    }\n    .chart-card-title {\n        padding: 10px 14px 6px;\n        font-size: 13px;\n        font-weight: 600;\n        color: var(--text-primary);\n    }\n    .chart-card-body {\n        padding: 6px 14px 12px;\n    }\n    /* \u0413\u043e\u0440\u0438\u0437\u043e\u043d\u0442\u0430\u043b\u044c\u043d\u0430\u044f \u0441\u0442\u043e\u043b\u0431\u0447\u0430\u0442\u0430\u044f \u0434\u0438\u0430\u0433\u0440\u0430\u043c\u043c\u0430 (CSS-\u0431\u0430\u0440\u044b) */\n    .chart-bar-row {\n        display: flex;\n        align-items: center;\n        margin-bottom: 6px;\n    }\n    .chart-bar-label {\n        flex: 0 0 auto;\n        max-width: 45%;\n        font-size: 11px;\n        color: var(--text-secondary);\n        overflow: hidden;\n        text-overflow: ellipsis;\n        white-space: nowrap;\n        padding-right: 8px;\n    }\n    .chart-bar-track {\n        flex: 1;\n        height: 16px;\n        background: rgba(255,255,255,0.06);\n        border-radius: 3px;\n        overflow: hidden;\n        position: relative;\n    }\n    .chart-bar-fill {\n        height: 100%;\n        border-radius: 3px;\n        transition: width 0.4s ease;\n        min-width: 2px;\n    }\n    .chart-bar-value {\n        flex: 0 0 auto;\n        width: 36px;\n        text-align: right;\n        font-size: 11px;\n        font-weight: 600;\n        color: var(--text-primary);\n        padding-left: 6px;\n    }\n    /* \u0421\u0432\u043e\u0434\u043d\u0430\u044f \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0430 \u0441\u043e \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u043e\u0439 */\n    .chart-stats-grid {\n        display: grid;\n        grid-template-columns: 1fr 1fr;\n        gap: 8px;\n        margin-bottom: 14px;\n    }\n    .chart-stat-card {\n        background: var(--card-bg);\n        border: 1px solid var(--card-border);\n        border-radius: 8px;\n        padding: 10px 12px;\n        text-align: center;\n    }\n    .chart-stat-value {\n        font-size: 22px;\n        font-weight: 700;\n        color: #3aa288;\n        line-height: 1.2;\n    }\n    .chart-stat-label {\n        font-size: 11px;\n        color: var(--text-secondary);\n        margin-top: 2px;\n    }\n    /* \u0421\u0432\u0435\u0442\u043b\u0430\u044f \u0442\u0435\u043c\u0430 */\n    [data-theme=\"light\"] .charts-tab-active { color: #2e8a72; }\n    [data-theme=\"light\"] .charts-tab-active::after { background: #2e8a72; }\n    [data-theme=\"light\"] .chart-bar-track { background: rgba(0,0,0,0.06); }\n    [data-theme=\"light\"] .chart-stat-card { background: #fafaf8; border-color: rgba(0,0,0,0.08); }\n    [data-theme=\"light\"] .chart-stat-value { color: #2e8a72; }\n    [data-theme=\"light\"] .chart-card { background: #fafaf8; border-color: rgba(0,0,0,0.08); }\n\n    /* ======================== \u0413\u0420\u0410\u0424\u0418\u041a \u041f\u041f\u0420 \u2014 \u0432\u0435\u0440\u0442\u0438\u043a\u0430\u043b\u044c\u043d\u0430\u044f \u0433\u0438\u0441\u0442\u043e\u0433\u0440\u0430\u043c\u043c\u0430 ======================== */\n    .ppr-chart-card {\n        margin-bottom: 16px;\n    }\n    .ppr-chart-header {\n        padding: 12px 14px 8px;\n    }\n    .ppr-chart-title {\n        font-size: 14px;\n        font-weight: 600;\n        color: var(--text-primary);\n        margin-bottom: 8px;\n    }\n    .ppr-legend {\n        display: flex;\n        flex-wrap: wrap;\n        gap: 10px;\n    }\n    .ppr-legend-item {\n        display: flex;\n        align-items: center;\n        gap: 4px;\n    }\n    .ppr-legend-dot {\n        width: 10px;\n        height: 10px;\n        border-radius: 2px;\n        flex-shrink: 0;\n    }\n    .ppr-legend-code {\n        font-size: 11px;\n        font-weight: 700;\n        color: var(--text-primary);\n    }\n    .ppr-legend-name {\n        font-size: 11px;\n        color: var(--text-secondary);\n    }\n    .ppr-chart-body {\n        padding: 4px 14px 12px;\n    }\n    .ppr-chart-area {\n        display: flex;\n        position: relative;\n    }\n    .ppr-y-axis {\n        display: flex;\n        flex-direction: column;\n        justify-content: space-between;\n        padding-right: 6px;\n        flex-shrink: 0;\n        width: 30px;\n    }\n    .ppr-y-label {\n        font-size: 9px;\n        color: var(--text-secondary);\n        text-align: right;\n        line-height: 1;\n    }\n    .ppr-chart-grid {\n        flex: 1;\n        display: flex;\n        position: relative;\n        height: 180px;\n        border-left: 1px solid var(--border-color);\n        border-bottom: 1px solid var(--border-color);\n    }\n    .ppr-grid-line {\n        position: absolute;\n        left: 0;\n        right: 0;\n        height: 1px;\n        background: var(--border-color);\n        opacity: 0.5;\n    }\n    .ppr-month-group {\n        flex: 1;\n        display: flex;\n        flex-direction: column;\n        justify-content: flex-end;\n        align-items: center;\n        position: relative;\n        min-width: 0;\n    }\n    .ppr-bars-row {\n        display: flex;\n        gap: 2px;\n        width: 100%;\n        justify-content: center;\n        align-items: flex-end;\n        flex: 1;\n        padding: 0 1px;\n    }\n    .ppr-bar-cell {\n        flex: 1;\n        display: flex;\n        align-items: flex-end;\n        justify-content: center;\n        max-width: 14px;\n    }\n    .ppr-bar {\n        width: 100%;\n        border-radius: 2px 2px 0 0;\n        position: relative;\n        min-height: 2px;\n        transition: height 0.3s ease;\n    }\n    .ppr-bar-val {\n        position: absolute;\n        top: -14px;\n        left: 50%;\n        transform: translateX(-50%);\n        font-size: 8px;\n        font-weight: 600;\n        color: var(--text-primary);\n        white-space: nowrap;\n        pointer-events: none;\n    }\n    .ppr-month-label {\n        font-size: 9px;\n        font-weight: 500;\n        color: var(--text-secondary);\n        padding-top: 4px;\n        text-align: center;\n        flex-shrink: 0;\n    }\n    /* \u0421\u0442\u0440\u043e\u043a\u0430 \u0438\u0442\u043e\u0433\u043e\u0432 \u043f\u043e\u0434 \u0433\u0440\u0430\u0444\u0438\u043a\u043e\u043c \u041f\u041f\u0420 */\n    .ppr-totals-row {\n        display: flex;\n        align-items: center;\n        gap: 12px;\n        padding: 8px 0 0;\n        border-top: 1px solid var(--border-color);\n        margin-top: 6px;\n        flex-wrap: wrap;\n    }\n    .ppr-totals-label {\n        font-size: 11px;\n        font-weight: 700;\n        color: var(--text-primary);\n        flex-shrink: 0;\n    }\n    .ppr-totals-item {\n        display: flex;\n        align-items: center;\n        gap: 4px;\n    }\n    .ppr-totals-value {\n        font-size: 12px;\n        font-weight: 700;\n        color: var(--text-primary);\n    }\n    [data-theme=\"light\"] .ppr-totals-row {\n        border-top-color: rgba(0,0,0,0.1);\n    }\n    /* \u0421\u0432\u0435\u0442\u043b\u0430\u044f \u0442\u0435\u043c\u0430 \u0434\u043b\u044f \u041f\u041f\u0420 */\n    [data-theme=\"light\"] .ppr-chart-grid {\n        border-left-color: rgba(0,0,0,0.12);\n        border-bottom-color: rgba(0,0,0,0.12);\n    }\n    [data-theme=\"light\"] .ppr-grid-line {\n        background: rgba(0,0,0,0.08);\n    }\n";
+    var css = "    /* ======================== \u0413\u0420\u0410\u0424\u0418\u041a\u0418 \u041a\u0418\u041f \u0418\u041e\u0421 ======================== */\n    .charts-tabs {\n        display: flex;\n        gap: 0;\n        border-bottom: 1px solid var(--border-color);\n        background: var(--card-bg);\n        position: sticky;\n        top: 56px;\n        z-index: 5;\n        overflow-x: auto;\n        -webkit-overflow-scrolling: touch;\n    }\n    .charts-tab {\n        flex: 1;\n        min-width: 0;\n        padding: 10px 6px;\n        border: none;\n        background: transparent;\n        color: var(--text-secondary);\n        font-size: 13px;\n        font-weight: 500;\n        cursor: pointer;\n        white-space: nowrap;\n        position: relative;\n        transition: color 0.2s;\n    }\n    .charts-tab::after {\n        content: '';\n        position: absolute;\n        left: 0; right: 0; bottom: 0;\n        height: 2px;\n        background: transparent;\n        border-radius: 1px;\n        transition: background 0.2s;\n    }\n    .charts-tab-active {\n        color: #3aa288;\n        font-weight: 600;\n    }\n    .charts-tab-active::after {\n        background: #3aa288;\n    }\n    .charts-content {\n        padding: 12px 14px 24px;\n    }\n    .charts-loading {\n        text-align: center;\n        padding: 40px 20px;\n        color: var(--text-secondary);\n        font-size: 13px;\n    }\n    /* \u041a\u0430\u0440\u0442\u043e\u0447\u043a\u0430 \u0433\u0440\u0430\u0444\u0438\u043a\u0430 */\n    .chart-card {\n        background: var(--card-bg);\n        border: 1px solid var(--card-border);\n        border-radius: 10px;\n        margin-bottom: 14px;\n        overflow: hidden;\n    }\n    .chart-card-title {\n        padding: 10px 14px 6px;\n        font-size: 13px;\n        font-weight: 600;\n        color: var(--text-primary);\n    }\n    .chart-card-body {\n        padding: 6px 14px 12px;\n    }\n    /* \u0413\u043e\u0440\u0438\u0437\u043e\u043d\u0442\u0430\u043b\u044c\u043d\u0430\u044f \u0441\u0442\u043e\u043b\u0431\u0447\u0430\u0442\u0430\u044f \u0434\u0438\u0430\u0433\u0440\u0430\u043c\u043c\u0430 (CSS-\u0431\u0430\u0440\u044b) */\n    .chart-bar-row {\n        display: flex;\n        align-items: center;\n        margin-bottom: 6px;\n    }\n    .chart-bar-label {\n        flex: 0 0 auto;\n        max-width: 45%;\n        font-size: 11px;\n        color: var(--text-secondary);\n        overflow: hidden;\n        text-overflow: ellipsis;\n        white-space: nowrap;\n        padding-right: 8px;\n    }\n    .chart-bar-track {\n        flex: 1;\n        height: 16px;\n        background: rgba(255,255,255,0.06);\n        border-radius: 3px;\n        overflow: hidden;\n        position: relative;\n    }\n    .chart-bar-fill {\n        height: 100%;\n        border-radius: 3px;\n        transition: width 0.4s ease;\n        min-width: 2px;\n    }\n    .chart-bar-value {\n        flex: 0 0 auto;\n        width: 36px;\n        text-align: right;\n        font-size: 11px;\n        font-weight: 600;\n        color: var(--text-primary);\n        padding-left: 6px;\n    }\n    /* \u0421\u0432\u043e\u0434\u043d\u0430\u044f \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0430 \u0441\u043e \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u043e\u0439 */\n    .chart-stats-grid {\n        display: grid;\n        grid-template-columns: 1fr 1fr;\n        gap: 8px;\n        margin-bottom: 14px;\n    }\n    .chart-stat-card {\n        background: var(--card-bg);\n        border: 1px solid var(--card-border);\n        border-radius: 8px;\n        padding: 10px 12px;\n        text-align: center;\n    }\n    .chart-stat-value {\n        font-size: 22px;\n        font-weight: 700;\n        color: #3aa288;\n        line-height: 1.2;\n    }\n    .chart-stat-label {\n        font-size: 11px;\n        color: var(--text-secondary);\n        margin-top: 2px;\n    }\n    /* \u0421\u0432\u0435\u0442\u043b\u0430\u044f \u0442\u0435\u043c\u0430 */\n    [data-theme=\"light\"] .charts-tab-active { color: #2e8a72; }\n    [data-theme=\"light\"] .charts-tab-active::after { background: #2e8a72; }\n    [data-theme=\"light\"] .chart-bar-track { background: rgba(0,0,0,0.06); }\n    [data-theme=\"light\"] .chart-stat-card { background: #fafaf8; border-color: rgba(0,0,0,0.08); }\n    [data-theme=\"light\"] .chart-stat-value { color: #2e8a72; }\n    [data-theme=\"light\"] .chart-card { background: #fafaf8; border-color: rgba(0,0,0,0.08); }\n\n    /* ======================== \u0413\u0420\u0410\u0424\u0418\u041a \u041f\u041f\u0420 \u2014 \u0432\u0435\u0440\u0442\u0438\u043a\u0430\u043b\u044c\u043d\u0430\u044f \u0433\u0438\u0441\u0442\u043e\u0433\u0440\u0430\u043c\u043c\u0430 ======================== */\n    .ppr-chart-card {\n        margin-bottom: 16px;\n    }\n    .ppr-chart-header {\n        padding: 12px 14px 8px;\n    }\n    .ppr-chart-title {\n        font-size: 14px;\n        font-weight: 600;\n        color: var(--text-primary);\n        margin-bottom: 8px;\n    }\n    .ppr-legend {\n        display: flex;\n        flex-wrap: wrap;\n        gap: 10px;\n    }\n    .ppr-legend-item {\n        display: flex;\n        align-items: center;\n        gap: 4px;\n    }\n    .ppr-legend-dot {\n        width: 10px;\n        height: 10px;\n        border-radius: 2px;\n        flex-shrink: 0;\n    }\n    .ppr-legend-code {\n        font-size: 11px;\n        font-weight: 700;\n        color: var(--text-primary);\n    }\n    .ppr-legend-name {\n        font-size: 11px;\n        color: var(--text-secondary);\n    }\n    .ppr-chart-body {\n        padding: 16px 14px 12px;\n    }\n    .ppr-chart-area {\n        display: flex;\n        position: relative;\n    }\n    .ppr-y-axis {\n        display: flex;\n        flex-direction: column;\n        justify-content: space-between;\n        padding-right: 6px;\n        flex-shrink: 0;\n        width: 30px;\n    }\n    .ppr-y-label {\n        font-size: 9px;\n        color: var(--text-secondary);\n        text-align: right;\n        line-height: 1;\n    }\n    .ppr-chart-grid {\n        flex: 1;\n        display: flex;\n        position: relative;\n        height: 180px;\n        border-left: 1px solid var(--border-color);\n        border-bottom: 1px solid var(--border-color);\n    }\n    .ppr-grid-line {\n        position: absolute;\n        left: 0;\n        right: 0;\n        height: 1px;\n        background: var(--border-color);\n        opacity: 0.5;\n    }\n    .ppr-month-group {\n        flex: 1;\n        display: flex;\n        flex-direction: column;\n        justify-content: flex-end;\n        align-items: center;\n        position: relative;\n        min-width: 0;\n    }\n    .ppr-bars-row {\n        display: flex;\n        gap: 2px;\n        width: 100%;\n        justify-content: center;\n        /* Task 473: stretch — ячейки растягиваются на всю высоту ряда:\n           раньше ячейки прижимались к низу и сжимались по контенту,\n           height:% столбца разрешался против auto-высоты ячейки и\n           схлопывался в min-height:2px — диаграмма не показывала\n           столбцы зрительно; низ столбца прижат flex-end\n           самой ячейки (.ppr-bar-cell) */\n        align-items: stretch;\n        flex: 1;\n        padding: 0 1px;\n    }\n    .ppr-bar-cell {\n        flex: 1;\n        display: flex;\n        align-items: flex-end;\n        justify-content: center;\n        max-width: 14px;\n        position: relative;\n    }\n    .ppr-bar {\n        width: 100%;\n        border-radius: 2px 2px 0 0;\n        position: relative;\n        min-height: 2px;\n        transition: height 0.3s ease;\n    }\n    .ppr-bar-val {\n        position: absolute;\n        top: -14px;\n        left: 50%;\n        transform: translateX(-50%);\n        font-size: 8px;\n        font-weight: 600;\n        color: var(--text-primary);\n        white-space: nowrap;\n        pointer-events: none;\n    }\n    /* Task 473: zero month label at baseline */\n    .ppr-bar-val-zero {\n        position: absolute;\n        bottom: 1px;\n        left: 50%;\n        transform: translateX(-50%);\n        font-size: 8px;\n        font-weight: 600;\n        color: var(--text-secondary);\n        white-space: nowrap;\n        pointer-events: none;\n    }\n    /* Task 473: right secondary axis + legend axis hint */\n    .ppr-y-axis-right {\n        padding-left: 6px;\n        padding-right: 0;\n    }\n    .ppr-y-axis-right .ppr-y-label {\n        text-align: left;\n    }\n    .ppr-legend-axis {\n        font-size: 9px;\n        opacity: 0.75;\n    }\n    .ppr-month-label {\n        font-size: 9px;\n        font-weight: 500;\n        color: var(--text-secondary);\n        padding-top: 4px;\n        text-align: center;\n        flex-shrink: 0;\n    }\n    /* \u0421\u0442\u0440\u043e\u043a\u0430 \u0438\u0442\u043e\u0433\u043e\u0432 \u043f\u043e\u0434 \u0433\u0440\u0430\u0444\u0438\u043a\u043e\u043c \u041f\u041f\u0420 */\n    .ppr-totals-row {\n        display: flex;\n        align-items: center;\n        gap: 12px;\n        padding: 8px 0 0;\n        border-top: 1px solid var(--border-color);\n        margin-top: 6px;\n        flex-wrap: wrap;\n    }\n    .ppr-totals-label {\n        font-size: 11px;\n        font-weight: 700;\n        color: var(--text-primary);\n        flex-shrink: 0;\n    }\n    .ppr-totals-item {\n        display: flex;\n        align-items: center;\n        gap: 4px;\n    }\n    .ppr-totals-value {\n        font-size: 12px;\n        font-weight: 700;\n        color: var(--text-primary);\n    }\n    [data-theme=\"light\"] .ppr-totals-row {\n        border-top-color: rgba(0,0,0,0.1);\n    }\n    /* \u0421\u0432\u0435\u0442\u043b\u0430\u044f \u0442\u0435\u043c\u0430 \u0434\u043b\u044f \u041f\u041f\u0420 */\n    [data-theme=\"light\"] .ppr-chart-grid {\n        border-left-color: rgba(0,0,0,0.12);\n        border-bottom-color: rgba(0,0,0,0.12);\n    }\n    [data-theme=\"light\"] .ppr-grid-line {\n        background: rgba(0,0,0,0.08);\n    }\n";
     var styleEl = document.createElement('style');
     styleEl.id = 'chartsDesktopCss';
     styleEl.textContent = css;
@@ -276,28 +289,58 @@
 
         // ============================================================
         // Рендер графика ППР — группированная вертикальная гистограмма
-        // (как в Excel: clustered column chart с легендой и итогами)
+        // (как в Excel: clustered column chart с легендой и итогами).
+        // Task 473: (а) значение над КАЖДЫМ столбцом — количество
+        // приборов на месяц видно прямо на диаграмме (включая «0»
+        // пустых месяцев — подпись у основания); (б) ВСПОМОГАТЕЛЬНАЯ
+        // ПРАВАЯ ОСЬ для малых серий: если максимум серии <= 25% от
+        // общего максимума (К 13–48 и П 0–15 при ТО 320–500), серия
+        // масштабируется по правой оси — иначе её столбцы зрительно
+        // неотличимы от нуля; малые серии делят одну ось и помечены
+        // в легенде «(правая ось)».
         // ============================================================
         _renderPPRChart: function(pprData) {
             var series = pprData.series;
             var numSeries = series.length;
             var numMonths = 12;
 
-            // Найти максимальное значение для масштаба оси Y
+            // Максимумы по сериям и общий максимум (Task 473)
+            var seriesMax = [];
             var maxVal = 0;
             for (var s = 0; s < numSeries; s++) {
+                var sMax = 0;
                 for (var m = 0; m < numMonths; m++) {
-                    if (series[s].values[m] > maxVal) maxVal = series[s].values[m];
+                    if (series[s].values[m] > sMax) sMax = series[s].values[m];
                 }
+                seriesMax[s] = sMax;
+                if (sMax > maxVal) maxVal = sMax;
             }
             if (maxVal === 0) maxVal = 1;
 
+            // Task 473: вспомогательная (правая) ось для малых серий —
+            // максимум серии <= 25% от общего максимума; все малые серии
+            // делят ОДНУ правую ось (масштаб — по наибольшей из них)
+            var SECONDARY_SHARE = 0.25;
+            var isSecondary = [];
+            var secMaxVal = 0;
+            var hasSecondary = false;
+            for (var s = 0; s < numSeries; s++) {
+                var small = seriesMax[s] > 0 && seriesMax[s] <= maxVal * SECONDARY_SHARE;
+                isSecondary[s] = small;
+                if (small) {
+                    hasSecondary = true;
+                    if (seriesMax[s] > secMaxVal) secMaxVal = seriesMax[s];
+                }
+            }
+
             // Округлить maxVal вверх до красивого числа
             var niceMax = this._niceMax(maxVal);
+            var secNiceMax = hasSecondary ? this._niceMax(secMaxVal) : 0;
 
             // Ось Y: 5 делений
             var ySteps = 5;
             var yStepVal = niceMax / ySteps;
+            var secStepVal = hasSecondary ? secNiceMax / ySteps : 0;
 
             var html = '<div class="chart-card ppr-chart-card">';
             html += '<div class="ppr-chart-header">';
@@ -308,7 +351,8 @@
                 html += '<div class="ppr-legend-item">';
                 html += '<span class="ppr-legend-dot" style="background:' + series[s].color + ';"></span>';
                 html += '<span class="ppr-legend-code">' + this._escHtml(series[s].code) + '</span>';
-                html += '<span class="ppr-legend-name">' + this._escHtml(series[s].name) + '</span>';
+                html += '<span class="ppr-legend-name">' + this._escHtml(series[s].name) +
+                    (isSecondary[s] ? ' <span class="ppr-legend-axis">(правая ось)</span>' : '') + '</span>';
                 html += '</div>';
             }
             html += '</div>';
@@ -345,15 +389,19 @@
                 html += '<div class="ppr-bars-row">';
                 for (var s = 0; s < numSeries; s++) {
                     var val = series[s].values[m];
-                    var heightPct = (val / niceMax) * 100;
+                    // Task 473: малые серии масштабируются по своей оси
+                    var scaleMax = isSecondary[s] ? secNiceMax : niceMax;
+                    var heightPct = (val / scaleMax) * 100;
                     html += '<div class="ppr-bar-cell">';
                     if (val > 0) {
-                        html += '<div class="ppr-bar" style="height:' + heightPct + '%;background:' + series[s].color + ';" title="' + this._escHtml(series[s].name) + ': ' + val + '">';
-                        // Значение над столбцом (показываем если достаточно высокий)
-                        if (heightPct > 8) {
-                            html += '<span class="ppr-bar-val">' + val + '</span>';
-                        }
+                        html += '<div class="ppr-bar" data-scale="' + (isSecondary[s] ? 'secondary' : 'primary') + '" style="height:' + heightPct + '%;background:' + series[s].color + ';" title="' + this._escHtml(series[s].name) + (isSecondary[s] ? ' (правая ось)' : '') + ': ' + val + '">';
+                        // Task 473: значение над КАЖДЫМ столбцом — количество
+                        // приборов на месяц видно прямо на диаграмме
+                        html += '<span class="ppr-bar-val">' + val + '</span>';
                         html += '</div>';
+                    } else {
+                        // Task 473: нулевой месяц — подпись «0» у основания
+                        html += '<span class="ppr-bar-val-zero">0</span>';
                     }
                     html += '</div>';
                 }
@@ -365,6 +413,16 @@
             }
 
             html += '</div>'; // .ppr-chart-grid
+
+            // Task 473: правая вспомогательная ось — масштаб малых серий
+            if (hasSecondary) {
+                html += '<div class="ppr-y-axis ppr-y-axis-right">';
+                for (var i = ySteps; i >= 0; i--) {
+                    html += '<div class="ppr-y-label">' + Math.round(secStepVal * i) + '</div>';
+                }
+                html += '</div>';
+            }
+
             html += '</div>'; // .ppr-chart-area
 
             // Строка итогов (сумма по каждой серии)
