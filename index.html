@@ -35033,6 +35033,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // повтор getCurrentUser раз в 60с + по событию 'online').
         _offlineRetryTimer: null,
         _offlineRetryOnlineHandler: null,
+        // Task 476 (этап 2 оптимизации): storage.persist() уже
+        // запрошен в этой сессии (идемпотентный guard)
+        _persistAsked: false,
 
         // ============================================================
         // Карта доступа: роль → список разрешённых страниц.
@@ -35220,6 +35223,55 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
         clearToken: function() {
             try { localStorage.removeItem(this.TOKEN_KEY); } catch (e) {}
+        },
+
+        // ============================================================
+        // Task 476 (этап 2 оптимизации): ПЕРСИСТЕНТНОСТЬ хранилища.
+        // Просим браузер НЕ эвиктить наши кэши (SW DATA-кэш Task 475,
+        // KipDB-копии) под давлением дисковой квоты. Идемпотентно:
+        // один вызов на сессию (после успешного входа); отказ браузера
+        // — не ошибка (best effort, кэши работают и без persist).
+        // ============================================================
+        _requestPersistentStorage: function() {
+            if (this._persistAsked) return;
+            this._persistAsked = true;
+            try {
+                if (navigator.storage && typeof navigator.storage.persist === 'function') {
+                    navigator.storage.persist().then(function(granted) {
+                        console.log('[KipAuth] storage.persist:',
+                            granted ? 'хранилище закреплено' : 'по усмотрению браузера');
+                    }).catch(function() {});
+                }
+            } catch (e) {}
+        },
+
+        // ============================================================
+        // Task 476 (этап 2 оптимизации): ЧИСТКА ЛОКАЛЬНЫХ КОПИЙ
+        // серверных данных при logout (ручной выход — устройство
+        // могут передать другому человеку; требования границы
+        // приватности из заявки на оптимизацию).
+        // Чистим: копии табеля (kip8_ws_cache_v1), кабельного журнала
+        // (kip8_cj_cache_v1 + kip8_cj_cols_v1), расходомеров
+        // (kip8_flow_cache_v1) — localStorage-слой; и KipDB-слой
+        // ЦЕЛИКОМ (там только серверные копии этих же разделов +
+        // отметки плановых мероприятий kip8_pe_marks_v1).
+        // НЕ трогаем: статические публичные data/*.json (SW DATA-кэш
+        // Task 475 — те же файлы, что лежат на GitHub Pages, без
+        // персональных данных), настройки интерфейса (тема, закреплённые
+        // разделы, избранное). Автоистечение сессии
+        // (handleSessionExpired) НЕ чистит — тот же пользователь
+        // вернётся после повторного входа, копии ему ещё пригодятся.
+        // ============================================================
+        _wipeLocalServerData: function() {
+            var LS_KEYS = ['kip8_ws_cache_v1', 'kip8_cj_cache_v1',
+                           'kip8_cj_cols_v1', 'kip8_flow_cache_v1'];
+            for (var i = 0; i < LS_KEYS.length; i++) {
+                try { localStorage.removeItem(LS_KEYS[i]); } catch (e) {}
+            }
+            if (typeof KipDB !== 'undefined' && KipDB &&
+                    typeof KipDB.clear === 'function') {
+                try { KipDB.clear().catch(function() {}); } catch (e) {}
+            }
         },
 
         // ============================================================
@@ -35512,6 +35564,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self._applyRoleToUI();
                 // Task 296: подтянуть серверную карту прав (матрица KIP8_Access).
                 self._fetchMyAccess();
+                // Task 476 (этап 2 оптимизации): закрепить хранилище устройства
+                self._requestPersistentStorage();
 
                 // Перейти на главную страницу.
                 if (typeof navigateTo === 'function') navigateTo('dashboard');
@@ -35686,6 +35740,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             } catch (e) {}
             // Task 296: сбросить серверную карту прав и вернуть легаси-карту.
             this._resetServerAccess();
+            // Task 476 (этап 2 оптимизации): ручной выход — чистим
+            // локальные копии серверных данных (граница приватности).
+            this._wipeLocalServerData();
             this._cachedRole = null;
             this._cachedEmail = null;
             this._cachedUserId = null;
@@ -36602,6 +36659,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self._updateSidebarUserInfo();
                 self._applyRoleToUI();
                 self._initializing = false;
+                // Task 476 (этап 2 оптимизации): закрепить хранилище
+                // (быстрый путь — вход уже был, кэши уже есть)
+                self._requestPersistentStorage();
                 // Асинхронная проверка сервера в фоне.
                 self._verifySessionInBackground();
                 return;
@@ -36626,6 +36686,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self._applyRoleToUI();
                 // Task 296: серверная карта прав из матрицы.
                 self._fetchMyAccess();
+                // Task 476 (этап 2 оптимизации): закрепить хранилище устройства
+                self._requestPersistentStorage();
                 self._initializing = false;
             }).catch(function(err) {
                 self._initializing = false;
@@ -36716,6 +36778,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     self._updateSidebarUserInfo();
                     self._applyRoleToUI();
                     self._fetchMyAccess();
+                    // Task 476 (этап 2 оптимизации): закрепить хранилище
+                    self._requestPersistentStorage();
                     if (typeof showToast === 'function') {
                         showToast('Связь восстановлена — выполнен вход (' + data.role + ')');
                     }
@@ -36782,6 +36846,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // Task 296: обновить серверную карту прав (матрица могла
                 // измениться галочками с прошлого визита).
                 self._fetchMyAccess();
+                // Task 476 (этап 2 оптимизации): закрепить хранилище
+                self._requestPersistentStorage();
                 console.log('[KipAuth] Фоновая проверка сессии OK');
             }).catch(function(err) {
                 const msg = (err && err.message) || '';
@@ -38253,6 +38319,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // 1. Мгновенно восстановить кэш колонок и данных — чтобы
             //    пользователь не смотрел на "Загрузка…" при каждом открытии.
             this._restoreCache();
+            // Task 476 (этап 2 оптимизации): промах localStorage — добрать
+            // из ёмкого KipDB-слоя (IndexedDB), затем фоновое обновление.
+            this._idbRestore();
             // 2. Фоново подгрузить свежую схему + данные.
             this._api('cableJournal.getColumns', {}).catch(e => { console.error('getColumns:', e); return null; })
                 .then(function(columnsRes) {
@@ -38311,6 +38380,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Сохранить колонки в localStorage.
         // ============================================================
         _persistColumns: function(colsRes) {
+            // Task 476 (этап 2 оптимизации): надёжная ёмкая копия в
+            // KipDB (IndexedDB) — рядом с localStorage-копией (квота
+            // ~5 МБ могла тихо резать запись). Тихие ошибки — кэш
+            // необязателен.
+            if (typeof KipDB !== 'undefined' && KipDB &&
+                    typeof KipDB.set === 'function') {
+                try { KipDB.set(this._cacheColsKey, colsRes).catch(function() {}); } catch (eKdb) {}
+            }
             try {
                 localStorage.setItem(this._cacheColsKey, JSON.stringify(colsRes));
             } catch (e) { /* quota or disabled */ }
@@ -38320,9 +38397,61 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Сохранить данные в localStorage.
         // ============================================================
         _persistData: function(rows, total) {
+            // Task 476 (этап 2 оптимизации): KipDB-копия + прежняя
+            // localStorage-копия (один снапшот, оба слоя).
+            var snap = { rows: rows, total: total, ts: Date.now() };
+            if (typeof KipDB !== 'undefined' && KipDB &&
+                    typeof KipDB.set === 'function') {
+                try { KipDB.set(this._cacheKey, snap).catch(function() {}); } catch (eKdb) {}
+            }
             try {
-                localStorage.setItem(this._cacheKey, JSON.stringify({ rows: rows, total: total, ts: Date.now() }));
+                localStorage.setItem(this._cacheKey, JSON.stringify(snap));
             } catch (e) { /* quota or disabled */ }
+        },
+
+        // ============================================================
+        // Task 476 (этап 2 оптимизации): восстановить кэш из KipDB
+        // (IndexedDB) — когда localStorage-копии нет (квота/чистка).
+        // Асинхронно, рендер тем же путём, что _restoreCache;
+        // фоновое обновление (getColumns + load) идёт как обычно и
+        // перезапишет устаревшее. Миграция: localStorage-копия есть,
+        // а KipDB пуст → перенос (одноразово).
+        // ============================================================
+        _idbRestore: function() {
+            if (typeof KipDB === 'undefined' || !KipDB ||
+                    typeof KipDB.get !== 'function') {
+                return;
+            }
+            const self = this;
+            KipDB.get(this._cacheColsKey).then(function(colsRes) {
+                if (colsRes && Array.isArray(colsRes.columns)) {
+                    self._columns = colsRes.columns;
+                    if (typeof colsRes.canEdit === 'boolean') {
+                        self._canEdit = colsRes.canEdit;
+                    }
+                }
+                return KipDB.get(self._cacheKey);
+            }).then(function(cached) {
+                if (cached && Array.isArray(cached.rows)) {
+                    if (!(self._rows && self._rows.length > 0)) {
+                        self._rows = cached.rows;
+                        self._total = cached.total || cached.rows.length;
+                        self._allRows = self._rows.slice();
+                        self._render();
+                    }
+                    return;
+                }
+                // миграция: localStorage-копия есть, KipDB пуст → перенос
+                try {
+                    const dataJson = localStorage.getItem(self._cacheKey);
+                    if (dataJson) {
+                        const ls = JSON.parse(dataJson);
+                        if (ls && Array.isArray(ls.rows)) {
+                            KipDB.set(self._cacheKey, ls).catch(function() {});
+                        }
+                    }
+                } catch (e) { /* ignore */ }
+            }).catch(function() { /* тихо — кэш необязателен */ });
         },
 
         // ============================================================
@@ -40162,6 +40291,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             //    Если silent=true — populate без renderList().
             this._restoreCache(silent);
             this._loadFallback(silent);
+            // Task 476 (этап 2 оптимизации): промах localStorage — добрать
+            // из ёмкого KipDB-слоя (IndexedDB); серверное обновление (load)
+            // идёт как обычно и перезапишет устаревшее.
+            this._idbRestore(silent);
 
             // Task 235: подгрузить кэш правил валидации из localStorage
             // (синхронно, до load()) — чтобы первое открытие карточки
@@ -40235,11 +40368,54 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // ============================================================
-        // Сохранить данные в localStorage
+        // Task 476 (этап 2 оптимизации): восстановить кэш из KipDB
+        // (IndexedDB) — когда localStorage-копии нет (квота ~5 МБ
+        // тихо резала запись / чистка). Та же логика, что
+        // _restoreCache, но асинхронная. Миграция: localStorage-копия
+        // есть, а KipDB пуст → перенос (одноразово).
+        // ============================================================
+        _idbRestore: function(silent) {
+            if (typeof KipDB === 'undefined' || !KipDB ||
+                    typeof KipDB.get !== 'function') {
+                return;
+            }
+            var self = this;
+            KipDB.get(this._cacheKey).then(function(cached) {
+                if (cached && Array.isArray(cached.meters)) {
+                    if (!self._loaded) {
+                        self._METERS = self._normalizeMeters(cached.meters);
+                        self._loaded = true;
+                        if (!silent) self.renderList();
+                    }
+                    return;
+                }
+                // миграция: localStorage-копия есть, KipDB пуст → перенос
+                try {
+                    var json = localStorage.getItem(self._cacheKey);
+                    if (json) {
+                        var ls = JSON.parse(json);
+                        if (ls && Array.isArray(ls.meters)) {
+                            KipDB.set(self._cacheKey, ls).catch(function() {});
+                        }
+                    }
+                } catch (e) { /* ignore */ }
+            }).catch(function() { /* тихо — кэш необязателен */ });
+        },
+
+        // ============================================================
+        // Сохранить данные в localStorage.
         // ============================================================
         _persistData: function(meters) {
+            // Task 476 (этап 2 оптимизации): KipDB-копия + прежняя
+            // localStorage-копия (один снапшот, оба слоя; квота больше
+            // не может тихо потерять данные расходомеров).
+            var snap = { meters: meters, ts: Date.now() };
+            if (typeof KipDB !== 'undefined' && KipDB &&
+                    typeof KipDB.set === 'function') {
+                try { KipDB.set(this._cacheKey, snap).catch(function() {}); } catch (eKdb) {}
+            }
             try {
-                localStorage.setItem(this._cacheKey, JSON.stringify({ meters: meters, ts: Date.now() }));
+                localStorage.setItem(this._cacheKey, JSON.stringify(snap));
             } catch (e) { /* quota or disabled */ }
         },
 
@@ -43396,6 +43572,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _byKey: {},
         _initialized: false,
 
+        // Task 476 (этап 2 оптимизации): ключ KipDB-копии отметок
+        // (IndexedDB — раздел открывается мгновенно при любой связи:
+        // отметки были загружены раньше и лежат на устройстве;
+        // свежесть догружается фоном loadMarks после восстановления).
+        // Формат: { v: 1, years: { '2026': { marks: [...], ts: N } } }.
+        _marksCacheKey: 'kip8_pe_marks_v1',
+
         // Task 471: отображаемый год шапки («N год»). По умолчанию —
         // год плана (YEAR); переключается кнопкой предыдущего года
         // по годам, которые есть в архиве (planEvents.years)
@@ -43506,7 +43689,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._setSelMonth(new Date().getMonth() + 1);
             this._updateYearUi();
             this._loadYears();
-            this.loadMarks(true);
+            // Task 476 (этап 2 оптимизации): сперва локальная KipDB-копия
+            // отметок (мгновенно, без сети — даже офлайн), затем фоновое
+            // обновление из сети перезапишет устаревшее.
+            var peSelf = this;
+            this._restoreMarksCache().then(function() {
+                peSelf.loadMarks(true);
+            });
         },
 
         // Task 464: классы колонок месяцев pe-mo-1..12 на шапке и
@@ -43927,10 +44116,66 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             });
         },
 
+        // ============================================================
+        // Task 476 (этап 2 оптимизации): локальная копия отметок
+        // (KipDB / IndexedDB).
+        // ============================================================
+        // Заявка на оптимизацию: «ранее подгруженные данные должны
+        // сохраняться в памяти устройства для моментального доступа
+        // к ним». Отметки — единственный серверный раздел без
+        // локальной копии: сохраняем по годам (формат v1) и
+        // восстанавливаем ДО сетевого loadMarks — раздел открывается
+        // с галочками/крестиками мгновенно при любой связи.
+        // ============================================================
+
+        // Сохранить текущие отметки (_marks за _viewYear) в KipDB.
+        _cacheMarks: function() {
+            if (typeof KipDB === 'undefined' || !KipDB ||
+                    typeof KipDB.get !== 'function' || typeof KipDB.set !== 'function') {
+                return;
+            }
+            var self = this;
+            KipDB.get(this._marksCacheKey).then(function(c) {
+                var obj = (c && c.v === 1 && c.years && typeof c.years === 'object')
+                    ? c : { v: 1, years: {} };
+                obj.years[String(self._viewYear)] = {
+                    marks: self._marks || [],
+                    ts: Date.now()
+                };
+                return KipDB.set(self._marksCacheKey, obj);
+            }).catch(function() { /* тихо — кэш необязателен */ });
+        },
+
+        // Восстановить отметки отображаемого года (_viewYear) из
+        // KipDB. Возвращает Promise<boolean> (нашли ли копию).
+        _restoreMarksCache: function() {
+            if (typeof KipDB === 'undefined' || !KipDB ||
+                    typeof KipDB.get !== 'function') {
+                return Promise.resolve(false);
+            }
+            var self = this;
+            return KipDB.get(this._marksCacheKey).then(function(c) {
+                if (!c || c.v !== 1 || !c.years || typeof c.years !== 'object') {
+                    return false;
+                }
+                var y = c.years[String(self._viewYear)];
+                if (!y || !Array.isArray(y.marks)) {
+                    return false;
+                }
+                self._marks = y.marks;
+                self._rebuildIndex();
+                self._renderMarks();
+                console.log('[Task476] отметки мероприятий — локальная копия (' +
+                    self._viewYear + ', ' + y.marks.length + ' шт.)');
+                return true;
+            }).catch(function() { return false; });
+        },
+
         // Загрузка отметок года. silent=true (автозагрузка при
         // открытии страницы) — без тостов; кнопка «Обновить» —
         // с тостом результата. Task 471: год — ОТОБРАЖАЕМЫЙ
-        // (_viewYear; может быть переключён на год архива)
+        // (_viewYear; может быть переключён на год архива).
+        // Task 476: успех — отметки сохраняются в KipDB-копию.
         loadMarks: function(silent) {
             var self = this;
             var token = (typeof KipAuth !== 'undefined') ? KipAuth.getToken() : '';
@@ -43947,6 +44192,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self._marks = (data && data.marks) ? data.marks : [];
                 self._rebuildIndex();
                 self._renderMarks();
+                // Task 476 (этап 2 оптимизации): свежие отметки — в
+                // локальную KipDB-копию (мгновенное открытие офлайн).
+                self._cacheMarks();
                 if (!silent) showToast('Отметки обновлены');
             }).catch(function(err) {
                 // Старый сервер без planEvents.* (Unknown action) —
@@ -45198,15 +45446,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // другой месяц) — прежний путь: справочник кодов →
             // шаблоны → загрузка вида. Обновление данных — кнопкой
             // «Обновить» (refreshData), НЕ авто-загрузкой.
+            // Task 476 (этап 2 оптимизации): промах localStorage —
+            // ДО сети пробуем ёмкую KipDB-копию (квота/приватный
+            // режим могли резать localStorage; IndexedDB — надёжный
+            // слой тех же данных) — мгновенное открытие сохраняется.
             if (this._restoreCachedView()) {
                 self._refreshFromUrlState();
             } else {
-                this._loadStatusCodes().then(function() {
-                    self._loadPatterns().then(function() {
-                        // Task 252: легенда под шахматкой убрана — коды статусов
-                        // снова выводятся в ячейках (_renderCell), расшифровка
-                        // цветов не нужна (попап Task 251 показывает код+название).
+                self._idbRestoreView().then(function(idbOk) {
+                    if (idbOk) {
                         self._refreshFromUrlState();
+                        return;
+                    }
+                    self._loadStatusCodes().then(function() {
+                        self._loadPatterns().then(function() {
+                            // Task 252: легенда под шахматкой убрана — коды статусов
+                            // снова выводятся в ячейках (_renderCell), расшифровка
+                            // цветов не нужна (попап Task 251 показывает код+название).
+                            self._refreshFromUrlState();
+                        });
                     });
                 });
             }
@@ -45751,10 +46009,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // состояние и возвращаем true; иначе false (звавший решает,
         // идти ли в сеть). Идемпотентен: безопасно звать из loadGrid
         // при каждом открытии/смене месяца.
+        // Task 476: разбор объекта кэша вынесен в _restoreFromObj —
+        // он общий для localStorage- и KipDB-копий (один формат v1).
         _restoreCachedView: function() {
             if (!this._year || !this._month) return false;
             var c = this._cacheRead();
             if (!c) return false;
+            return this._restoreFromObj(c);
+        },
+
+        // Task 476: применить объект кэша (формат v1 — общий для
+        // обоих хранилищ) к состоянию модуля. Возвращает true, если
+        // ТЕКУЩИЙ вид (год-месяц) в копии есть и состояние поднято.
+        _restoreFromObj: function(c) {
             var view = c.views && c.views[this._ymKey()];
             if (!view || !Array.isArray(view.entries) ||
                 !Array.isArray(view.trainings)) return false;
@@ -45805,6 +46072,40 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return true;
         },
 
+        // ============================================================
+        // Task 476 (этап 2 оптимизации): KipDB-слой локальной копии.
+        // ============================================================
+        // localStorage — синхронный мгновенный слой, но его квота
+        // (~5 МБ на origin) могла не вместить копию (запись тихо
+        // упала) или копию стёр logout. KipDB (IndexedDB) — ёмкий
+        // асинхронный слой ТЕХ ЖЕ данных того же формата v1:
+        // промах localStorage добираем из него ДО похода в сеть.
+        // Заодно работает миграция: старой localStorage-копии в
+        // KipDB нет → переносим (одноразово, дальше — только KipDB).
+        // Возвращает Promise<boolean> — восстановлен ли текущий вид.
+        // ============================================================
+        _idbRestoreView: function() {
+            var self = this;
+            if (typeof KipDB === 'undefined' || !KipDB ||
+                    typeof KipDB.get !== 'function') {
+                return Promise.resolve(false);
+            }
+            if (!this._year || !this._month) return Promise.resolve(false);
+            return KipDB.get(this._wsCacheKey).then(function(c) {
+                if (c && c.v === 1 && self._restoreFromObj(c)) {
+                    return true;
+                }
+                // миграция: в KipDB пусто, но localStorage-копия есть →
+                // поднимаем её и переносим в KipDB для будущих сессий
+                var ls = self._cacheRead();
+                if (ls) {
+                    KipDB.set(self._wsCacheKey, ls).catch(function() {});
+                    return self._restoreFromObj(ls);
+                }
+                return false;
+            }).catch(function() { return false; });
+        },
+
         // Сохранить текущее состояние в локальную копию: справочники
         // + отпуска текущего года + текущий вид (записи/мероприятия,
         // отметка времени). Остальные виды/годы не трогаем — месяц
@@ -45845,6 +46146,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         return (c.views[a].ts || 0) - (c.views[b].ts || 0);
                     });
                     for (var k = 0; k < keys.length - 12; k++) delete c.views[keys[k]];
+                }
+                // Task 476 (этап 2 оптимизации): надёжная ёмкая копия в
+                // KipDB (IndexedDB) — переживает переполнение localStorage
+                // (квота ~5 МБ), читается фоном, не блокирует поток. Тихие
+                // ошибки: кэш необязателен, сетка жива.
+                if (typeof KipDB !== 'undefined' && KipDB &&
+                        typeof KipDB.set === 'function') {
+                    try { KipDB.set(this._wsCacheKey, c).catch(function() {}); } catch (eKdb) {}
                 }
                 localStorage.setItem(this._wsCacheKey, JSON.stringify(c));
                 this._cacheTs = c.views[ym].ts;
@@ -49394,10 +49703,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 this._updateCacheStamp();
                 return Promise.resolve(true);
             }
+            // Task 476 (этап 2 оптимизации): до сети — KipDB-слой
+            // (localStorage-копии может не быть: квота ~5 МБ тихо
+            // резала записи, либо это первый запуск после чистки).
+            // Вид есть в IndexedDB → мгновенный рендер БЕЗ сети;
+            // нет — прежний сетевой путь (внутри then ниже).
+            var idbTry = force ? Promise.resolve(false) : this._idbRestoreView();
+            return idbTry.then(function(idbOk) {
+            if (idbOk) {
+                self._renderGrid();
+                self._updateCalChip();
+                self._updateCacheStamp();
+                return true;
+            }
             // Task 314: при принудительном обновлении сетка ОСТАЁТСЯ на
             // экране (не мигает «Загрузка…») — индикатор на кнопке;
             // «Загрузка…» — только первый показ вида без данных
-            var keepGrid = !!(force && this._EMPLOYEES.length && wrapEl &&
+            var keepGrid = !!(force && self._EMPLOYEES.length && wrapEl &&
                              wrapEl.querySelector('.ws-grid'));
             if (wrapEl && !keepGrid) {
                 // Task 267: анимированные точки «Загрузка…» (по примеру
@@ -49405,25 +49727,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 wrapEl.innerHTML = '<div class="flow-loading" id="wsEmpty"><div class="flow-loading-text">Загрузка<span class="flow-loading-dots"><span>.</span><span>.</span><span>.</span></span></div></div>';
                 // штамп очищаем: данные ЭТОГО вида ещё грузятся (время
                 // прежнего вида вводило бы в заблуждение)
-                this._cacheTs = 0;
+                self._cacheTs = 0;
             }
-            this._updateCacheStamp();
+            self._updateCacheStamp();
 
             return Promise.all([
-                this._loadEmployees(),
-                this._loadEntries(),
-                this._loadTrainings(),
+                self._loadEmployees(),
+                self._loadEntries(),
+                self._loadTrainings(),
                 // Task 305: шаблоны ротации («Дни_цикла») — для бейджа
                 // плановой смены на днях отпуска (_plannedShiftAt);
                 // собственный catch — сбой не блокирует рендер сетки
                 // (бейджи просто не показываются)
-                this._loadPatterns(),
+                self._loadPatterns(),
                 // Task 274: план отпусков — с собственным catch, сбой
                 // не блокирует рендер сетки
-                this._loadVacations(),
+                self._loadVacations(),
                 // Task 392: СИЗ — с собственным catch, сбой не
                 // блокирует рендер сетки
-                this._loadPpe()
+                self._loadPpe()
             ]).then(function() {
                 self._renderGrid();
                 // Task 260: чип норм месяца в тулбаре
@@ -49456,6 +49778,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     KipToast.show('Ошибка загрузки графика: ' + self._apiErrText(err));
                 }
                 return false;
+            });
             });
         },
 
@@ -61876,6 +62199,95 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         </div>
     </div>
 </div>
+
+<script>
+// ============================================================
+// Task 476 (этап 2 оптимизации): KipDB — IndexedDB-хранилище
+// кэша СЕРВЕРНЫХ данных (табель, кабельный журнал, расходомеры,
+// отметки плановых мероприятий).
+// ============================================================
+// Зачем: localStorage — СИНХРОННЫЙ и всего ~5 МБ на origin; при
+// нехватке квоты записи локальных копий ТИХО падают → разделы
+// теряют мгновенное открытие. IndexedDB — асинхронная и ёмкая
+// (сотни МБ), не блокирует главный поток. Схема: модули пишут
+// копии в ОБА хранилища (localStorage — прежний мгновенный
+// синхронный слой, тесты/десктоп; KipDB — надёжный ёмкий слой),
+// при чтении промах localStorage добирается из KipDB (+ старые
+// localStorage-копии мигрируют в KipDB сами собой).
+// Статические публичные data/*.json живут в SW DATA-кэше
+// (Task 475) — их здесь нет. Запросы к Apps Script по-прежнему
+// НИКОГДА не кэшируются (bypass в sw.js — авторизация/heartbeat
+// всегда напрямую в сеть; сервер остаётся источником прав).
+// При logout локальные копии серверных данных чистятся
+// (KipAuth._wipeLocalServerData) — граница приватности.
+// Все вызовы KipDB обёрнуты guard «typeof KipDB» — модуль
+// необязателен, ошибки хранилища ТИХИ (кэш — не критичные данные).
+// ============================================================
+var KipDB = (function() {
+    // Имя БД kip8test; перенос в kip8 → 'kip8-cache-v1' (маппинг
+    // де-изоляции, как IMAGE_CACHE_VERSION kipia-images-*-v3)
+    var DB_NAME = 'kip8-cache-test-v1';
+    var STORE = 'kv';
+    var _dbp = null;
+
+    function _open() {
+        if (_dbp) return _dbp;
+        if (typeof indexedDB === 'undefined' || indexedDB === null) {
+            _dbp = Promise.reject(new Error('IndexedDB недоступен'));
+            return _dbp;
+        }
+        _dbp = new Promise(function(resolve, reject) {
+            var req;
+            try { req = indexedDB.open(DB_NAME, 1); }
+            catch (e) { reject(e); return; }
+            req.onupgradeneeded = function(ev) {
+                var db = ev.target.result;
+                if (!db.objectStoreNames || !db.objectStoreNames.contains(STORE)) {
+                    db.createObjectStore(STORE);
+                }
+            };
+            req.onsuccess = function(ev) { resolve(ev.target.result); };
+            req.onerror = function() { reject(req.error || new Error('IndexedDB open error')); };
+            req.onblocked = function() { reject(new Error('IndexedDB blocked')); };
+        });
+        // сбой открытия — следующая попытка начнётся заново
+        _dbp.catch(function() { _dbp = null; });
+        return _dbp;
+    }
+
+    function _run(mode, fn) {
+        return _open().then(function(db) {
+            return new Promise(function(resolve, reject) {
+                var t, req;
+                try {
+                    t = db.transaction(STORE, mode);
+                    req = fn(t.objectStore(STORE));
+                } catch (e) { reject(e); return; }
+                t.oncomplete = function() {
+                    resolve(req && typeof req === 'object' && ('result' in req) ? req.result : undefined);
+                };
+                t.onerror = function() { reject(t.error || new Error('idb error')); };
+                t.onabort = function() { reject(t.error || new Error('idb abort')); };
+            });
+        });
+    }
+
+    return {
+        // быстрая проверка окружения (без открытия БД)
+        available: (typeof indexedDB !== 'undefined' && indexedDB !== null),
+        /** KipDB.get(key) → Promise<значение|undefined> */
+        get: function(key) { return _run('readonly', function(s) { return s.get(key); }); },
+        /** KipDB.set(key, value) → Promise (value — structured-clone) */
+        set: function(key, value) { return _run('readwrite', function(s) { return s.put(value, key); }); },
+        /** KipDB.del(key) → Promise */
+        del: function(key) { return _run('readwrite', function(s) { return s['delete'](key); }); },
+        /** KipDB.keys() → Promise<string[]> */
+        keys: function() { return _run('readonly', function(s) { return s.getAllKeys(); }); },
+        /** KipDB.clear() → Promise — полное стирание хранилища */
+        clear: function() { return _run('readwrite', function(s) { return s.clear(); }); }
+    };
+})();
+</script>
 
 <script>
 // ============================================================
