@@ -35275,6 +35275,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // ============================================================
+        // Task 477 (этап 3 оптимизации): фоновая предзагрузка всех
+        // данных приложения ПО ПРАВАМ РОЛИ (модуль KipPreload).
+        // Запускается после показа интерфейса — с задержкой, чтобы
+        // не конкурировать с входом/первым экраном; сам preload
+        // идёт по одному элементу в idle-паузах (≥1.5 с между
+        // запросами) и только по разделам, доступным роли
+        // (canAccess — серверная матрица + легаси-карта).
+        // ============================================================
+        _schedulePreload: function() {
+            setTimeout(function() {
+                try {
+                    if (typeof KipPreload !== 'undefined' && KipPreload) {
+                        KipPreload.start();
+                    }
+                } catch (e) {}
+            }, 4000);
+        },
+
+        // ============================================================
         // API: вызов Apps Script.
         // ============================================================
         api: function(action, payload) {
@@ -35566,6 +35585,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self._fetchMyAccess();
                 // Task 476 (этап 2 оптимизации): закрепить хранилище устройства
                 self._requestPersistentStorage();
+                // Task 477 (этап 3 оптимизации): фоновая предзагрузка по роли
+                self._schedulePreload();
 
                 // Перейти на главную страницу.
                 if (typeof navigateTo === 'function') navigateTo('dashboard');
@@ -35740,6 +35761,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             } catch (e) {}
             // Task 296: сбросить серверную карту прав и вернуть легаси-карту.
             this._resetServerAccess();
+            // Task 477 (этап 3 оптимизации): остановить фоновую очередь
+            // предзагрузки (пользователь выходит — данные больше не нужны)
+            try {
+                if (typeof KipPreload !== 'undefined' && KipPreload) {
+                    KipPreload.stop();
+                }
+            } catch (e) {}
             // Task 476 (этап 2 оптимизации): ручной выход — чистим
             // локальные копии серверных данных (граница приватности).
             this._wipeLocalServerData();
@@ -36662,6 +36690,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // Task 476 (этап 2 оптимизации): закрепить хранилище
                 // (быстрый путь — вход уже был, кэши уже есть)
                 self._requestPersistentStorage();
+                // Task 477 (этап 3 оптимизации): фоновая предзагрузка по роли
+                // (матрица ещё едет фоном — очередь строится по canAccess
+                // на момент старта; сервер всё равно гейтит каждый экшен)
+                self._schedulePreload();
                 // Асинхронная проверка сервера в фоне.
                 self._verifySessionInBackground();
                 return;
@@ -36688,6 +36720,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self._fetchMyAccess();
                 // Task 476 (этап 2 оптимизации): закрепить хранилище устройства
                 self._requestPersistentStorage();
+                // Task 477 (этап 3 оптимизации): фоновая предзагрузка по роли
+                self._schedulePreload();
                 self._initializing = false;
             }).catch(function(err) {
                 self._initializing = false;
@@ -36780,6 +36814,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     self._fetchMyAccess();
                     // Task 476 (этап 2 оптимизации): закрепить хранилище
                     self._requestPersistentStorage();
+                    // Task 477 (этап 3 оптимизации): фоновая предзагрузка
+                    // по роли — связь вернулась, разделы готовим заранее
+                    self._schedulePreload();
                     if (typeof showToast === 'function') {
                         showToast('Связь восстановлена — выполнен вход (' + data.role + ')');
                     }
@@ -36848,6 +36885,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self._fetchMyAccess();
                 // Task 476 (этап 2 оптимизации): закрепить хранилище
                 self._requestPersistentStorage();
+                // Task 477 (этап 3): предзагрузка могла быть запланирована
+                // быстрым путём до смены роли — дожидаемся актуальной
+                // матрицы и стартуем по ней (start одноразовый)
+                self._schedulePreload();
                 console.log('[KipAuth] Фоновая проверка сессии OK');
             }).catch(function(err) {
                 const msg = (err && err.message) || '';
@@ -62285,6 +62326,364 @@ var KipDB = (function() {
         keys: function() { return _run('readonly', function(s) { return s.getAllKeys(); }); },
         /** KipDB.clear() → Promise — полное стирание хранилища */
         clear: function() { return _run('readwrite', function(s) { return s.clear(); }); }
+    };
+})();
+
+// ============================================================
+// Task 477 (этап 3 оптимизации): KipPreload — фоновая
+// предзагрузка всех данных приложения ПО ПРАВАМ РОЛИ.
+// ============================================================
+// Требование заявки: «в принципе должны незаметно подгружаться
+// все данные приложения (только из тех разделов и данных, к
+// которым у пользователя есть доступ согласно его роли)».
+// После входа, когда интерфейс уже показан и браузер простаивает,
+// ПО ОДНОМУ (последовательно, requestIdleCallback + пауза ≥1.5 с
+// между элементами) подогреваем кэши:
+//   • статические data/*.json доступных по роли разделов — обычный
+//     fetch через SWR (Task 475): мгновенный ответ из кэша + фоновая
+//     ревалидация сети — тот же путь, что обычное открытие раздела;
+//   • серверные данные (табель/каб. журнал/расходомеры/отметки
+//     мероприятий) — те же read-only экшены, что используют разделы;
+//     копии пишутся в KipDB (Task 476) — разделы откроются мгновенно
+//     даже офлайн при первом заходе.
+// Вежливость к сети/устройству: saveData или 2g/slow-2g — очередь
+// НЕ запускается вовсе; офлайн — пауза, 'online' — продолжение;
+// logout — остановка и сброс. Сервер остаётся источником прав:
+// каждый экшен гейтится на его стороне (клиентская видимость прав
+// не даёт), preload читает ТОЛЬКО то, что роль и так видит.
+// ============================================================
+var KipPreload = (function() {
+    // Пауза между элементами очереди (мс): сеть не «занята» под
+    // предзагрузку — пользовательский трафик идёт первым
+    var GAP_MS = 1500;
+    var IDLE_TIMEOUT = 5000;
+
+    var _started = false;   // один запуск за сессию
+    var _queue = [];        // [{kind:'json',file}, {kind:'api',id}]
+    var _active = false;    // насос работает
+    var _paused = false;    // офлайн-пауза
+    var _done = 0;
+    var _fail = 0;
+
+    function _log() {
+        try {
+            var args = Array.prototype.slice.call(arguments);
+            args.unshift('[KipPreload]');
+            console.log.apply(console, args);
+        } catch (e) {}
+    }
+
+    // Экономия трафика пользователя: Data Saver / медленный тип сети
+    // (2g, slow-2g) — фоновая предзагрузка отключается ЦЕЛИКОМ
+    function _connBlocked() {
+        var c = null;
+        try {
+            c = navigator.connection || navigator.mozConnection ||
+                navigator.webkitConnection || null;
+        } catch (e) {}
+        if (!c) return false;
+        if (c.saveData) return true;
+        var t = String(c.effectiveType || '');
+        return t === 'slow-2g' || t === '2g';
+    }
+
+    // ============================================================
+    // Манифест: раздел → данные. Видимость разделов — canAccess
+    // (серверная матрица KIP8_Access + легаси-карта, как у кнопок
+    // UI: правка галочки в матрице доезжает ≤ ~10 мин). Гость
+    // («Общий доступ» — калькуляторы без data-файлов) получает
+    // пустую очередь; серверные группы — только с токеном.
+    // ============================================================
+    function _buildQueue() {
+        var q = [];
+        function accJson(page, file) {
+            try { if (KipAuth.canAccess(page)) q.push({ kind: 'json', file: file, page: page }); }
+            catch (e) {}
+        }
+        accJson('devices', 'data/devices.json');
+        accJson('lockouts-prod', 'data/lockouts.json');
+        accJson('valves-prod', 'data/valves.json');
+        accJson('regulators-prod', 'data/regulators.json');
+        accJson('projects-prod', 'data/projects.json');
+        accJson('cable-journal-view', 'data/cables.json');
+        accJson('phonebook', 'data/phonebook.json');
+        accJson('exam-tickets', 'data/exam-tickets.json');
+        accJson('flowmeter-data', 'data/flowmeters.json');
+        var token = '';
+        try { token = KipAuth.getToken() || ''; } catch (e) {}
+        if (token) {
+            function accApi(page, id) {
+                try { if (KipAuth.canAccess(page)) q.push({ kind: 'api', id: id, page: page }); }
+                catch (e) {}
+            }
+            accApi('work-schedule', 'ws');
+            accApi('cable-journal-view', 'cj');
+            accApi('flowmeter-data', 'fm');
+            accApi('plan-events', 'pe');
+        }
+        return q;
+    }
+
+    function _api(action, payload) {
+        var p = {};
+        try { p = Object.assign({}, payload || {}); } catch (e) { p = payload || {}; }
+        try { p.token = KipAuth.getToken() || ''; } catch (e) {}
+        return KipAuth.api(action, p);
+    }
+
+    // read-modify-write KipDB-копии (merge с существующей, LS —
+    // fallback при пустом KipDB). Гонки с одновременной записью
+    // модуля не страшны: кэш необязателен, следующая запись
+    // (обычное использование раздела) всё выровняет.
+    function _mergeIdbCache(key, mut) {
+        if (typeof KipDB === 'undefined' || !KipDB ||
+                typeof KipDB.set !== 'function') {
+            return Promise.resolve(false);
+        }
+        var base = null;
+        return KipDB.get(key).catch(function() { return null; }).then(function(c) {
+            if (c && typeof c === 'object') {
+                base = c;
+            } else {
+                try {
+                    var raw = localStorage.getItem(key);
+                    if (raw) base = JSON.parse(raw);
+                } catch (e) { base = null; }
+            }
+            if (!base || typeof base !== 'object') base = {};
+            var out = mut(base);
+            if (!out) return false;
+            return KipDB.set(key, out).then(function() { return true; })
+                .catch(function() { return false; });
+        });
+    }
+
+    // Табель: справочники + текущий месяц — форма кэша Task 314 (v1),
+    // merge с копией (другие виды/годы не трогаем). Сортировка и
+    // нормализация — как у раздела (при restore применится тоже).
+    function _preloadWs() {
+        var d = new Date();
+        var year = d.getFullYear();
+        var month = d.getMonth() + 1;
+        var ym = year + '-' + (month < 10 ? '0' + month : month);
+        return Promise.all([
+            _api('workSchedule.getStatusCodes', {}),
+            _api('workSchedule.getPatterns', {}),
+            _api('workSchedule.listEmployees', { includeArchived: false }),
+            _api('workSchedule.listTrainings', { year: year }),
+            _api('workSchedule.listVacations', { year: year }),
+            _api('workSchedule.listPpe', {}),
+            _api('workSchedule.listEntries', { year: year, month: month })
+        ]).then(function(rs) {
+            var employees = (rs[2] && rs[2].employees) || [];
+            try {
+                if (typeof WorkSchedule !== 'undefined' && WorkSchedule &&
+                        typeof WorkSchedule._sortEmployees === 'function') {
+                    employees = WorkSchedule._sortEmployees(employees);
+                }
+            } catch (e) {}
+            var key = 'kip8_ws_cache_v1';
+            try {
+                if (typeof WorkSchedule !== 'undefined' && WorkSchedule &&
+                        WorkSchedule._wsCacheKey) key = WorkSchedule._wsCacheKey;
+            } catch (e) {}
+            return _mergeIdbCache(key, function(c) {
+                c.v = 1;
+                c.codes = (rs[0] && rs[0].codes) || [];
+                c.patterns = (rs[1] && rs[1].patterns) || [];
+                c.employees = employees;
+                if (!c.vacations || typeof c.vacations !== 'object') c.vacations = {};
+                c.vacations[String(year)] = (rs[4] && rs[4].vacations) || [];
+                c.ppe = (rs[5] && rs[5].ppe) || [];
+                c.instrList = (rs[3] && rs[3].instrList) || [];
+                c.instrAll = (rs[3] && rs[3].instrAll) || [];
+                c.eventsAll = (rs[3] && rs[3].eventsAll) || [];
+                if (!c.views || typeof c.views !== 'object') c.views = {};
+                c.views[ym] = {
+                    entries: (rs[6] && rs[6].entries) || [],
+                    trainings: (rs[3] && rs[3].trainings) || [],
+                    ts: Date.now()
+                };
+                return c;
+            });
+        });
+    }
+
+    // Кабельный журнал: схема + список — форма _persistData/_persistColumns
+    function _preloadCj() {
+        return _api('cableJournal.getColumns', {}).then(function(colsRes) {
+            return _api('cableJournal.list', { options: { limit: 1000 } }).then(function(data) {
+                var colsKey = 'kip8_cj_cols_v1';
+                var dataKey = 'kip8_cj_cache_v1';
+                try {
+                    if (typeof KipCableJournal !== 'undefined' && KipCableJournal) {
+                        if (KipCableJournal._cacheColsKey) colsKey = KipCableJournal._cacheColsKey;
+                        if (KipCableJournal._cacheKey) dataKey = KipCableJournal._cacheKey;
+                    }
+                } catch (e) {}
+                if (typeof KipDB === 'undefined' || !KipDB ||
+                        typeof KipDB.set !== 'function') {
+                    return false;
+                }
+                return KipDB.set(colsKey, colsRes).catch(function() {}).then(function() {
+                    return KipDB.set(dataKey, {
+                        rows: (data && data.rows) || [],
+                        total: (data && data.total) || 0,
+                        ts: Date.now()
+                    });
+                }).then(function() { return true; }).catch(function() { return false; });
+            });
+        });
+    }
+
+    // Расходомеры: список — форма _persistData
+    function _preloadFm() {
+        return _api('flowmeter.list', {}).then(function(data) {
+            var key = 'kip8_flow_cache_v1';
+            try {
+                if (typeof FlowmeterData !== 'undefined' && FlowmeterData &&
+                        FlowmeterData._cacheKey) key = FlowmeterData._cacheKey;
+            } catch (e) {}
+            if (typeof KipDB === 'undefined' || !KipDB ||
+                    typeof KipDB.set !== 'function') {
+                return false;
+            }
+            return KipDB.set(key, {
+                meters: (data && data.meters) || [],
+                ts: Date.now()
+            }).then(function() { return true; }).catch(function() { return false; });
+        });
+    }
+
+    // Отметки плановых мероприятий текущего года — форма Task 476
+    // (merge по годам, соседние годы не трогаем)
+    function _preloadPe() {
+        var year = new Date().getFullYear();
+        return _api('planEvents.list', { year: year }).then(function(data) {
+            var key = 'kip8_pe_marks_v1';
+            try {
+                if (typeof PlanEventsData !== 'undefined' && PlanEventsData &&
+                        PlanEventsData._marksCacheKey) key = PlanEventsData._marksCacheKey;
+            } catch (e) {}
+            return _mergeIdbCache(key, function(c) {
+                c.v = 1;
+                if (!c.years || typeof c.years !== 'object') c.years = {};
+                c.years[String(year)] = {
+                    marks: (data && data.marks) || [],
+                    ts: Date.now()
+                };
+                return c;
+            });
+        });
+    }
+
+    function _runItem(item) {
+        if (item.kind === 'json') {
+            // SWR (Task 475): SW ответит из персистентного DATA-кэша
+            // мгновенно и сам ревалидирует сеть фоном — прогрев тем же
+            // путём, что обычное открытие раздела; cache-busting как у
+            // разделов (SW нормализует ключ без query).
+            return fetch(item.file + '?v=preload' + Date.now(), { cache: 'no-store' })
+                .then(function(r) { return !!(r && r.ok); })
+                .catch(function() { return false; });
+        }
+        if (item.id === 'ws') return _preloadWs();
+        if (item.id === 'cj') return _preloadCj();
+        if (item.id === 'fm') return _preloadFm();
+        if (item.id === 'pe') return _preloadPe();
+        return Promise.resolve(false);
+    }
+
+    // requestIdleCallback + минимальная пауза GAP_MS между элементами
+    // (браузер сам выберет свободный такт; timeout — не занимать
+    // idle-очередь надолго)
+    function _scheduleIdle(fn) {
+        var t0 = Date.now();
+        function go() {
+            var wait = GAP_MS - (Date.now() - t0);
+            if (wait > 0) { setTimeout(go, wait); return; }
+            fn();
+        }
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(function() { go(); }, { timeout: IDLE_TIMEOUT });
+        } else {
+            setTimeout(go, GAP_MS);
+        }
+    }
+
+    function _next() {
+        if (_queue.length === 0) {
+            _active = false;
+            _log('очередь завершена:', _done, 'успешно,', _fail, 'с ошибками');
+            return;
+        }
+        if (_paused || navigator.onLine === false) {
+            _active = false;
+            _log('пауза (нет сети) — продолжим по событию online');
+            return;
+        }
+        var item = _queue.shift();
+        Promise.resolve().then(function() { return _runItem(item); })
+            .then(function(ok) { if (!ok) _fail++; })
+            .catch(function() { _fail++; })
+            .then(function() {
+                _done++;
+                _scheduleIdle(_next);
+            });
+    }
+
+    function _kick() {
+        if (_active || _queue.length === 0) return;
+        _active = true;
+        _next();
+    }
+
+    // Запуск (один раз за сессию; KipAuth._schedulePreload зовёт
+    // после показа интерфейса с задержкой). Возвращает true, если
+    // очередь реально запущена.
+    function start() {
+        if (_started) return false;
+        _started = true;
+        if (_connBlocked()) {
+            _log('экономия трафика (saveData/2G) — предзагрузка отключена');
+            return false;
+        }
+        _queue = _buildQueue();
+        if (_queue.length === 0) {
+            _log('нет доступных по роли данных — очередь пуста');
+            return false;
+        }
+        var role = '';
+        try { role = KipAuth._cachedRole || '?'; } catch (e) {}
+        _log('старт: очередь из', _queue.length, 'элементов (роль:', role + ')');
+        _kick();
+        return true;
+    }
+
+    // logout / смена пользователя: остановить и забыть очередь
+    function stop() {
+        _queue = [];
+        _active = false;
+        _paused = false;
+        _started = false;
+        _done = 0;
+        _fail = 0;
+    }
+
+    try {
+        window.addEventListener('online', function() { _paused = false; _kick(); });
+        window.addEventListener('offline', function() { _paused = true; });
+    } catch (e) {}
+
+    return {
+        start: start,
+        stop: stop,
+        // диагностика (консоль/тесты): текущее состояние очереди
+        _state: function() {
+            return { started: _started, active: _active, paused: _paused,
+                     pending: _queue.length, done: _done, fail: _fail };
+        },
+        _buildQueue: _buildQueue
     };
 })();
 </script>
