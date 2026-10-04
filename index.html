@@ -35028,6 +35028,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _resendTimer: null,
         _heartbeatTimer: null,
         _initializing: false,
+        // Task 475: автоповтор входа при офлайн-старте с токеном
+        // (bootstrap: сети нет, кэша роли нет → гостевой режим;
+        // повтор getCurrentUser раз в 60с + по событию 'online').
+        _offlineRetryTimer: null,
+        _offlineRetryOnlineHandler: null,
 
         // ============================================================
         // Карта доступа: роль → список разрешённых страниц.
@@ -35470,6 +35475,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this.api('verifyOTP', { email: this._pendingEmail, code: code, device: deviceType }).then(function(data) {
                 // data = { token, role, userId, email }
                 self.setToken(data.token);
+                // Task 475: ручной вход удался — остановить автоповтор
+                // офлайн-входа (если был запущен).
+                self._stopOfflineTokenRetry();
                 self._cachedRole = data.role;
                 self._cachedEmail = data.email;
                 self._cachedUserId = data.userId;
@@ -36649,16 +36657,95 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     if (typeof navigateTo === 'function') navigateTo('dashboard');
                     console.warn('[KipAuth.bootstrap] Сессия недействительна → гостевой режим');
                 } else {
-                    // Сетевая ошибка, но кэша нет — показать вход с пояснением.
-                    // Токен НЕ удаляем, чтобы пользователь мог обновить страницу.
-                    self._showLoginScreen();
-                    self._showError(
-                        'Не удалось связаться с сервером. ' +
-                        'Проверьте подключение к интернету и обновите страницу.'
-                    );
-                    console.warn('[KipAuth.bootstrap] Сетевая ошибка, токен сохранён:', msg);
+                    // Task 475 (этап 1 оптимизации): сети нет, кэша роли нет,
+                    // но ТОКЕН есть — НЕ тупик экрана входа. Открываем
+                    // ГОСТЕВОЙ режим (калькуляторы), токен сохраняем;
+                    // при появлении связи роль догоняется автоматически
+                    // (интервал 60с + событие 'online' — _startOfflineTokenRetry).
+                    // Пользователь не заблокирован даже при полном офлайне.
+                    self._cachedRole = 'Общий доступ';
+                    self._cachedEmail = null;
+                    self._cachedUserId = null;
+                    self._lastRoleFetch = Date.now();
+                    self._updateSidebarUserInfo();
+                    self._applyRoleToUI();
+                    if (typeof navigateTo === 'function') navigateTo('dashboard');
+                    if (typeof showToast === 'function') {
+                        showToast('Нет связи с сервером — открыт гостевой режим. Вход восстановится автоматически');
+                    }
+                    console.warn('[KipAuth.bootstrap] Сетевая ошибка, токен сохранён, гостевой режим + автоповтор:', msg);
+                    self._startOfflineTokenRetry();
                 }
             });
+        },
+
+        // ============================================================
+        // Task 475 (этап 1 оптимизации): автоповтор входа при
+        // офлайн-старте с токеном.
+        // ============================================================
+        // bootstrap не смог получить роль (сеть недоступна), приложение
+        // открыто в гостевом режиме. Здесь — лёгкий повтор getCurrentUser:
+        //   - раз в 60 секунд (интервал);
+        //   - по событию 'online' (сеть вернулась — не ждём минуту);
+        //   - первая попытка через 5 секунд (сервер мог уже ожить).
+        // При успехе: роль/кэш/heartbeat/UI применяются штатно, повтор
+        // останавливается, показывается тост о восстановлении входа.
+        // При session_expired — чистый выход через handleSessionExpired.
+        // NETWORK-ошибки молча пропускаются (ждём следующий тик).
+        // ============================================================
+        _startOfflineTokenRetry: function() {
+            if (this._offlineRetryTimer) return; // уже запущен
+            const self = this;
+            const attempt = function() {
+                const token = self.getToken();
+                if (!token) { self._stopOfflineTokenRetry(); return; }
+                self.api('getCurrentUser', { token: token }).then(function(data) {
+                    self._stopOfflineTokenRetry();
+                    self._cachedRole = data.role;
+                    self._cachedEmail = data.email;
+                    self._cachedUserId = data.userId;
+                    self._lastRoleFetch = Date.now();
+                    // Сохранить роль в localStorage — следующий старт
+                    // пойдёт по быстрому пути (мгновенное открытие).
+                    try {
+                        localStorage.setItem('kip8_cached_role', data.role || '');
+                        localStorage.setItem('kip8_cached_email', data.email || '');
+                        localStorage.setItem('kip8_cached_user_id', String(data.userId || ''));
+                    } catch (e) {}
+                    self._startHeartbeat();
+                    self._updateSidebarUserInfo();
+                    self._applyRoleToUI();
+                    self._fetchMyAccess();
+                    if (typeof showToast === 'function') {
+                        showToast('Связь восстановлена — выполнен вход (' + data.role + ')');
+                    }
+                }).catch(function(err) {
+                    // session_expired/no_session — штатный чистый выход
+                    // (handleSessionExpired различает SERVER/NETWORK сам);
+                    // сетевые ошибки молча ждём следующего тика.
+                    if (err && err._kind === 'SERVER') {
+                        self._stopOfflineTokenRetry();
+                        self.handleSessionExpired(err);
+                    }
+                });
+            };
+            this._offlineRetryTimer = setInterval(attempt, 60 * 1000);
+            this._offlineRetryOnlineHandler = function() {
+                setTimeout(attempt, 500);
+            };
+            window.addEventListener('online', this._offlineRetryOnlineHandler);
+            setTimeout(attempt, 5000);
+        },
+
+        _stopOfflineTokenRetry: function() {
+            if (this._offlineRetryTimer) {
+                clearInterval(this._offlineRetryTimer);
+                this._offlineRetryTimer = null;
+            }
+            if (this._offlineRetryOnlineHandler) {
+                window.removeEventListener('online', this._offlineRetryOnlineHandler);
+                this._offlineRetryOnlineHandler = null;
+            }
         },
 
         // ============================================================
@@ -61791,6 +61878,54 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 </div>
 
 <script>
+// ============================================================
+// Task 475 (этап 1 оптимизации): сброс in-memory кэшей разделов.
+// ============================================================
+// Вызывается слушателем navigator.serviceWorker 'message' (DATA_REFRESHED
+// с полем path), когда SW при фоновой ревалидации data/*.json обнаружил
+// ИЗМЕНЕНИЕ содержимого. Мы НЕ перерисовываем открытый раздел (не
+// дёргаем пользователя) — только сбрасываем флаги загрузки: свежая
+// версия поднимется из персистентного SW DATA-кэша при следующем
+// открытии раздела, мгновенно и незаметно.
+// Переменные xxxLoaded объявлены top-level let в классических <script> —
+// доступны здесь через глобальное лексическое окружение.
+// ============================================================
+function resetSectionDataCache(path) {
+    var m = /\/data\/([a-z-]+)\.json$/i.exec(String(path || ''));
+    if (!m) return;
+    switch (m[1]) {
+        case 'devices':
+            devLoaded = false;
+            break;
+        case 'lockouts':
+            lockLoaded = false;
+            break;
+        case 'valves':
+            valveLoaded = false;
+            break;
+        case 'regulators':
+            regulatorLoaded = false;
+            break;
+        case 'projects':
+            projectLoaded = false;
+            break;
+        case 'cables':
+            cableLoaded = false;
+            break;
+        case 'phonebook':
+            pbLoaded = false;
+            break;
+        case 'exam-tickets':
+            try { if (typeof _ticketsData !== 'undefined') _ticketsData = null; } catch (e) {}
+            break;
+        // flowmeters.json — только fallback FlowmeterData (8 КБ, основные
+        // данные — серверные); не сбрасываем.
+    }
+    console.log('[Task475] SWR: данные обновились в фоне →', m[1], '(кэш раздела сброшен, свежая версия — при следующем открытии)');
+}
+</script>
+
+<script>
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
         // updateViaCache: 'none' — браузер всегда ходит в сеть за sw.js,
@@ -61825,6 +61960,14 @@ if ('serviceWorker' in navigator) {
                     // загрузилась свежая версия
                     if (typeof _ticketsData !== 'undefined') {
                         _ticketsData = null;
+                    }
+                    // Task 475: SWR-ревалидация data/*.json — SW сравнил
+                    // свежий ответ с кэшем и обнаружил ИЗМЕНЕНИЕ.
+                    // Сбрасываем in-memory кэш соответствующего раздела:
+                    // свежая версия поднимется при следующем открытии
+                    // раздела (незаметно — без перерисовки под пользователем).
+                    if (event.data.path) {
+                        try { resetSectionDataCache(event.data.path); } catch (e) {}
                     }
                 }
             });
