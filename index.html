@@ -12800,6 +12800,18 @@
         font-feature-settings: "tnum";
     }
     [data-theme="light"] .dev-card-value.dev-card-number { color: #1a4060; }
+    /* Task 478: строка «Период ремонта» в карточке прибора — цвет
+       текста ЗНАЧЕНИЯ по состоянию ППР: ЗЕЛЁНЫЙ — прибор в гр. ППР
+       (вид ремонта ТО/К/П) и срок ремонта не просрочен (дата
+       последнего ремонта + период ещё не истёк: срок >= сегодня);
+       КРАСНЫЙ — прибор в гр. ППР (вид ТО/К/П) и срок ПРОСРОЧЕН
+       (дата + период < сегодня); остальные (не в гр. ППР / вид
+       не ТО/К/П / срок не вычислить) — обычный цвет. Палитра — как
+       у строк следующих сроков инструктажей (Task 407 .ws-il-due-*) */
+    .dev-card-value.dev-ppr-ok { color: #81c784; font-weight: 600; }
+    .dev-card-value.dev-ppr-bad { color: #ef5350; font-weight: 600; }
+    [data-theme="light"] .dev-card-value.dev-ppr-ok { color: #2e7d32; }
+    [data-theme="light"] .dev-card-value.dev-ppr-bad { color: #c62828; }
     .dev-card-value.dev-card-date {
         color: rgba(200, 215, 230, 0.7);
         font-feature-settings: "tnum";
@@ -22803,6 +22815,60 @@
         }
     }
 
+    // Task 478: цвет текста строки «Период ремонта» в карточке прибора.
+    // Возвращает CSS-класс значения строки: '' (обычный цвет) |
+    // 'dev-ppr-ok' (зелёный) | 'dev-ppr-bad' (красный):
+    //   ЗЕЛЁНЫЙ — прибор в графике ППР («В гр. ППР» = «Есть»), вид
+    //     ремонта ТО/К/П и дата ремонта НЕ просрочена: дата
+    //     последнего ремонта + период ремонта (мес/год) ЕЩЁ не
+    //     истёк (срок >= сегодня);
+    //   КРАСНЫЙ — прибор в графике ППР, вид ТО/К/П, срок ремонта
+    //     ПРОСРОЧЕН (дата + период < сегодня);
+    //   ОБЫЧНЫЙ — прибора нет в гр. ППР («Нет»), вид ремонта не
+    //     ТО/К/П, или срок не вычислить (нет даты / не разобрать
+    //     период). Форматы периода: «(3 мес)», «(1 год)», «(2 года)»,
+    //     «(5 лет)». Граница — ISO «сегодня»: лексикографическое
+    //     сравнение строк (приём Task 380/444; срок ровно «сегодня» —
+    //     ещё действует). Дата «сегодня» считается инлайн — без
+    //     зависимости от внешних хелперов (самодостаточность в
+    //     мок-тестах, приём Task 444). nowOpt — необязательная
+    //     фиксированная «сегодня» (только для тестов).
+    function devPprStatusClass(dev, nowOpt) {
+        // Прибор в графике ППР? («Есть», регистронезависимо — как фильтр 4)
+        if (String(dev['В гр. ППР'] || '').trim().toLowerCase() !== 'есть') return '';
+        // Вид ремонта: ТО / К / П — остальные без индикации
+        var vid = String(dev['Вид ремонта'] || '').trim().toUpperCase();
+        if (vid !== 'ТО' && vid !== 'К' && vid !== 'П') return '';
+        // Дата последнего ремонта — только ISO YYYY-MM-DD
+        var m = String(dev['Дата'] || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!m) return '';
+        // Период ремонта: число + единица («мес» → месяцы, «год»/«года»/«лет» → годы)
+        var per = String(dev['Период ремонта'] || '').trim();
+        var pm = per.match(/(\d+)/);
+        if (!pm) return '';
+        var n = parseInt(pm[1], 10);
+        if (!n || n <= 0) return '';
+        var perLower = per.toLowerCase();
+        // Следующий срок ремонта = дата + период
+        var due;
+        if (perLower.indexOf('мес') !== -1) {
+            due = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1 + n, parseInt(m[3], 10));
+        } else if (perLower.indexOf('год') !== -1 || perLower.indexOf('лет') !== -1) {
+            due = new Date(parseInt(m[1], 10) + n, parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+        } else {
+            return ''; // неизвестная единица периода — не подсвечивать
+        }
+        var dueIso = due.getFullYear() + '-' +
+            ('0' + (due.getMonth() + 1)).slice(-2) + '-' +
+            ('0' + (due.getDate())).slice(-2);
+        // «Сегодня» (ISO) — инлайн, самодостаточность рендера в мок-тестах
+        var now = nowOpt || new Date();
+        var todayIso = now.getFullYear() + '-' +
+            ('0' + (now.getMonth() + 1)).slice(-2) + '-' +
+            ('0' + (now.getDate())).slice(-2);
+        return (dueIso < todayIso) ? 'dev-ppr-bad' : 'dev-ppr-ok';
+    }
+
     function devRenderDetail() {
         const devId = window._devDetailId;
         if (!devId || !devLoaded || !devData) return;
@@ -22849,6 +22915,7 @@
         for (const f of DEV_FIELDS) {
             if (_hideRemarks && f.key === 'Замечания') continue;
             let val = '';
+            let pprCls = ''; // Task 478: класс цвета строки «Период ремонта»
             if (f.isCombined) {
                 const dateRaw = dev['Дата'] || '';
                 const vidVal = dev['Вид ремонта'] || '';
@@ -22856,6 +22923,9 @@
                 const dateFormatted = dateRaw ? devFormatDate(dateRaw) : '';
                 const parts = [dateFormatted, vidVal, perVal].filter(p => p);
                 val = parts.join(' ');
+                // Task 478: цвет текста строки по состоянию ППР —
+                // зелёный (не просрочен) / красный (просрочен)
+                pprCls = devPprStatusClass(dev);
             } else {
                 val = dev[f.key];
             }
@@ -22884,7 +22954,10 @@
                 html += kipRenderMultiLinks(parts, 'sar', devEsc);
                 html += '</div>';
             } else {
-                html += '<div class="dev-card-value' + cls + '">' + devEsc(String(val)) + '</div>';
+                // Task 478: для строки «Период ремонта» (isCombined)
+                // класс цвета добавляется к значению (ссылочные поля
+                // № проекта/№ СБС/№ САР pprCls не имеют — всегда '')
+                html += '<div class="dev-card-value' + cls + (pprCls ? ' ' + pprCls : '') + '">' + devEsc(String(val)) + '</div>';
             }
             html += '</div>';
         }
