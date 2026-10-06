@@ -44,6 +44,13 @@
 //     фильтров, клик — сброс всех фильтров по колонкам разом;
 //   - карточка прибора открывается ТОЛЬКО кликом по ячейкам
 //     столбца «№» (клик по другим ячейкам лишь выделяет строку).
+// Task 479:
+//   - столбец «Дата» — цвет ТЕКСТА даты в ячейках по состоянию ППР
+//     (та же логика devPprStatusClass из index.html, что у строки
+//     «Период ремонта» карточки): зелёный (срок не просрочен) /
+//     оранжево-золотистый (просрочен, НО срок — на текущий
+//     календарный месяц) / красный (просрочен раньше текущего
+//     месяца); остальные приборы — обычный цвет ячейки.
 //
 // Модуль самодостаточен; зависимости — глобальные: devData,
 // devRenderSorted, devOpenDetail, KipAuth. Загружается loader'ом
@@ -166,7 +173,10 @@
         { key: 'Технические характеристики',    label: 'Тех. характеристики', width: 230 },
         { key: 'Примечания',                    label: 'Примечания',        width: 160 },
         { key: 'Замечания',                     label: 'Замечания',         width: 160, restricted: true },
-        { key: 'Дата',                          label: 'Дата',              width: 85 },
+        // Task 479: ширина 85→110 — ISO-дата (10 симв.) при цвете ППР
+        // местами обрезалась многоточием (VLM-находка браузер-чека);
+        // сохранённая пользователем ширина приоритетнее (getColWidth)
+        { key: 'Дата',                          label: 'Дата',              width: 110 },
         { key: 'Вид ремонта',                   label: 'Вид ремонта',       width: 110 },
         { key: 'Период ремонта',                label: 'Период ремонта',    width: 105 }
     ];
@@ -330,6 +340,18 @@
         '[data-theme="light"] .dev-table td.dev-table-col-num { border-right-color: rgba(58,110,165,0.35); }',
         /* Task 172: клик по ячейке «№» открывает карточку — курсор-рука */
         '.dev-table tbody td.dev-table-col-num { cursor: pointer; }',
+        /* Task 479: столбец «Дата» — цвет текста по состоянию ППР (та же
+           логика devPprStatusClass, что строка «Период ремонта» карточки):
+           зелёный #81c784 / оранжево-золотистый #e0a030 (янтарь меток
+           Task 169: срок просрочен, но приходится на текущий календарный
+           месяц) / красный #ef5350; светлая тема — #2e7d32 / #a06a00 /
+           #c62828; полужирный 600 — статус читается сразу. */
+        '.dev-table td.dev-ppr-ok { color: #81c784; font-weight: 600; }',
+        '.dev-table td.dev-ppr-warn { color: #e0a030; font-weight: 600; }',
+        '.dev-table td.dev-ppr-bad { color: #ef5350; font-weight: 600; }',
+        '[data-theme="light"] .dev-table td.dev-ppr-ok { color: #2e7d32; }',
+        '[data-theme="light"] .dev-table td.dev-ppr-warn { color: #a06a00; }',
+        '[data-theme="light"] .dev-table td.dev-ppr-bad { color: #c62828; }',
         /* Task 163: счётчик приборов и «Экспорт CSV» — в шапке, справа от «Таблица».
            Видны только в табличном виде (класс .table-active на группе). */
         '.dev-table-header-group .dev-table-count,',
@@ -1131,6 +1153,16 @@
             var cls = 'dev-table-td' + (col.sticky ? ' dev-table-sticky-' + col.sticky : '');
             // Task 172: маркер колонки «№» — по её ячейкам открывается карточка
             if (col.key === '__num__') cls += ' dev-table-col-num';
+            // Task 479: столбец «Дата» — цвет текста даты по состоянию
+            // ППР — та же логика, что у строки «Период ремонта» карточки
+            // (devPprStatusClass из index.html: зелёный / оранжево-
+            // золотистый — срок на текущий календарный месяц / красный;
+            // '' — обычный цвет). Guard typeof: модуль может выполниться
+            // раньше основного скрипта (async-инъекция в head).
+            if (col.key === 'Дата' && typeof devPprStatusClass === 'function') {
+                var pprCls = devPprStatusClass(dev);
+                if (pprCls) cls += ' ' + pprCls;
+            }
             // Task 165: подсветка совпадений (кроме колонки № — порядковый номер)
             var cellHtml = (col.key === '__num__') ? esc(val) : markCell(val, query);
             html += '<td class="' + cls + '" title="' + esc(val) + '">' + cellHtml + '</td>';
