@@ -60,12 +60,31 @@
 // с фильтром Кр 503/ТО 1509) + их CSS (ppr-chart-*, ppr-bar-*,
 // ppr-y-*, ppr-totals-*) и _niceMax; сводная статистика и
 // Топ-10 вкладки «Блокировки» — как у «Приборов», НЕ рендерятся.
+//
+// Task 485: (а) «Блокировки»: расшифровка серии «Кр» — «Кап.
+// ремонт» (в 484 была опечатка «Кан.»; правка в sync-lockouts.py
+// и data/lockouts.json). (б) Вкладки «Клапана»
+// и «Регуляторы» — НОВЫЕ КРУГОВЫЕ диаграммы (SVG) в том же
+// оформлении, что «Приборы»/«Блокировки»: белая «документная»
+// карточка .ppr-tc-card + палитра Excel accent1-6 и их +40%
+// (сектора от 12 часов по часовой, как Excel). СТАРАЯ сводная
+// статистика и Топ-10 бары (по группе/производству) со их CSS
+// УДАЛЕНЫ (заявка: «убери текущие графики и подсчёты, и сделай
+// новые (круговые)»). Клапана: по типам (Отсечные — «Тип,
+// пропускная характеристика» содержит «Отс»; Регулирующие —
+// «Рег»/«рег»; Дисковые затворы — столбец «Тип запорной части.
+// Материал затвора/ корпуса» содержит «Затвор дисковый»;
+// остальные — «Клапана»), по Ду (DN), футированные. Регуляторы:
+// по производствам, по устройствам («Устроиство регулятора или
+// ручного управления»), по параметрам — унификация по регули-
+// руемой величине (температура/давление/уровень/расход/концен-
+// трация/частота на ЧП/ручное управление/прочие).
 // ============================================================
 (function () {
     'use strict';
 
     // ---------- 1. CSS ----------
-    var css = "    /* ======================== \u0413\u0420\u0410\u0424\u0418\u041a\u0418 \u041a\u0418\u041f \u0418\u041e\u0421 ======================== */\n    .charts-tabs {\n        display: flex;\n        gap: 0;\n        border-bottom: 1px solid var(--border-color);\n        background: var(--card-bg);\n        position: sticky;\n        top: 56px;\n        z-index: 5;\n        overflow-x: auto;\n        -webkit-overflow-scrolling: touch;\n    }\n    .charts-tab {\n        flex: 1;\n        min-width: 0;\n        padding: 10px 6px;\n        border: none;\n        background: transparent;\n        color: var(--text-secondary);\n        font-size: 13px;\n        font-weight: 500;\n        cursor: pointer;\n        white-space: nowrap;\n        position: relative;\n        transition: color 0.2s;\n    }\n    .charts-tab::after {\n        content: '';\n        position: absolute;\n        left: 0; right: 0; bottom: 0;\n        height: 2px;\n        background: transparent;\n        border-radius: 1px;\n        transition: background 0.2s;\n    }\n    .charts-tab-active {\n        color: #3aa288;\n        font-weight: 600;\n    }\n    .charts-tab-active::after {\n        background: #3aa288;\n    }\n    .charts-content {\n        padding: 12px 14px 24px;\n    }\n    .charts-loading {\n        text-align: center;\n        padding: 40px 20px;\n        color: var(--text-secondary);\n        font-size: 13px;\n    }\n    /* \u041a\u0430\u0440\u0442\u043e\u0447\u043a\u0430 \u0433\u0440\u0430\u0444\u0438\u043a\u0430 */\n    .chart-card {\n        background: var(--card-bg);\n        border: 1px solid var(--card-border);\n        border-radius: 10px;\n        margin-bottom: 14px;\n        overflow: hidden;\n    }\n    .chart-card-title {\n        padding: 10px 14px 6px;\n        font-size: 13px;\n        font-weight: 600;\n        color: var(--text-primary);\n    }\n    .chart-card-body {\n        padding: 6px 14px 12px;\n    }\n    /* \u0413\u043e\u0440\u0438\u0437\u043e\u043d\u0442\u0430\u043b\u044c\u043d\u0430\u044f \u0441\u0442\u043e\u043b\u0431\u0447\u0430\u0442\u0430\u044f \u0434\u0438\u0430\u0433\u0440\u0430\u043c\u043c\u0430 (CSS-\u0431\u0430\u0440\u044b) */\n    .chart-bar-row {\n        display: flex;\n        align-items: center;\n        margin-bottom: 6px;\n    }\n    .chart-bar-label {\n        flex: 0 0 auto;\n        max-width: 45%;\n        font-size: 11px;\n        color: var(--text-secondary);\n        overflow: hidden;\n        text-overflow: ellipsis;\n        white-space: nowrap;\n        padding-right: 8px;\n    }\n    .chart-bar-track {\n        flex: 1;\n        height: 16px;\n        background: rgba(255,255,255,0.06);\n        border-radius: 3px;\n        overflow: hidden;\n        position: relative;\n    }\n    .chart-bar-fill {\n        height: 100%;\n        border-radius: 3px;\n        transition: width 0.4s ease;\n        min-width: 2px;\n    }\n    .chart-bar-value {\n        flex: 0 0 auto;\n        width: 36px;\n        text-align: right;\n        font-size: 11px;\n        font-weight: 600;\n        color: var(--text-primary);\n        padding-left: 6px;\n    }\n    /* \u0421\u0432\u043e\u0434\u043d\u0430\u044f \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0430 \u0441\u043e \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u043e\u0439 */\n    .chart-stats-grid {\n        display: grid;\n        grid-template-columns: 1fr 1fr;\n        gap: 8px;\n        margin-bottom: 14px;\n    }\n    .chart-stat-card {\n        background: var(--card-bg);\n        border: 1px solid var(--card-border);\n        border-radius: 8px;\n        padding: 10px 12px;\n        text-align: center;\n    }\n    .chart-stat-value {\n        font-size: 22px;\n        font-weight: 700;\n        color: #3aa288;\n        line-height: 1.2;\n    }\n    .chart-stat-label {\n        font-size: 11px;\n        color: var(--text-secondary);\n        margin-top: 2px;\n    }\n    /* \u0421\u0432\u0435\u0442\u043b\u0430\u044f \u0442\u0435\u043c\u0430 */\n    [data-theme=\"light\"] .charts-tab-active { color: #2e8a72; }\n    [data-theme=\"light\"] .charts-tab-active::after { background: #2e8a72; }\n    [data-theme=\"light\"] .chart-bar-track { background: rgba(0,0,0,0.06); }\n    [data-theme=\"light\"] .chart-stat-card { background: #fafaf8; border-color: rgba(0,0,0,0.08); }\n    [data-theme=\"light\"] .chart-stat-value { color: #2e8a72; }\n    [data-theme=\"light\"] .chart-card { background: #fafaf8; border-color: rgba(0,0,0,0.08); }";
+    var css = "    /* ======================== \u0413\u0420\u0410\u0424\u0418\u041a\u0418 \u041a\u0418\u041f \u0418\u041e\u0421 ======================== */\n    .charts-tabs {\n        display: flex;\n        gap: 0;\n        border-bottom: 1px solid var(--border-color);\n        background: var(--card-bg);\n        position: sticky;\n        top: 56px;\n        z-index: 5;\n        overflow-x: auto;\n        -webkit-overflow-scrolling: touch;\n    }\n    .charts-tab {\n        flex: 1;\n        min-width: 0;\n        padding: 10px 6px;\n        border: none;\n        background: transparent;\n        color: var(--text-secondary);\n        font-size: 13px;\n        font-weight: 500;\n        cursor: pointer;\n        white-space: nowrap;\n        position: relative;\n        transition: color 0.2s;\n    }\n    .charts-tab::after {\n        content: '';\n        position: absolute;\n        left: 0; right: 0; bottom: 0;\n        height: 2px;\n        background: transparent;\n        border-radius: 1px;\n        transition: background 0.2s;\n    }\n    .charts-tab-active {\n        color: #3aa288;\n        font-weight: 600;\n    }\n    .charts-tab-active::after {\n        background: #3aa288;\n    }\n    .charts-content {\n        padding: 12px 14px 24px;\n    }\n    .charts-loading {\n        text-align: center;\n        padding: 40px 20px;\n        color: var(--text-secondary);\n        font-size: 13px;\n    }\n    /* \u0421\u0432\u0435\u0442\u043b\u0430\u044f \u0442\u0435\u043c\u0430 */\n    [data-theme=\"light\"] .charts-tab-active { color: #2e8a72; }\n    [data-theme=\"light\"] .charts-tab-active::after { background: #2e8a72; }\n";
     var styleEl = document.createElement('style');
     styleEl.id = 'chartsDesktopCss';
     styleEl.textContent = css;
@@ -212,6 +231,90 @@
     styleEl483.textContent = css483;
     document.head.appendChild(styleEl483);
 
+    // ---------- 1b. CSS Task 485: круговые диаграммы ----------
+    // «Клапана»/«Регуляторы»: та же «документная» белая карточка
+    // .ppr-tc-card (Task 483/484), титул по центру; пирог — SVG
+    // (сектора path-дугами, белые разделители 1px), проценты у
+    // крупных секторов (>= 5.5%) снаружи; легенда справа — сетка:
+    // свотч палитры + название + количество + процент.
+    var css485 = [
+        '/* ===== Task 485: круговые диаграммы «Клапана»/«Регуляторы» ===== */',
+        '.pc-title {',
+        '    font-weight: 600;',
+        '    font-size: 12.5px;',
+        '    color: #111111;',
+        '    text-align: center;',
+        '    padding: 2px 6px 8px;',
+        '}',
+        '.pc-body {',
+        '    display: flex;',
+        '    align-items: center;',
+        '    flex-wrap: wrap;',
+        '    gap: 4px 6px;',
+        '    padding: 0 2px 2px;',
+        '}',
+        '.pc-svg {',
+        '    flex: 0 0 244px;',
+        '    width: 244px;',
+        '    max-width: 100%;',
+        '    height: auto;',
+        '    display: block;',
+        '}',
+        '.pc-legend {',
+        '    flex: 1 1 230px;',
+        '    min-width: 205px;',
+        '    display: grid;',
+        '    grid-template-columns: repeat(auto-fill, minmax(184px, 1fr));',
+        '    gap: 3px 10px;',
+        '    align-content: start;',
+        '}',
+        '.pc-li {',
+        '    display: flex;',
+        '    align-items: center;',
+        '    gap: 5px;',
+        '    font-size: 11px;',
+        '    color: #111111;',
+        '    min-width: 0;',
+        '}',
+        '.pc-swatch {',
+        '    flex: 0 0 auto;',
+        '    width: 10px;',
+        '    height: 10px;',
+        '    border: 1px solid rgba(0,0,0,0.28);',
+        '    box-sizing: border-box;',
+        '}',
+        '.pc-name {',
+        '    flex: 1 1 auto;',
+        '    min-width: 0;',
+        '    overflow: hidden;',
+        '    text-overflow: ellipsis;',
+        '    white-space: nowrap;',
+        '    text-align: left;',
+        '}',
+        '.pc-cnt {',
+        '    flex: 0 0 auto;',
+        '    font-weight: 700;',
+        '    font-variant-numeric: tabular-nums;',
+        '}',
+        '.pc-pct {',
+        '    flex: 0 0 auto;',
+        '    width: 38px;',
+        '    text-align: right;',
+        '    color: #555555;',
+        '    font-variant-numeric: tabular-nums;',
+        '}',
+        '.pc-slice-lbl {',
+        '    font-size: 10px;',
+        '    font-weight: 600;',
+        '    fill: #111111;',
+        '    pointer-events: none;',
+        '}'
+    ].join('\n');
+    var styleEl485 = document.createElement('style');
+    styleEl485.id = 'chartsDesktopCss485';
+    styleEl485.textContent = css485;
+    document.head.appendChild(styleEl485);
+
     // ---------- 2. Страница page-charts ----------
     var pageWrap = document.createElement('div');
     pageWrap.innerHTML = "        <div id=\"page-charts\" class=\"page-content\">\n            <div class=\"page-inline-header\"><div class=\"page-inline-header-chevron\" onclick=\"chevronTap()\" aria-label=\"\u041d\u0430\u0437\u0430\u0434 / \u0413\u043b\u0430\u0432\u043d\u0430\u044f\"></div><div class=\"page-inline-header-title\">\u0413\u0440\u0430\u0444\u0438\u043a\u0438 \u041a\u0418\u041f \u0418\u041e\u0421</div></div>\n            <!-- \u0412\u043a\u043b\u0430\u0434\u043a\u0438 -->\n            <div class=\"charts-tabs\">\n                <button class=\"charts-tab charts-tab-active\" data-chart-tab=\"devices\" onclick=\"KipCharts.switchTab('devices')\">\u041f\u0440\u0438\u0431\u043e\u0440\u044b</button>\n                <button class=\"charts-tab\" data-chart-tab=\"lockouts\" onclick=\"KipCharts.switchTab('lockouts')\">\u0411\u043b\u043e\u043a\u0438\u0440\u043e\u0432\u043a\u0438</button>\n                <button class=\"charts-tab\" data-chart-tab=\"valves\" onclick=\"KipCharts.switchTab('valves')\">\u041a\u043b\u0430\u043f\u0430\u043d\u0430</button>\n                <button class=\"charts-tab\" data-chart-tab=\"regulators\" onclick=\"KipCharts.switchTab('regulators')\">\u0420\u0435\u0433\u0443\u043b\u044f\u0442\u043e\u0440\u044b</button>\n            </div>\n            <!-- \u0421\u043e\u0434\u0435\u0440\u0436\u0438\u043c\u043e\u0435 \u0432\u043a\u043b\u0430\u0434\u043a\u0438 -->\n            <div id=\"chartsContent\" class=\"charts-content\">\n                <div class=\"charts-loading\">\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430\u2026</div>\n            </div>\n        </div>\n";
@@ -276,45 +379,16 @@
         // _loadData('lockouts'); рендер — _renderDevicesPPR.
         _pprChartLockouts: null,
 
-                // Конфигурация разделов
+        // Конфигурация разделов (Task 485: только источники данных —
+        // поля groupField/prodField/typeField/color старых Топ-10
+        // баров удалены вместе с ними; вкладки «Клапана»/
+        // «Регуляторы» рендерят круговые диаграммы из этих же
+        // массивов)
         _SECTIONS: {
-            devices: {
-                jsonFile: 'data/devices.json',
-                arrayKey: 'devices',
-                groupField: 'Наименование',
-                prodField: 'Место установки',
-                typeField: 'Тип',
-                label: 'Приборы',
-                color: '#4a8fc7',
-                colorLight: 'rgba(74,143,199,0.35)'
-            },
-            lockouts: {
-                jsonFile: 'data/lockouts.json',
-                arrayKey: 'lockouts',
-                groupField: 'Параметр',
-                prodField: 'Производство',
-                label: 'Блокировки',
-                color: '#b85a7a',
-                colorLight: 'rgba(184,90,122,0.35)'
-            },
-            valves: {
-                jsonFile: 'data/valves.json',
-                arrayKey: 'valves',
-                groupField: 'Тип, пропускная характеристика',
-                prodField: 'Производство',
-                label: 'Клапана',
-                color: '#4a8a8c',
-                colorLight: 'rgba(74,138,140,0.35)'
-            },
-            regulators: {
-                jsonFile: 'data/regulators.json',
-                arrayKey: 'regulators',
-                groupField: 'Параметр',
-                prodField: 'Производство',
-                label: 'Регуляторы',
-                color: '#7e5ab8',
-                colorLight: 'rgba(126,90,184,0.35)'
-            }
+            devices:    { jsonFile: 'data/devices.json',    arrayKey: 'devices',    label: 'Приборы' },
+            lockouts:   { jsonFile: 'data/lockouts.json',   arrayKey: 'lockouts',   label: 'Блокировки' },
+            valves:     { jsonFile: 'data/valves.json',     arrayKey: 'valves',     label: 'Клапана' },
+            regulators: { jsonFile: 'data/regulators.json', arrayKey: 'regulators', label: 'Регуляторы' }
         },
 
         // Переключение вкладки
@@ -383,13 +457,17 @@
             });
         },
 
-        // Основной рендер контента
+        // Основной рендер контента — ДИСПЕТЧЕР вкладок (Task 485):
+        // «Приборы»/«Блокировки» — таблица + диаграмма ППР «как в
+        // Excel» из блока ppr_chart (Task 483/484); «Клапана»/
+        // «Регуляторы» — КРУГОВЫЕ диаграммы из массивов данных
+        // (Task 485; заявка: «убери текущие графики и подсчёты, и
+        // сделай новые (круговые)»). Старая сводная статистика и
+        // Топ-10 бары (по группе/производству) УДАЛЕНЫ — не
+        // рендерятся ни для одной вкладки.
         _renderContent: function(tab, items) {
             var container = document.getElementById('chartsContent');
             if (!container) return;
-
-            var sec = this._SECTIONS[tab];
-            var html = '';
 
             // Для вкладок Приборы/Блокировки — таблица + диаграмма
             // ППР «как в Excel» из блока ppr_chart (Task 483 —
@@ -401,96 +479,33 @@
                 var ppr = tab === 'devices' ? this._pprChart
                                             : this._pprChartLockouts;
                 if (ppr && ppr.series && ppr.series.length) {
-                    html += this._renderDevicesPPR(ppr,
+                    container.innerHTML = this._renderDevicesPPR(ppr,
                         tab === 'devices' ? 'ПРИБОРОВ' : 'БЛОКИРОВОК');
                 } else {
                     // ppr_chart отсутствует (устаревший кэш данных или
                     // синк с gid= одного листа) — понятное сообщение
-                    html += '<div class="chart-card"><div class="ppr-tc-empty-note">' +
+                    container.innerHTML = '<div class="ppr-tc-card"><div class="ppr-tc-empty-note">' +
                         'Данные графика ППР по ' + (tab === 'devices' ? 'приборам' : 'блокировкам') + ' появятся после обновления перечня ' +
                         'КИП ИОС (синхронизация с таблицей). Обновите страницу или ' +
                         'повторите позже.</div></div>';
                 }
-                container.innerHTML = html;
                 return;
             }
 
-            // 1. Сводная статистика
-            var totalItems = items.length;
-            var groupField = sec.groupField;
-            var prodField = sec.prodField;
-
-            // Группировка по groupField
-            var groups = {};
-            var prods = {};
-            for (var i = 0; i < items.length; i++) {
-                var item = items[i];
-                var gVal = (item[groupField] || '').toString().trim();
-                if (gVal) groups[gVal] = (groups[gVal] || 0) + 1;
-                var pVal = (item[prodField] || '').toString().trim();
-                if (pVal) prods[pVal] = (prods[pVal] || 0) + 1;
-            }
-            var groupCount = Object.keys(groups).length;
-            var prodCount = Object.keys(prods).length;
-
-            // Для приборов — ещё по типу
-            var typeCount = 0;
-            if (sec.typeField) {
-                var types = {};
-                for (var i = 0; i < items.length; i++) {
-                    var tVal = (items[i][sec.typeField] || '').toString().trim();
-                    if (tVal) types[tVal] = (types[tVal] || 0) + 1;
+            // Task 485: Клапана/Регуляторы — круговые диаграммы
+            if (tab === 'valves' || tab === 'regulators') {
+                if (!items || !items.length) {
+                    container.innerHTML = '<div class="ppr-tc-card"><div class="ppr-tc-empty-note">' +
+                        'Данные по ' + (tab === 'valves' ? 'клапанам' : 'регуляторам') +
+                        ' появятся после синхронизации с таблицей. Обновите страницу или ' +
+                        'повторите позже.</div></div>';
+                    return;
                 }
-                typeCount = Object.keys(types).length;
+                container.innerHTML = tab === 'valves'
+                    ? this._renderValvesPies(items)
+                    : this._renderRegulatorsPies(items);
+                return;
             }
-
-            // Сводная сетка
-            html += '<div class="chart-stats-grid">';
-            html += '<div class="chart-stat-card"><div class="chart-stat-value">' + totalItems + '</div><div class="chart-stat-label">Всего ' + sec.label.toLowerCase() + '</div></div>';
-            html += '<div class="chart-stat-card"><div class="chart-stat-value">' + prodCount + '</div><div class="chart-stat-label">Производств</div></div>';
-            html += '<div class="chart-stat-card"><div class="chart-stat-value">' + groupCount + '</div><div class="chart-stat-label">Уникальных ' + this._groupLabel(tab) + '</div></div>';
-            if (sec.typeField) {
-                html += '<div class="chart-stat-card"><div class="chart-stat-value">' + typeCount + '</div><div class="chart-stat-label">Уникальных типов</div></div>';
-            } else {
-                html += '<div class="chart-stat-card"><div class="chart-stat-value">' + this._avgPerProd(items, prodField) + '</div><div class="chart-stat-label">Среднее на пр-во</div></div>';
-            }
-            html += '</div>';
-
-            // 2. График: Топ-10 по groupField
-            var sortedGroups = Object.keys(groups).map(function(k) { return {name: k, count: groups[k]}; });
-            sortedGroups.sort(function(a, b) { return b.count - a.count; });
-            html += this._renderBarChart(
-                'Топ-10 по ' + this._groupLabel(tab),
-                sortedGroups.slice(0, 10),
-                sec.color
-            );
-
-            // 3. График: Топ-10 производств
-            var sortedProds = Object.keys(prods).map(function(k) { return {name: k, count: prods[k]}; });
-            sortedProds.sort(function(a, b) { return b.count - a.count; });
-            html += this._renderBarChart(
-                'Топ-10 производств',
-                sortedProds.slice(0, 10),
-                sec.color
-            );
-
-            // 4. Для приборов — ещё и по типу
-            if (sec.typeField) {
-                var types = {};
-                for (var i = 0; i < items.length; i++) {
-                    var tVal = (items[i][sec.typeField] || '').toString().trim();
-                    if (tVal) types[tVal] = (types[tVal] || 0) + 1;
-                }
-                var sortedTypes = Object.keys(types).map(function(k) { return {name: k, count: types[k]}; });
-                sortedTypes.sort(function(a, b) { return b.count - a.count; });
-                html += this._renderBarChart(
-                    'Топ-10 типов приборов',
-                    sortedTypes.slice(0, 10),
-                    sec.color
-                );
-            }
-
-            container.innerHTML = html;
         },
 
         // ============================================================
@@ -542,7 +557,7 @@
                 }
             }
 
-            var html = '<div class="chart-card ppr-tc-card">';
+            var html = '<div class="ppr-tc-card">';
 
             // ---------- ТАБЛИЦА ----------
             html += '<div class="ppr-tc-table">';
@@ -601,53 +616,279 @@
             return html;
         },
 
-        // Название группировки для заголовка
-        _groupLabel: function(tab) {
-            switch (tab) {
-                case 'devices': return 'наименований';
-                case 'lockouts': return 'параметров';
-                case 'valves': return 'типов клапанов';
-                case 'regulators': return 'параметров';
-                default: return 'групп';
-            }
+        // ============================================================
+        // Task 485: КРУГОВЫЕ диаграммы (SVG) — вкладки «Клапана» и
+        // «Регуляторы». Оформление — как у «Приборов»/«Блокировок»
+        // (Task 483/484): белая «документная» карточка .ppr-tc-card,
+        // палитра Excel — accent1-6 темы книги + их осветлённые +40%
+        // (дальше цикл повторяется, как раскраска серий Excel).
+        // Пирог: сектора от 12 часов ПО ЧАСОВОЙ стрелке (как Excel),
+        // тонкие белые разделители; у секторов >= 5.5% — процентная
+        // подпись снаружи (как dLbls; меньшие слишком плотно садятся
+        // друг на друга на многокомпонентных пирогах — их данные
+        // полностью в легенде; 5.5% = >= 20 град. = >= 33px дуги
+        // между соседними подписями). Серия с count 0 — только строка
+        // легенды (заявка: «…остальные как просто "Клапана" тоже
+        // сколько»); единственный ненулевой сектор — <circle> (дуга
+        // с совпавшими концами не рисуется).
+        // ============================================================
+
+        // Палитра Excel: accent1-6 + осветлённые +40% (бейджи 483)
+        _PC_PALETTE: [
+            '#4F81BD', '#C0504D', '#9BBB59', '#8064A2', '#4BACC6', '#F79646',
+            '#8DB4E2', '#D99694', '#C3D69B', '#B1A0C7', '#92CDDC', '#FDC08A'
+        ],
+
+        // Процент: >= 10% — целым, меньше — одним знаком (Excel-стиль)
+        _pcPct: function(part, total) {
+            if (!total) return '0%';
+            var v = part * 100 / total;
+            return (v >= 10 ? Math.round(v) : Math.round(v * 10) / 10) + '%';
         },
 
-        // Среднее количество на производство
-        _avgPerProd: function(items, prodField) {
-            var prods = {};
-            for (var i = 0; i < items.length; i++) {
-                var p = (items[i][prodField] || '').toString().trim();
-                if (p) prods[p] = (prods[p] || 0) + 1;
+        // Карточка с круговой диаграммой: title + SVG-пирог + легенда.
+        // rows = [{name, count}] — порядок rows = порядок секторов и
+        // строк легенды; count 0 — строка легенды без сектора.
+        _renderPieCard: function(title, rows) {
+            if (!rows || !rows.length) return '';
+            var total = 0, i;
+            for (i = 0; i < rows.length; i++) {
+                var c0 = rows[i].count;
+                if (typeof c0 === 'number' && c0 > 0) total += c0;
             }
-            var keys = Object.keys(prods);
-            if (keys.length === 0) return '0';
-            var sum = 0;
-            for (var i = 0; i < keys.length; i++) sum += prods[keys[i]];
-            return (sum / keys.length).toFixed(1);
-        },
+            if (!total) return '';
 
-        // Рендер горизонтальной столбчатой диаграммы
-        _renderBarChart: function(title, data, color) {
-            if (!data || data.length === 0) return '';
-            var maxVal = data[0].count;
-            if (maxVal === 0) maxVal = 1;
+            var PAL = this._PC_PALETTE;
+            var html = '<div class="ppr-tc-card">';
+            html += '<div class="pc-title">' + this._escHtml(title) + '</div>';
+            html += '<div class="pc-body">';
 
-            var html = '<div class="chart-card">';
-            html += '<div class="chart-card-title">' + this._escHtml(title) + '</div>';
-            html += '<div class="chart-card-body">';
+            // ---------- SVG-пирог ----------
+            var CX = 130, CY = 125, R = 82;
+            var svg = '<svg class="pc-svg" viewBox="0 0 260 250" role="img" aria-label="' +
+                this._escHtml(title) + '">';
+            var nonzero = [];
+            for (i = 0; i < rows.length; i++) {
+                if (rows[i].count > 0) nonzero.push(rows[i]);
+            }
+            if (nonzero.length === 1) {
+                // единственный сектор — сплошной круг
+                svg += '<circle cx="' + CX + '" cy="' + CY + '" r="' + R +
+                    '" fill="' + PAL[0] + '" stroke="#ffffff" stroke-width="1">' +
+                    '<title>' + this._escHtml(nonzero[0].name) + ': ' + nonzero[0].count +
+                    ' (' + this._pcPct(nonzero[0].count, total) + ')</title></circle>';
+            } else {
+                var a0 = -Math.PI / 2; // 12 часов
+                for (i = 0; i < rows.length; i++) {
+                    var cnt = rows[i].count;
+                    if (!cnt || cnt < 0) continue;
+                    var frac = cnt / total;
+                    var aStart = a0;
+                    var a1 = a0 + frac * 2 * Math.PI;
+                    var x0 = (CX + R * Math.cos(aStart)).toFixed(2);
+                    var y0 = (CY + R * Math.sin(aStart)).toFixed(2);
+                    var x1 = (CX + R * Math.cos(a1)).toFixed(2);
+                    var y1 = (CY + R * Math.sin(a1)).toFixed(2);
+                    var large = (frac > 0.5) ? 1 : 0;
+                    svg += '<path d="M' + CX + ',' + CY + ' L' + x0 + ',' + y0 +
+                        ' A' + R + ',' + R + ' 0 ' + large + ' 1 ' + x1 + ',' + y1 +
+                        ' Z" fill="' + PAL[i % PAL.length] +
+                        '" stroke="#ffffff" stroke-width="1">' +
+                        '<title>' + this._escHtml(rows[i].name) + ': ' + cnt +
+                        ' (' + this._pcPct(cnt, total) + ')</title></path>';
+                    // процентная подпись снаружи у секторов >= 5.5%
+                    if (frac >= 0.055) {
+                        var mid = (aStart + a1) / 2;
+                        var lr = R + 13;
+                        var lx = (CX + lr * Math.cos(mid)).toFixed(1);
+                        var ly = (CY + lr * Math.sin(mid)).toFixed(1);
+                        var cosM = Math.cos(mid);
+                        var anch = (cosM > 0.25) ? 'start'
+                                 : ((cosM < -0.25) ? 'end' : 'middle');
+                        svg += '<text class="pc-slice-lbl" x="' + lx + '" y="' + ly +
+                            '" text-anchor="' + anch + '" dominant-baseline="middle">' +
+                            this._pcPct(cnt, total) + '</text>';
+                    }
+                    a0 = a1;
+                }
+            }
+            svg += '</svg>';
+            html += svg;
 
-            for (var i = 0; i < data.length; i++) {
-                var d = data[i];
-                var pct = Math.round((d.count / maxVal) * 100);
-                html += '<div class="chart-bar-row">';
-                html += '<div class="chart-bar-label" title="' + this._escHtml(d.name) + '">' + this._escHtml(d.name) + '</div>';
-                html += '<div class="chart-bar-track"><div class="chart-bar-fill" style="width:' + pct + '%;background:' + color + ';"></div></div>';
-                html += '<div class="chart-bar-value">' + d.count + '</div>';
+            // ---------- ЛЕГЕНДА ----------
+            html += '<div class="pc-legend">';
+            for (i = 0; i < rows.length; i++) {
+                var cnt = rows[i].count || 0;
+                html += '<div class="pc-li" title="' + this._escHtml(rows[i].name) + ': ' + cnt + '">';
+                html += '<span class="pc-swatch" style="background:' + PAL[i % PAL.length] + ';"></span>';
+                html += '<span class="pc-name">' + this._escHtml(rows[i].name) + '</span>';
+                html += '<span class="pc-cnt">' + cnt + '</span>';
+                html += '<span class="pc-pct">' + this._pcPct(cnt, total) + '</span>';
                 html += '</div>';
             }
+            html += '</div>';
 
-            html += '</div></div>';
+            html += '</div>'; // .pc-body
+            html += '</div>'; // .ppr-tc-card
             return html;
+        },
+
+        // Счётчик по полю: [{name, count}] — по убыванию количества,
+        // при равенстве — по алфавиту названий (стабильно)
+        _countByField: function(items, field) {
+            var map = {}, i;
+            for (i = 0; i < items.length; i++) {
+                var v = (items[i][field] || '').toString().trim();
+                if (!v) continue;
+                map[v] = (map[v] || 0) + 1;
+            }
+            var keys = Object.keys(map);
+            keys.sort(function(a, b) {
+                return (map[b] - map[a]) || (a < b ? -1 : (a > b ? 1 : 0));
+            });
+            var rows = [];
+            for (i = 0; i < keys.length; i++) {
+                rows.push({ name: keys[i], count: map[keys[i]] });
+            }
+            return rows;
+        },
+
+        // Поля листа «Клапана_app» (написания заголовков — как в
+        // файле; «Устроиство» с «и» — написание листа «Регуляторы»)
+        _V_TYPE_FIELD: 'Тип, пропускная характеристика',
+        _V_ZAP_FIELD: 'Тип запорной части. Материал затвора/ корпуса',
+        _V_DN_FIELD: 'DN (мм)',
+
+        // Task 485: вкладка «Клапана» — три круговые диаграммы:
+        //  1) ПО ТИПАМ (порядок проверки — «Клапана» (прочие) всегда
+        //     последняя): Дисковые затворы — столбец «Тип запорной
+        //     части…» содержит «Затвор дисковый» (заявка считает их
+        //     ОТДЕЛЬНОЙ категорией по этому столбцу: у всех 28
+        //     дисковых «Тип, пропускная характеристика» =
+        //     «Запорно-рег.» — поэтому проверяются ПЕРВЫМИ, иначе
+        //     категория «Регулирующие» вырезала бы их и они не
+        //     считались бы отдельной строкой); Отсечные — «Тип…»
+        //     содержит «Отс»; Регулирующие — содержит «Рег» или «рег»
+        //     (регистронезависимо, как в заявке); прочие — «Клапана»
+        //     (в текущем файле 0: каждая строка либо «Отс.», либо с
+        //     «рег»; строка легенды выводится и при 0 — «тоже
+        //     сколько»);
+        //  2) ПО ДУ: значение «DN (мм)» как в файле («?»/пусто —
+        //     «Ду не указан»); сортировка по количеству, при
+        //     равенстве — по первому числу значения («Ду не указан»
+        //     — последним);
+        //  3) ФУТИРОВАННЫЕ: «футирован»/«футерован» в столбце
+        //     запорной части (все — мембранные с фторопластом).
+        _renderValvesPies: function(items) {
+            var types = [
+                { name: 'Отсечные', count: 0 },
+                { name: 'Регулирующие', count: 0 },
+                { name: 'Дисковые затворы', count: 0 },
+                { name: 'Клапана', count: 0 }
+            ];
+            var dnMap = {};
+            var fut = 0, plain = 0;
+            var i;
+            for (i = 0; i < items.length; i++) {
+                var it = items[i];
+                var tip = (it[this._V_TYPE_FIELD] || '').toString().toLowerCase();
+                var zap = (it[this._V_ZAP_FIELD] || '').toString().toLowerCase();
+                if (zap.indexOf('дисков') !== -1) types[2].count++;
+                else if (tip.indexOf('отс') !== -1) types[0].count++;
+                else if (tip.indexOf('рег') !== -1) types[1].count++;
+                else types[3].count++;
+
+                var dn = (it[this._V_DN_FIELD] || '').toString().trim();
+                var dnKey = (!dn || dn === '?') ? 'Ду не указан' : ('Ду ' + dn);
+                dnMap[dnKey] = (dnMap[dnKey] || 0) + 1;
+
+                if (zap.indexOf('футирован') !== -1 || zap.indexOf('футерован') !== -1) fut++;
+                else plain++;
+            }
+
+            var dnNum = function(k) {
+                var m = k.match(/\d+/);
+                return m ? parseInt(m[0], 10) : 1e9;
+            };
+            var dnKeys = Object.keys(dnMap);
+            dnKeys.sort(function(a, b) {
+                return (dnMap[b] - dnMap[a]) || (dnNum(a) - dnNum(b));
+            });
+            var dnRows = [];
+            for (i = 0; i < dnKeys.length; i++) {
+                dnRows.push({ name: dnKeys[i], count: dnMap[dnKeys[i]] });
+            }
+
+            return this._renderPieCard('Количество КЛАПАНОВ по типам', types) +
+                this._renderPieCard('Количество КЛАПАНОВ по Ду', dnRows) +
+                this._renderPieCard('Количество футированных КЛАПАНОВ', [
+                    { name: 'Футированные', count: fut },
+                    { name: 'Не футированные', count: plain }
+                ]);
+        },
+
+        // Поля листа «Регуляторы_app» («Устроиство» — написание файла)
+        _R_PROD_FIELD: 'Производство',
+        _R_UST_FIELD: 'Устроиство регулятора или ручного управления',
+        _R_PAR_FIELD: 'Параметр',
+
+        // Task 485: унификация «Параметра» по РЕГУЛИРУЕМОЙ ВЕЛИЧИНЕ
+        // (заявка: «температура, давление, уровень, расход,
+        // концентрация, ручное управление, частота на частотных
+        // преобразователях ЧП и так далее») — первое совпавшее
+        // правило (регистронезависимо; опечатки листа учтены:
+        // «Давыление» ~ давление, «Уровнень» ~ уровень):
+        //   Температура  «температур…» / TIC
+        //   Давление     «давлени…»/«давылен…»
+        //   Уровень      «уровен…»/«уровн…»
+        //   Расход       «расход…» / FIRC / «Дозировка…» (дозирование = расход)
+        //   Концентрация «концентрац…»
+        //   Частота (ЧП) «частот…» / «ЧП»
+        //   Ручное упр.  «ручн…»
+        //   Прочие       дискретные операции (подача/слив/отсекатели/
+        //                обогрев/пульсация/подключение и т.п.)
+        _REG_PARAM_RULES: [
+            { name: 'Температура', rx: /температур|\btic\b/i },
+            { name: 'Давление', rx: /давлени|давылен/i },
+            { name: 'Уровень', rx: /уровен|уровн/i },
+            { name: 'Расход', rx: /расход|\bfirc\b|дозировк/i },
+            { name: 'Концентрация', rx: /концентрац/i },
+            { name: 'Частота (ЧП)', rx: /частот|чп/i },
+            { name: 'Ручное управление', rx: /ручн/i }
+        ],
+
+        _classifyRegParam: function(s) {
+            var v = (s || '').toString();
+            var rules = this._REG_PARAM_RULES;
+            for (var i = 0; i < rules.length; i++) {
+                if (rules[i].rx.test(v)) return rules[i].name;
+            }
+            return 'Прочие';
+        },
+
+        // Task 485: вкладка «Регуляторы» — три круговые диаграммы
+        // (производства / устройства / параметры-величины). Порядок
+        // секторов «Параметров» — порядок правил, «Прочие» — последним.
+        _renderRegulatorsPies: function(items) {
+            var prodRows = this._countByField(items, this._R_PROD_FIELD);
+            var ustRows = this._countByField(items, this._R_UST_FIELD);
+
+            var parMap = {};
+            var i;
+            for (i = 0; i < items.length; i++) {
+                var cat = this._classifyRegParam(items[i][this._R_PAR_FIELD]);
+                parMap[cat] = (parMap[cat] || 0) + 1;
+            }
+            var parRows = [];
+            for (i = 0; i < this._REG_PARAM_RULES.length; i++) {
+                var nm = this._REG_PARAM_RULES[i].name;
+                if (parMap[nm]) parRows.push({ name: nm, count: parMap[nm] });
+            }
+            if (parMap['Прочие']) parRows.push({ name: 'Прочие', count: parMap['Прочие'] });
+
+            return this._renderPieCard('Количество РЕГУЛЯТОРОВ по производствам', prodRows) +
+                this._renderPieCard('Количество РЕГУЛЯТОРОВ по устройствам (регулятора или ручного управления)', ustRows) +
+                this._renderPieCard('Количество РЕГУЛЯТОРОВ по параметрам (регулируемой величине)', parRows);
         },
 
         // HTML-экранирование
