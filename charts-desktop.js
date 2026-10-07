@@ -43,14 +43,29 @@
 // РЕЗУЛЬТАТ ОТЛИЧАЕТСЯ от листа «Диаграммы», где COUNTIF считает
 // ВСЕ строки, включая «Нет»: К 350 без изм., П 86→84, ТО 4703→2977).
 // Вкладка «Приборы» теперь грузит devices.json (единый путь
-// _renderTab/_loadData); _renderPPRChart с правой осью ОСТАЁТСЯ
-// для вкладки «Блокировки» (живой код).
+// _renderTab/_loadData).
+//
+// Task 484: ППР «Блокировки» — ТОТ ЖЕ вид «как в Excel», что
+// «Приборы» (заявка: «убери всё лишнее и сделай так же оформление
+// и подсчёт, как во вкладке "Приборы"»): вкладка «Блокировки»
+// рендерит ТАБЛИЦУ+ДИАГРАММУ _renderDevicesPPR (титул «Количество
+// БЛОКИРОВОК …», серии Кр/ТО) из блока ppr_chart в
+// data/lockouts.json — его считает sync-lockouts.py по исходному
+// листу «Блокировки»: метка месяца I..XII == «Кр»/«ТО»
+// (регистронезависимо, как COUNTIF) И «Наличие в перечне и в ППР»
+// == «Есть» (тот же фильтр заявки; «Нет»/пусто — мимо).
+// ЛИШНЕЕ УДАЛЕНО: старый рендерер _renderPPRChart (гистограмма с
+// осями/легендой/правой осью, Task 473/483) + заШитые счётчики
+// _PPR_LOCKOUTS (расходились с файлом: было Кр 526/ТО 1578, в файле
+// с фильтром Кр 503/ТО 1509) + их CSS (ppr-chart-*, ppr-bar-*,
+// ppr-y-*, ppr-totals-*) и _niceMax; сводная статистика и
+// Топ-10 вкладки «Блокировки» — как у «Приборов», НЕ рендерятся.
 // ============================================================
 (function () {
     'use strict';
 
     // ---------- 1. CSS ----------
-    var css = "    /* ======================== \u0413\u0420\u0410\u0424\u0418\u041a\u0418 \u041a\u0418\u041f \u0418\u041e\u0421 ======================== */\n    .charts-tabs {\n        display: flex;\n        gap: 0;\n        border-bottom: 1px solid var(--border-color);\n        background: var(--card-bg);\n        position: sticky;\n        top: 56px;\n        z-index: 5;\n        overflow-x: auto;\n        -webkit-overflow-scrolling: touch;\n    }\n    .charts-tab {\n        flex: 1;\n        min-width: 0;\n        padding: 10px 6px;\n        border: none;\n        background: transparent;\n        color: var(--text-secondary);\n        font-size: 13px;\n        font-weight: 500;\n        cursor: pointer;\n        white-space: nowrap;\n        position: relative;\n        transition: color 0.2s;\n    }\n    .charts-tab::after {\n        content: '';\n        position: absolute;\n        left: 0; right: 0; bottom: 0;\n        height: 2px;\n        background: transparent;\n        border-radius: 1px;\n        transition: background 0.2s;\n    }\n    .charts-tab-active {\n        color: #3aa288;\n        font-weight: 600;\n    }\n    .charts-tab-active::after {\n        background: #3aa288;\n    }\n    .charts-content {\n        padding: 12px 14px 24px;\n    }\n    .charts-loading {\n        text-align: center;\n        padding: 40px 20px;\n        color: var(--text-secondary);\n        font-size: 13px;\n    }\n    /* \u041a\u0430\u0440\u0442\u043e\u0447\u043a\u0430 \u0433\u0440\u0430\u0444\u0438\u043a\u0430 */\n    .chart-card {\n        background: var(--card-bg);\n        border: 1px solid var(--card-border);\n        border-radius: 10px;\n        margin-bottom: 14px;\n        overflow: hidden;\n    }\n    .chart-card-title {\n        padding: 10px 14px 6px;\n        font-size: 13px;\n        font-weight: 600;\n        color: var(--text-primary);\n    }\n    .chart-card-body {\n        padding: 6px 14px 12px;\n    }\n    /* \u0413\u043e\u0440\u0438\u0437\u043e\u043d\u0442\u0430\u043b\u044c\u043d\u0430\u044f \u0441\u0442\u043e\u043b\u0431\u0447\u0430\u0442\u0430\u044f \u0434\u0438\u0430\u0433\u0440\u0430\u043c\u043c\u0430 (CSS-\u0431\u0430\u0440\u044b) */\n    .chart-bar-row {\n        display: flex;\n        align-items: center;\n        margin-bottom: 6px;\n    }\n    .chart-bar-label {\n        flex: 0 0 auto;\n        max-width: 45%;\n        font-size: 11px;\n        color: var(--text-secondary);\n        overflow: hidden;\n        text-overflow: ellipsis;\n        white-space: nowrap;\n        padding-right: 8px;\n    }\n    .chart-bar-track {\n        flex: 1;\n        height: 16px;\n        background: rgba(255,255,255,0.06);\n        border-radius: 3px;\n        overflow: hidden;\n        position: relative;\n    }\n    .chart-bar-fill {\n        height: 100%;\n        border-radius: 3px;\n        transition: width 0.4s ease;\n        min-width: 2px;\n    }\n    .chart-bar-value {\n        flex: 0 0 auto;\n        width: 36px;\n        text-align: right;\n        font-size: 11px;\n        font-weight: 600;\n        color: var(--text-primary);\n        padding-left: 6px;\n    }\n    /* \u0421\u0432\u043e\u0434\u043d\u0430\u044f \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0430 \u0441\u043e \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u043e\u0439 */\n    .chart-stats-grid {\n        display: grid;\n        grid-template-columns: 1fr 1fr;\n        gap: 8px;\n        margin-bottom: 14px;\n    }\n    .chart-stat-card {\n        background: var(--card-bg);\n        border: 1px solid var(--card-border);\n        border-radius: 8px;\n        padding: 10px 12px;\n        text-align: center;\n    }\n    .chart-stat-value {\n        font-size: 22px;\n        font-weight: 700;\n        color: #3aa288;\n        line-height: 1.2;\n    }\n    .chart-stat-label {\n        font-size: 11px;\n        color: var(--text-secondary);\n        margin-top: 2px;\n    }\n    /* \u0421\u0432\u0435\u0442\u043b\u0430\u044f \u0442\u0435\u043c\u0430 */\n    [data-theme=\"light\"] .charts-tab-active { color: #2e8a72; }\n    [data-theme=\"light\"] .charts-tab-active::after { background: #2e8a72; }\n    [data-theme=\"light\"] .chart-bar-track { background: rgba(0,0,0,0.06); }\n    [data-theme=\"light\"] .chart-stat-card { background: #fafaf8; border-color: rgba(0,0,0,0.08); }\n    [data-theme=\"light\"] .chart-stat-value { color: #2e8a72; }\n    [data-theme=\"light\"] .chart-card { background: #fafaf8; border-color: rgba(0,0,0,0.08); }\n\n    /* ======================== \u0413\u0420\u0410\u0424\u0418\u041a \u041f\u041f\u0420 \u2014 \u0432\u0435\u0440\u0442\u0438\u043a\u0430\u043b\u044c\u043d\u0430\u044f \u0433\u0438\u0441\u0442\u043e\u0433\u0440\u0430\u043c\u043c\u0430 ======================== */\n    .ppr-chart-card {\n        margin-bottom: 16px;\n    }\n    .ppr-chart-header {\n        padding: 12px 14px 8px;\n    }\n    .ppr-chart-title {\n        font-size: 14px;\n        font-weight: 600;\n        color: var(--text-primary);\n        margin-bottom: 8px;\n    }\n    .ppr-legend {\n        display: flex;\n        flex-wrap: wrap;\n        gap: 10px;\n    }\n    .ppr-legend-item {\n        display: flex;\n        align-items: center;\n        gap: 4px;\n    }\n    .ppr-legend-dot {\n        width: 10px;\n        height: 10px;\n        border-radius: 2px;\n        flex-shrink: 0;\n    }\n    .ppr-legend-code {\n        font-size: 11px;\n        font-weight: 700;\n        color: var(--text-primary);\n    }\n    .ppr-legend-name {\n        font-size: 11px;\n        color: var(--text-secondary);\n    }\n    .ppr-chart-body {\n        padding: 16px 14px 12px;\n    }\n    .ppr-chart-area {\n        display: flex;\n        position: relative;\n    }\n    .ppr-y-axis {\n        display: flex;\n        flex-direction: column;\n        justify-content: space-between;\n        padding-right: 6px;\n        flex-shrink: 0;\n        width: 30px;\n    }\n    .ppr-y-label {\n        font-size: 9px;\n        color: var(--text-secondary);\n        text-align: right;\n        line-height: 1;\n    }\n    .ppr-chart-grid {\n        flex: 1;\n        display: flex;\n        position: relative;\n        height: 180px;\n        border-left: 1px solid var(--border-color);\n        border-bottom: 1px solid var(--border-color);\n    }\n    .ppr-grid-line {\n        position: absolute;\n        left: 0;\n        right: 0;\n        height: 1px;\n        background: var(--border-color);\n        opacity: 0.5;\n    }\n    .ppr-month-group {\n        flex: 1;\n        display: flex;\n        flex-direction: column;\n        justify-content: flex-end;\n        align-items: center;\n        position: relative;\n        min-width: 0;\n    }\n    .ppr-bars-row {\n        display: flex;\n        gap: 2px;\n        width: 100%;\n        justify-content: center;\n        /* Task 473: stretch — ячейки растягиваются на всю высоту ряда:\n           раньше ячейки прижимались к низу и сжимались по контенту,\n           height:% столбца разрешался против auto-высоты ячейки и\n           схлопывался в min-height:2px — диаграмма не показывала\n           столбцы зрительно; низ столбца прижат flex-end\n           самой ячейки (.ppr-bar-cell) */\n        align-items: stretch;\n        flex: 1;\n        padding: 0 1px;\n    }\n    .ppr-bar-cell {\n        flex: 1;\n        display: flex;\n        align-items: flex-end;\n        justify-content: center;\n        max-width: 14px;\n        position: relative;\n    }\n    .ppr-bar {\n        width: 100%;\n        border-radius: 2px 2px 0 0;\n        position: relative;\n        min-height: 2px;\n        transition: height 0.3s ease;\n    }\n    .ppr-bar-val {\n        position: absolute;\n        top: -14px;\n        left: 50%;\n        transform: translateX(-50%);\n        font-size: 8px;\n        font-weight: 600;\n        color: var(--text-primary);\n        white-space: nowrap;\n        pointer-events: none;\n    }\n    /* Task 473: zero month label at baseline */\n    .ppr-bar-val-zero {\n        position: absolute;\n        bottom: 1px;\n        left: 50%;\n        transform: translateX(-50%);\n        font-size: 8px;\n        font-weight: 600;\n        color: var(--text-secondary);\n        white-space: nowrap;\n        pointer-events: none;\n    }\n    /* Task 473: right secondary axis + legend axis hint */\n    .ppr-y-axis-right {\n        padding-left: 6px;\n        padding-right: 0;\n    }\n    .ppr-y-axis-right .ppr-y-label {\n        text-align: left;\n    }\n    .ppr-legend-axis {\n        font-size: 9px;\n        opacity: 0.75;\n    }\n    .ppr-month-label {\n        font-size: 9px;\n        font-weight: 500;\n        color: var(--text-secondary);\n        padding-top: 4px;\n        text-align: center;\n        flex-shrink: 0;\n    }\n    /* \u0421\u0442\u0440\u043e\u043a\u0430 \u0438\u0442\u043e\u0433\u043e\u0432 \u043f\u043e\u0434 \u0433\u0440\u0430\u0444\u0438\u043a\u043e\u043c \u041f\u041f\u0420 */\n    .ppr-totals-row {\n        display: flex;\n        align-items: center;\n        gap: 12px;\n        padding: 8px 0 0;\n        border-top: 1px solid var(--border-color);\n        margin-top: 6px;\n        flex-wrap: wrap;\n    }\n    .ppr-totals-label {\n        font-size: 11px;\n        font-weight: 700;\n        color: var(--text-primary);\n        flex-shrink: 0;\n    }\n    .ppr-totals-item {\n        display: flex;\n        align-items: center;\n        gap: 4px;\n    }\n    .ppr-totals-value {\n        font-size: 12px;\n        font-weight: 700;\n        color: var(--text-primary);\n    }\n    [data-theme=\"light\"] .ppr-totals-row {\n        border-top-color: rgba(0,0,0,0.1);\n    }\n    /* \u0421\u0432\u0435\u0442\u043b\u0430\u044f \u0442\u0435\u043c\u0430 \u0434\u043b\u044f \u041f\u041f\u0420 */\n    [data-theme=\"light\"] .ppr-chart-grid {\n        border-left-color: rgba(0,0,0,0.12);\n        border-bottom-color: rgba(0,0,0,0.12);\n    }\n    [data-theme=\"light\"] .ppr-grid-line {\n        background: rgba(0,0,0,0.08);\n    }\n";
+    var css = "    /* ======================== \u0413\u0420\u0410\u0424\u0418\u041a\u0418 \u041a\u0418\u041f \u0418\u041e\u0421 ======================== */\n    .charts-tabs {\n        display: flex;\n        gap: 0;\n        border-bottom: 1px solid var(--border-color);\n        background: var(--card-bg);\n        position: sticky;\n        top: 56px;\n        z-index: 5;\n        overflow-x: auto;\n        -webkit-overflow-scrolling: touch;\n    }\n    .charts-tab {\n        flex: 1;\n        min-width: 0;\n        padding: 10px 6px;\n        border: none;\n        background: transparent;\n        color: var(--text-secondary);\n        font-size: 13px;\n        font-weight: 500;\n        cursor: pointer;\n        white-space: nowrap;\n        position: relative;\n        transition: color 0.2s;\n    }\n    .charts-tab::after {\n        content: '';\n        position: absolute;\n        left: 0; right: 0; bottom: 0;\n        height: 2px;\n        background: transparent;\n        border-radius: 1px;\n        transition: background 0.2s;\n    }\n    .charts-tab-active {\n        color: #3aa288;\n        font-weight: 600;\n    }\n    .charts-tab-active::after {\n        background: #3aa288;\n    }\n    .charts-content {\n        padding: 12px 14px 24px;\n    }\n    .charts-loading {\n        text-align: center;\n        padding: 40px 20px;\n        color: var(--text-secondary);\n        font-size: 13px;\n    }\n    /* \u041a\u0430\u0440\u0442\u043e\u0447\u043a\u0430 \u0433\u0440\u0430\u0444\u0438\u043a\u0430 */\n    .chart-card {\n        background: var(--card-bg);\n        border: 1px solid var(--card-border);\n        border-radius: 10px;\n        margin-bottom: 14px;\n        overflow: hidden;\n    }\n    .chart-card-title {\n        padding: 10px 14px 6px;\n        font-size: 13px;\n        font-weight: 600;\n        color: var(--text-primary);\n    }\n    .chart-card-body {\n        padding: 6px 14px 12px;\n    }\n    /* \u0413\u043e\u0440\u0438\u0437\u043e\u043d\u0442\u0430\u043b\u044c\u043d\u0430\u044f \u0441\u0442\u043e\u043b\u0431\u0447\u0430\u0442\u0430\u044f \u0434\u0438\u0430\u0433\u0440\u0430\u043c\u043c\u0430 (CSS-\u0431\u0430\u0440\u044b) */\n    .chart-bar-row {\n        display: flex;\n        align-items: center;\n        margin-bottom: 6px;\n    }\n    .chart-bar-label {\n        flex: 0 0 auto;\n        max-width: 45%;\n        font-size: 11px;\n        color: var(--text-secondary);\n        overflow: hidden;\n        text-overflow: ellipsis;\n        white-space: nowrap;\n        padding-right: 8px;\n    }\n    .chart-bar-track {\n        flex: 1;\n        height: 16px;\n        background: rgba(255,255,255,0.06);\n        border-radius: 3px;\n        overflow: hidden;\n        position: relative;\n    }\n    .chart-bar-fill {\n        height: 100%;\n        border-radius: 3px;\n        transition: width 0.4s ease;\n        min-width: 2px;\n    }\n    .chart-bar-value {\n        flex: 0 0 auto;\n        width: 36px;\n        text-align: right;\n        font-size: 11px;\n        font-weight: 600;\n        color: var(--text-primary);\n        padding-left: 6px;\n    }\n    /* \u0421\u0432\u043e\u0434\u043d\u0430\u044f \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0430 \u0441\u043e \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u043e\u0439 */\n    .chart-stats-grid {\n        display: grid;\n        grid-template-columns: 1fr 1fr;\n        gap: 8px;\n        margin-bottom: 14px;\n    }\n    .chart-stat-card {\n        background: var(--card-bg);\n        border: 1px solid var(--card-border);\n        border-radius: 8px;\n        padding: 10px 12px;\n        text-align: center;\n    }\n    .chart-stat-value {\n        font-size: 22px;\n        font-weight: 700;\n        color: #3aa288;\n        line-height: 1.2;\n    }\n    .chart-stat-label {\n        font-size: 11px;\n        color: var(--text-secondary);\n        margin-top: 2px;\n    }\n    /* \u0421\u0432\u0435\u0442\u043b\u0430\u044f \u0442\u0435\u043c\u0430 */\n    [data-theme=\"light\"] .charts-tab-active { color: #2e8a72; }\n    [data-theme=\"light\"] .charts-tab-active::after { background: #2e8a72; }\n    [data-theme=\"light\"] .chart-bar-track { background: rgba(0,0,0,0.06); }\n    [data-theme=\"light\"] .chart-stat-card { background: #fafaf8; border-color: rgba(0,0,0,0.08); }\n    [data-theme=\"light\"] .chart-stat-value { color: #2e8a72; }\n    [data-theme=\"light\"] .chart-card { background: #fafaf8; border-color: rgba(0,0,0,0.08); }";
     var styleEl = document.createElement('style');
     styleEl.id = 'chartsDesktopCss';
     styleEl.textContent = css;
@@ -237,7 +252,10 @@
         _PPR_TC_STYLES: {
             'К':  { suffix: 'k',  bar: '#4F81BD', badge: '#8DB4E2', row: '#DBEEF4' },
             'П':  { suffix: 'p',  bar: '#C0504D', badge: '#D99694', row: '#FDEADA' },
-            'ТО': { suffix: 'to', bar: '#9BBB59', badge: '#C3D69B', row: '#EBF1DE' }
+            'ТО': { suffix: 'to', bar: '#9BBB59', badge: '#C3D69B', row: '#EBF1DE' },
+            // Task 484: «Кр» (капитальный ремонт блокировок) — та же
+            // ветка accent1 (синий), что «К» приборов; штриховки НЕТ
+            'Кр': { suffix: 'k',  bar: '#4F81BD', badge: '#8DB4E2', row: '#DBEEF4' }
         },
 
         // Task 483: пастельные заливки шапки месяцев — как на листе
@@ -251,17 +269,14 @@
         // _loadData('devices'); рендер — _renderDevicesPPR.
         _pprChart: null,
 
-        // Данные ППР на текущий год (2026) — Блокировки (Схемы)
-        // 2 серии: Кан.ремонт (Кр), Тех.обслуж. (ТО)
-        _PPR_LOCKOUTS: {
-            title: 'График ППР — Схемы на 2026 год',
-            series: [
-                { name: 'Кан. ремонт', code: 'Кр', color: '#4a90d9', values: [58, 49, 26, 31, 13, 38, 33, 34, 74, 23, 49, 98] },
-                { name: 'Тех. обслуж.', code: 'ТО', color: '#5ab870', values: [87, 96, 210, 114, 132, 198, 112, 111, 162, 122, 96, 138] }
-            ]
-        },
+        // Task 484: блок ppr_chart из data/lockouts.json (считает
+        // sync-lockouts.py по листу «Блокировки»: метки месяцев
+        // I..XII == Кр/ТО И «Наличие в перечне и в ППР» == «Есть» —
+        // тот же подсчёт, что у приборов). Заполняется в
+        // _loadData('lockouts'); рендер — _renderDevicesPPR.
+        _pprChartLockouts: null,
 
-        // Конфигурация разделов
+                // Конфигурация разделов
         _SECTIONS: {
             devices: {
                 jsonFile: 'data/devices.json',
@@ -338,6 +353,13 @@
                     if (section === 'devices' && data.ppr_chart) {
                         KipCharts._pprChart = data.ppr_chart;
                     }
+                    // Task 484: для блокировок — тот же блок ppr_chart
+                    // (счётчики Кр/ТО с фильтром «Наличие в перечне и
+                    // в ППР» = «Есть», считает sync-lockouts.py по листу
+                    // «Блокировки»)
+                    if (section === 'lockouts' && data.ppr_chart) {
+                        KipCharts._pprChartLockouts = data.ppr_chart;
+                    }
                     callback(items);
                 })
                 .catch(function() {
@@ -369,29 +391,28 @@
             var sec = this._SECTIONS[tab];
             var html = '';
 
-            // Для вкладки Приборы — таблица + диаграмма ППР «как в
-            // Excel» из блока ppr_chart (Task 483; данные считаются
-            // sync-devices.py по листу «Приборы» с фильтром «Наличие
-            // в ППР» = «Есть»)
-            if (tab === 'devices') {
-                var ppr = this._pprChart;
+            // Для вкладок Приборы/Блокировки — таблица + диаграмма
+            // ППР «как в Excel» из блока ppr_chart (Task 483 —
+            // приборы: sync-devices.py по листу «Приборы», фильтр
+            // «Наличие в ППР» = «Есть»; Task 484 — блокировки:
+            // sync-lockouts.py по листу «Блокировки», фильтр «Наличие
+            // в перечне и в ППР» = «Есть»; тот же вид и подсчёт)
+            if (tab === 'devices' || tab === 'lockouts') {
+                var ppr = tab === 'devices' ? this._pprChart
+                                            : this._pprChartLockouts;
                 if (ppr && ppr.series && ppr.series.length) {
-                    html += this._renderDevicesPPR(ppr);
+                    html += this._renderDevicesPPR(ppr,
+                        tab === 'devices' ? 'ПРИБОРОВ' : 'БЛОКИРОВОК');
                 } else {
                     // ppr_chart отсутствует (устаревший кэш данных или
                     // синк с gid= одного листа) — понятное сообщение
                     html += '<div class="chart-card"><div class="ppr-tc-empty-note">' +
-                        'Данные графика ППР по приборам появятся после обновления перечня ' +
+                        'Данные графика ППР по ' + (tab === 'devices' ? 'приборам' : 'блокировкам') + ' появятся после обновления перечня ' +
                         'КИП ИОС (синхронизация с таблицей). Обновите страницу или ' +
                         'повторите позже.</div></div>';
                 }
                 container.innerHTML = html;
                 return;
-            }
-
-            // 0. График ППР (если есть для данного раздела)
-            if (tab === 'lockouts') {
-                html += this._renderPPRChart(this._PPR_LOCKOUTS);
             }
 
             // 1. Сводная статистика
@@ -491,8 +512,11 @@
         //    легенды и титула диаграммы НЕТ (месяцы задаёт таблица
         //    сверху) — всё как на листе «Диаграммы».
         // Данные — ppr_chart (см. _loadData): counts НЕ заШиты.
+        // Task 484: noun — существительное титула («ПРИБОРОВ» у
+        // приборов, «БЛОКИРОВОК» у блокировок; по умолчанию —
+        // «ПРИБОРОВ», обратная совместимость моков тестов 483).
         // ============================================================
-        _renderDevicesPPR: function(ppr) {
+        _renderDevicesPPR: function(ppr, noun) {
             var styles = this._PPR_TC_STYLES;
             var mCls = this._PPR_TC_MONTH_CLS;
             var FALLBACK = { suffix: 'x', bar: '#9e9e9e', badge: '#e0e0e0', row: '#f5f5f5' };
@@ -506,7 +530,7 @@
                 series.push({ code: s.code, name: s.name || s.code, values: s.values, st: st });
             }
             var year = ppr.year || new Date().getFullYear();
-            var title = 'Количество ПРИБОРОВ по графику ППР по месяцам на ' + year + ' год';
+            var title = 'Количество ' + (noun || 'ПРИБОРОВ') + ' по графику ППР по месяцам на ' + year + ' год';
 
             // ЕДИНАЯ шкала всех серий (как в Excel; оси нет, но высоты
             // пропорциональны значениям). Максимум по всем сериям.
@@ -575,177 +599,6 @@
 
             html += '</div>'; // .ppr-tc-card
             return html;
-        },
-
-        // ============================================================
-        // Рендер графика ППР — группированная вертикальная гистограмма
-        // (как в Excel: clustered column chart с легендой и итогами).
-        // Task 473: (а) значение над КАЖДЫМ столбцом — количество
-        // приборов на месяц видно прямо на диаграмме (включая «0»
-        // пустых месяцев — подпись у основания); (б) ВСПОМОГАТЕЛЬНАЯ
-        // ПРАВАЯ ОСЬ для малых серий: если максимум серии <= 25% от
-        // общего максимума (К 13–48 и П 0–15 при ТО 320–500), серия
-        // масштабируется по правой оси — иначе её столбцы зрительно
-        // неотличимы от нуля; малые серии делят одну ось и помечены
-        // в легенде «(правая ось)».
-        // ============================================================
-        _renderPPRChart: function(pprData) {
-            var series = pprData.series;
-            var numSeries = series.length;
-            var numMonths = 12;
-
-            // Максимумы по сериям и общий максимум (Task 473)
-            var seriesMax = [];
-            var maxVal = 0;
-            for (var s = 0; s < numSeries; s++) {
-                var sMax = 0;
-                for (var m = 0; m < numMonths; m++) {
-                    if (series[s].values[m] > sMax) sMax = series[s].values[m];
-                }
-                seriesMax[s] = sMax;
-                if (sMax > maxVal) maxVal = sMax;
-            }
-            if (maxVal === 0) maxVal = 1;
-
-            // Task 473: вспомогательная (правая) ось для малых серий —
-            // максимум серии <= 25% от общего максимума; все малые серии
-            // делят ОДНУ правую ось (масштаб — по наибольшей из них)
-            var SECONDARY_SHARE = 0.25;
-            var isSecondary = [];
-            var secMaxVal = 0;
-            var hasSecondary = false;
-            for (var s = 0; s < numSeries; s++) {
-                var small = seriesMax[s] > 0 && seriesMax[s] <= maxVal * SECONDARY_SHARE;
-                isSecondary[s] = small;
-                if (small) {
-                    hasSecondary = true;
-                    if (seriesMax[s] > secMaxVal) secMaxVal = seriesMax[s];
-                }
-            }
-
-            // Округлить maxVal вверх до красивого числа
-            var niceMax = this._niceMax(maxVal);
-            var secNiceMax = hasSecondary ? this._niceMax(secMaxVal) : 0;
-
-            // Ось Y: 5 делений
-            var ySteps = 5;
-            var yStepVal = niceMax / ySteps;
-            var secStepVal = hasSecondary ? secNiceMax / ySteps : 0;
-
-            var html = '<div class="chart-card ppr-chart-card">';
-            html += '<div class="ppr-chart-header">';
-            html += '<div class="ppr-chart-title">' + this._escHtml(pprData.title) + '</div>';
-            // Легенда
-            html += '<div class="ppr-legend">';
-            for (var s = 0; s < numSeries; s++) {
-                html += '<div class="ppr-legend-item">';
-                html += '<span class="ppr-legend-dot" style="background:' + series[s].color + ';"></span>';
-                html += '<span class="ppr-legend-code">' + this._escHtml(series[s].code) + '</span>';
-                html += '<span class="ppr-legend-name">' + this._escHtml(series[s].name) +
-                    (isSecondary[s] ? ' <span class="ppr-legend-axis">(правая ось)</span>' : '') + '</span>';
-                html += '</div>';
-            }
-            html += '</div>';
-            html += '</div>';
-
-            // Тело графика
-            html += '<div class="ppr-chart-body">';
-
-            // Оси + область графика
-            html += '<div class="ppr-chart-area">';
-
-            // Ось Y (метки слева)
-            html += '<div class="ppr-y-axis">';
-            for (var i = ySteps; i >= 0; i--) {
-                var yVal = Math.round(yStepVal * i);
-                html += '<div class="ppr-y-label">' + yVal + '</div>';
-            }
-            html += '</div>';
-
-            // Сетка + столбцы
-            html += '<div class="ppr-chart-grid">';
-
-            // Горизонтальные линии сетки
-            for (var i = 0; i <= ySteps; i++) {
-                var bottomPct = (i / ySteps) * 100;
-                html += '<div class="ppr-grid-line" style="bottom:' + bottomPct + '%;"></div>';
-            }
-
-            // Группы столбцов по месяцам
-            for (var m = 0; m < numMonths; m++) {
-                html += '<div class="ppr-month-group">';
-
-                // Столбцы серий
-                html += '<div class="ppr-bars-row">';
-                for (var s = 0; s < numSeries; s++) {
-                    var val = series[s].values[m];
-                    // Task 473: малые серии масштабируются по своей оси
-                    var scaleMax = isSecondary[s] ? secNiceMax : niceMax;
-                    var heightPct = (val / scaleMax) * 100;
-                    html += '<div class="ppr-bar-cell">';
-                    if (val > 0) {
-                        html += '<div class="ppr-bar" data-scale="' + (isSecondary[s] ? 'secondary' : 'primary') + '" style="height:' + heightPct + '%;background:' + series[s].color + ';" title="' + this._escHtml(series[s].name) + (isSecondary[s] ? ' (правая ось)' : '') + ': ' + val + '">';
-                        // Task 473: значение над КАЖДЫМ столбцом — количество
-                        // приборов на месяц видно прямо на диаграмме
-                        html += '<span class="ppr-bar-val">' + val + '</span>';
-                        html += '</div>';
-                    } else {
-                        // Task 473: нулевой месяц — подпись «0» у основания
-                        html += '<span class="ppr-bar-val-zero">0</span>';
-                    }
-                    html += '</div>';
-                }
-                html += '</div>';
-
-                // Метка месяца
-                html += '<div class="ppr-month-label">' + this._MONTHS_ROMAN[m] + '</div>';
-                html += '</div>';
-            }
-
-            html += '</div>'; // .ppr-chart-grid
-
-            // Task 473: правая вспомогательная ось — масштаб малых серий
-            if (hasSecondary) {
-                html += '<div class="ppr-y-axis ppr-y-axis-right">';
-                for (var i = ySteps; i >= 0; i--) {
-                    html += '<div class="ppr-y-label">' + Math.round(secStepVal * i) + '</div>';
-                }
-                html += '</div>';
-            }
-
-            html += '</div>'; // .ppr-chart-area
-
-            // Строка итогов (сумма по каждой серии)
-            html += '<div class="ppr-totals-row">';
-            html += '<div class="ppr-totals-label">Итого:</div>';
-            for (var s = 0; s < numSeries; s++) {
-                var total = 0;
-                for (var m = 0; m < numMonths; m++) total += series[s].values[m];
-                html += '<div class="ppr-totals-item">';
-                html += '<span class="ppr-legend-dot" style="background:' + series[s].color + ';"></span>';
-                html += '<span class="ppr-legend-code">' + this._escHtml(series[s].code) + '</span>';
-                html += '<span class="ppr-totals-value">' + total + '</span>';
-                html += '</div>';
-            }
-            html += '</div>';
-
-            html += '</div>'; // .ppr-chart-body
-            html += '</div>'; // .chart-card
-
-            return html;
-        },
-
-        // Красивое округление максимума для оси Y
-        _niceMax: function(val) {
-            if (val <= 0) return 10;
-            var mag = Math.pow(10, Math.floor(Math.log10(val)));
-            var norm = val / mag;
-            var nice;
-            if (norm <= 1) nice = 1;
-            else if (norm <= 2) nice = 2;
-            else if (norm <= 5) nice = 5;
-            else nice = 10;
-            return nice * mag;
         },
 
         // Название группировки для заголовка
