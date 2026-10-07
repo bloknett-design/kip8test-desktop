@@ -25,6 +25,26 @@
 // зрительно различимы по месяцам; в легенде малые серии помечены
 // «(правая ось)»; сверху графика добавлен запас под подписи
 // (padding-top 16px).
+//
+// Task 483: ППР «Приборы» — НОВЫЙ ВИД «как в Excel» (заявка: «оформ-
+// ление и предоставление информации сделай по примеру как на
+// приложенном скрину»): ТАБЛИЦА СВЕРХУ (шапка «Вид обслуживания» +
+// «Количество ПРИБОРОВ по графику ППР по месяцам на <год> год»,
+// месяцы I–XII с пастельными заливками листа «Диаграммы», строки
+// К/П/ТО с бейджами-кодами и оттенками строк) + ДИАГРАММА СНИЗУ
+// (сгруппированные столбцы К/П/ТО, выровненные по колонкам таблицы
+// — общая сетка, значения над каждым столбцом, осей/легенды/титула
+// НЕТ — как на листе «Диаграммы»; ТО — горизонтальная штриховка).
+// ДАННЫЕ БОЛЬШЕ НЕ Зашиты: _PPR_DEVICES УДАЛЁН (корень жалобы —
+// зашитые числа расходились с файлом); счётчики считает sync-devices.py
+// (ppr_chart в data/devices.json): метка месяца I..XII == «К»/«П»/«ТО»
+// (точное совпадение, как COUNTIF; «К*» НЕ считается) И столбец
+// «Наличие в ППР» == «Есть» (заявка: «если «Нет» — не учитываются»;
+// РЕЗУЛЬТАТ ОТЛИЧАЕТСЯ от листа «Диаграммы», где COUNTIF считает
+// ВСЕ строки, включая «Нет»: К 350 без изм., П 86→84, ТО 4703→2977).
+// Вкладка «Приборы» теперь грузит devices.json (единый путь
+// _renderTab/_loadData); _renderPPRChart с правой осью ОСТАЁТСЯ
+// для вкладки «Блокировки» (живой код).
 // ============================================================
 (function () {
     'use strict';
@@ -35,6 +55,147 @@
     styleEl.id = 'chartsDesktopCss';
     styleEl.textContent = css;
     document.head.appendChild(styleEl);
+
+    // ---------- 1a. CSS Task 483: ППР «Приборы» — таблица + диаграмма ----------
+    // Вид-фрагмент листа «Диаграммы» книги «Перечень КИП ИОС рабочий.xlsx»:
+    // БЕЛАЯ «документная» карточка в обеих темах (пастели Excel читаются
+    // только на белом); сетка таблицы — через gap:1px + фон линий;
+    // диаграмма ниже — ТА ЖЕ сетка (столбцы выровнены по колонкам
+    // таблицы), палитра accent1/2/3 темы книги, штриховка ТО.
+    var css483 = [
+        '/* ===== Task 483: ППР «Приборы» — таблица + диаграмма «как в Excel» ===== */',
+        '.ppr-tc-card {',
+        '    background: #ffffff;',
+        '    border: 1px solid rgba(0,0,0,0.35);',
+        '    border-radius: 8px;',
+        '    margin-bottom: 16px;',
+        '    padding: 10px 8px 8px;',
+        '}',
+        '[data-theme="light"] .ppr-tc-card { background: #ffffff; border-color: rgba(0,0,0,0.28); }',
+        '.ppr-tc-table {',
+        '    display: grid;',
+        '    grid-template-columns: minmax(104px, 1.45fr) 40px repeat(12, minmax(30px, 1fr));',
+        '    gap: 1px;',
+        '    background: #9a9a9a; /* цвет линий сетки (gap) */',
+        '    border: 1px solid #7f7f7f;',
+        '}',
+        '.ppr-tc-table > div {',
+        '    background: #ffffff;',
+        '    display: flex;',
+        '    align-items: center;',
+        '    justify-content: center;',
+        '    text-align: center;',
+        '    font-size: 12px;',
+        '    color: #111111;',
+        '    padding: 4px 2px;',
+        '    box-sizing: border-box;',
+        '    min-height: 26px;',
+        '}',
+        '.ppr-tc-vo {',
+        '    grid-column: 1 / 3;',
+        '    grid-row: 1 / 3;',
+        '    font-weight: 600;',
+        '    font-size: 11.5px;',
+        '}',
+        '.ppr-tc-title {',
+        '    grid-column: 3 / 15;',
+        '    font-weight: 600;',
+        '    font-size: 12.5px;',
+        '    padding: 6px 4px;',
+        '}',
+        '.ppr-tc-m { font-weight: 700; font-size: 11px; }',
+        '.ppr-tc-table .ppr-tc-m-pink { background: #FFB9B9; }',
+        '.ppr-tc-table .ppr-tc-m-gold { background: #FFDB69; }',
+        '.ppr-tc-name { justify-content: flex-start; text-align: left; padding-left: 10px; }',
+        '.ppr-tc-badge { font-weight: 700; }',
+        '.ppr-tc-table .ppr-tc-badge-k  { background: #8DB4E2; }',
+        '.ppr-tc-table .ppr-tc-badge-p  { background: #D99694; }',
+        '.ppr-tc-table .ppr-tc-badge-to { background: #C3D69B; }',
+        '.ppr-tc-table .ppr-tc-r-k  { background: #DBEEF4; }',
+        '.ppr-tc-table .ppr-tc-r-p  { background: #FDEADA; }',
+        '.ppr-tc-table .ppr-tc-r-to { background: #EBF1DE; }',
+        '.ppr-tc-v { font-variant-numeric: tabular-nums; }',
+        '/* Диаграмма — та же сетка (выравнивание по колонкам таблицы) */',
+        '.ppr-tc-chart {',
+        '    display: grid;',
+        '    grid-template-columns: minmax(104px, 1.45fr) 40px repeat(12, minmax(30px, 1fr));',
+        '    gap: 1px;',
+        '    margin-top: 2px;',
+        '    min-height: 216px;',
+        '    /* прозрачная рамка = рамке таблицы: контент-боксы сеток',
+        '       совпадают побитово — столбцы диаграммы стоят ровно под',
+        '       колонками месяцев таблицы */',
+        '    border: 1px solid transparent;',
+        '}',
+        '.ppr-tc-chart-empty { grid-column: 1 / 3; }',
+        '.ppr-tc-g {',
+        '    position: relative;',
+        '    display: flex;',
+        '    border-bottom: 1px solid rgba(0,0,0,0.45);',
+        '    border-left: 1px solid rgba(0,0,0,0.10);',
+        '}',
+        '.ppr-tc-bars {',
+        '    position: relative;',
+        '    flex: 1;',
+        '    display: flex;',
+        '    align-items: stretch; /* Task 473: ячейки растягиваются на высоту */',
+        '    justify-content: center;',
+        '    gap: 2px;',
+        '    padding: 16px 1px 0; /* запас под подписи значений (Task 473) */',
+        '    box-sizing: border-box;',
+        '}',
+        '.ppr-tc-bcell {',
+        '    flex: 1;',
+        '    max-width: 17px;',
+        '    position: relative;',
+        '    display: flex;',
+        '    align-items: flex-end; /* низ столбца прижат к основанию */',
+        '    justify-content: center;',
+        '}',
+        '.ppr-tc-bar {',
+        '    width: 100%;',
+        '    min-height: 2px;',
+        '    position: relative;',
+        '    border: 1px solid rgba(0,0,0,0.22);',
+        '    border-radius: 1px 1px 0 0;',
+        '    box-sizing: border-box;',
+        '}',
+        '.ppr-tc-hatch {',
+        '    background: repeating-linear-gradient(to bottom, #A3AF7F 0px, #A3AF7F 3px, #C4D695 3px, #C4D695 6px);',
+        '}',
+        '.ppr-tc-val {',
+        '    position: absolute;',
+        '    top: -13px;',
+        '    left: 50%;',
+        '    transform: translateX(-50%);',
+        '    font-size: 9px;',
+        '    font-weight: 600;',
+        '    color: #222222;',
+        '    white-space: nowrap;',
+        '    pointer-events: none;',
+        '}',
+        '.ppr-tc-val-zero {',
+        '    position: absolute;',
+        '    bottom: 1px;',
+        '    left: 50%;',
+        '    transform: translateX(-50%);',
+        '    font-size: 9px;',
+        '    font-weight: 600;',
+        '    color: #666666;',
+        '    white-space: nowrap;',
+        '    pointer-events: none;',
+        '}',
+        '.ppr-tc-empty-note {',
+        '    padding: 18px 14px;',
+        '    font-size: 13px;',
+        '    color: var(--text-secondary);',
+        '    text-align: center;',
+        '}'
+    ].join('\n');
+    var styleEl483 = document.createElement('style');
+    styleEl483.id = 'chartsDesktopCss483';
+    styleEl483.textContent = css483;
+    document.head.appendChild(styleEl483);
 
     // ---------- 2. Страница page-charts ----------
     var pageWrap = document.createElement('div');
@@ -69,18 +230,26 @@
         // Месяцы года (римские)
         _MONTHS_ROMAN: ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'],
 
-        // Данные ППР на текущий год (2026) — Приборы
-        // 3 серии: Калибровка (K), Поверка (П), Тех.обслуж. (ТО)
-        // Источник: «Перечень КИП ИОС рабочий.xlsx» → лист «Диаграмма приборов»
-        // Формулы: COUNTIF(Приборы[<месяц>], <код вида обслуживания>)
-        _PPR_DEVICES: {
-            title: 'Количество приборов по графику ППР по месяцам на 2026 год',
-            series: [
-                { name: 'Калибровка', code: 'К', color: '#4a90d9', values: [13, 33, 30, 45, 24, 28, 33, 34, 48, 16, 34, 35] },
-                { name: 'Поверка', code: 'П', color: '#e07040', values: [12, 12, 4, 15, 0, 4, 6, 10, 4, 6, 1, 12] },
-                { name: 'Тех. обслуж.', code: 'ТО', color: '#5ab870', values: [353, 354, 500, 320, 374, 496, 333, 353, 481, 358, 362, 485] }
-            ]
+        // Task 483: ППР «Приборы» — оформление серий (палитра листа
+        // «Диаграммы» книги: бейджи и оттенки строк — accent1/2/3 +80%
+        // (стандартная палитра Excel), столбцы — accent1/2/3, штриховка
+        // ТО — полосы тех же тонов). Суффиксы классов — латиницей.
+        _PPR_TC_STYLES: {
+            'К':  { suffix: 'k',  bar: '#4F81BD', badge: '#8DB4E2', row: '#DBEEF4' },
+            'П':  { suffix: 'p',  bar: '#C0504D', badge: '#D99694', row: '#FDEADA' },
+            'ТО': { suffix: 'to', bar: '#9BBB59', badge: '#C3D69B', row: '#EBF1DE' }
         },
+
+        // Task 483: пастельные заливки шапки месяцев — как на листе
+        // «Диаграммы» (I/V/IX/XII — розовый #FFB9B9, VI-VIII —
+        // золотой #FFDB69, остальные — без заливки).
+        _PPR_TC_MONTH_CLS: ['pink','','','','pink','gold','gold','gold','pink','','','pink'],
+
+        // Task 483: блок ppr_chart из data/devices.json (считает
+        // sync-devices.py по листу «Приборы»: метки месяцев I..XII ==
+        // К/П/ТО И «Наличие в ППР» == «Есть»). Заполняется в
+        // _loadData('devices'); рендер — _renderDevicesPPR.
+        _pprChart: null,
 
         // Данные ППР на текущий год (2026) — Блокировки (Схемы)
         // 2 серии: Кан.ремонт (Кр), Тех.обслуж. (ТО)
@@ -163,6 +332,12 @@
                 .then(function(data) {
                     var items = data[sec.arrayKey] || [];
                     KipCharts._cache[section] = items;
+                    // Task 483: для приборов — захватить блок ppr_chart
+                    // (месячные счётчики К/П/ТО с фильтром «Наличие в ППР»
+                    // = «Есть», считает sync-devices.py по листу «Приборы»)
+                    if (section === 'devices' && data.ppr_chart) {
+                        KipCharts._pprChart = data.ppr_chart;
+                    }
                     callback(items);
                 })
                 .catch(function() {
@@ -177,12 +352,9 @@
             var container = document.getElementById('chartsContent');
             if (!container) return;
 
-            // Для вкладки Приборы — диаграмма ППР не зависит от JSON-данных
-            if (tab === 'devices') {
-                this._renderContent(tab, []);
-                return;
-            }
-
+            // Task 483: вкладка «Приборы» идёт общим путём — грузит
+            // devices.json (диаграмме ППР нужны счётчики ppr_chart;
+            // раньше данные были заШиты и загрузка не требовалась)
             container.innerHTML = '<div class="charts-loading">Загрузка…</div>';
             this._loadData(tab, function(items) {
                 KipCharts._renderContent(tab, items);
@@ -197,9 +369,22 @@
             var sec = this._SECTIONS[tab];
             var html = '';
 
-            // Для вкладки Приборы — только диаграмма ППР (как в Excel)
+            // Для вкладки Приборы — таблица + диаграмма ППР «как в
+            // Excel» из блока ppr_chart (Task 483; данные считаются
+            // sync-devices.py по листу «Приборы» с фильтром «Наличие
+            // в ППР» = «Есть»)
             if (tab === 'devices') {
-                html += this._renderPPRChart(this._PPR_DEVICES);
+                var ppr = this._pprChart;
+                if (ppr && ppr.series && ppr.series.length) {
+                    html += this._renderDevicesPPR(ppr);
+                } else {
+                    // ppr_chart отсутствует (устаревший кэш данных или
+                    // синк с gid= одного листа) — понятное сообщение
+                    html += '<div class="chart-card"><div class="ppr-tc-empty-note">' +
+                        'Данные графика ППР по приборам появятся после обновления перечня ' +
+                        'КИП ИОС (синхронизация с таблицей). Обновите страницу или ' +
+                        'повторите позже.</div></div>';
+                }
                 container.innerHTML = html;
                 return;
             }
@@ -285,6 +470,111 @@
             }
 
             container.innerHTML = html;
+        },
+
+        // ============================================================
+        // Task 483: ППР «Приборы» — ТАБЛИЦА + ДИАГРАММА «как в Excel»
+        // (вид-фрагмент листа «Диаграммы» книги «Перечень КИП ИОС
+        // рабочий.xlsx», сверено со скрином пользователя):
+        //  — ТАБЛИЦА: шапка «Вид обслуживания» (2 строки × 2 колонки,
+        //    объединена как A1:B2) + титул «Количество ПРИБОРОВ по
+        //    графику ППР по месяцам на <год> год» (C1:N1); месяцы
+        //    I–XII жирным с пастельными заливками (I/V/IX/XII —
+        //    #FFB9B9, VI-VIII — #FFDB69); строки К/П/ТО: бейдж-код
+        //    (accent +40%) + название + 12 значений (строка —
+        //    оттенок accent +80%);
+        //  — ДИАГРАММА под таблицей: СГРУППИРОВАННЫЕ столбцы К/П/ТО
+        //    (accent1/2/3: #4F81BD/#C0504D/#9BBB59, у ТО — горизон-
+        //    тальная штриховка, как на листе), выровнены по колонкам
+        //    таблицы (ОБЩАЯ CSS-сетка), значения над КАЖДЫМ столбцом
+        //    (0 — подпись у основания, прецедент Task 473), осей,
+        //    легенды и титула диаграммы НЕТ (месяцы задаёт таблица
+        //    сверху) — всё как на листе «Диаграммы».
+        // Данные — ppr_chart (см. _loadData): counts НЕ заШиты.
+        // ============================================================
+        _renderDevicesPPR: function(ppr) {
+            var styles = this._PPR_TC_STYLES;
+            var mCls = this._PPR_TC_MONTH_CLS;
+            var FALLBACK = { suffix: 'x', bar: '#9e9e9e', badge: '#e0e0e0', row: '#f5f5f5' };
+
+            // Серии (код/название/значения) + оформление по коду
+            var series = [];
+            for (var i = 0; i < ppr.series.length; i++) {
+                var s = ppr.series[i];
+                if (!s || !s.values || s.values.length !== 12) continue;
+                var st = styles[s.code] || FALLBACK;
+                series.push({ code: s.code, name: s.name || s.code, values: s.values, st: st });
+            }
+            var year = ppr.year || new Date().getFullYear();
+            var title = 'Количество ПРИБОРОВ по графику ППР по месяцам на ' + year + ' год';
+
+            // ЕДИНАЯ шкала всех серий (как в Excel; оси нет, но высоты
+            // пропорциональны значениям). Максимум по всем сериям.
+            var maxVal = 1;
+            for (var i = 0; i < series.length; i++) {
+                for (var m = 0; m < 12; m++) {
+                    var v = series[i].values[m];
+                    if (typeof v === 'number' && v > maxVal) maxVal = v;
+                }
+            }
+
+            var html = '<div class="chart-card ppr-tc-card">';
+
+            // ---------- ТАБЛИЦА ----------
+            html += '<div class="ppr-tc-table">';
+            // Шапка: «Вид обслуживания» (строки 1-2, колонки 1-2) + титул
+            html += '<div class="ppr-tc-vo">Вид обслуживания</div>';
+            html += '<div class="ppr-tc-title">' + this._escHtml(title) + '</div>';
+            for (var m = 0; m < 12; m++) {
+                var cls = 'ppr-tc-m' + (mCls[m] ? ' ppr-tc-m-' + mCls[m] : '');
+                html += '<div class="' + cls + '">' + this._MONTHS_ROMAN[m] + '</div>';
+            }
+            // Строки данных: бейдж + название + 12 значений
+            for (var i = 0; i < series.length; i++) {
+                var sr = series[i];
+                html += '<div class="ppr-tc-name ppr-tc-r-' + sr.st.suffix + '">' + this._escHtml(sr.name) + '</div>';
+                html += '<div class="ppr-tc-badge ppr-tc-badge-' + sr.st.suffix + '">' + this._escHtml(sr.code) + '</div>';
+                for (var m = 0; m < 12; m++) {
+                    var val = sr.values[m];
+                    var num = (typeof val === 'number' && isFinite(val)) ? val : 0;
+                    html += '<div class="ppr-tc-v ppr-tc-r-' + sr.st.suffix + '">' + num + '</div>';
+                }
+            }
+            html += '</div>';
+
+            // ---------- ДИАГРАММА (та же сетка — выравнивание по месяцам) ----------
+            html += '<div class="ppr-tc-chart">';
+            html += '<div class="ppr-tc-chart-empty"></div>';
+            for (var m = 0; m < 12; m++) {
+                html += '<div class="ppr-tc-g">';
+                html += '<div class="ppr-tc-bars">';
+                for (var i = 0; i < series.length; i++) {
+                    var sr = series[i];
+                    var val = sr.values[m];
+                    var num = (typeof val === 'number' && isFinite(val)) ? val : 0;
+                    var barCls = 'ppr-tc-bar' + (sr.code === 'ТО' ? ' ppr-tc-hatch' : '');
+                    var styleAttr = 'height:' + ((num / maxVal) * 100) + '%;' +
+                        (sr.code !== 'ТО' ? 'background:' + sr.st.bar + ';' : '');
+                    html += '<div class="ppr-tc-bcell">';
+                    if (num > 0) {
+                        html += '<div class="' + barCls + '" style="' + styleAttr + '"' +
+                            ' title="' + this._escHtml(sr.name) + ' (' + this._escHtml(sr.code) + '), ' +
+                            this._MONTHS_ROMAN[m] + ': ' + num + '">';
+                        html += '<span class="ppr-tc-val">' + num + '</span>';
+                        html += '</div>';
+                    } else {
+                        // Нулевой месяц — подпись «0» у основания (Task 473)
+                        html += '<span class="ppr-tc-val-zero">0</span>';
+                    }
+                    html += '</div>';
+                }
+                html += '</div>';
+                html += '</div>';
+            }
+            html += '</div>';
+
+            html += '</div>'; // .ppr-tc-card
+            return html;
         },
 
         // ============================================================
