@@ -8590,6 +8590,30 @@
         box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22);
         white-space: nowrap;
     }
+    /* Task 482 (заявка: «В ячейках шахматки табеля учёта значки
+       "ПЗ" и "И" должны менять цвет рамки на зелёный, если
+       отмечено их выполнение, или красный, если выполнение не
+       отмечено, а дата проведения прошла»): РАМКА бейджа И/ПЗ —
+       индикатор состояния записи «Инструктажи»: выполнение = 1 →
+       ЗЕЛЁНАЯ (ws-ev-done, #43a047 — палитра галочки отметки
+       Task 418); выполнение не отмечено + дата проведения прошла
+       (поле «просрочен» сервера либо дата_начала < «сегодня»,
+       как в карточке) → КРАСНАЯ (ws-ev-late, #ef5350 — палитра
+       бейджа «просрочен» Task 418); остальные случаи (дата ещё
+       не наступила, нет полей состояния, виртуальный бейдж
+       статуса) — прежняя тёмная рамка. Внешняя полоска
+       box-shadow перекрашивается в ту же пару — бейдж лежит на
+       цветных фонах ячеек, цветная рамка читается; обе темы
+       (средние тона зелёного/красного — уже используются в
+       светлой теме Task 418) */
+    .ws-grid tbody td.ws-cell .ws-ev-badge.ws-ev-done {
+        border-color: #43a047;
+        box-shadow: 0 0 0 1px rgba(67, 160, 71, 0.55);
+    }
+    .ws-grid tbody td.ws-cell .ws-ev-badge.ws-ev-late {
+        border-color: #ef5350;
+        box-shadow: 0 0 0 1px rgba(239, 83, 80, 0.55);
+    }
     /* Task 388 (заявка: «цвет фона миниатюр всегда должен
        соответствовать установленному»): пунктирный прозрачный бейдж
        НЕсформированного дня УДАЛЁН — бейдж мероприятия ВСЕГДА
@@ -51311,6 +51335,32 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // слоем; слушатель scroll — ОДИН раз на элемент окна
         // (флаг _barExpPin)
         // ============================================================
+        // Task 482 (заявка: «в окнах мероприятий и нормах рабочего
+        // времени, если при их разворачивании список будет длинным
+        // и не вмещаться в экран, то сделай возможность его
+        // прокрутки колёсиком мышки или свайпом по сенсору
+        // экрана»): ПРЕДЕЛ ВЫСОТЫ раскрытого окна — до НИЗА ЭКРАНА
+        // (вьюпорта) с запасом 10px, минимум 140px (защита от
+        // экзотических вьюпортов). Список ДЛИННЕЕ предела → окно
+        // раскрыто по предел, а остаток листается ВНУТРИ окна:
+        // штатная прокрутка уже стоит (overflow-y: auto +
+        // overscroll-behavior: contain, приём скрытия полосы
+        // Task 378/331) — КОЛЕСО мыши, СВАЙП по сенсору и стрелки
+        // ↑↓ работают, полоса по-прежнему невидима. Верх окна при
+        // раскрытии НЕ двигается (низ растёт вниз оверлеем,
+        // Task 379) — getBoundingClientRect().top стабилен и во
+        // время transition высоты; пересчёт — на каждый
+        // _barExpSync (рендеры/шрифты/resize уже зовут его).
+        // ГВАРД typeof в местах вызова — старые VM-харнессы
+        // тестов 378/379 подгружают только _barExpSync/_barExp-
+        // Toggle без окна/вьюпорта: без метода кап отключён
+        // (высота = scrollHeight, прежнее поведение)
+        _barExpMaxH: function(el) {
+            var rect = el.getBoundingClientRect();
+            var vh = (typeof window !== 'undefined' && window.innerHeight) ||
+                     ((document.documentElement || {}).clientHeight) || 0;
+            return Math.max(140, vh - rect.top - 10);
+        },
         _barExpSync: function(el) {
             if (!el) return;
             var btn = el.querySelector('.ws-bar-exp');
@@ -51364,8 +51414,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // и при каждом _barExpSync — значки (пере)создаются
             // после рендеров, актуальный scrollTop учитывается.
             // РАСКРЫТОЕ окно не скроллится (высота = scrollHeight)
-            // — transform остаётся 0; transition у значков только на
-            // opacity — движение мгновенное, без отставания
+            // — transform остаётся 0; Task 482: окно КАПАЕТСЯ по
+            // экрану и МОЖЕТ скрулливаться — значки и тут держатся
+            // в верхнем углу (тот же translateY(scrollTop));
+            // transition у значков только на opacity — движение
+            // мгновенное, без отставания
             if (!el._barExpPin) {
                 el._barExpPin = true;
                 el.addEventListener('scroll', function() {
@@ -51395,9 +51448,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // объёмом текста (замер после перерисовки);
                 // Task 379: отрицательный margin-bottom компенсирует
                 // прирост высоты — ГАБАРИТ БАРА НЕ МЕНЯЕТСЯ, окно
-                // уходит вниз ОВЕРЛЕЕМ поверх ряда 2/3 и шахматки
-                el.style.height = el.scrollHeight + 'px';
-                el.style.marginBottom = (95 - el.scrollHeight) + 'px';
+                // уходит вниз ОВЕРЛЕЕМ поверх ряда 2/3 и шахматки;
+                // Task 482: КАП по экрану — раскрытое окно НЕ ВЫШЕ
+                // низа вьюпорта (длинный список листается ВНУТРИ;
+                // гвард typeof — старые VM-харнессы без метода)
+                var hOpen = el.scrollHeight;
+                if (typeof this._barExpMaxH === 'function') {
+                    var hCap = this._barExpMaxH(el);
+                    if (hOpen > hCap) hOpen = hCap;
+                }
+                el.style.height = hOpen + 'px';
+                el.style.marginBottom = (95 - hOpen) + 'px';
             }
             btn.classList.toggle('on', open);
             btn.style.display = (need || open) ? '' : 'none';
@@ -51408,7 +51469,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // margin-bottom = 95 − высота (ОТРИЦАТЕЛЬНЫЙ) — низ окна
         // смещается вниз ПОВЕРХ бара оверлеем, а строка бара
         // сохраняет габарит 95px (бар НЕ увеличивается в размере,
-        // сетка под ним не уезжает)
+        // сетка под ним не уезжает). Task 482: высота КАПАЕТСЯ по
+        // экрану (_barExpMaxH) — текст длиннее предела листается
+        // ВНУТРИ окна (колесо/свайп/↑↓); гвард typeof — старые
+        // VM-харнессы без метода (высота = scrollHeight, как прежде)
         _barExpToggle: function(el) {
             if (!el) return;
             var open = el.classList.contains('ws-bar-open');
@@ -51418,8 +51482,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 el.style.marginBottom = '';
             } else {
                 el.classList.add('ws-bar-open');
-                el.style.height = el.scrollHeight + 'px';
-                el.style.marginBottom = (95 - el.scrollHeight) + 'px';
+                var hOpen = el.scrollHeight;
+                if (typeof this._barExpMaxH === 'function') {
+                    var hCap = this._barExpMaxH(el);
+                    if (hOpen > hCap) hOpen = hCap;
+                }
+                el.style.height = hOpen + 'px';
+                el.style.marginBottom = (95 - hOpen) + 'px';
             }
             this._barExpSync(el);
         },
@@ -53873,7 +53942,39 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         ? (events[evj].code + ' — ' +
                            this._instrShortOf(String(evTr.тема).trim()))
                         : String((evMeta.name || '')).trim();
-                    evChips += '<span class="ws-ev-badge"' +
+                    // Task 482 (заявка: «В ячейках шахматки табеля
+                    // учёта значки "ПЗ" и "И" должны менять цвет
+                    // рамки на зелёный, если отмечено их выполнение,
+                    // или красный, если выполнение не отмечено, а
+                    // дата проведения прошла»): класс состояния на
+                    // бейдж — ТОЛЬКО И/ПЗ (у семейства «Инструк-
+                    // тажи» есть столбцы «выполнение»/«просрочен»;
+                    // ОБ/ПР/* не окрашиваются): выполнение = 1 →
+                    // ws-ev-done (зелёная рамка); не выполнено +
+                    // дата прошла (поле «просрочен» сервера, нет —
+                    // дата_начала < «сегодня», семантика карточки
+                    // Task 418) → ws-ev-late (красная); записи без
+                    // полей (виртуальный бейдж статуса) — обычная
+                    // рамка. _todayIso ставит _renderGrid (фолбэк —
+                    // свежая дата; гвард typeof — старые VM-харнессы
+                    // _renderCell без _isoDate: нет даты «сегодня» —
+                    // просрочка не считается, рамка обычная)
+                    var evStateCls = '';
+                    if (evTr && (events[evj].code === 'И' ||
+                                 events[evj].code === 'ПЗ')) {
+                        var evDone = (parseInt(evTr.выполнение, 10) === 1);
+                        var evLate = (evTr.просрочен !== undefined)
+                            ? (parseInt(evTr.просрочен, 10) === 1)
+                            : (!evDone &&
+                               String(evTr.дата_начала || '') <
+                               (this._todayIso ||
+                                (typeof this._isoDate === 'function'
+                                 ? this._isoDate(new Date()) : '')));
+                        evStateCls = evDone
+                            ? ' ws-ev-done'
+                            : (evLate ? ' ws-ev-late' : '');
+                    }
+                    evChips += '<span class="ws-ev-badge' + evStateCls + '"' +
                                (evMeta.color ? ' style="background:' + evMeta.color + ';"' : '') +
                                (evTip ? ' title="' + this._esc(evTip) + '"' : '') +
                                '>' + this._esc(events[evj].code) + '</span>';
@@ -54369,9 +54470,41 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // Task 427: семейство записи (id таблиц раздельные —
                 // одинаковый id адресуется семейством типа)
                 var deFam = this._isInstrType(deT.тип) ? 1 : 0;
-                var deActs = '';
+                // Task 482 (заявка: «добавь возможность отмечать их
+                // выполнение в окне, которое появляется возле
+                // ячейкой при нажатии на эту ячейку, рядом со
+                // значками редактирования и удаления, у тех
+                // пользователей, которые имеют доступ к изменению
+                // данных»): ГАЛОЧКА отметки выполнения — в ряду
+                // действий, ПЕРЕД ✎/✕ (клик — toggleTrainingDone,
+                // тот же метод, что в карточке, Task 418: сервер
+                // пишет столбец «выполнение», автосоздание новых
+                // сроков, тост). ТОЛЬКО записям семейства
+                // «Инструктажи» (И/ПЗ — столбец есть; ОБ/ПР/* —
+                // галочки нет) и записям с id. Зрители (без права
+                // записи) видят СОСТОЯНИЕ — некликабельно (как в
+                // карточке); сетка показывает то же цветом рамки
+                // бейджа (ws-ev-done/ws-ev-late)
+                var deChk = '';
+                if (deFam === 1 && deId) {
+                    var deDone = (parseInt(deT.выполнение, 10) === 1);
+                    if (this._canEdit) {
+                        deChk = '<span class="ws-done-chk' +
+                                (deDone ? ' ws-done-on' : '') + '"' +
+                                ' role="button" tabindex="0" title="' +
+                                (deDone ? 'Снять отметку о выполнении'
+                                        : 'Отметить выполнение') + '"' +
+                                ' onclick="event.stopPropagation(); ' +
+                                'WorkSchedule.toggleTrainingDone(' + deId +
+                                ')">✓</span>';
+                    } else if (deDone) {
+                        deChk = '<span class="ws-done-chk ws-done-on ws-done-ro"' +
+                                ' title="Выполнено">✓</span>';
+                    }
+                }
+                var deActs = deChk;
                 if (this._canEdit && deId) {
-                    deActs = '<span class="ws-popup-act" title="Редактировать"' +
+                    deActs += '<span class="ws-popup-act" title="Редактировать"' +
                              ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + deId + ', ' + deFam + ')">✎</span>' +
                              '<span class="ws-popup-act ws-popup-act-del" title="Удалить"' +
                              ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + deId + ', ' + deFam + ')">✕</span>';
@@ -55775,6 +55908,37 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var pg = document.getElementById('page-ws-workers');
             if (pg && pg.classList && pg.classList.contains('active')) {
                 this._renderWorkersPage();
+            }
+        },
+
+        // Task 482: перерисовка ШАХМАТКИ при открытом табеле — бейджи
+        // И/ПЗ красят рамку по выполнению (ws-ev-done/ws-ev-late);
+        // _renderGrid — штатный путь (правки ячеек уже ходят через
+        // него: _PENDING сохраняются, авто-«д»/«н» пересчитываются
+        // идемпотентно). Вне табеля — тишина (паттерн
+        // _renderWorkersIfOpen: правка из карточки «Работники»
+        // перерисовывает только её)
+        _renderGridIfOpen: function() {
+            var pg = document.getElementById('page-work-schedule');
+            if (pg && pg.classList && pg.classList.contains('active')) {
+                this._renderGrid();
+            }
+        },
+
+        // Task 482: обновить содержимое ОТКРЫТОГО окна «Мероприятия
+        // в этот день» после отметки выполнения (галочка в ряду ✎/✕
+        // меняет состояние на зелёную/пустую). Окно — fixed-элемент
+        // ВНЕ сетки: _renderGrid его не перестраивает, позиция
+        // сохраняется; _popupCell живёт, пока окно открыто (устанав-
+        // ливается _openCellPopup/_openEventsOnlyPopup, чистится
+        // closeCellPopup)
+        _refreshEventsPopup: function() {
+            var evp = document.getElementById('wsEventsPopup');
+            if (evp && this._popupCell &&
+                    evp.classList.contains('active')) {
+                evp.innerHTML = this._renderEventsPopup(
+                    this._popupCell.date,
+                    this._popupCell['таб_номер']);
             }
         },
 
@@ -59560,6 +59724,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         KipToast.show(msg);
                     }
                     self._renderWorkersIfOpen();
+                    // Task 482: бейджи И/ПЗ шахматки (рамка по вы-
+                    // полнению) + окно «Мероприятия в этот день»
+                    // (галочка в ряду ✎/✕) — состояние отметки
+                    // видно СРАЗУ, без перезагрузки. ГВАРД typeof —
+                    // старые VM-харнессы тестов 419-423 подгружают
+                    // только toggleTrainingDone без помощников
+                    if (typeof self._renderGridIfOpen === 'function') {
+                        self._renderGridIfOpen();
+                    }
+                    if (typeof self._refreshEventsPopup === 'function') {
+                        self._refreshEventsPopup();
+                    }
                 })
                 .catch(function(err) {
                     if (typeof KipToast !== 'undefined' && KipToast.show) {
