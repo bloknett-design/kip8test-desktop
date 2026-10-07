@@ -35413,6 +35413,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     typeof KipDB.clear === 'function') {
                 try { KipDB.clear().catch(function() {}); } catch (e) {}
             }
+            // Task 486: метку тихого обновления табеля — в ноль:
+            // после чистки копий повторный вход (даже внутри окна
+            // троттлинга 5 минут) обязан заново тихо обновить —
+            // копий нет, качать обязательно (см. silentRefresh)
+            try {
+                if (typeof WorkSchedule !== 'undefined' && WorkSchedule) {
+                    WorkSchedule._silentTs = 0;
+                }
+            } catch (e) {}
         },
 
         // ============================================================
@@ -35429,6 +35438,26 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 try {
                     if (typeof KipPreload !== 'undefined' && KipPreload) {
                         KipPreload.start();
+                    }
+                } catch (e) {}
+                // Task 486: тихое обновление данных табеля при
+                // открытии приложения (заявка: «помимо ручного
+                // обновления, сделай тихое обновление данных при
+                // открытии приложения») — тем же таймером, что
+                // KipPreload (4 с после показа интерфейса, чтобы не
+                // конкурировать с входом/первым экраном). Права —
+                // canAccess (серверная матрица + легаси-карта, как у
+                // видимости раздела); сам метод тихий: без кнопки,
+                // спиннера и тоста, сбой — console.warn. ВСЕ 5 путей
+                // старта приложения зовут _schedulePreload → тихое
+                // обновление идёт при КАЖДОМ открытии приложения
+                // (троттлинг 5 минут внутри silentRefresh)
+                try {
+                    if (typeof WorkSchedule !== 'undefined' && WorkSchedule &&
+                            typeof WorkSchedule.silentRefresh === 'function' &&
+                            KipAuth && typeof KipAuth.canAccess === 'function' &&
+                            KipAuth.canAccess('work-schedule')) {
+                        WorkSchedule.silentRefresh();
                     }
                 } catch (e) {}
             }, 4000);
@@ -45239,6 +45268,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 314: флаг идущего обновления по кнопке (блокирует
         // повторные клики, крутит иконку)
         _refreshing: false,
+        // Task 486: ТИХОЕ обновление при открытии приложения. Метка
+        // времени последнего успешного тихого обновления (троттлинг
+        // 5 минут — повторные _schedulePreload после фоновой
+        // проверки сессии не дёргают сеть; сброс при logout
+        // _wipeLocalServerData — после чистки копий обновление
+        // обязательно) и флаг идущего тихого обновления (защита от
+        // параллельного запуска; KipPreload._preloadWs по нему же
+        // пропускает свой ws-элемент)
+        _silentTs: 0,
+        _silentBusy: false,
 
         init: function() {
             if (this._initialized) {
@@ -46893,6 +46932,154 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 done(ok !== false);
             }).catch(function() {
                 done(false);
+            });
+        },
+
+        // ============================================================
+        // Task 486 (заявка: «в разделе "Табель учёта рабочего
+        // времени", помимо ручного обновления, сделай тихое
+        // обновление данных при открытии приложения»): ТИХОЕ
+        // обновление при открытии приложения. KipAuth._schedulePreload
+        // (ВСЕ 5 путей старта: вход OTP, быстрый/медленный bootstrap,
+        // возврат связи, фоновая проверка сессии) через 4 с после
+        // показа интерфейса зовёт ЭТОТ метод — без кнопки, спиннера
+        // и тоста:
+        //   • год/месяц — открытый вид (init уже прошёл) или текущая
+        //     дата (раздел ещё не открывали);
+        //   • те же 7 read-only экшенов, что «Обновить» и
+        //     KipPreload._preloadWs — сервер остаётся источником прав;
+        //   • свежие данные пишутся в ОБА слоя локальной копии Task 314
+        //     (localStorage + KipDB, формат v1, merge — другие
+        //     виды/годы не трогаем): следующее открытие раздела
+        //     мгновенно покажет СВЕЖИЕ данные (Task 314: LS-слой
+        //     читается первым — KipPreload-копия в KipDB его НЕ
+        //     обновляла, оттого тихое обновление и было нужно);
+        //   • раздел УЖЕ открыт — состояние поднимается (_restoreFromObj)
+        //     и сетка перерисовывается (как кэш-путь loadGrid), НО не
+        //     посреди ручного «Обновить» и не с открытым попапом
+        //     ячейки — в этих случаях пишется только копия, экран не
+        //     дёргается;
+        //   • _PENDING — слой правок ПОВЕРХ записей (Task 251), не
+        //     затирается — та же семантика, что у «Обновить»;
+        //   • троттлинг 5 минут (_silentTs); пустая копия после
+        //     logout — обновление и внутри окна (копий нет, качать
+        //     обязательно);
+        //   • сбой — ТИХИЙ (console.warn, без тоста/экрана): по
+        //     заявке «тихое»; KipPreload._preloadWs остаётся
+        //     ретраем-фолбэком (свежая _silentTs/занятость — он
+        //     пропускает свой ws-элемент, см. _preloadWs).
+        // Возвращает Promise<boolean>.
+        // ============================================================
+        silentRefresh: function() {
+            var self = this;
+            // идёт тихое обновление — второй параллельный не нужен
+            if (this._silentBusy) return Promise.resolve(false);
+            // троттлинг: свежее успешное обновление + НЕ пустая копия
+            // (после logout-чистки копий качаем даже внутри окна)
+            if (this._silentTs &&
+                    (Date.now() - this._silentTs) < 5 * 60 * 1000 &&
+                    this._cacheRead()) {
+                return Promise.resolve(false);
+            }
+            // год/месяц: открытый вид раздела (init прошёл — селекты
+            // установлены) либо текущая дата (раздел не открывали)
+            var year = this._year, month = this._month;
+            if (!year || !month) {
+                var d = new Date();
+                year = d.getFullYear();
+                month = d.getMonth() + 1;
+            }
+            var ym = year + '-' + (month < 10 ? '0' + month : month);
+            this._silentBusy = true;
+            return Promise.all([
+                this._api('workSchedule.getStatusCodes', {}),
+                this._api('workSchedule.getPatterns', {}),
+                this._api('workSchedule.listEmployees', { includeArchived: false }),
+                this._api('workSchedule.listTrainings', { year: year }),
+                this._api('workSchedule.listVacations', { year: year }),
+                this._api('workSchedule.listPpe', {}),
+                this._api('workSchedule.listEntries', { year: year, month: month })
+            ]).then(function(rs) {
+                self._silentTs = Date.now();
+                // merge с существующей копией (форма v1 Task 314 /
+                // _cacheWrite; другие виды/годы не трогаем):
+                // сотрудники — сортировка как у раздела (restore не
+                // пересортирует), коды/шаблон инструктажей — сырыми
+                // (нормализация в _restoreFromObj, как у _preloadWs)
+                var employees = (rs[2] && rs[2].employees) || [];
+                try { employees = self._sortEmployees(employees); } catch (e) {}
+                var c = null;
+                try { c = self._cacheRead(); } catch (e) { c = null; }
+                if (!c || c.v !== 1) c = { v: 1 };
+                c.codes = (rs[0] && rs[0].codes) || [];
+                c.patterns = (rs[1] && rs[1].patterns) || [];
+                c.employees = employees;
+                if (!c.vacations || typeof c.vacations !== 'object') c.vacations = {};
+                c.vacations[String(year)] = (rs[4] && rs[4].vacations) || [];
+                c.ppe = (rs[5] && rs[5].ppe) || [];
+                c.instrList = (rs[3] && rs[3].instrList) || [];
+                c.instrAll = (rs[3] && rs[3].instrAll) || [];
+                c.eventsAll = (rs[3] && rs[3].eventsAll) || [];
+                if (!c.views || typeof c.views !== 'object') c.views = {};
+                c.views[ym] = {
+                    entries: (rs[6] && rs[6].entries) || [],
+                    trainings: (rs[3] && rs[3].trainings) || [],
+                    ts: Date.now()
+                };
+                // лимит 12 видов — как у _cacheWrite (квота localStorage)
+                var keys = Object.keys(c.views);
+                if (keys.length > 12) {
+                    keys.sort(function(a, b) {
+                        return (c.views[a].ts || 0) - (c.views[b].ts || 0);
+                    });
+                    for (var k = 0; k < keys.length - 12; k++) delete c.views[keys[k]];
+                }
+                // ОБА слоя (как _cacheWrite): KipDB — ёмкий надёжный,
+                // localStorage — мгновенный (именно его читает
+                // _restoreCachedView при открытии раздела)
+                if (typeof KipDB !== 'undefined' && KipDB &&
+                        typeof KipDB.set === 'function') {
+                    try { KipDB.set(self._wsCacheKey, c).catch(function() {}); } catch (eKdb) {}
+                }
+                try {
+                    localStorage.setItem(self._wsCacheKey, JSON.stringify(c));
+                } catch (eLs) { /* квота/приватный — тихо */ }
+
+                // Раздел ОТКРЫТ (init прошёл, права есть, вид жив) и не
+                // занят ручным «Обновить»/попапом ячейки — тихо
+                // поднимаем состояние и перерисовываем сетку (годовой
+                // кэш итогов мог устареть — сброс как у loadGrid(true),
+                // «Год» перезагрузится при показе). _PENDING — слой
+                // поверх записей, уживается с новыми записями (как у
+                // «Обновить»); fetched-вид != открытому — только копия
+                var popup = document.getElementById('wsCellPopup');
+                var popupOpen = !!(popup && popup.classList &&
+                    popup.classList.contains('active'));
+                if (self._initialized && self._viewLevel !== null &&
+                        self._year === year && self._month === month &&
+                        !self._refreshing && !popupOpen &&
+                        document.getElementById('wsGridWrap')) {
+                    self._YEAR_DATA = null;
+                    self._VAC_YEARS = {};
+                    if (self._restoreFromObj(c)) {
+                        self._renderGrid();
+                        self._updateCalChip();
+                        self._updateCacheStamp();
+                    }
+                }
+                return true;
+            }).catch(function(err) {
+                // ТИХИЙ сбой: без тоста и экрана ошибки — «тихое
+                // обновление» по заявке; ретраем остаётся KipPreload
+                // ._preloadWs (_silentTs не ставился — не пропустит)
+                try {
+                    console.warn('[WorkSchedule.silentRefresh] тихий сбой:',
+                        (err && err.message) || err);
+                } catch (e) {}
+                return false;
+            }).then(function(ok) {
+                self._silentBusy = false;
+                return ok;
             });
         },
 
@@ -62754,7 +62941,23 @@ var KipPreload = (function() {
     // Табель: справочники + текущий месяц — форма кэша Task 314 (v1),
     // merge с копией (другие виды/годы не трогаем). Сортировка и
     // нормализация — как у раздела (при restore применится тоже).
+    // Task 486: если WorkSchedule.silentRefresh уже обновил данные
+    // (метка _silentTs свежая < 5 мин) или сейчас обновляет
+    // (_silentBusy) — пропускаем: дублировать сеть не нужно, кэш уже
+    // свеж (тихое обновление пишет ОБА слоя — и KipDB, и localStorage).
+    // Тихий сбой silentRefresh (метка не ставилась) — сюда приходит
+    // ретраем-фолбэком: _preloadWs остаётся запасным путём обновления
+    // копии (KipDB-слой, как в Task 477).
     function _preloadWs() {
+        try {
+            if (typeof WorkSchedule !== 'undefined' && WorkSchedule) {
+                if (WorkSchedule._silentBusy) return Promise.resolve(true);
+                if (WorkSchedule._silentTs &&
+                        (Date.now() - WorkSchedule._silentTs) < 5 * 60 * 1000) {
+                    return Promise.resolve(true);
+                }
+            }
+        } catch (e) {}
         var d = new Date();
         var year = d.getFullYear();
         var month = d.getMonth() + 1;
