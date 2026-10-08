@@ -54234,6 +54234,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Task 251: клик по ячейке открывает попап выбора статуса рядом
             // с ячейкой (вместо мгновенно сохраняющего bottom-sheet)
             var clickHandler = 'WorkSchedule.onCellClick(event, \'' + isoDate + '\',\'' + safeTabNo + '\')';
+            // Task 487 (заявка: «И в десктопной версии сделай появление
+            // попапа, если есть мероприятие, при наведении указателя
+            // мыши»): ховер-хендлеры на ВСЕХ ячейках — дёшево (сам
+            // onCellHover гейтит десктоп+мышь и наличие мероприятий);
+            // mouseenter/mouseleave НЕ всплывают и считают td с
+            // бейджами одной зоной — выхода на бейдж не происходит
+            var hoverHandler = 'WorkSchedule.onCellHover(event, \'' + isoDate + '\',\'' + safeTabNo + '\')';
             // Task 311: пояснительные тултипы (title) с ячеек шахматки
             // убраны по заявке — вся информация (статус/название,
             // праздник, мероприятия с кнопками, «Дополнительно…») — в
@@ -54242,7 +54249,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                    (style ? 'style="' + style + '" ' : '') +
                    'data-editable="' + editable + '" ' +
                    'data-day="' + day + '" ' +
-                   'onclick="' + clickHandler + '">' +
+                   'onclick="' + clickHandler + '" ' +
+                   'onmouseenter="' + hoverHandler + '" ' +
+                   'onmouseleave="WorkSchedule.onCellLeave()">' +
                    // Task 298: код отпуска «О» → «ОТ» (Т-12/Т-13).
                    // Task 274: пустая ячейка в периоде отпуска — код «ОТ»
                    // плана (фоновый цвет и рамка — классом ws-vac-plan)
@@ -54468,16 +54477,90 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             } catch (e) {}
             // Task 319 (заявка): ЗРИТЕЛЯМ («График работы — просмотр»)
             // клик по ячейке открывает ТОЛЬКО окно «Мероприятия в этот
-            // день» — справка без правки (кнопки ✎/✕ в нём и так
-            // скрыты _canEdit в _renderEventsPopup, строка не клика-
-            // бельна). Окно выбора кодов — только ролям с правом
-            // записи; прежний тост «нет прав» зрителю больше не
-            // показывается — вместо него информативное окно.
+            // день» — справка без правки (Task 487: кнопок в нём нет
+            // НИ У КОГО — окно справочное, правка из карточки
+            // работника; строка не кликабельна). Окно выбора кодов —
+            // только ролям с правом записи; прежний тост «нет прав»
+            // зрителю больше не показывается — вместо него
+            // информативное окно.
             if (!this._canEdit) {
                 this._openEventsOnlyPopup(td, isoDate, tabNo);
                 return;
             }
             this._openCellPopup(td, isoDate, tabNo);
+        },
+
+        // Task 487 (заявка: «И в десктопной версии сделай появление
+        // попапа, если есть мероприятие, при наведении указателя
+        // мыши»): ХОВЕР по ячейке шахматки с мероприятием открывает
+        // окно «Мероприятия в этот день» БЕЗ клика — быстрый просмотр
+        // (окно справочное, кнопок в нём больше нет — Task 487;
+        // правка — из карточки работника). Только ДЕСКТОП с настоящим
+        // мышьиным указателем: вьюпорт ≥1024px (тот же признак, что
+        // isDesktop у остального модуля) И media (hover: hover) +
+        // (pointer: fine) — планшет/телефон ховера не получает
+        // (tap-«mouseenter» совместимости отсекается). Гварды:
+        // пакетное сохранение (_saving) и ОТКРЫТЫЙ КЛИКОМ попап
+        // (_popupCell) — ховер им не мешает; ячейка без мероприятий
+        // окно не открывает. Повторный вход в ту же ячейку (выход на
+        // бейдж/соседа и назад в grace-окне 350 мс) — не дёргает
+        // рендер, только гасит отложенное закрытие.
+        onCellHover: function(ev, isoDate, tabNo) {
+            if (typeof window === 'undefined' || !window.matchMedia) return;
+            if (!window.matchMedia('(min-width: 1024px)').matches) return;
+            if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+            if (this._saving) return;
+            if (this._popupCell) return;
+            // Task 487: анти-дребезг — после ЗАКРЫТИЯ кликового попапа
+            // (Esc/кловер/выбор статуса) браузер переотправляет
+            // mouseenter на ячейку под НЕПОДВИЖНЫМ курсором (кловер-
+            // оверлей скрылся — элемент под указателем «сменлся»):
+            // 400 мс не даём окну «возродиться» сразу после закрытия;
+            // реальный ховер (движение мыши) работает как прежде
+            if (this._popupClosedAt &&
+                    (Date.now() - this._popupClosedAt) < 400) return;
+            // ячейка без мероприятий — окно «Мероприятия» не открываем
+            if (!this._eventsAt(isoDate, tabNo).length) return;
+            if (this._hoverOn && this._hoverCell &&
+                    this._hoverCell.date === isoDate &&
+                    String(this._hoverCell['таб_номер']) === String(tabNo)) {
+                // курсор вернулся в ту же ячейку — отменить закрытие
+                if (this._hoverTimer) {
+                    clearTimeout(this._hoverTimer);
+                    this._hoverTimer = null;
+                }
+                return;
+            }
+            var td = null;
+            try {
+                if (ev && ev.target && ev.target.closest) {
+                    td = ev.target.closest('td.ws-cell');
+                }
+            } catch (e) {}
+            this._openHoverPopup(td, isoDate, tabNo);
+        },
+
+        // Task 487: курсор ушёл с ячейки — окно закрывается не сразу:
+        // grace-таймер 350 мс (курсор может идти НА окно — прочитать
+        // длинную тему; вход в окно гасит таймер, см. _openHoverPopup).
+        // Открытый кликом попап (_popupCell) — неприкосновенен:
+        // ховер-состояние просто сбрасывается без закрытия.
+        onCellLeave: function() {
+            if (!this._hoverOn) return;
+            if (this._popupCell) {
+                this._hoverOn = false;
+                if (this._hoverTimer) {
+                    clearTimeout(this._hoverTimer);
+                    this._hoverTimer = null;
+                }
+                return;
+            }
+            if (this._hoverTimer) clearTimeout(this._hoverTimer);
+            var self = this;
+            this._hoverTimer = setTimeout(function() {
+                self._hoverTimer = null;
+                self._closeHoverPopup();
+            }, 350);
         },
 
         // Содержимое попапа: заголовок (дата · ФИО), строки статусов
@@ -54647,55 +54730,35 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             for (var de = 0; de < dayEvents.length; de++) {
                 var deMeta = this._statusMeta(dayEvents[de].code) || {};
-                // Task 309: кнопки правки/удаления мероприятия —
-                // только ролям с правом записи (зрители видят
-                // справку без действий). stopPropagation — клик не
-                // дойдёт до строки (строка не кликабельна, но
-                // подстрахуемся на будущее)
+                // Task 487 (заявка: «в попапе мероприятия "И" или
+                // "ПЗ" убери возможность редактирования и внесения
+                // изменений (убери все три кнопки), должен быть
+                // только просмотр, а изменение теперь должно быть
+                // возможно только из карт работников»): все ТРИ
+                // кнопки окна — ГАЛОЧКА выполнения (Task 482), ✎
+                // (Task 309) и ✕ (Task 309) — УДАЛЕНЫ. Окно
+                // «Мероприятия в этот день» теперь СПРАВОЧНОЕ для
+                // ВСЕХ ролей (в т.ч. редакторов): правка/удаление/
+                // отметка выполнения — ТОЛЬКО из карточки работника
+                // (страница «Работники», Task 385/418/427). От записи
+                // остаётся ИНФОРМАЦИЯ о выполнении — некликабельный
+                // ✓ (ws-done-ro, как прежде у зрителей); сетка
+                // дублирует состояние цветом рамки бейджа
+                // (ws-ev-done/ws-ev-late, Task 482)
                 var deT = dayEvents[de].training;
                 var deId = parseInt(deT.id, 10);
                 // Task 427: семейство записи (id таблиц раздельные —
-                // одинаковый id адресуется семейством типа)
+                // одинаковый id адресуется семейством типа) — нужно
+                // маркеру: столбец «выполнение» есть только у
+                // семейства «Инструктажи» (И/ПЗ)
                 var deFam = this._isInstrType(deT.тип) ? 1 : 0;
-                // Task 482 (заявка: «добавь возможность отмечать их
-                // выполнение в окне, которое появляется возле
-                // ячейкой при нажатии на эту ячейку, рядом со
-                // значками редактирования и удаления, у тех
-                // пользователей, которые имеют доступ к изменению
-                // данных»): ГАЛОЧКА отметки выполнения — в ряду
-                // действий, ПЕРЕД ✎/✕ (клик — toggleTrainingDone,
-                // тот же метод, что в карточке, Task 418: сервер
-                // пишет столбец «выполнение», автосоздание новых
-                // сроков, тост). ТОЛЬКО записям семейства
-                // «Инструктажи» (И/ПЗ — столбец есть; ОБ/ПР/* —
-                // галочки нет) и записям с id. Зрители (без права
-                // записи) видят СОСТОЯНИЕ — некликабельно (как в
-                // карточке); сетка показывает то же цветом рамки
-                // бейджа (ws-ev-done/ws-ev-late)
                 var deChk = '';
-                if (deFam === 1 && deId) {
-                    var deDone = (parseInt(deT.выполнение, 10) === 1);
-                    if (this._canEdit) {
-                        deChk = '<span class="ws-done-chk' +
-                                (deDone ? ' ws-done-on' : '') + '"' +
-                                ' role="button" tabindex="0" title="' +
-                                (deDone ? 'Снять отметку о выполнении'
-                                        : 'Отметить выполнение') + '"' +
-                                ' onclick="event.stopPropagation(); ' +
-                                'WorkSchedule.toggleTrainingDone(' + deId +
-                                ')">✓</span>';
-                    } else if (deDone) {
-                        deChk = '<span class="ws-done-chk ws-done-on ws-done-ro"' +
-                                ' title="Выполнено">✓</span>';
-                    }
+                if (deFam === 1 && deId &&
+                        parseInt(deT.выполнение, 10) === 1) {
+                    deChk = '<span class="ws-done-chk ws-done-on ws-done-ro"' +
+                            ' title="Выполнено">✓</span>';
                 }
                 var deActs = deChk;
-                if (this._canEdit && deId) {
-                    deActs += '<span class="ws-popup-act" title="Редактировать"' +
-                             ' onclick="event.stopPropagation(); WorkSchedule.editTraining(' + deId + ', ' + deFam + ')">✎</span>' +
-                             '<span class="ws-popup-act ws-popup-act-del" title="Удалить"' +
-                             ' onclick="event.stopPropagation(); WorkSchedule.deleteTraining(' + deId + ', ' + deFam + ')">✕</span>';
-                }
                 html += '<div class="ws-popup-row ws-popup-event">' +
                         '<span class="ws-popup-swatch" style="background:' + (deMeta.color || '#3a3a3a') + ';"></span>' +
                         '<span class="ws-popup-code">' + this._esc(dayEvents[de].code) + '</span>' +
@@ -54726,6 +54789,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // HTML рядом с #wsCellPopup (после него)
             var evp = document.getElementById('wsEventsPopup');
             this._popupCell = { date: isoDate, 'таб_номер': tabNo };
+            // Task 487: клик ПЕРЕХВАТЫВАЕТ окно мероприятий у ховер-
+            // режима — сбрасываем ховер-флаги/таймер/хендлеры: окно
+            // ниже перерендерится уже кликовым содержимым (гварды
+            // onCellLeave теперь видят живой _popupCell и не закроют
+            // его отсроченным таймером)
+            this._hoverOn = false;
+            this._hoverCell = null;
+            if (this._hoverTimer) {
+                clearTimeout(this._hoverTimer);
+                this._hoverTimer = null;
+            }
+            if (evp) { evp.onmouseenter = null; evp.onmouseleave = null; }
             popup.innerHTML = this._renderCellPopup(isoDate, tabNo);
             closer.classList.add('active');
             popup.classList.add('active');
@@ -54792,6 +54867,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         closeCellPopup: function() {
             var popup = document.getElementById('wsCellPopup');
             var closer = document.getElementById('wsPopupCloser');
+            // Task 487: Esc/кловер/выбор статуса закрывают и ховер-
+            // режим (если был жив) — флаги/таймер/хендлеры снимаются,
+            // само окно ниже закрывается общей логикой. Метка
+            // _popupClosedAt — для анти-дребезга в onCellHover:
+            // скрытие кловера «меняет» элемент под неподвижным
+            // курсором, и браузер переотправляет mouseenter ячейке —
+            // 400 мс окно не возрождается сразу после закрытия
+            this._hoverOn = false;
+            this._hoverCell = null;
+            if (this._hoverTimer) {
+                clearTimeout(this._hoverTimer);
+                this._hoverTimer = null;
+            }
+            this._popupClosedAt = Date.now();
             // Task 313: окно «Мероприятия в этот день» закрывается
             // ВМЕСТЕ с окном кодов (один жизненный цикл: кловер,
             // выбор статуса, «+ Мероприятие…», «Дополнительно…»,
@@ -54799,7 +54888,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // через closeCellPopup; Task 417: попап карточки
             // удалён)
             var evp = document.getElementById('wsEventsPopup');
-            if (evp) { evp.classList.remove('active'); evp.innerHTML = ''; }
+            if (evp) {
+                evp.classList.remove('active');
+                evp.innerHTML = '';
+                evp.onmouseenter = null;
+                evp.onmouseleave = null;
+            }
             if (popup) { popup.classList.remove('active'); popup.innerHTML = ''; }
             if (closer) closer.classList.remove('active');
             this._popupCell = null;
@@ -54812,13 +54906,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // правилам _openCellPopup (правее, не влезает — левее,
         // клампы по краям); закрывается кловером/Esc как обычно
         // (closeCellPopup чистит ОБА окна). Содержимое — тот же
-        // _renderEventsPopup: строки-справка без ✎/✕ (кнопки и
-        // так _canEdit-gated), пустой день — «нет мероприятий».
+        // _renderEventsPopup: строки-справка (Task 487 — окно без
+        // кнопок у ВСЕХ ролей), пустой день — «нет мероприятий».
         _openEventsOnlyPopup: function(cellEl, isoDate, tabNo) {
             var evp = document.getElementById('wsEventsPopup');
             var closer = document.getElementById('wsPopupCloser');
             if (!evp) return;
             this._popupCell = { date: isoDate, 'таб_номер': tabNo };
+            // Task 487: как и в _openCellPopup — клик зрителя
+            // перехватывает окно у ховер-режима (сброс флагов/таймера)
+            this._hoverOn = false;
+            this._hoverCell = null;
+            if (this._hoverTimer) {
+                clearTimeout(this._hoverTimer);
+                this._hoverTimer = null;
+            }
+            evp.onmouseenter = null;
+            evp.onmouseleave = null;
             evp.innerHTML = this._renderEventsPopup(isoDate, tabNo);
             if (closer) closer.classList.add('active');
             evp.classList.add('active');
@@ -54847,6 +54951,87 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             evp.style.left = Math.round(left) + 'px';
             evp.style.top = Math.round(top) + 'px';
             evp.style.visibility = '';
+        },
+
+        // Task 487: ховер-версия окна «Мероприятия в этот день» — тот
+        // же рендер (_renderEventsPopup, справочное окно без кнопок),
+        // то же позиционирование (правее ячейки, не влезает — левее,
+        // клампы по краям вьюпорта), но БЕЗ кловера #wsPopupCloser
+        // (закрытие — уход курсора, не клик «вне») и БЕЗ записи
+        // _popupCell (кликовый режим не трогаем). Курсор может уйти
+        // НА окно (прочитать длинную тему): mouseenter окна гасит
+        // grace-таймер, mouseleave — закрывает. Оба хендлера живут
+        // только в ховер-режиме (_closeHoverPopup их снимает; клики
+        // _openCellPopup/_openEventsOnlyPopup тоже сбрасывают).
+        _openHoverPopup: function(cellEl, isoDate, tabNo) {
+            var evp = document.getElementById('wsEventsPopup');
+            if (!evp) return;
+            if (this._hoverTimer) {
+                clearTimeout(this._hoverTimer);
+                this._hoverTimer = null;
+            }
+            this._hoverOn = true;
+            this._hoverCell = { date: isoDate, 'таб_номер': tabNo };
+            evp.innerHTML = this._renderEventsPopup(isoDate, tabNo);
+            evp.classList.add('active');
+            // Сначала скрыто в левом верхнем углу — измерить габариты,
+            // затем позиционировать и показать (как _openEventsOnlyPopup)
+            evp.style.left = '0px';
+            evp.style.top = '0px';
+            evp.style.visibility = 'hidden';
+            var ew = evp.offsetWidth;
+            var eh = evp.offsetHeight;
+            var vw = window.innerWidth;
+            var vh = window.innerHeight;
+            var left, top;
+            var rect = cellEl ? cellEl.getBoundingClientRect() : null;
+            if (rect) {
+                left = rect.right + 6;
+                if (left + ew > vw - 8) left = rect.left - ew - 6;
+                if (left < 8) left = Math.max(8, Math.min(rect.left, vw - ew - 8));
+                if (left + ew > vw - 8) left = Math.max(8, vw - ew - 8);
+                top = rect.top;
+                if (top + eh > vh - 8) top = Math.max(8, vh - eh - 8);
+            } else {
+                left = Math.max(8, (vw - ew) / 2);
+                top = Math.max(8, (vh - eh) / 2);
+            }
+            evp.style.left = Math.round(left) + 'px';
+            evp.style.top = Math.round(top) + 'px';
+            evp.style.visibility = '';
+            var self = this;
+            evp.onmouseenter = function() {
+                if (self._hoverTimer) {
+                    clearTimeout(self._hoverTimer);
+                    self._hoverTimer = null;
+                }
+            };
+            evp.onmouseleave = function() {
+                if (self._hoverOn && !self._popupCell) self._closeHoverPopup();
+            };
+        },
+
+        // Task 487: закрыть ховер-окно (grace-таймер истёк / курсор
+        // ушёл с самого окна / Esc / закрытие кликового попапа).
+        // Кликковый режим неприкосновенен: при живом _popupCell окно
+        // принадлежит клику — трогаем только ховер-флаги и хендлеры.
+        _closeHoverPopup: function() {
+            if (!this._hoverOn) return;
+            this._hoverOn = false;
+            this._hoverCell = null;
+            if (this._hoverTimer) {
+                clearTimeout(this._hoverTimer);
+                this._hoverTimer = null;
+            }
+            var evp = document.getElementById('wsEventsPopup');
+            if (evp) {
+                evp.onmouseenter = null;
+                evp.onmouseleave = null;
+                if (!this._popupCell) {
+                    evp.classList.remove('active');
+                    evp.innerHTML = '';
+                }
+            }
         },
 
         // Выбор статуса в попапе: применяется ЛОКАЛЬНО (в _PENDING),
