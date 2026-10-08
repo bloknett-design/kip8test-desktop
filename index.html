@@ -48154,9 +48154,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // Task 442: число ВЫХОДНОГО дня — ЖИРНОЕ (s=1,
                 // как прежде у всех) + medium-верх контура
                 // (headC: T/TL/TR/TLR); обычный день — НЕ жирное
-                // число (новый стиль regDate)
-                head.push({ v: String(model.days[d].d) +
-                            (model.days[d].short ? '*' : ''),
+                // число (новый стиль regDate).
+                // Task 488 («простой редактируемый xlsx»): число
+                // дня — ЧИСЛОВАЯ ячейка (прежде — текст «1»..«31»
+                // ⇒ Excel рисовал «число сохранено как текст» на
+                // всей шапке, зелёные треугольники, сортировка/
+                // фильтр/правка — как у текста). Сокращённый день
+                // «N*» — остаётся ТЕКСТОМ (звёздочка)
+                head.push({ v: model.days[d].short
+                            ? (String(model.days[d].d) + '*')
+                            : model.days[d].d,
                             s: off ? stMap.headC + edge
                                    : stMap.regDate });
                 // день недели в полосе выходного — medium-бока
@@ -48285,8 +48292,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     } else if (String(v) === '') {
                         x += '<c r="' + ref + '"' + st + '/>';
                     } else {
+                        // Task 488: xml:space="preserve" при краевом
+                        // пробеле — как в _wsXlsSheetXml (архив);
+                        // без него Excel может подрезать текст
+                        var sv = String(v);
+                        var sp = (/^\s|\s$/.test(sv))
+                            ? ' xml:space="preserve"' : '';
                         x += '<c r="' + ref + '" t="inlineStr"' + st +
-                             '><is><t>' + this._wsXlsEsc(String(v)) +
+                             '><is><t' + sp + '>' + this._wsXlsEsc(sv) +
                              '</t></is></c>';
                     }
                 }
@@ -48327,6 +48340,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var widths = [Math.min(34, empLen + 2)];
             for (var d = 0; d < model.days.length; d++) widths.push(3.8);
             widths.push(6, 9.5);
+            // Task 488 («простой редактируемый xlsx»): + docProps
+            // (core/app) в [Content_Types] и _rels/.rels, в
+            // workbook.xml — bookViews (Excel всегда их пишет)
+            var dp = this._wsXlsDocProps();
             var files = [];
             var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
                 '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
@@ -48335,6 +48352,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
                 '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
                 '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+                dp.ct +
                 '</Types>';
             files.push({ name: '[Content_Types].xml',
                          data: this._wsXlsBytes(ct) });
@@ -48344,14 +48362,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
                     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
                     '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"' +
-                    ' Target="xl/workbook.xml"/></Relationships>')
+                    ' Target="xl/workbook.xml"/>' + dp.rels +
+                    '</Relationships>')
             });
+            // Task 488: docProps — сразу за rels (канонический
+            // порядок частей Excel: CT, rels, docProps, xl/*)
+            for (var dpi = 0; dpi < dp.files.length; dpi++) {
+                files.push(dp.files[dpi]);
+            }
             files.push({
                 name: 'xl/workbook.xml',
                 data: this._wsXlsBytes(
                     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
                     '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"' +
                     ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+                    '<bookViews><workbookView/></bookViews>' +
                     '<sheets><sheet name="Табель" sheetId="1" r:id="rId1"/>' +
                     '</sheets></workbook>')
             });
@@ -49509,8 +49534,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     } else if (String(v) === '') {
                         x += '<c r="' + ref + '"' + st + '/>';
                     } else {
+                        // Task 488: xml:space="preserve" при краевом
+                        // пробеле (как в _wsXlsSheetXml архива)
+                        var sv = String(v);
+                        var sp = (/^\s|\s$/.test(sv))
+                            ? ' xml:space="preserve"' : '';
                         x += '<c r="' + ref + '" t="inlineStr"' + st +
-                             '><is><t>' + this._wsXlsEsc(String(v)) +
+                             '><is><t' + sp + '>' + this._wsXlsEsc(sv) +
                              '</t></is></c>';
                     }
                 }
@@ -49614,6 +49644,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                { v: model.ppe[q].fio, s: 7 }]);
                 }
             }
+            // Task 488 («простой редактируемый xlsx»): + docProps
+            // (core/app) и bookViews — тот же паттерн, что у книги
+            // «Табель» (_buildTabelWorkbook)
+            var dp = this._wsXlsDocProps();
             var files = [];
             var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
                 '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
@@ -49622,6 +49656,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
                 '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
                 '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+                dp.ct +
                 '</Types>';
             files.push({ name: '[Content_Types].xml',
                          data: this._wsXlsBytes(ct) });
@@ -49631,14 +49666,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
                     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
                     '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"' +
-                    ' Target="xl/workbook.xml"/></Relationships>')
+                    ' Target="xl/workbook.xml"/>' + dp.rels +
+                    '</Relationships>')
             });
+            for (var dpi = 0; dpi < dp.files.length; dpi++) {
+                files.push(dp.files[dpi]);
+            }
             files.push({
                 name: 'xl/workbook.xml',
                 data: this._wsXlsBytes(
                     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
                     '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"' +
                     ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+                    '<bookViews><workbookView/></bookViews>' +
                     '<sheets><sheet name="Мероприятия" sheetId="1" r:id="rId1"/>' +
                     '</sheets></workbook>')
             });
@@ -54740,25 +54780,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // «Мероприятия в этот день» теперь СПРАВОЧНОЕ для
                 // ВСЕХ ролей (в т.ч. редакторов): правка/удаление/
                 // отметка выполнения — ТОЛЬКО из карточки работника
-                // (страница «Работники», Task 385/418/427). От записи
-                // остаётся ИНФОРМАЦИЯ о выполнении — некликабельный
-                // ✓ (ws-done-ro, как прежде у зрителей); сетка
-                // дублирует состояние цветом рамки бейджа
-                // (ws-ev-done/ws-ev-late, Task 482)
+                // (страница «Работники», Task 385/418/427).
+                // Task 488 (заявка: «кнопка отметки осталась»):
+                // удалён и read-only МАРКЕР-квадрат галочки (тот
+                // зелёный ✓ в рамке, классы chk/маркера) — он
+                // выглядит элементом управления, а окно должно быть
+                // чисто текстовой справкой. Состояние выполнения
+                // видно: (а) цветом рамки бейджа ячейки в сетке
+                // (ws-ev-done/ws-ev-late, Task 482), (б) галочкой
+                // в КАРТОЧКЕ работника. Строка окна = свотч + код +
+                // название — ничего кликабельного
                 var deT = dayEvents[de].training;
-                var deId = parseInt(deT.id, 10);
-                // Task 427: семейство записи (id таблиц раздельные —
-                // одинаковый id адресуется семейством типа) — нужно
-                // маркеру: столбец «выполнение» есть только у
-                // семейства «Инструктажи» (И/ПЗ)
-                var deFam = this._isInstrType(deT.тип) ? 1 : 0;
-                var deChk = '';
-                if (deFam === 1 && deId &&
-                        parseInt(deT.выполнение, 10) === 1) {
-                    deChk = '<span class="ws-done-chk ws-done-on ws-done-ro"' +
-                            ' title="Выполнено">✓</span>';
-                }
-                var deActs = deChk;
                 html += '<div class="ws-popup-row ws-popup-event">' +
                         '<span class="ws-popup-swatch" style="background:' + (deMeta.color || '#3a3a3a') + ';"></span>' +
                         '<span class="ws-popup-code">' + this._esc(dayEvents[de].code) + '</span>' +
@@ -54766,7 +54798,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         // («сокращение» из «Список_И_и_ПЗ», нет — полное)
                         '<span class="ws-popup-name">' +
                         this._esc(this._instrShortOf(deT.тема) || deMeta.name || '') + '</span>' +
-                        deActs + '</div>';
+                        '</div>';
             }
             return html;
         },
@@ -57904,10 +57936,62 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // экранирование XML-текста
         _wsXlsEsc: function(s) {
             return String(s == null ? '' : s)
+                // Task 488 («простой редактируемый xlsx»): XML 1.0
+                // ЗАПРЕЩАЕТ управляющие символы 0x00–0x08, 0x0B,
+                // 0x0C, 0x0E–0x1F (допустимы только \t \n \r).
+                // «Мусорные» байты из пользовательских полей (тема
+                // мероприятия, примечание СИЗ…) дают книгу, которую
+                // LibreOffice/openpyxl открывают, а Excel —
+                // «восстанавливает» (ремонт файла). Вырезаем ДО
+                // экранирования, все три листа книги
+                .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;');
+        },
+
+        // Task 488 («простой редактируемый xlsx»): СТАНДАРТНЫЙ состав
+        // книги — docProps (core.xml/app.xml) + bookViews. Excel сам
+        // всегда пишет эти части: без них книга открывается, но
+        // «неполна» (панель свойств пуста; строгие наборы —
+        // МойОфис/старые сборки — ворчливее). Общий помощник всех
+        // трёх выгрузок: {files, ct, rels} — файлы docProps,
+        // Override-строки [Content_Types] и Relationship-строки
+        // _rels/.rels (rId2/rId3 НЕ конфликтуют: rId1 — workbook)
+        _wsXlsDocProps: function() {
+            var nowIso = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+            return {
+                files: [
+                    { name: 'docProps/core.xml',
+                      data: this._wsXlsBytes(
+                          '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                          '<cp:coreProperties' +
+                          ' xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"' +
+                          ' xmlns:dc="http://purl.org/dc/elements/1.1/"' +
+                          ' xmlns:dcterms="http://purl.org/dc/terms/"' +
+                          ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' +
+                          '<dc:creator>КИПиА</dc:creator>' +
+                          '<cp:lastModifiedBy>КИПиА</cp:lastModifiedBy>' +
+                          '<dcterms:created xsi:type="dcterms:W3CDTF">' +
+                          nowIso + '</dcterms:created>' +
+                          '<dcterms:modified xsi:type="dcterms:W3CDTF">' +
+                          nowIso + '</dcterms:modified>' +
+                          '</cp:coreProperties>') },
+                    { name: 'docProps/app.xml',
+                      data: this._wsXlsBytes(
+                          '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                          '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">' +
+                          '<Application>КИПиА</Application>' +
+                          '</Properties>') }
+                ],
+                ct: '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
+                    '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>',
+                rels: '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties"' +
+                      ' Target="docProps/core.xml"/>' +
+                      '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties"' +
+                      ' Target="docProps/app.xml"/>'
+            };
         },
 
         // XML листа: rows — массив строк (массив ячеек; строка =>
@@ -58319,7 +58403,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 { name: 'Мероприятия', rows: d.events, person: 'ФИО',
                   widths: [32, 15, 50, 15, 15, 16, 42] }
             ];
-            var files = [];
+            // Task 488 («простой редактируемый xlsx»): (1) zip-порядок
+            // частей КАНОНИЧЕСКИЙ — [Content_Types].xml ПЕРВЫМ, затем
+            // _rels/.rels, docProps, workbook, его rels, листы, стили
+            // (прежде листы шли ПЕРВЫМИ, CT — последним: Excel такое
+            // читает по central directory, но поборчливые наборы
+            // ждут «как пишет сам Excel»); (2) + docProps (core/app)
+            // и bookViews в workbook.xml — паттерн _buildTabelWorkbook
+            var dp = this._wsXlsDocProps();
+            var sheetFiles = [];
             var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
                 '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
                 '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
@@ -58336,7 +58428,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 rels += '<Relationship Id="rId' + (i + 1) +
                         '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"' +
                         ' Target="worksheets/sheet' + (i + 1) + '.xml"/>';
-                files.push({
+                sheetFiles.push({
                     name: 'xl/worksheets/sheet' + (i + 1) + '.xml',
                     data: this._wsXlsBytes(this._wsXlsSheetXml(
                         sheets[i].rows, { widths: sheets[i].widths,
@@ -58350,6 +58442,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             rels += '<Relationship Id="rId' + relN +
                     '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"' +
                     ' Target="styles.xml"/>';
+            ct += dp.ct;
+            var files = [];
             files.push({ name: '[Content_Types].xml',
                         data: this._wsXlsBytes(ct + '</Types>') });
             files.push({
@@ -58358,14 +58452,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
                     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
                     '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"' +
-                    ' Target="xl/workbook.xml"/></Relationships>')
+                    ' Target="xl/workbook.xml"/>' + dp.rels +
+                    '</Relationships>')
             });
+            for (var dpi = 0; dpi < dp.files.length; dpi++) {
+                files.push(dp.files[dpi]);
+            }
             files.push({
                 name: 'xl/workbook.xml',
                 data: this._wsXlsBytes(
                     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
                     '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"' +
                     ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+                    '<bookViews><workbookView/></bookViews>' +
                     '<sheets>' + sheetTags + '</sheets></workbook>')
             });
             files.push({
@@ -58375,6 +58474,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
                     rels + '</Relationships>')
             });
+            for (var sfi = 0; sfi < sheetFiles.length; sfi++) {
+                files.push(sheetFiles[sfi]);
+            }
             files.push({ name: 'xl/styles.xml',
                          data: this._wsXlsBytes(this._wsXlsStylesXml()) });
             var now = new Date();
