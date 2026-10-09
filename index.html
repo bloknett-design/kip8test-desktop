@@ -1216,10 +1216,24 @@
     [data-theme="light"] .ts-card-arrow { color: rgba(20, 20, 19, 0.15); }
     [data-theme="light"] .ts-group-badge-rtd { background: rgba(43, 138, 74, 0.1); color: #2b8a4a; border-color: rgba(43, 138, 74, 0.3); }
     [data-theme="light"] .ts-group-badge-tc { background: rgba(156, 108, 52, 0.1); color: #8a5c26; border-color: rgba(156, 108, 52, 0.3); }
-    /* Task 373: мобильная версия — карточки столбиком, по одной в
-       строке, на всю ширину (отступы по краям — padding .ts-page) */
-    @media (max-width: 1023px) { .ts-cards-grid { grid-template-columns: 1fr; } }
-    @media (max-width: 400px) { .ts-card { padding: 10px 12px; } .ts-card-name { font-size: 15px; } .ts-card-meta { font-size: 11px; } }
+    /* Task 490: мобильная версия — кнопки-карточки по ДВЕ в строке,
+       рядом кнопки с одинаковой градуировкой (НСХ): ТС — 50М+100М
+       одной α, 50П+100П, Pt100+Pt1000; ТП — ТХА (K)+ТХК (L) вместе
+       (заявка), далее ТЖК (J)+ТМК (T), ТХКн (E)+ТНН (N), ТПП (R)+
+       ТПП (S); ТПР (B) — непарная, во всю строку. На кнопках ТС
+       остаются ТОЛЬКО градуировка и температурный коэффициент
+       (скрыты R₀ и международный аналог в скобках), на кнопках ТП —
+       наименование с градуировкой (скрыты материал электродов и
+       диапазон НСХ). Десктоп (≥1024px) — без изменений (Task 373). */
+    @media (max-width: 1023px) {
+        .ts-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+        .ts-card { padding: 10px 12px 11px; gap: 4px; }
+        .ts-card-name { font-size: 15px; }
+        .ts-card-meta { font-size: 11px; }
+        .ts-card .ts-card-name-analog, .ts-card .ts-card-r0, .ts-card .ts-card-meta-sep, .ts-card .ts-card-range, .ts-card-tc .ts-card-meta { display: none; }
+        .ts-cards-grid > .ts-card:nth-child(odd):last-child { grid-column: 1 / -1; }
+    }
+    @media (max-width: 400px) { .ts-card { padding: 9px 10px 10px; } .ts-card-name { font-size: 14px; } .ts-card-meta { font-size: 10.5px; } }
 
     .method-indicator { background: rgba(30, 42, 56, 0.75); backdrop-filter: blur(8px); margin: 10px 0; padding: 12px 14px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(74, 143, 199, 0.15); position: relative; z-index: 2; }
     
@@ -33537,6 +33551,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     // выбора, диапазонов НСХ и справочной информации. Порядок как в
     // бывших выпадающих списках: ТС (Cu → Pt), затем ТП (K…B),
     // Task 373: после ТХКн (E) — ТХК (L), хромель-копель.
+    // Task 490: порядок ТП — парами для мобильных кнопок по две в
+    // строке: ТХА (K)+ТХК (L) (заявка — вместе), затем ТЖК (J)+
+    // ТМК (T), ТХКн (E)+ТНН (N), ТПП (R)+ТПП (S), ТПР (B).
     function getTempSensorCatalog(){
         let rtd=getRtdSensorMap();
         let alphaTxt={pt1391:'α = 0,00391 (ГОСТ)',pt1385:'α = 0,00385 (IEC)'};
@@ -33551,7 +33568,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         });
         // Task 373: L — хромель-копель, диапазон НСХ −200…800 °C
         let tcm={K:{mat:'хромель-алюмель',r:[-270,1372]},J:{mat:'железо-константан',r:[-210,1200]},T:{mat:'медь-константан',r:[-270,400]},N:{mat:'никросил-нисил',r:[-270,1300]},E:{mat:'хромель-константан',r:[-270,1000]},L:{mat:'хромель-копель',r:[-200,800]},R:{mat:'платинородий-платина',r:[-50,1768]},S:{mat:'платинородий-платина',r:[-50,1768]},B:{mat:'платинородий-платинородий',r:[0,1820]}};
-        ['K','J','T','N','E','L','R','S','B'].forEach(function(k){
+        ['K','L','J','T','E','N','R','S','B'].forEach(function(k){
             let m=tcm[k];
             list.push({key:'tc_'+k,kind:'tc',tc:k,name:getTcSensorMap()[k],meta:m.mat,range:{min:m.r[0],max:m.r[1]}});
         });
@@ -33570,6 +33587,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     // «Избранные» показывает только избранные датчики (заголовки пустых
     // групп скрыты), бейджи ТС/ТП убраны, звезда избранного — в правом
     // верхнем углу карточки (по примеру расходомеров хозрасчётных).
+    // Task 490: имя/meta ТС делятся на спаны — на десктопе текст
+    // прежний (спаны инлайн), на мобильном скрыты аналог в скобках
+    // и R₀: на кнопке ТС остаются только градуировка и температурный
+    // коэффициент (α), на кнопке ТП — наименование с градуировкой.
     function renderTempSensorCards(){
         let rtdBox=document.getElementById('tsRtdCards');
         let tcBox=document.getElementById('tsTcCards');
@@ -33585,10 +33606,31 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         cat.forEach(function(s){
             if(favMode&&!TempFav.has(s.key)){return;}
             let isFav=TempFav.has(s.key);
+            // Task 490: имя ТС — «градуировка + аналог в скобках»;
+            // на мобильном аналог скрыт (CSS .ts-card-name-analog),
+            // на кнопке — только градуировка (50М, 100П, Pt100 …)
+            let nameHtml=s.name;
+            if(s.kind==='rtd'){
+                let sp=String(s.name).indexOf(' (');
+                if(sp>0){
+                    nameHtml='<span class="ts-card-name-main">'+s.name.slice(0,sp)+'</span><span class="ts-card-name-analog">'+s.name.slice(sp)+'</span>';
+                }
+            }
+            // Task 490: meta ТС — «R₀ · α»; на мобильном R₀ скрыт
+            // (CSS .ts-card-r0), на кнопке — только температурный
+            // коэффициент; у ТП (материал электродов) meta на
+            // мобильном скрыта целиком
+            let metaHtml=s.meta;
+            if(s.kind==='rtd'){
+                let sep=s.meta.indexOf(' · ');
+                if(sep>0){
+                    metaHtml='<span class="ts-card-r0">'+s.meta.slice(0,sep)+'</span><span class="ts-card-meta-sep"> · </span><span class="ts-card-alpha">'+s.meta.slice(sep+3)+'</span>';
+                }
+            }
             let card='<div class="ts-card'+(s.kind==='tc'?' ts-card-tc':'')+'" onclick="openTempSensor(\''+s.key+'\')" role="button" tabindex="0" aria-label="'+s.name+'">'
                 +'<button type="button" class="ts-card-fav-btn'+(isFav?' active':'')+'" onclick="event.stopPropagation(); toggleTempSensorFav(\''+s.key+'\')" aria-label="'+(isFav?'Убрать из избранного':'В избранное')+'" title="'+(isFav?'Убрать из избранного':'В избранное')+'">'+(isFav?'★':'☆')+'</button>'
-                +'<div class="ts-card-top"><span class="ts-card-name">'+s.name+'</span><i class="ts-card-arrow">›</i></div>'
-                +'<div class="ts-card-meta">'+s.meta+'</div>'
+                +'<div class="ts-card-top"><span class="ts-card-name">'+nameHtml+'</span><i class="ts-card-arrow">›</i></div>'
+                +'<div class="ts-card-meta">'+metaHtml+'</div>'
                 +'<div class="ts-card-range">НСХ: '+fmtR(s.range.min)+'…'+fmtR(s.range.max)+' °C</div>'
                 +'</div>';
             if(s.kind==='rtd'){rtdHtml+=card;rtdShown=true;}else{tcHtml+=card;tcShown=true;}
