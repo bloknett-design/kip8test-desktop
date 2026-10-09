@@ -20479,9 +20479,23 @@
             <label class="flow-input-label" for="wsEmpTabNo">Таб. №</label>
             <input type="text" id="wsEmpTabNo" class="flow-input-field-small" placeholder="2706" autocomplete="off">
         </div>
+        <!-- Task 489: столбец «ФИО» листа «Сотрудники» разделён на
+             ТРИ столбца — форма вводит ПОЛНЫЕ данные частями
+             (фамилия/имя/отчество); краткое ФИО «Иванов И. И.»
+             приложение composeит само -->
         <div class="flow-input-group" style="flex:1 1 65%;">
-            <label class="flow-input-label" for="wsEmpFio">ФИО</label>
-            <input type="text" id="wsEmpFio" class="flow-input-field-small" placeholder="Галкин Д. Н." autocomplete="off">
+            <label class="flow-input-label" for="wsEmpFam">Фамилия</label>
+            <input type="text" id="wsEmpFam" class="flow-input-field-small" placeholder="Галкин" autocomplete="off">
+        </div>
+    </div>
+    <div class="flow-input-row">
+        <div class="flow-input-group" style="flex:1 1 50%;">
+            <label class="flow-input-label" for="wsEmpName">Имя</label>
+            <input type="text" id="wsEmpName" class="flow-input-field-small" placeholder="Дмитрий" autocomplete="off">
+        </div>
+        <div class="flow-input-group" style="flex:1 1 50%;">
+            <label class="flow-input-label" for="wsEmpPatr">Отчество</label>
+            <input type="text" id="wsEmpPatr" class="flow-input-field-small" placeholder="Николаевич" autocomplete="off">
         </div>
     </div>
     <div class="flow-input-row">
@@ -20516,6 +20530,13 @@
         <div class="flow-input-group">
             <label class="flow-input-label" for="wsEmpHire">Дата приёма</label>
             <input type="date" id="wsEmpHire" class="flow-input-field-small">
+        </div>
+        <!-- Task 489: дата рождения — новый столбец «дата_рождения»
+             листа «Сотрудники» (ПЕРЕД «комментарием»); в карте
+             работника — в конце списка блока профиля -->
+        <div class="flow-input-group">
+            <label class="flow-input-label" for="wsEmpBirth">Дата рождения</label>
+            <input type="date" id="wsEmpBirth" class="flow-input-field-small">
         </div>
     </div>
     <!-- Task 320: подсказка календарного режима дневного персонала —
@@ -51003,6 +51024,42 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return p.length === 3 ? (p[2] + '.' + p[1] + '.' + p[0]) : String(iso);
         },
 
+        // Task 489: инициал части имени («Александр»/«А.»/«А» →
+        // «А.») — для композиции КРАТКОГО ФИО из частей
+        _wsNameInitial: function(part) {
+            var s = String(part || '').trim();
+            if (!s) return '';
+            return s.charAt(0).toUpperCase() + '.';
+        },
+
+        // Task 489: КРАТКОЕ ФИО из частей («Галкин»+«Дмитрий»+
+        // «Николаевич» → «Галкин Д. Н.»; инициалы «Д.»/«Н.» дают
+        // то же; нет имени/отчества — одна фамилия) — «в других
+        // местах как и прежде сокращённо» (заявка); так же поле
+        // ФИО в payload add/updateEmployee для легаси-сервера
+        _wsShortFio: function(fam, im, ot) {
+            var out = String(fam || '').trim();
+            var ini = this._wsNameInitial(im);
+            if (ini) out += ' ' + ini;
+            var oin = this._wsNameInitial(ot);
+            if (oin) out += ' ' + oin;
+            return out.trim();
+        },
+
+        // Task 489: ПОЛНОЕ ФИО из частей («Галкин Дмитрий
+        // Николаевич»; пустые части пропускаются) — шапка блока
+        // профиля карты работника + лист «Работники» Excel-архива
+        // (получение из записи — инлайн: ФИО_полное || ФИО)
+        _wsFullFio: function(fam, im, ot) {
+            var parts = [String(fam || '').trim(), String(im || '').trim(),
+                         String(ot || '').trim()];
+            var out = [];
+            for (var i = 0; i < parts.length; i++) {
+                if (parts[i]) out.push(parts[i]);
+            }
+            return out.join(' ');
+        },
+
         // Русская форма множественного: 1 часть / 2 части / 5 частей
         _plural: function(n, forms) {
             var a = Math.abs(n) % 100;
@@ -55296,7 +55353,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var b1Acts = '';
             if (withEdit) {
                 b1Acts = '<button type="button" class="ws-wbtn ws-emp-editdata"' +
-                         ' title="Правка данных работника: ФИО, режим, должность…"' +
+                         ' title="Правка данных работника: ФИО (фамилия/имя/отчество), дата рождения, режим, должность…"' +
                          ' onclick="WorkSchedule.openEmpEditForm(\'' +
                          this._esc(String(emp['таб_номер'] || '')) + '\')">Правка данных…</button>' +
                          '<button type="button" class="ws-wbtn ws-wbtn-danger ws-emp-dismiss"' +
@@ -55304,12 +55361,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                          ' onclick="WorkSchedule.openDismissForm(\'' +
                          this._esc(String(emp['таб_номер'] || '')) + '\')">Уволить…</button>';
             }
+            // Task 489: шапка профиля — ПОЛНОЕ ФИО («Галкин Дмитрий
+            // Николаевич»; легаси-кэш без ФИО_полное — как прежде
+            // краткое) — «должны отражаться только в приложении в
+            // карте работника в блоке профиля» (заявка)
+            var empFioFull = String(emp['ФИО_полное'] || '').trim() ||
+                             String(emp['ФИО'] || '').trim();
             var b1 = asBlocks
                 ? '<div class="ws-whead"><div class="ws-whead-t ws-whead-name">' +
-                  this._esc(emp['ФИО']) + ' · таб. №' +
+                  this._esc(empFioFull) + ' · таб. №' +
                   this._esc(emp['таб_номер']) +
                   '</div><div class="ws-whead-a">' + b1Acts + '</div></div>'
-                : '<div class="ws-popup-title">' + this._esc(emp['ФИО']) +
+                : '<div class="ws-popup-title">' + this._esc(empFioFull) +
                   ' · таб. №' + this._esc(emp['таб_номер']) + '</div>';
 
             // --- Блок 1: профиль (бывшая вкладка «Сотрудники») ---
@@ -55344,7 +55407,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // выполненной проверки знаний до 1000 В («от …»)
                 ['Группа допуска', grpVal || '—'],
                 ['Дата приёма', emp['дата_приёма'] ? this._fmtDateRu(emp['дата_приёма']) : '—'],
-                ['Комментарий', String(emp['комментарий'] || '').trim()]
+                ['Комментарий', String(emp['комментарий'] || '').trim()],
+                // Task 489 (заявка): «дата_рождения» — строкой В КОНЦЕ
+                // списка профиля (пусто/нет — не показывается)
+                ['Дата рождения', emp['дата_рождения']
+                    ? this._fmtDateRu(emp['дата_рождения']) : '']
             ];
             // Task 396 (заявка): ЗЕБРА — чередующийся фон вторых
             // строк блока (класс ws-row-alt — только asBlocks;
@@ -55364,8 +55431,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
 
             // Task 384 → 385: «Правка данных…» — шторка работника в
-            // режиме ПРАВКИ (профиль: ФИО/тип/смена/шаблон/старт/
-            // приём/должность/комментарий; таб. № — readonly, PK).
+            // режиме ПРАВКИ (профиль: фамилия/имя/отчество (Task 489 —
+            // столбец ФИО листа разделён)/дата рождения (Task 489)/
+            // тип/смена/шаблон/старт/приём/должность/комментарий;
+            // таб. № — readonly, PK).
             // Сервер: workSchedule.updateEmployee. Со страницы
             // «Работники» (withEdit; до Task 385 — из карточки
             // шахматки; двойная защита в openEmpEditForm)
@@ -57792,7 +57861,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // i+id / e+id), как в _wtabYearRecords. Task 445 (заявка):
         // КНИГА = ПЯТЬ листов, годы записей — относительно ТЕКУЩЕГО
         // календарного года (не года шахматки):
-        //   1) «Работники» — справочник профилей (таб/ФИО/тип/смена/
+        //   1) «Работники» — справочник профилей (таб/ФИО (Task 489:
+        //      ПОЛНОЕ — «Галкин Дмитрий Николаевич»)/тип/смена/
         //      должность/группа допуска/дата приёма) — без фильтра;
         //   2) «Отпуска» — даты отпусков ПРЕДЫДУЩЕГО и ТЕКУЩЕГО
         //      годов (пул _VAC_YEARS; соседние годы лениво
@@ -58294,7 +58364,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var smena = parseInt(emp['смена'], 10);
                 employees.push([
                     String(emp['таб_номер'] || ''),
-                    String(emp['ФИО'] || ''),
+                    // Task 489 (заявка): полное ФИО — «отражаются …
+                    // в сохранённом файле excel … на листе
+                    // "Работники"»; легаси-кэш без ФИО_полное —
+                    // краткое, как прежде
+                    String(emp['ФИО_полное'] || '').trim() ||
+                        String(emp['ФИО'] || '').trim(),
                     String(emp['тип'] || ''),
                     (smena >= 1 && smena <= 5) ? smena : '',
                     String(emp['должность'] || ''),
@@ -59057,7 +59132,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             document.getElementById('wsEmpStart').value = today;
             document.getElementById('wsEmpHire').value  = today;
             document.getElementById('wsEmpTabNo').value = '';
-            document.getElementById('wsEmpFio').value = '';
+            // Task 489: ТРИ поля имени + дата рождения (столбец ФИО
+            // листа разделён)
+            document.getElementById('wsEmpFam').value = '';
+            document.getElementById('wsEmpName').value = '';
+            document.getElementById('wsEmpPatr').value = '';
+            document.getElementById('wsEmpBirth').value = '';
             document.getElementById('wsEmpType').value = 'сменный';
             document.getElementById('wsEmpShift').value = '';
             // Task 318: «Должность» — выпадающий список из таблицы
@@ -59128,7 +59208,24 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // на клиенте: пустой в записи → сегодня)
             document.getElementById('wsEmpTabNo').value = String(emp['таб_номер'] || '');
             document.getElementById('wsEmpTabNo').readOnly = true;
-            document.getElementById('wsEmpFio').value = String(emp['ФИО'] || '');
+            // Task 489: ТРИ поля имени — из ЧАСТЕЙ записи; легаси-
+            // кэш/сервер без частей — раскладка краткого ФИО по
+            // словам («Галкин Д. Н.» → Галкин/Д./Н.); дата
+            // рождения — поле записи (нет — пусто)
+            var famVal = String(emp['фамилия'] || '').trim();
+            var nameVal = String(emp['имя'] || '').trim();
+            var patrVal = String(emp['отчество'] || '').trim();
+            if (!famVal) {
+                var fioWords = String(emp['ФИО'] || '').trim().split(/\s+/);
+                famVal = fioWords[0] || '';
+                nameVal = fioWords[1] || '';
+                patrVal = fioWords.slice(2).join(' ');
+            }
+            document.getElementById('wsEmpFam').value = famVal;
+            document.getElementById('wsEmpName').value = nameVal;
+            document.getElementById('wsEmpPatr').value = patrVal;
+            document.getElementById('wsEmpBirth').value =
+                String(emp['дата_рождения'] || '');
             var tip = String(emp['тип'] || '').trim();
             document.getElementById('wsEmpType').value =
                 (tip === 'сменный' || tip === 'дневной') ? tip : 'сменный';
@@ -59168,7 +59265,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             document.getElementById('wsEmpOverlay').classList.add('active');
             document.getElementById('wsEmpSheet').classList.add('active');
             setTimeout(function() {
-                var f = document.getElementById('wsEmpFio');
+                var f = document.getElementById('wsEmpFam');
                 if (f) f.focus();
             }, 350);
         },
@@ -59370,7 +59467,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         submitEmployeeForm: function() {
             var tabNo = document.getElementById('wsEmpTabNo').value.trim();
-            var fio = document.getElementById('wsEmpFio').value.trim();
+            // Task 489: имя — ТРИ поля (фамилия/имя/отчество);
+            // дата рождения — необязательное поле даты
+            var fam = document.getElementById('wsEmpFam').value.trim();
+            var name = document.getElementById('wsEmpName').value.trim();
+            var patr = document.getElementById('wsEmpPatr').value.trim();
+            var birth = document.getElementById('wsEmpBirth').value;
             var type = document.getElementById('wsEmpType').value;
             var shift = document.getElementById('wsEmpShift').value;
             var patId = document.getElementById('wsEmpPattern').value;
@@ -59386,8 +59488,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var self = this;
 
             if (!tabNo) { if (typeof KipToast !== 'undefined') KipToast.show('Введите таб. №'); return; }
-            if (!fio)   { if (typeof KipToast !== 'undefined') KipToast.show('Введите ФИО'); return; }
+            // Task 489: обязательна ФАМИЛИЯ (имя/отчество —
+            // необязательные части полного ФИО)
+            if (!fam)   { if (typeof KipToast !== 'undefined') KipToast.show('Введите фамилию'); return; }
             if (!startCycle) { if (typeof KipToast !== 'undefined') KipToast.show('Укажите дату старта цикла'); return; }
+
+            // Task 489: поле ФИО в payload — составленное КРАТКОЕ
+            // («Галкин Д. Н.»): легаси-сервер (не обновлён) пишет его
+            // в единый столбец ФИО как прежде; НОВЫЙ сервер —
+            // предпочитает ЧАСТИ (фамилия/имя/отчество) и дату
+            // рождения
+            var fioShort = this._wsShortFio(fam, name, patr);
 
             // Task 384: РЕЖИМ ПРАВКИ — данные существующего сотрудника
             // обновляются (workSchedule.updateEmployee; таб. № — из
@@ -59396,7 +59507,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (this._empEditTab) {
                 var editTab = this._empEditTab;
                 this._api('workSchedule.updateEmployee', {
-                    'таб_номер': editTab, 'ФИО': fio, тип: type,
+                    'таб_номер': editTab, 'ФИО': fioShort,
+                    'фамилия': fam, 'имя': name, 'отчество': patr,
+                    'дата_рождения': birth || null,
+                    тип: type,
                     смена: shift || null,
                     шаблон_ротации: patId ? parseInt(patId, 10) : null,
                     старт_цикла: startCycle,
@@ -59422,7 +59536,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
 
             this._api('workSchedule.addEmployee', {
-                'таб_номер': tabNo, 'ФИО': fio, тип: type,
+                'таб_номер': tabNo, 'ФИО': fioShort,
+                'фамилия': fam, 'имя': name, 'отчество': patr,
+                'дата_рождения': birth || null,
+                тип: type,
                 смена: shift || null,
                 шаблон_ротации: patId ? parseInt(patId, 10) : null,
                 старт_цикла: startCycle,
