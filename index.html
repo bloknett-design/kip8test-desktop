@@ -1197,9 +1197,22 @@
     .ts-empty-fav-text { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
     .ts-empty-fav-hint { font-size: 12px; color: var(--conv-info-text); line-height: 1.5; }
     .ts-empty-fav-hint .star { color: #4a8fc7; font-weight: 700; }
-    .ts-calc-panel { padding: 14px 16px; background: var(--card-bg); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(74, 143, 199, 0.2); border-radius: 14px; margin: 8px 0 12px; position: relative; z-index: 2; }
-    .ts-calc-title { font-size: 14px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.2px; }
-    .ts-calc-hint { color: var(--conv-info-text); font-size: 11px; line-height: 1.4; margin: 6px 0 10px; }
+    /* Task 494: панель произвольного расчёта — эффект ВЫСТУПА по образцу
+       featured-кнопок Task 492 (рамка 2px + градиент + тень: внешняя
+       снизу, inset-подсветка сверху, затемнение снизу); заголовок
+       «Расчёт произвольных значений» и подсказка «Введите значение…»
+       УДАЛЕНЫ по заявке (правила .ts-calc-title/.ts-calc-hint сняты);
+       поля — крупнее (19px/52px) и ярче: белый текст, яркая рамка. */
+    .ts-calc-panel { padding: 16px; background-color: var(--card-bg); background-image: linear-gradient(180deg, rgba(74, 143, 199, 0.2), rgba(74, 143, 199, 0.05)); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 2px solid rgba(74, 143, 199, 0.85); border-radius: 14px; margin: 8px 0 12px; position: relative; z-index: 2; box-shadow: 0 5px 14px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -3px 0 rgba(0, 0, 0, 0.3); }
+    .ts-calc-panel .scale-form-label { color: rgba(255, 255, 255, 0.6); font-size: 12px; margin-bottom: 7px; }
+    .ts-calc-field { height: 52px; font-size: 19px; font-weight: 700; color: #ffffff; background: rgba(13, 17, 23, 0.45); border-color: rgba(74, 143, 199, 0.45); margin-bottom: 14px; }
+    .ts-calc-field::placeholder { color: rgba(255, 255, 255, 0.4); font-weight: 500; }
+    .ts-calc-field:focus { border-color: rgba(74, 143, 199, 0.85); box-shadow: 0 0 0 3px rgba(74, 143, 199, 0.18); background: rgba(13, 17, 23, 0.6); }
+    [data-theme="light"] .ts-calc-panel { border-color: rgba(43, 111, 163, 0.8); background-color: var(--card-bg); background-image: linear-gradient(180deg, rgba(74, 143, 199, 0.16), rgba(74, 143, 199, 0.03)); box-shadow: 0 4px 12px rgba(21, 54, 83, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -3px 0 rgba(21, 54, 83, 0.12); }
+    [data-theme="light"] .ts-calc-panel .scale-form-label { color: rgba(20, 20, 19, 0.6); }
+    [data-theme="light"] .ts-calc-field { color: #141413; background: rgba(255, 255, 255, 0.75); border-color: rgba(43, 111, 163, 0.5); }
+    [data-theme="light"] .ts-calc-field::placeholder { color: rgba(20, 20, 19, 0.45); }
+    [data-theme="light"] .ts-calc-field:focus { border-color: rgba(43, 111, 163, 0.9); box-shadow: 0 0 0 3px rgba(74, 143, 199, 0.15); background: rgba(255, 255, 255, 0.9); }
     [data-theme="light"] .ts-card-fav-btn { color: rgba(43, 111, 163, 0.45); }
     [data-theme="light"] .ts-card-fav-btn.active { color: #2b6fa3; background: rgba(74, 143, 199, 0.12); }
     [data-theme="light"] .ts-tab { color: rgba(43, 111, 163, 0.6); }
@@ -1368,6 +1381,9 @@
         
         .nav-btn { padding: 9px 14px; font-size: 13px; }
         .form-field, .scale-field { padding: 9px 12px; font-size: 14px; height: 40px; }
+        /* Task 494: поля панели произвольного расчёта НЕ ужимаем —
+           крупный яркий шрифт заявлен на мобильном тоже (19/52) */
+        .ts-calc-field { padding: 10px 14px; font-size: 19px; height: 52px; }
         select.scale-field, select.form-field { font-size: 13px; height: 40px; min-height: 40px; padding-top: 9px; padding-bottom: 9px; }
         .kit-dev-form .scale-field { height: 36px !important; padding: 6px 8px !important; font-size: 12px !important; }
         .kit-dev-form select.scale-field { min-height: 36px !important; height: 36px !important; font-size: 12px !important; }
@@ -1390,6 +1406,8 @@
         .nav-btn { padding: 8px 12px; font-size: 12px; gap: 5px; }
         .nav-btn svg { width: 12px; height: 12px; }
         .form-field, .scale-field { padding: 8px 10px; font-size: 13px; height: 38px; }
+        /* Task 494: поля панели расчёта — крупный шрифт и на ≤400px */
+        .ts-calc-field { padding: 10px 14px; font-size: 19px; height: 52px; }
         select.scale-field, select.form-field { font-size: 12px; height: 38px; min-height: 38px; padding-top: 8px; padding-bottom: 8px; }
         .kit-dev-form .scale-field { height: 34px !important; padding: 5px 8px !important; font-size: 11px !important; }
         .kit-dev-form select.scale-field { min-height: 34px !important; height: 34px !important; font-size: 11px !important; }
@@ -20139,14 +20157,17 @@
                          шага таблицы: отображается ВСЕГДА, а не только после
                          «Рассчитать». Подпись второго поля и пример подставляет
                          openTempSensor() под тип датчика; живой двусторонний
-                         расчёт — прежние tempQueryFromTemp/tempQueryFromValue. -->
+                         расчёт — прежние tempQueryFromTemp/tempQueryFromValue.
+                         Task 494 (заявка): заголовок «Расчёт произвольных
+                         значений» и подсказка «Введите значение в любое…» —
+                         УДАЛЕНЫ; панель — эффект выступа (рамка 2px +
+                         градиент + тень, стиль featured Task 492), поля —
+                         крупнее и ярче (класс ts-calc-field, CSS в <style>). -->
                     <div class="ts-calc-panel" id="tempCustomCalcPanel">
-                        <div class="ts-calc-title">Расчёт произвольных значений</div>
-                        <div class="ts-calc-hint">Введите значение в любое поле — другое рассчитается автоматически</div>
                         <div class="scale-form-label">Температура (°C)</div>
-                        <input type="text" inputmode="numeric" id="tempQueryTemp" class="scale-field" placeholder="Например: 55" oninput="tempQueryFromTemp()" autocomplete="off" enterkeyhint="next">
+                        <input type="text" inputmode="numeric" id="tempQueryTemp" class="scale-field ts-calc-field" placeholder="Например: 55" oninput="tempQueryFromTemp()" autocomplete="off" enterkeyhint="next">
                         <div class="scale-form-label" id="tempQueryValLabel">Сопротивление R(t), Ом</div>
-                        <input type="text" inputmode="numeric" id="tempQueryVal" class="scale-field" placeholder="Например: 61,8" oninput="tempQueryFromValue()" autocomplete="off" enterkeyhint="done">
+                        <input type="text" inputmode="numeric" id="tempQueryVal" class="scale-field ts-calc-field" placeholder="Например: 61,8" oninput="tempQueryFromValue()" autocomplete="off" enterkeyhint="done">
                     </div>
                     <div class="scale-form">
                 <div class="scale-form-label">Тип датчика</div>
