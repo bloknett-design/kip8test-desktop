@@ -1227,28 +1227,64 @@
        Десктоп (≥1024px) — без изменений (Task 373). */
     /* Task 491: пары ТС — по заявке ОДИНАКОВЫЕ градуировки:
        50М+50М (α 0,00428 и 0,00426), 100М+100М (порядок в
-       каталоге getTempSensorCatalog). Популярные кнопки 50М, 100М,
-       ТХА (K), ТХК (L) — класс ts-card-feat: крупнее шрифт и рамка
-       (2px, акцент) + эффект ВЫСТУПА над сеткой — приподнятый
-       градиент, внешняя тень снизу, внутренняя подсветка сверху
-       и затемнение снизу; при нажатии кнопка «утапливается»
-       (тень внутрь). Только в мобильном media-блоке; светлая тема —
-       мягкие тени; десктоп ≥1024px — без изменений. */
+       каталоге getTempSensorCatalog). Task 492 (заявка):
+       (а) КРУПНЫЙ шрифт (бывший featured из Task 491 — имя 19px,
+       meta 12px; ≤400px: 17px) — теперь на ВСЕХ кнопках-карточках;
+       (б) featured-оформление (рамка 2px + эффект ВЫСТУПА: градиент,
+       внешняя тень снизу, inset-подсветка сверху, затемнение снизу,
+       :active «утапливается») — теперь у кнопок В ИЗБРАННОМ
+       (класс вешает renderTempSensorCards по isFav), а НЕ у
+       популярных градуировок 50М/100М/ТХА (K)/ТХК (L) — их
+       оформление прежнее (шрифт общим правилом выше); правила
+       «.ts-card-feat имя/meta» удалены — шрифт feat = базовый;
+       (в) верхние компактные табы .ts-tabs скрыты — их заменяет
+       НИЖНИЙ бар #tsBottomBar (по образцу расходомеров, CSS ниже);
+       светлая тема — мягкие тени; десктоп ≥1024px — без изменений. */
     @media (max-width: 1023px) {
         .ts-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
         .ts-card { padding: 10px 12px 11px; gap: 4px; }
-        .ts-card-name { font-size: 15px; }
-        .ts-card-meta { font-size: 11px; }
+        /* Task 492: крупный шрифт — на всех кнопках (бывш. featured) */
+        .ts-card-name { font-size: 19px; }
+        .ts-card-meta { font-size: 12px; }
         .ts-card .ts-card-name-analog, .ts-card .ts-card-r0, .ts-card .ts-card-meta-sep, .ts-card .ts-card-range, .ts-card-tc .ts-card-meta { display: none; }
         .ts-cards-grid > .ts-card:nth-child(odd):last-child { grid-column: 1 / -1; }
+        /* Task 492: featured — только кнопки в избранном */
         .ts-card-feat { padding: 12px 14px 13px; border: 2px solid rgba(74, 143, 199, 0.85); background: linear-gradient(180deg, rgba(74, 143, 199, 0.2), rgba(74, 143, 199, 0.05)); box-shadow: 0 5px 14px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -3px 0 rgba(0, 0, 0, 0.3); }
-        .ts-card-feat .ts-card-name { font-size: 19px; }
-        .ts-card-feat .ts-card-meta { font-size: 12px; }
         .ts-card-feat:active { transform: translateY(2px) scale(0.98); border-color: rgba(74, 143, 199, 0.85); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.32), inset 0 2px 8px rgba(0, 0, 0, 0.35); }
         [data-theme="light"] .ts-card-feat { border-color: rgba(43, 111, 163, 0.8); background: linear-gradient(180deg, rgba(74, 143, 199, 0.16), rgba(74, 143, 199, 0.03)); box-shadow: 0 4px 12px rgba(21, 54, 83, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -3px 0 rgba(21, 54, 83, 0.12); }
         [data-theme="light"] .ts-card-feat:active { border-color: rgba(43, 111, 163, 0.8); box-shadow: 0 1px 4px rgba(21, 54, 83, 0.18), inset 0 2px 8px rgba(21, 54, 83, 0.18); }
+        /* Task 492: верхние табы скрыты — заменены нижним баром */
+        .ts-tabs { display: none; }
+        /* Task 492: отступ контента под фиксированный нижний бар */
+        body:has(#page-temp-sensors.active) .ts-page { padding-bottom: 96px; }
     }
-    @media (max-width: 400px) { .ts-card { padding: 9px 10px 10px; } .ts-card-name { font-size: 14px; } .ts-card-meta { font-size: 10.5px; } .ts-card-feat .ts-card-name { font-size: 17px; } }
+    /* Task 492: meta на узких экранах — прежние 10.5px удалены:
+       крупный шрифт един для всех кнопок (12px наследуется), имя 17px
+       (бывш. featured-правило Task 491 удалено — стало базовым) */
+    @media (max-width: 400px) { .ts-card { padding: 9px 10px 10px; } .ts-card-name { font-size: 17px; } }
+
+    /* Task 492: нижний бар «Все / Избранные» датчиков температуры —
+       по образцу расходомеров хозрасчётных (flow-bottom-bar): fixed
+       внизу экрана, две равные крупные кнопки (17px), вертикальный
+       разделитель, blur-фон, safe-area; виден ТОЛЬКО на мобильной
+       странице датчиков (≤1023px), на десктопе — прежние компактные
+       табы .ts-tabs сверху; активный таб и счётчики синхронизируются
+       автоматически (setTempSensorsTab переключает все
+       .ts-tab[data-ts-tab], renderTempSensorCards обновляет счётчики
+       tsAllCount/tsFavCount + tsAllCountMob/tsFavCountMob) */
+    .ts-bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 80; display: none; grid-template-columns: 1fr 1fr; gap: 0; padding: 0; padding-bottom: env(safe-area-inset-bottom, 0px); background: var(--bottom-nav-bg, rgba(23, 33, 43, 0.95)); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--card-border); }
+    body:has(#page-temp-sensors.active) .ts-bottom-bar { display: grid; }
+    @media (min-width: 1024px) { body:has(#page-temp-sensors.active) .ts-bottom-bar { display: none !important; } }
+    .ts-bottom-bar::before { content: ''; position: absolute; left: 50%; top: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); width: 1px; background: rgba(74, 143, 199, 0.25); transform: translateX(-50%); pointer-events: none; z-index: 1; }
+    [data-theme="light"] .ts-bottom-bar::before { background: rgba(43, 111, 163, 0.2); }
+    #tsBottomBar .ts-tab { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 56px; padding: 16px 10px calc(16px + env(safe-area-inset-bottom, 0px)); border: none; border-radius: 0; background: transparent; color: rgba(74, 143, 199, 0.6); font-family: 'Inter', sans-serif; font-size: 17px; font-weight: 600; cursor: pointer; pointer-events: auto; touch-action: manipulation; -webkit-tap-highlight-color: transparent; box-shadow: none; transition: background 0.2s, color 0.2s; position: relative; z-index: 2; }
+    #tsBottomBar .ts-tab:active { background: rgba(74, 143, 199, 0.08); opacity: 0.75; }
+    #tsBottomBar .ts-tab.active { background: transparent; color: #4a8fc7; }
+    #tsBottomBar .ts-tab-count { min-width: 18px; height: 18px; border-radius: 9px; font-size: 11px; line-height: 18px; }
+    [data-theme="light"] #tsBottomBar .ts-tab { color: rgba(43, 111, 163, 0.55); }
+    [data-theme="light"] #tsBottomBar .ts-tab:active { background: rgba(74, 143, 199, 0.06); }
+    [data-theme="light"] #tsBottomBar .ts-tab.active { color: #2b6fa3; }
+    @media (max-width: 400px) { #tsBottomBar .ts-tab { font-size: 15px; padding: 14px 8px calc(14px + env(safe-area-inset-bottom, 0px)); gap: 4px; } }
 
     .method-indicator { background: rgba(30, 42, 56, 0.75); backdrop-filter: blur(8px); margin: 10px 0; padding: 12px 14px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(74, 143, 199, 0.15); position: relative; z-index: 2; }
     
@@ -20077,6 +20113,20 @@
             </div>
         </div>
 
+        <!-- Task 492: нижний бар «Все / Избранные» датчиков температуры —
+             по образцу расходомеров хозрасчётных (#flowBottomBar): fixed
+             внизу экрана (сиблинг страницы, как у расходомеров), виден
+             только на мобильной странице датчиков (≤1023px, CSS
+             .ts-bottom-bar); на десктопе — прежние табы .ts-tabs сверху.
+             Счётчики-дубликаты tsAllCountMob/tsFavCountMob обновляет
+             renderTempSensorCards вместе с верхними; активный таб
+             синхронизирует setTempSensorsTab по data-ts-tab (все
+             .ts-tab[data-ts-tab] разом) -->
+        <div id="tsBottomBar" class="ts-bottom-bar">
+            <button type="button" class="ts-tab active" data-ts-tab="all" onclick="setTempSensorsTab('all')" role="tab" aria-selected="true">Все <span class="ts-tab-count" id="tsAllCountMob">0</span></button>
+            <button type="button" class="ts-tab" data-ts-tab="fav" onclick="setTempSensorsTab('fav')" role="tab" aria-selected="false">Избранные <span class="ts-tab-count" id="tsFavCountMob">0</span></button>
+        </div>
+
         <!-- Task 372: страница выбранного датчика температуры — диапазон
              измерения, шаг таблицы, таблица значений, «Расчёт произвольных
              значений» (Task 371) и справочная информация по типу датчика -->
@@ -33615,6 +33665,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     // прежний (спаны инлайн), на мобильном скрыты аналог в скобках
     // и R₀: на кнопке ТС остаются только градуировка и температурный
     // коэффициент (α), на кнопке ТП — наименование с градуировкой.
+    // Task 492: (а) счётчики обновляются в ДВУХ местах — верхние табы
+    // .ts-tabs (десктоп) и нижний бар #tsBottomBar (мобильный,
+    // tsAllCountMob/tsFavCountMob); (б) класс ts-card-feat
+    // (featured-оформление: рамка 2px + эффект выступа, CSS @media
+    // ≤1023px) вешается на КНОПКИ В ИЗБРАННОМ (isFav) — Task 491
+    // (популярные 50М/100М/ТХА (K)/ТХК (L)) отменён заявкой.
     function renderTempSensorCards(){
         let rtdBox=document.getElementById('tsRtdCards');
         let tcBox=document.getElementById('tsTcCards');
@@ -33622,10 +33678,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         let favMode=(tempSensorsTab==='fav');
         let fmtR=function(v){return String(v).replace('-','−');};
         let cat=getTempSensorCatalog();
-        // счётчики в табах «Все / Избранные» (обновляются при каждом рендере)
+        // счётчики в табах «Все / Избранные» (обновляются при каждом
+        // рендере); Task 492: в ДВУХ экземплярах — верхние табы .ts-tabs
+        // (десктоп ≥1024px) и нижний бар #tsBottomBar (мобильный ≤1023px)
         let allEl=document.getElementById('tsAllCount'),favEl=document.getElementById('tsFavCount');
+        let allElMob=document.getElementById('tsAllCountMob'),favElMob=document.getElementById('tsFavCountMob');
         if(allEl){allEl.textContent=String(cat.length);}
         if(favEl){favEl.textContent=String(TempFav.count());}
+        if(allElMob){allElMob.textContent=String(cat.length);}
+        if(favElMob){favElMob.textContent=String(TempFav.count());}
         let rtdHtml='',tcHtml='',rtdShown=false,tcShown=false;
         cat.forEach(function(s){
             if(favMode&&!TempFav.has(s.key)){return;}
@@ -33651,12 +33712,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     metaHtml='<span class="ts-card-r0">'+s.meta.slice(0,sep)+'</span><span class="ts-card-meta-sep"> · </span><span class="ts-card-alpha">'+s.meta.slice(sep+3)+'</span>';
                 }
             }
-            // Task 491: «популярные» кнопки (заявка): 50М, 100М (обе
-            // Cu-градуировки, α 0,00428 и 0,00426) и термопары ТХА (K),
-            // ТХК (L) — класс ts-card-feat: на мобильном крупнее шрифт
-            // и рамка (2px) + эффект выступа (CSS @media ≤1023px);
-            // десктоп ≥1024px — без изменений
-            let feat=(s.kind==='rtd'&&(String(s.key).indexOf('cu50_')===0||String(s.key).indexOf('cu100_')===0))||(s.kind==='tc'&&(s.tc==='K'||s.tc==='L'));
+            // Task 492: featured-оформление (класс ts-card-feat: рамка
+            // 2px, градиент, эффект выступа — CSS @media ≤1023px) теперь
+            // у КНОПОК В ИЗБРАННОМ (isFav; в режиме «Избранные» выделены
+            // все показанные), а НЕ у популярных градуировок 50М/100М/
+            // ТХА (K)/ТХК (L) — Task 491 отменён заявкой: их оформление
+            // прежнее, крупный шрифт (CSS) — у ВСЕХ кнопок;
+            // десктоп ≥1024px — стилей feat нет (класс в DOM безвреден)
+            let feat=isFav;
             let card='<div class="ts-card'+(s.kind==='tc'?' ts-card-tc':'')+(feat?' ts-card-feat':'')+'" onclick="openTempSensor(\''+s.key+'\')" role="button" tabindex="0" aria-label="'+s.name+'">'
                 +'<button type="button" class="ts-card-fav-btn'+(isFav?' active':'')+'" onclick="event.stopPropagation(); toggleTempSensorFav(\''+s.key+'\')" aria-label="'+(isFav?'Убрать из избранного':'В избранное')+'" title="'+(isFav?'Убрать из избранного':'В избранное')+'">'+(isFav?'★':'☆')+'</button>'
                 +'<div class="ts-card-top"><span class="ts-card-name">'+nameHtml+'</span><i class="ts-card-arrow">›</i></div>'
