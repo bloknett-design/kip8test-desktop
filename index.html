@@ -1213,6 +1213,17 @@
     [data-theme="light"] .ts-calc-field { color: #141413; background: rgba(255, 255, 255, 0.75); border-color: rgba(43, 111, 163, 0.5); }
     [data-theme="light"] .ts-calc-field::placeholder { color: rgba(20, 20, 19, 0.45); }
     [data-theme="light"] .ts-calc-field:focus { border-color: rgba(43, 111, 163, 0.9); box-shadow: 0 0 0 3px rgba(74, 143, 199, 0.15); background: rgba(255, 255, 255, 0.9); }
+    /* Task 495: блок ввода данных расчёта ТАБЛИЦЫ (диапазон + шаг,
+       #tempTableFormPanel) — оформлен как панель произвольного
+       расчёта (тот же контейнер .ts-calc-panel и поля .ts-calc-field),
+       но с ПРОТИВОПОЛОЖНЫМ эффектом: УГЛУБЛЕНИЕ вместо выступа.
+       Рамка 1px приглушённая (у выступа — яркая 2px), фон — тёмный
+       «колодец» без синего градиента, тени ТОЛЬКО внутренние (сверху
+       тёмная — глубина, снизу светлая кромка), внешней тени НЕТ —
+       блок «втоплен» в страницу, тогда как панель произвольного
+       расчёта над ним выступает. */
+    .ts-calc-panel.ts-calc-inset { background-color: rgba(13, 17, 23, 0.55); background-image: none; border: 1px solid rgba(74, 143, 199, 0.32); box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.06); }
+    [data-theme="light"] .ts-calc-panel.ts-calc-inset { background-color: rgba(21, 54, 83, 0.08); background-image: none; border-color: rgba(43, 111, 163, 0.35); box-shadow: inset 0 2px 8px rgba(21, 54, 83, 0.18), inset 0 -1px 0 rgba(255, 255, 255, 0.7); }
     [data-theme="light"] .ts-card-fav-btn { color: rgba(43, 111, 163, 0.45); }
     [data-theme="light"] .ts-card-fav-btn.active { color: #2b6fa3; background: rgba(74, 143, 199, 0.12); }
     [data-theme="light"] .ts-tab { color: rgba(43, 111, 163, 0.6); }
@@ -1221,10 +1232,9 @@
     [data-theme="light"] .ts-tab.active .ts-tab-count { background: #2b6fa3; color: #fff; }
     [data-theme="light"] #tempSensorFavBtn { color: rgba(43, 111, 163, 0.55); }
     [data-theme="light"] #tempSensorFavBtn.active { color: #2b6fa3; }
-    /* Task 372: чип выбранного датчика на странице датчика */
-    .ts-view-chip { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-height: 44px; padding: 9px 12px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; }
-    .ts-view-chip-name { font-size: 15px; font-weight: 700; color: var(--text-primary); }
-    .ts-view-chip-meta { font-size: 11px; color: var(--conv-info-text); line-height: 1.35; }
+    /* Task 372: чип выбранного датчика — Task 495: чип удалён из
+       блока ввода (тип датчика показывает заголовок страницы);
+       CSS-правила чипа сняты как неиспользуемые. */
     [data-theme="light"] .ts-card-range { color: rgba(20, 20, 19, 0.35); }
     [data-theme="light"] .ts-card-arrow { color: rgba(20, 20, 19, 0.15); }
     [data-theme="light"] .ts-group-badge-rtd { background: rgba(43, 138, 74, 0.1); color: #2b8a4a; border-color: rgba(43, 138, 74, 0.3); }
@@ -20169,14 +20179,23 @@
                         <div class="scale-form-label" id="tempQueryValLabel">Сопротивление R(t), Ом</div>
                         <input type="text" inputmode="numeric" id="tempQueryVal" class="scale-field ts-calc-field" placeholder="Например: 61,8" oninput="tempQueryFromValue()" autocomplete="off" enterkeyhint="done">
                     </div>
-                    <div class="scale-form">
-                <div class="scale-form-label">Тип датчика</div>
-                <div id="tempSensorViewChip" class="ts-view-chip"></div>
-                <div class="scale-form-label" style="margin-top:12px;">Диапазон измерения (°C)</div>
-                <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items: stretch;"><input type="text" inputmode="numeric" id="temp_sensor_min" class="scale-field" style="flex: 1; margin-bottom: 0;" value="0" placeholder="min °C" autocomplete="off" enterkeyhint="next"><input type="text" inputmode="numeric" id="temp_sensor_max" class="scale-field" style="flex: 1; margin-bottom: 0;" value="100" placeholder="max °C" autocomplete="off" enterkeyhint="next"></div>
+                    <!-- Task 495: блок ввода данных для расчёта таблицы —
+                         поле типа датчика (чип) и его подпись, а также
+                         подсказка про шаг пересчёта удалены по заявке;
+                         блок оформлен как панель
+                         произвольного расчёта (Task 494: тот же контейнер
+                         и те же поля), но с эффектом
+                         УГЛУБЛЕНИЯ, а не выступа — модификатор
+                         ts-calc-inset: приглушённая рамка 1px, тёмный
+                         «колодец» без синего градиента, тени только
+                         внутренние. Обёртка .scale-form снята; кнопка
+                         «Рассчитать» осталась вне панели. -->
+                    <div class="ts-calc-panel ts-calc-inset" id="tempTableFormPanel">
+                <div class="scale-form-label">Диапазон измерения (°C)</div>
+                <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items: stretch;"><input type="text" inputmode="numeric" id="temp_sensor_min" class="scale-field ts-calc-field" style="flex: 1; margin-bottom: 0;" value="0" placeholder="min °C" autocomplete="off" enterkeyhint="next"><input type="text" inputmode="numeric" id="temp_sensor_max" class="scale-field ts-calc-field" style="flex: 1; margin-bottom: 0;" value="100" placeholder="max °C" autocomplete="off" enterkeyhint="next"></div>
                 <div class="scale-form-label">Шаг таблицы (°C)</div>
-                <input type="text" inputmode="numeric" id="temp_sensor_step" class="scale-field" value="10" placeholder="10" autocomplete="off" enterkeyhint="done"><div style="color:rgba(255,255,255,0.25); font-size:10px; margin-top:-6px; margin-bottom:8px; padding-left:4px;">Шаг расчёта таблицы в градусах Цельсия</div>
-                            </div>
+                <input type="text" inputmode="numeric" id="temp_sensor_step" class="scale-field ts-calc-field" value="10" placeholder="10" autocomplete="off" enterkeyhint="done">
+                    </div>
             <button type="button" class="converter-convert-btn" onclick="calcTempSensor()"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 16 16 12 12 8"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Рассчитать</button>
                 </div>
                 <div class="conv-col conv-col-table">
@@ -33785,9 +33804,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         tempSensorKey=key;
         let title=document.getElementById('tempSensorViewTitle');
         if(title){title.textContent=sel.name+(sel.kind==='rtd'?' — термометр сопротивления':' — термопара');}
-        let chip=document.getElementById('tempSensorViewChip');
-        // Task 373: бейдж ТС/ТП убран из чипа — только имя и параметры
-        if(chip){chip.innerHTML='<span class="ts-view-chip-name">'+sel.name+'</span><span class="ts-view-chip-meta">'+sel.meta+'</span>';}
+        // Task 495: чип типа датчика удалён из блока ввода — тип
+        // датчика виден в заголовке страницы
         let mn=document.getElementById('temp_sensor_min'),mx=document.getElementById('temp_sensor_max'),st=document.getElementById('temp_sensor_step');
         if(mn){mn.value='0';}
         if(mx){mx.value='100';}
