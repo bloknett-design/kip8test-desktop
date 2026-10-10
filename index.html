@@ -16874,7 +16874,7 @@
                      и на десктопе занимала отдельную строку. -->
                 <div class="menu-btn-row">
                     <div id="flowmeterMenuBtn" class="menu-btn" onclick="navigateTo('flowmeter-data')" style="cursor: pointer;"><div class="menu-btn-text"><div class="menu-btn-label">Расходомеры хозрасчётные</div><div class="menu-btn-sublabel">Накопительные расходы и показания</div></div><svg class="menu-btn-arrow" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: rgba(255,255,255,0.12); fill: none; stroke-width: 2; stroke-linecap: round;"><polyline points="9 18 15 12 9 6"/></svg></div>
-                    <div id="workScheduleMenuBtn" class="menu-btn" onclick="navigateTo('work-schedule')" style="cursor: pointer;"><div class="menu-btn-text"><div class="menu-btn-label">Табель учёта рабочего времени</div><div class="menu-btn-sublabel">Шахматка сменного и дневного персонала</div></div><svg class="menu-btn-arrow" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: rgba(255,255,255,0.12); fill: none; stroke-width: 2; stroke-linecap: round;"><polyline points="9 18 15 12 9 6"/></svg></div>
+                    <div id="workScheduleMenuBtn" class="menu-btn" onclick="navigateTo('work-schedule')" style="cursor: pointer;"><div class="menu-btn-text"><div class="menu-btn-label">Табель учёта</div><div class="menu-btn-sublabel">Шахматка сменного и дневного персонала</div></div><svg class="menu-btn-arrow" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: rgba(255,255,255,0.12); fill: none; stroke-width: 2; stroke-linecap: round;"><polyline points="9 18 15 12 9 6"/></svg></div>
                     <!-- Task 460: «Плановые мероприятия» — статичная
                          страница-таблица периодических работ по образцу
                          «Пример таблицы мероприятий.xlsx»; отдельного
@@ -29942,7 +29942,9 @@
         // кнопки на странице «Документация ИОС» (по примеру «Расходомеров
         // хозрасчётные»): wrapSubsectionItems оборачивает кнопку в
         // .subsection-cell, т.к. ключ появился в этом реестре
-        'work-schedule':  { label: 'Табель учёта рабочего времени', sublabel: 'Шахматка сменного и дневного персонала',          target: 'work-schedule',  category: 'docs' },
+        // Task 493: кнопка на главной/в разделе — короче «Табель учёта»
+        // (заголовок страницы и крошки — прежнее полное имя)
+        'work-schedule':  { label: 'Табель учёта', sublabel: 'Шахматка сменного и дневного персонала',          target: 'work-schedule',  category: 'docs' },
         // Task 460: «Плановые мероприятия» — можно закрепить на
         // главной (кнопка на странице «Документация ИОС»)
         'plan-events':    { label: 'Плановые мероприятия',       sublabel: 'Периодические работы по месяцам года',            target: 'plan-events',    category: 'docs' },
