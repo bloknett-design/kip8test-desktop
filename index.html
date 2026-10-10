@@ -20172,12 +20172,23 @@
                          значений» и подсказка «Введите значение в любое…» —
                          УДАЛЕНЫ; панель — эффект выступа (рамка 2px +
                          градиент + тень, стиль featured Task 492), поля —
-                         крупнее и ярче (класс ts-calc-field, CSS в <style>). -->
+                         крупнее и ярче (класс ts-calc-field, CSS в <style>).
+                         Task 496 (заявка): после ввода значения нажатие
+                         кнопки подтверждения («Готово»/Enter) мобильной
+                         клавиатуры ЗАКРЫВАЕТ клавиатуру, а не перескакивает
+                         на следующее поле: у поля температуры был
+                         enterkeyhint="next" (кнопка «Далее» вела в поле
+                         значения) — оба поля переведены на
+                         enterkeyhint="done" + onkeydown tempQueryEnterBlur
+                         (preventDefault + stopPropagation + blur — выход из
+                         глобального Enter-перехода между полями). Живой
+                         двусторонний расчёт по oninput (Task 371) — без
+                         изменений. -->
                     <div class="ts-calc-panel" id="tempCustomCalcPanel">
                         <div class="scale-form-label">Температура (°C)</div>
-                        <input type="text" inputmode="numeric" id="tempQueryTemp" class="scale-field ts-calc-field" placeholder="Например: 55" oninput="tempQueryFromTemp()" autocomplete="off" enterkeyhint="next">
+                        <input type="text" inputmode="numeric" id="tempQueryTemp" class="scale-field ts-calc-field" placeholder="Например: 55" oninput="tempQueryFromTemp()" onkeydown="tempQueryEnterBlur(event,this)" autocomplete="off" enterkeyhint="done">
                         <div class="scale-form-label" id="tempQueryValLabel">Сопротивление R(t), Ом</div>
-                        <input type="text" inputmode="numeric" id="tempQueryVal" class="scale-field ts-calc-field" placeholder="Например: 61,8" oninput="tempQueryFromValue()" autocomplete="off" enterkeyhint="done">
+                        <input type="text" inputmode="numeric" id="tempQueryVal" class="scale-field ts-calc-field" placeholder="Например: 61,8" oninput="tempQueryFromValue()" onkeydown="tempQueryEnterBlur(event,this)" autocomplete="off" enterkeyhint="done">
                     </div>
                     <!-- Task 495: блок ввода данных для расчёта таблицы —
                          поле типа датчика (чип) и его подпись, а также
@@ -34122,6 +34133,27 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if(f(mid)<v){lo=mid;}else{hi=mid;}
         }
         return (lo+hi)/2;
+    }
+    // Task 496 (заявка): в блоке произвольного расчёта кнопка подтверждения
+    // («Готово»/Enter) мобильной клавиатуры ЗАКРЫВАЕТ клавиатуру, а не
+    // перескакивает на следующее поле: у поля температуры был
+    // enterkeyhint="next" (кнопка «Далее» вела в поле значения) — оба поля
+    // переведены на enterkeyhint="done", Enter гасится и снимает фокус
+    // (preventDefault + blur: клавиатура закрывается и на iOS, где «done»
+    // сам по себе клавиатуру не убирает, и на Android). ВАЖНО:
+    // stopPropagation — ППР-поля выходят из ГЛОБАЛЬНОГО обработчика
+    // Enter/Next («логичный переход между полями», document keydown):
+    // без него после blur событие всплывает, глобальный handler ставит
+    // фокус в следующее поле и клавиатура не закрывается. Глобальный
+    // переход в остальных блоках — без изменений. Живой двусторонний
+    // расчёт по oninput (Task 371) не меняется.
+    function tempQueryEnterBlur(e, el){
+        if(!e){return;}
+        if(e.key==='Enter'||e.keyCode===13){
+            e.preventDefault();
+            if(e.stopPropagation){e.stopPropagation();}
+            if(el&&typeof el.blur==='function'){el.blur();}
+        }
     }
     // Task 371: живой расчёт «температура → R/E» (ввод в поле температуры)
     function tempQueryFromTemp(){
