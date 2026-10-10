@@ -1217,14 +1217,23 @@
     [data-theme="light"] .ts-group-badge-rtd { background: rgba(43, 138, 74, 0.1); color: #2b8a4a; border-color: rgba(43, 138, 74, 0.3); }
     [data-theme="light"] .ts-group-badge-tc { background: rgba(156, 108, 52, 0.1); color: #8a5c26; border-color: rgba(156, 108, 52, 0.3); }
     /* Task 490: мобильная версия — кнопки-карточки по ДВЕ в строке,
-       рядом кнопки с одинаковой градуировкой (НСХ): ТС — 50М+100М
-       одной α, 50П+100П, Pt100+Pt1000; ТП — ТХА (K)+ТХК (L) вместе
-       (заявка), далее ТЖК (J)+ТМК (T), ТХКн (E)+ТНН (N), ТПП (R)+
-       ТПП (S); ТПР (B) — непарная, во всю строку. На кнопках ТС
-       остаются ТОЛЬКО градуировка и температурный коэффициент
-       (скрыты R₀ и международный аналог в скобках), на кнопках ТП —
-       наименование с градуировкой (скрыты материал электродов и
-       диапазон НСХ). Десктоп (≥1024px) — без изменений (Task 373). */
+       рядом кнопки с одинаковой градуировкой (НСХ): ТС — 50П+100П,
+       Pt100+Pt1000; ТП — ТХА (K)+ТХК (L) вместе (заявка), далее
+       ТЖК (J)+ТМК (T), ТХКн (E)+ТНН (N), ТПП (R)+ТПП (S); ТПР (B) —
+       непарная, во всю строку. На кнопках ТС остаются ТОЛЬКО
+       градуировка и температурный коэффициент (скрыты R₀ и
+       международный аналог в скобках), на кнопках ТП — наименование
+       с градуировкой (скрыты материал электродов и диапазон НСХ).
+       Десктоп (≥1024px) — без изменений (Task 373). */
+    /* Task 491: пары ТС — по заявке ОДИНАКОВЫЕ градуировки:
+       50М+50М (α 0,00428 и 0,00426), 100М+100М (порядок в
+       каталоге getTempSensorCatalog). Популярные кнопки 50М, 100М,
+       ТХА (K), ТХК (L) — класс ts-card-feat: крупнее шрифт и рамка
+       (2px, акцент) + эффект ВЫСТУПА над сеткой — приподнятый
+       градиент, внешняя тень снизу, внутренняя подсветка сверху
+       и затемнение снизу; при нажатии кнопка «утапливается»
+       (тень внутрь). Только в мобильном media-блоке; светлая тема —
+       мягкие тени; десктоп ≥1024px — без изменений. */
     @media (max-width: 1023px) {
         .ts-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
         .ts-card { padding: 10px 12px 11px; gap: 4px; }
@@ -1232,8 +1241,14 @@
         .ts-card-meta { font-size: 11px; }
         .ts-card .ts-card-name-analog, .ts-card .ts-card-r0, .ts-card .ts-card-meta-sep, .ts-card .ts-card-range, .ts-card-tc .ts-card-meta { display: none; }
         .ts-cards-grid > .ts-card:nth-child(odd):last-child { grid-column: 1 / -1; }
+        .ts-card-feat { padding: 12px 14px 13px; border: 2px solid rgba(74, 143, 199, 0.85); background: linear-gradient(180deg, rgba(74, 143, 199, 0.2), rgba(74, 143, 199, 0.05)); box-shadow: 0 5px 14px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -3px 0 rgba(0, 0, 0, 0.3); }
+        .ts-card-feat .ts-card-name { font-size: 19px; }
+        .ts-card-feat .ts-card-meta { font-size: 12px; }
+        .ts-card-feat:active { transform: translateY(2px) scale(0.98); border-color: rgba(74, 143, 199, 0.85); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.32), inset 0 2px 8px rgba(0, 0, 0, 0.35); }
+        [data-theme="light"] .ts-card-feat { border-color: rgba(43, 111, 163, 0.8); background: linear-gradient(180deg, rgba(74, 143, 199, 0.16), rgba(74, 143, 199, 0.03)); box-shadow: 0 4px 12px rgba(21, 54, 83, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -3px 0 rgba(21, 54, 83, 0.12); }
+        [data-theme="light"] .ts-card-feat:active { border-color: rgba(43, 111, 163, 0.8); box-shadow: 0 1px 4px rgba(21, 54, 83, 0.18), inset 0 2px 8px rgba(21, 54, 83, 0.18); }
     }
-    @media (max-width: 400px) { .ts-card { padding: 9px 10px 10px; } .ts-card-name { font-size: 14px; } .ts-card-meta { font-size: 10.5px; } }
+    @media (max-width: 400px) { .ts-card { padding: 9px 10px 10px; } .ts-card-name { font-size: 14px; } .ts-card-meta { font-size: 10.5px; } .ts-card-feat .ts-card-name { font-size: 17px; } }
 
     .method-indicator { background: rgba(30, 42, 56, 0.75); backdrop-filter: blur(8px); margin: 10px 0; padding: 12px 14px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(74, 143, 199, 0.15); position: relative; z-index: 2; }
     
@@ -29134,7 +29149,13 @@
         // открытии страницы; детальная страница без выбранного датчика
         // (прямой переход по hash после перезагрузки) уходит на список.
         if (page === 'temp-sensor-view' && !tempSensorKey) { page = 'temp-sensors'; }
-        if (page === 'temp-sensors') { if (typeof renderTempSensorCards === 'function') renderTempSensorCards(); }
+        // Task 491: если пользователь добавил избранное — при открытии
+        // страницы сразу вкладка «Избранные» (нет избранного — «Все»);
+        // тот же принцип в расходомерах хозрасчётных (FlowmeterData.init)
+        if (page === 'temp-sensors') {
+            if (typeof setTempSensorsTab === 'function' && typeof TempFav !== 'undefined') { setTempSensorsTab(TempFav.count() > 0 ? 'fav' : 'all'); }
+            if (typeof renderTempSensorCards === 'function') renderTempSensorCards();
+        }
         // Task 372: на десктопе последний сегмент хлебных крошек страницы
         // датчика — имя выбранного датчика (50М (Cu50), ТХА (K)…), а не
         // статическая метка «Датчик температуры» (customCurrentLabel).
@@ -33554,12 +33575,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     // Task 490: порядок ТП — парами для мобильных кнопок по две в
     // строке: ТХА (K)+ТХК (L) (заявка — вместе), затем ТЖК (J)+
     // ТМК (T), ТХКн (E)+ТНН (N), ТПП (R)+ТПП (S), ТПР (B).
+    // Task 491: порядок ТС — парами ОДИНАКОВЫХ градуировок (заявка):
+    // 50М+50М (α 0,00428 и 0,00426), 100М+100М, далее пары Task 490
+    // без изменений: 50П+100П, Pt100+Pt1000.
     function getTempSensorCatalog(){
         let rtd=getRtdSensorMap();
         let alphaTxt={pt1391:'α = 0,00391 (ГОСТ)',pt1385:'α = 0,00385 (IEC)'};
         let fmtR=function(v){return String(v).replace('-','−');};
         let list=[];
-        ['cu50_1428','cu100_1428','cu50_1426','cu100_1426','pt50_1391','pt100_1391','pt100_1385','pt1000_1385'].forEach(function(k){
+        ['cu50_1428','cu50_1426','cu100_1428','cu100_1426','pt50_1391','pt100_1391','pt100_1385','pt1000_1385'].forEach(function(k){
             let sd=rtd[k];
             if(!sd){return;}
             let isCu=sd.nsc==='cu';
@@ -33627,7 +33651,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     metaHtml='<span class="ts-card-r0">'+s.meta.slice(0,sep)+'</span><span class="ts-card-meta-sep"> · </span><span class="ts-card-alpha">'+s.meta.slice(sep+3)+'</span>';
                 }
             }
-            let card='<div class="ts-card'+(s.kind==='tc'?' ts-card-tc':'')+'" onclick="openTempSensor(\''+s.key+'\')" role="button" tabindex="0" aria-label="'+s.name+'">'
+            // Task 491: «популярные» кнопки (заявка): 50М, 100М (обе
+            // Cu-градуировки, α 0,00428 и 0,00426) и термопары ТХА (K),
+            // ТХК (L) — класс ts-card-feat: на мобильном крупнее шрифт
+            // и рамка (2px) + эффект выступа (CSS @media ≤1023px);
+            // десктоп ≥1024px — без изменений
+            let feat=(s.kind==='rtd'&&(String(s.key).indexOf('cu50_')===0||String(s.key).indexOf('cu100_')===0))||(s.kind==='tc'&&(s.tc==='K'||s.tc==='L'));
+            let card='<div class="ts-card'+(s.kind==='tc'?' ts-card-tc':'')+(feat?' ts-card-feat':'')+'" onclick="openTempSensor(\''+s.key+'\')" role="button" tabindex="0" aria-label="'+s.name+'">'
                 +'<button type="button" class="ts-card-fav-btn'+(isFav?' active':'')+'" onclick="event.stopPropagation(); toggleTempSensorFav(\''+s.key+'\')" aria-label="'+(isFav?'Убрать из избранного':'В избранное')+'" title="'+(isFav?'Убрать из избранного':'В избранное')+'">'+(isFav?'★':'☆')+'</button>'
                 +'<div class="ts-card-top"><span class="ts-card-name">'+nameHtml+'</span><i class="ts-card-arrow">›</i></div>'
                 +'<div class="ts-card-meta">'+metaHtml+'</div>'
@@ -40550,6 +40580,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var self = this;
             var token = KipAuth.getToken();
             var silent = !!token; // авторизован → не рендерить промежуточные данные
+
+            // Task 491: при открытии раздела — сразу вкладка «Избранные»,
+            // если пользователь добавил избранное (принцип «Датчиков
+            // температуры», автозапуск в navigateTo); нет избранного —
+            // вкладка «Все». Кнопки табов синхронизируются напрямую
+            // (без setTab — он ранний return при том же табе и делает
+            // лишний повторный рендер).
+            var targetTab491 = (typeof FlowFav !== 'undefined' && FlowFav.count() > 0) ? 'fav' : 'all';
+            if (this._activeTab !== targetTab491) {
+                this._activeTab = targetTab491;
+                var tabBtns491 = document.querySelectorAll('.flow-tab[data-flow-tab]');
+                for (var tb491 = 0; tb491 < tabBtns491.length; tb491++) {
+                    tabBtns491[tb491].classList.toggle('active', tabBtns491[tb491].getAttribute('data-flow-tab') === targetTab491);
+                }
+            }
 
             // Task 238: исходное состояние — «загрузка» (если есть токен).
             // init() сразу рендерит список с пустым _METERS, поэтому
