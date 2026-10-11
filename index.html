@@ -1224,6 +1224,23 @@
        расчёта над ним выступает. */
     .ts-calc-panel.ts-calc-inset { background-color: rgba(13, 17, 23, 0.55); background-image: none; border: 1px solid rgba(74, 143, 199, 0.32); box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.06); }
     [data-theme="light"] .ts-calc-panel.ts-calc-inset { background-color: rgba(21, 54, 83, 0.08); background-image: none; border-color: rgba(43, 111, 163, 0.35); box-shadow: inset 0 2px 8px rgba(21, 54, 83, 0.18), inset 0 -1px 0 rgba(255, 255, 255, 0.7); }
+    /* Task 498 (заявка): пределы НСХ под полями произвольного расчёта —
+       класс ts-calc-range (id tempQueryTempRange / tempQueryValRange,
+       заполняет openTempSensor): под полем температуры — в °C, под
+       полем значения — в Ом (ТС) / мВ (ТП). Прижаты к «своему» полю
+       (верхний отрицательный отступ компенсирует нижний отступ поля),
+       у последней строки панели нижний отступ убран. */
+    .ts-calc-range { font-size: 11px; font-weight: 600; color: rgba(255, 255, 255, 0.52); margin: -8px 2px 12px; line-height: 1.4; letter-spacing: -0.1px; }
+    .ts-calc-panel .ts-calc-range:last-child { margin-bottom: 0; }
+    [data-theme="light"] .ts-calc-range { color: rgba(20, 20, 19, 0.55); }
+    /* Task 498 (заявка): в баре страницы расчёта датчика температуры —
+       только тип датчика («50М (Cu50) α = 0,00428 °C⁻¹», задаёт
+       openTempSensor) и шрифт крупнее: 18 → 21px, в scrolled-состоянии
+       15 → 17px (ID-селектор сильнее классовых правил; при нехватке
+       ширины адаптивный фиттер fitPageHeaderTitle сам уменьшит шрифт
+       и/или перенесёт заголовок на несколько строк). */
+    #tempSensorViewTitle { font-size: 21px; }
+    .page-content.scrolled #tempSensorViewTitle { font-size: 17px; }
     [data-theme="light"] .ts-card-fav-btn { color: rgba(43, 111, 163, 0.45); }
     [data-theme="light"] .ts-card-fav-btn.active { color: #2b6fa3; background: rgba(74, 143, 199, 0.12); }
     [data-theme="light"] .ts-tab { color: rgba(43, 111, 163, 0.6); }
@@ -20187,8 +20204,16 @@
                     <div class="ts-calc-panel" id="tempCustomCalcPanel">
                         <div class="scale-form-label">Температура (°C)</div>
                         <input type="text" inputmode="numeric" id="tempQueryTemp" class="scale-field ts-calc-field" placeholder="Например: 55" oninput="tempQueryFromTemp()" onkeydown="tempQueryEnterBlur(event,this)" autocomplete="off" enterkeyhint="done">
+                        <!-- Task 498 (заявка): под каждым полем ППР — пределы
+                             НСХ выбранного датчика: у температуры — в градусах
+                             Цельсия («−50…200 °C»), у значения — в единицах
+                             измерения датчика («39,3…92,8 Ом» / мВ). Заполняет
+                             openTempSensor() по каталогу (id tempQueryTempRange /
+                             tempQueryValRange), оформление — класс ts-calc-range. -->
+                        <div class="ts-calc-range" id="tempQueryTempRange"></div>
                         <div class="scale-form-label" id="tempQueryValLabel">Сопротивление R(t), Ом</div>
                         <input type="text" inputmode="numeric" id="tempQueryVal" class="scale-field ts-calc-field" placeholder="Например: 61,8" oninput="tempQueryFromValue()" onkeydown="tempQueryEnterBlur(event,this)" autocomplete="off" enterkeyhint="done">
+                        <div class="ts-calc-range" id="tempQueryValRange"></div>
                     </div>
                     <!-- Task 495: блок ввода данных для расчёта таблицы —
                          поле типа датчика (чип) и его подпись, а также
@@ -29260,11 +29285,29 @@
         // Task 372: на десктопе последний сегмент хлебных крошек страницы
         // датчика — имя выбранного датчика (50М (Cu50), ТХА (K)…), а не
         // статическая метка «Датчик температуры» (customCurrentLabel).
+        // Task 498 (заявка): последний сегмент — ТОЛЬКО тип датчика,
+        // как в заголовке мобильного бара: ТС — «градуировка (аналог)
+        // α = …°C⁻¹» (например, «50М (Cu50) α = 0,00428 °C⁻¹»), ТП —
+        // наименование. Логика α инлайн (дублирует openTempSensor —
+        // он самодостаточен для VM-харнесов тестов).
         if (page === 'temp-sensor-view' && tempSensorKey) {
             setTimeout(() => {
                 if (typeof updateDesktopBreadcrumb === 'function') {
                     let s372 = (typeof tempSensorFindByKey === 'function') ? tempSensorFindByKey(tempSensorKey) : null;
-                    if (s372) updateDesktopBreadcrumb(null, s372.name);
+                    if (s372) {
+                        let l498 = s372.name;
+                        if (s372.kind === 'rtd') {
+                            let sd498 = (typeof getRtdSensorMap === 'function') ? (getRtdSensorMap()[s372.key] || {}) : {};
+                            if (sd498.nsc === 'cu') {
+                                l498 += ' α = ' + String(sd498.alpha).replace('.', ',') + ' °C⁻¹';
+                            } else if (sd498.nsc === 'pt1391') {
+                                l498 += ' α = 0,00391 °C⁻¹';
+                            } else if (sd498.nsc === 'pt1385') {
+                                l498 += ' α = 0,00385 °C⁻¹';
+                            }
+                        }
+                        updateDesktopBreadcrumb(null, l498);
+                    }
                 }
             }, 60);
         }
@@ -33681,6 +33724,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     // Task 491: порядок ТС — парами ОДИНАКОВЫХ градуировок (заявка):
     // 50М+50М (α 0,00428 и 0,00426), 100М+100М, далее пары Task 490
     // без изменений: 50П+100П, Pt100+Pt1000.
+    // Task 498 (заявка: «посмотри пределы измерения и скорректируй
+    // неточности»): пределы НСХ каталога СВЕРЕНЫ с первоисточниками и
+    // подтверждены — диапазоны НЕ менялись: ТС Cu (50М/100М, α 0,00428
+    // и 0,00426) — −50…+200 °C (линейная формула НСХ меди R(t)=R₀(1+αt);
+    // область обратного преобразования по ГОСТ 6651-2009, приложение Б);
+    // ТС Pt (50П/100П/Pt100/Pt1000) — −200…+850 °C (таблицы А.1/А.2
+    // ГОСТ 6651-2009 / IEC 60751); ТП — НИСТ ITS-90 (SRD 60) =
+    // ГОСТ Р 8.585-2001: K −270…1372, J −210…1200, T −270…400,
+    // N −270…1300, E −270…1000, L −200…800, R и S −50…1768,
+    // B 0…1820 °C. Исправлена формула pt1391 ниже 0 °C (см.
+    // calcRtdResistance, Task 498) — значения 100П/50П теперь точно
+    // по таблице А.2.
     function getTempSensorCatalog(){
         let rtd=getRtdSensorMap();
         let alphaTxt={pt1391:'α = 0,00391 (ГОСТ)',pt1385:'α = 0,00385 (IEC)'};
@@ -33814,7 +33869,26 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         if(!sel){showToast('Датчик не найден');return;}
         tempSensorKey=key;
         let title=document.getElementById('tempSensorViewTitle');
-        if(title){title.textContent=sel.name+(sel.kind==='rtd'?' — термометр сопротивления':' — термопара');}
+        // Task 498 (заявка): в баре страницы — ТОЛЬКО тип датчика:
+        // ТС — «градуировка (аналог) α = … °C⁻¹» (например,
+        // «50М (Cu50) α = 0,00428 °C⁻¹»; α различает одинаковые
+        // градуировки 50М/100М), ТП — наименование («ТХА (K)»).
+        // Пояснения «— термометр сопротивления»/«— термопара» убраны;
+        // шрифт заголовка крупнее (CSS #tempSensorViewTitle, 21px).
+        if(title){
+            let t498=sel.name;
+            if(sel.kind==='rtd'){
+                let sd498=getRtdSensorMap()[sel.key]||{};
+                if(sd498.nsc==='cu'){
+                    t498+=' α = '+String(sd498.alpha).replace('.',',')+' °C⁻¹';
+                }else if(sd498.nsc==='pt1391'){
+                    t498+=' α = 0,00391 °C⁻¹';
+                }else if(sd498.nsc==='pt1385'){
+                    t498+=' α = 0,00385 °C⁻¹';
+                }
+            }
+            title.textContent=t498;
+        }
         // Task 495: чип типа датчика удалён из блока ввода — тип
         // датчика виден в заголовке страницы
         let mn=document.getElementById('temp_sensor_min'),mx=document.getElementById('temp_sensor_max'),st=document.getElementById('temp_sensor_step');
@@ -33838,6 +33912,26 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         }
         if(tInp){tInp.value='';}
         if(vInp){vInp.value='';}
+        // Task 498 (заявка): пределы НСХ датчика — в полях ввода
+        // произвольного расчёта: под полем температуры — в градусах
+        // Цельсия («−50…200 °C», целые, как на карточках каталога),
+        // под полем значения — в единицах измерения датчика
+        // («39,3…92,8 Ом» для ТС, мВ для ТП). Границы — из каталога
+        // (единый источник диапазонов), значения для Ом/мВ — через
+        // НСХ (tempCalcForwardValue) на границах.
+        let tR498=document.getElementById('tempQueryTempRange');
+        let vR498=document.getElementById('tempQueryValRange');
+        let rng498=getTempSensorRange();
+        let fmtI498=function(v){return String(v).replace('-','−');};
+        let fmtM498=function(v){return formatNumber(v).replace('-','−');};
+        if(tR498){tR498.textContent=fmtI498(rng498.min)+'…'+fmtI498(rng498.max)+' °C';}
+        if(vR498){
+            let vmin498=tempCalcForwardValue(rng498.min);
+            let vmax498=tempCalcForwardValue(rng498.max);
+            if(vmin498!==null&&vmax498!==null&&isFinite(vmin498)&&isFinite(vmax498)){
+                vR498.textContent=fmtM498(vmin498)+'…'+fmtM498(vmax498)+' '+((sel.kind==='rtd')?'Ом':'мВ');
+            }
+        }
         // Task 373: звезда избранного в шапке страницы датчика
         updateTempSensorFavBtn();
         let body=document.getElementById('tempSensorInfoBody');
@@ -33961,9 +34055,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if(t>=0){ return r0*(1+A*t+B*t*t); }
             else { return r0*(1+A*t+B*t*t+C*(t-100)*t*t*t); }
         } else if(nsc==='pt1391'){
-            let A=3.96847e-3, B=-5.84e-7;
+            // Task 498 (заявка: сверка пределов и корректировка
+            // неточностей): коэффициенты выровнены по таблице А.2
+            // ГОСТ 6651-2009 (платина W100 = 1,391): A = 3,969·10⁻³,
+            // B = −5,841·10⁻⁷; ниже 0 °C добавлен член C·(t−100)·t³
+            // с C = −4,330·10⁻¹² (аналогично pt1385). Раньше ниже 0 °C
+            // член C не учитывался, а B был округлён до −5,84·10⁻⁷
+            // (A = 3,96847·10⁻³) — значения 100П/50П при отрицательных
+            // температурах расходились с таблицей А.2: при −200 °C на
+            // ~1,05 Ом (18,29 вместо 17,24), при −100 °C на ~0,09 Ом.
+            // Контроль сверки с А.2 (R₀ = 100 Ом): −200 → 17,24;
+            // −150 → 38,79; −100 → 59,64; −50 → 80,00; 0 → 100,00;
+            // 70 → 127,50; 100 → 139,11; 850 → 395,16.
+            let A=3.969e-3, B=-5.841e-7, C=-4.330e-12;
             if(t>=0){ return r0*(1+A*t+B*t*t); }
-            else { return r0*(1+A*t+B*t*t); }
+            else { return r0*(1+A*t+B*t*t+C*(t-100)*t*t*t); }
         }
         return r0;
     }
@@ -34088,8 +34194,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             cu100_1428:{r0:100,alpha:0.00428,name:'100М (Cu100)',nsc:'cu',formula:'R(t) = R₀(1 + 0,00428·t)'},
             cu50_1426:{r0:50,alpha:0.00426,name:'50М (Cu50)',nsc:'cu',formula:'R(t) = R₀(1 + 0,00426·t)'},
             cu100_1426:{r0:100,alpha:0.00426,name:'100М (Cu100)',nsc:'cu',formula:'R(t) = R₀(1 + 0,00426·t)'},
-            pt50_1391:{r0:50,name:'50П (Pt50)',nsc:'pt1391',formula:'R(t) = R₀[1 + At + Bt²], A=3,96847·10⁻³, B=−5,84·10⁻⁷'},
-            pt100_1391:{r0:100,name:'100П (Pt100)',nsc:'pt1391',formula:'R(t) = R₀[1 + At + Bt²], A=3,96847·10⁻³, B=−5,84·10⁻⁷'},
+            pt50_1391:{r0:50,name:'50П (Pt50)',nsc:'pt1391',formula:'R(t) = R₀[1 + At + Bt² + C(t−100)t³] при t<0; A=3,969·10⁻³, B=−5,841·10⁻⁷, C=−4,330·10⁻¹²'},
+            pt100_1391:{r0:100,name:'100П (Pt100)',nsc:'pt1391',formula:'R(t) = R₀[1 + At + Bt² + C(t−100)t³] при t<0; A=3,969·10⁻³, B=−5,841·10⁻⁷, C=−4,330·10⁻¹²'},
             pt100_1385:{r0:100,name:'Pt100 (IEC)',nsc:'pt1385',formula:'R(t) = R₀[1 + At + Bt² + C(t−100)t³], IEC 60751 / ГОСТ 6651-2009'},
             pt1000_1385:{r0:1000,name:'Pt1000 (IEC)',nsc:'pt1385',formula:'R(t) = R₀[1 + At + Bt² + C(t−100)t³], IEC 60751 / ГОСТ 6651-2009'}
         };
