@@ -40745,6 +40745,25 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // 2. Тихо заполнить _METERS из localStorage и data/flowmeters.json.
             //    Если silent=true — populate без renderList().
             this._restoreCache(silent);
+            // Task 497 (баг-репорт): при наличии избранного показывать
+            // его СРАЗУ из локального кэша, ДО подгрузки данных с
+            // сервера. Раньше при первом открытии раздела (после входа
+            // в приложение) на вкладке «Избранные» (Task 491 открывает
+            // её автоматически) висела заглушка «Нет избранных
+            // расходомеров», хотя счётчик в нижнем баре показывал число
+            // избранных: _restoreCache(silent) заполнял _METERS из
+            // localStorage МОЛЧА (без рендера), а первый рендер с
+            // данными ждал ответа API. Теперь: кэш есть → мгновенный
+            // рендер избранных карточек; серверный load() по завершении
+            // перерисует список свежими показаниями (как и раньше).
+            // Кэша нет → renderList выше уже показал «Загрузка
+            // данных…» (не «Нет избранных…» — порядок заглушек Task
+            // 497 в renderList).
+            if (silent && this._activeTab === 'fav' &&
+                    typeof FlowFav !== 'undefined' &&
+                    FlowFav.count() > 0 && this._METERS.length > 0) {
+                this.renderList();
+            }
             this._loadFallback(silent);
             // Task 476 (этап 2 оптимизации): промах localStorage — добрать
             // из ёмкого KipDB-слоя (IndexedDB); серверное обновление (load)
@@ -41160,7 +41179,24 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             // Заглушка для пустого списка
             if (!meters || meters.length === 0) {
-                if (isFavTab) {
+                // Task 497 (баг-репорт): пустой список на вкладке
+                // «Избранные» ещё не значит «нет избранных»: пока данные
+                // не пришли с сервера (_loadState 'loading') или fetch
+                // упал ('error'), избранное СУЩЕСТВУЕТ — счётчик в
+                // нижнем баре это уже показывает, а заглушка «Нет
+                // избранных расходомеров» при первом открытии раздела
+                // вводила в заблуждение. Подсказка «Нет избранных…» —
+                // только когда избранного ДЕЙСТВИТЕЛЬНО нет (FlowFav
+                // пуст) или данные уже загружены, но избранных в них не
+                // оказалось (например, расходомер удалён на сервере);
+                // в полёте/ошибке — «Загрузка данных…» / «Нет связи с
+                // сервером».
+                var hasFav497 = (typeof FlowFav !== 'undefined') &&
+                                (FlowFav.count() > 0);
+                var favEmpty497 = isFavTab &&
+                        !(hasFav497 && (this._loadState === 'loading' ||
+                                        this._loadState === 'error'));
+                if (favEmpty497) {
                     container.innerHTML =
                         '<div class="flow-empty-fav">' +
                         '<div class="flow-empty-fav-icon">☆</div>' +
