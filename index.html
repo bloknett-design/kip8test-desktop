@@ -1208,11 +1208,11 @@
     .ts-calc-field { height: 52px; font-size: 19px; font-weight: 700; color: #ffffff; background: rgba(13, 17, 23, 0.45); border-color: rgba(74, 143, 199, 0.45); margin-bottom: 14px; }
     .ts-calc-field::placeholder { color: rgba(255, 255, 255, 0.4); font-weight: 500; }
     .ts-calc-field:focus { border-color: rgba(74, 143, 199, 0.85); box-shadow: 0 0 0 3px rgba(74, 143, 199, 0.18); background: rgba(13, 17, 23, 0.6); }
-    [data-theme="light"] .ts-calc-panel { border-color: rgba(43, 111, 163, 0.8); background-color: var(--card-bg); background-image: linear-gradient(180deg, rgba(74, 143, 199, 0.16), rgba(74, 143, 199, 0.03)); box-shadow: 0 4px 12px rgba(21, 54, 83, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -3px 0 rgba(21, 54, 83, 0.12); }
+    [data-theme="light"] .ts-calc-panel { border-color: rgba(198, 97, 63, 0.55); background-color: var(--card-bg); background-image: linear-gradient(180deg, rgba(198, 97, 63, 0.13), rgba(198, 97, 63, 0.02)); box-shadow: 0 4px 12px rgba(158, 78, 48, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -3px 0 rgba(158, 78, 48, 0.12); }
     [data-theme="light"] .ts-calc-panel .scale-form-label { color: rgba(20, 20, 19, 0.6); }
-    [data-theme="light"] .ts-calc-field { color: #141413; background: rgba(255, 255, 255, 0.75); border-color: rgba(43, 111, 163, 0.5); }
+    [data-theme="light"] .ts-calc-field { color: #141413; background: rgba(255, 255, 255, 0.78); border-color: rgba(20, 20, 19, 0.2); }
     [data-theme="light"] .ts-calc-field::placeholder { color: rgba(20, 20, 19, 0.45); }
-    [data-theme="light"] .ts-calc-field:focus { border-color: rgba(43, 111, 163, 0.9); box-shadow: 0 0 0 3px rgba(74, 143, 199, 0.15); background: rgba(255, 255, 255, 0.9); }
+    [data-theme="light"] .ts-calc-field:focus { border-color: rgba(198, 97, 63, 0.65); box-shadow: 0 0 0 3px rgba(198, 97, 63, 0.15); background: rgba(255, 255, 255, 0.92); }
     /* Task 495: блок ввода данных расчёта ТАБЛИЦЫ (диапазон + шаг,
        #tempTableFormPanel) — оформлен как панель произвольного
        расчёта (тот же контейнер .ts-calc-panel и поля .ts-calc-field),
@@ -1223,7 +1223,7 @@
        блок «втоплен» в страницу, тогда как панель произвольного
        расчёта над ним выступает. */
     .ts-calc-panel.ts-calc-inset { background-color: rgba(13, 17, 23, 0.55); background-image: none; border: 1px solid rgba(74, 143, 199, 0.32); box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.06); }
-    [data-theme="light"] .ts-calc-panel.ts-calc-inset { background-color: rgba(21, 54, 83, 0.08); background-image: none; border-color: rgba(43, 111, 163, 0.35); box-shadow: inset 0 2px 8px rgba(21, 54, 83, 0.18), inset 0 -1px 0 rgba(255, 255, 255, 0.7); }
+    [data-theme="light"] .ts-calc-panel.ts-calc-inset { background-color: rgba(198, 97, 63, 0.05); background-image: none; border-color: rgba(198, 97, 63, 0.22); box-shadow: inset 0 2px 8px rgba(158, 78, 48, 0.14), inset 0 -1px 0 rgba(255, 255, 255, 0.7); }
 
     /* Task 500 (заявка): единый стиль отображения для ВСЕХ разделов
        «КИП и А» — по образцу «Датчиков температуры» (Tasks 494-499):
@@ -1255,19 +1255,19 @@
        виден .cs-trigger) в панелях — тот же крупный вид, что у полей */
     .ts-calc-panel .cs-trigger { padding: 10px 14px; height: 52px; min-height: 52px; font-size: 19px; font-weight: 700; color: #ffffff; background: rgba(13, 17, 23, 0.45); border-color: rgba(74, 143, 199, 0.45); }
     .ts-calc-panel .cs-trigger:focus, .ts-calc-panel .cs-trigger.cs-open { border-color: rgba(74, 143, 199, 0.85); box-shadow: 0 0 0 3px rgba(74, 143, 199, 0.18); background: rgba(13, 17, 23, 0.6); }
-    [data-theme="light"] .ts-calc-panel .cs-trigger { color: #141413; background: rgba(255, 255, 255, 0.75); border-color: rgba(43, 111, 163, 0.5); }
-    [data-theme="light"] .ts-calc-panel .cs-trigger:focus, [data-theme="light"] .ts-calc-panel .cs-trigger.cs-open { border-color: rgba(43, 111, 163, 0.9); box-shadow: 0 0 0 3px rgba(74, 143, 199, 0.15); background: rgba(255, 255, 255, 0.9); }
+    [data-theme="light"] .ts-calc-panel .cs-trigger { color: #141413; background: rgba(255, 255, 255, 0.78); border-color: rgba(20, 20, 19, 0.2); }
+    [data-theme="light"] .ts-calc-panel .cs-trigger:focus, [data-theme="light"] .ts-calc-panel .cs-trigger.cs-open { border-color: rgba(198, 97, 63, 0.65); box-shadow: 0 0 0 3px rgba(198, 97, 63, 0.15); background: rgba(255, 255, 255, 0.92); }
     .ts-calc-panel .cs-wrapper { margin-bottom: 14px; }
     .ts-calc-panel input.scale-field::placeholder, .ts-calc-panel input.form-field::placeholder { color: rgba(255, 255, 255, 0.4); font-weight: 500; }
     .ts-calc-panel input.scale-field:focus, .ts-calc-panel select.scale-field:focus,
     .ts-calc-panel input.form-field:focus, .ts-calc-panel select.form-field:focus { border-color: rgba(74, 143, 199, 0.85); box-shadow: 0 0 0 3px rgba(74, 143, 199, 0.18); background: rgba(13, 17, 23, 0.6); }
     [data-theme="light"] .ts-calc-panel input.scale-field, [data-theme="light"] .ts-calc-panel select.scale-field,
-    [data-theme="light"] .ts-calc-panel input.form-field, [data-theme="light"] .ts-calc-panel select.form-field { color: #141413; background: rgba(255, 255, 255, 0.75); border-color: rgba(43, 111, 163, 0.5); }
+    [data-theme="light"] .ts-calc-panel input.form-field, [data-theme="light"] .ts-calc-panel select.form-field { color: #141413; background: rgba(255, 255, 255, 0.78); border-color: rgba(20, 20, 19, 0.2); }
     [data-theme="light"] .ts-calc-panel input.scale-field::placeholder, [data-theme="light"] .ts-calc-panel input.form-field::placeholder { color: rgba(20, 20, 19, 0.45); }
     [data-theme="light"] .ts-calc-panel input.scale-field:focus, [data-theme="light"] .ts-calc-panel select.scale-field:focus,
-    [data-theme="light"] .ts-calc-panel input.form-field:focus, [data-theme="light"] .ts-calc-panel select.form-field:focus { border-color: rgba(43, 111, 163, 0.9); box-shadow: 0 0 0 3px rgba(74, 143, 199, 0.15); background: rgba(255, 255, 255, 0.9); }
+    [data-theme="light"] .ts-calc-panel input.form-field:focus, [data-theme="light"] .ts-calc-panel select.form-field:focus { border-color: rgba(198, 97, 63, 0.65); box-shadow: 0 0 0 3px rgba(198, 97, 63, 0.15); background: rgba(255, 255, 255, 0.92); }
     .ts-calc-panel .scale-form-label.ts-calc-sep { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(74, 143, 199, 0.3); }
-    [data-theme="light"] .ts-calc-panel .scale-form-label.ts-calc-sep { border-top-color: rgba(43, 111, 163, 0.35); }
+    [data-theme="light"] .ts-calc-panel .scale-form-label.ts-calc-sep { border-top-color: rgba(198, 97, 63, 0.25); }
     .conv-3col-page .conv-col-input .scale-form.ts-calc-panel,
     .conv-3col-page .conv-col-input .converter-form.ts-calc-panel { margin: 8px 0 12px; }
     /* Task 499 (заявка: «подсказки диапазонов впиши непосредственно
@@ -1284,14 +1284,26 @@
        и/или перенесёт заголовок на несколько строк). */
     #tempSensorViewTitle { font-size: 21px; }
     .page-content.scrolled #tempSensorViewTitle { font-size: 17px; }
-    [data-theme="light"] .ts-card-fav-btn { color: rgba(43, 111, 163, 0.45); }
-    [data-theme="light"] .ts-card-fav-btn.active { color: #2b6fa3; background: rgba(74, 143, 199, 0.12); }
-    [data-theme="light"] .ts-tab { color: rgba(43, 111, 163, 0.6); }
-    [data-theme="light"] .ts-tab.active { background: rgba(74, 143, 199, 0.12); color: #2b6fa3; }
-    [data-theme="light"] .ts-tab-count { background: rgba(74, 143, 199, 0.15); color: #2b6fa3; }
-    [data-theme="light"] .ts-tab.active .ts-tab-count { background: #2b6fa3; color: #fff; }
-    [data-theme="light"] #tempSensorFavBtn { color: rgba(43, 111, 163, 0.55); }
-    [data-theme="light"] #tempSensorFavBtn.active { color: #2b6fa3; }
+    [data-theme="light"] .ts-card-fav-btn { color: rgba(198, 97, 63, 0.5); }
+    [data-theme="light"] .ts-card-fav-btn.active { color: #C6613F; background: rgba(198, 97, 63, 0.12); }
+    [data-theme="light"] .ts-tab { color: rgba(198, 97, 63, 0.65); }
+    [data-theme="light"] .ts-tab.active { background: rgba(198, 97, 63, 0.12); color: #C6613F; }
+    [data-theme="light"] .ts-tab-count { background: rgba(198, 97, 63, 0.15); color: #C6613F; }
+    [data-theme="light"] .ts-tab.active .ts-tab-count { background: #C6613F; color: #fff; }
+    [data-theme="light"] #tempSensorFavBtn { color: rgba(198, 97, 63, 0.6); }
+    [data-theme="light"] #tempSensorFavBtn.active { color: #C6613F; }
+    /* Task 501 (заявка): политура кнопок и блоков светлой темы —
+       ТЁПЛАЯ палитра (акцент светлой темы #C6613F — как кнопки
+       «Рассчитать», активные пункты навигации и значения
+       результатов): рамки/градиенты/тени панелей и featured-карточек,
+       фокус-кольца полей, табы и звёзды избранного, разделители —
+       терракотовые/тёплые вместо синих; рамки полей — нейтральные.
+       Тёмная тема не тронута (синий — её акцент). */
+    [data-theme="light"] .ts-tabs { border-color: rgba(20, 20, 19, 0.15); }
+    [data-theme="light"] .ts-card:hover, [data-theme="light"] .ts-card:active { border-color: rgba(198, 97, 63, 0.3); }
+    [data-theme="light"] .ts-card:hover .ts-card-arrow, [data-theme="light"] .ts-card:active .ts-card-arrow { color: rgba(198, 97, 63, 0.4); }
+    [data-theme="light"] .ts-empty-fav-icon { color: rgba(198, 97, 63, 0.4); }
+    [data-theme="light"] .ts-empty-fav-hint .star { color: #C6613F; }
     /* Task 372: чип выбранного датчика — Task 495: чип удалён из
        блока ввода (тип датчика показывает заголовок страницы);
        CSS-правила чипа сняты как неиспользуемые. */
@@ -1334,8 +1346,8 @@
         /* Task 492: featured — только кнопки в избранном */
         .ts-card-feat { padding: 12px 14px 13px; border: 2px solid rgba(74, 143, 199, 0.85); background: linear-gradient(180deg, rgba(74, 143, 199, 0.2), rgba(74, 143, 199, 0.05)); box-shadow: 0 5px 14px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -3px 0 rgba(0, 0, 0, 0.3); }
         .ts-card-feat:active { transform: translateY(2px) scale(0.98); border-color: rgba(74, 143, 199, 0.85); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.32), inset 0 2px 8px rgba(0, 0, 0, 0.35); }
-        [data-theme="light"] .ts-card-feat { border-color: rgba(43, 111, 163, 0.8); background: linear-gradient(180deg, rgba(74, 143, 199, 0.16), rgba(74, 143, 199, 0.03)); box-shadow: 0 4px 12px rgba(21, 54, 83, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -3px 0 rgba(21, 54, 83, 0.12); }
-        [data-theme="light"] .ts-card-feat:active { border-color: rgba(43, 111, 163, 0.8); box-shadow: 0 1px 4px rgba(21, 54, 83, 0.18), inset 0 2px 8px rgba(21, 54, 83, 0.18); }
+        [data-theme="light"] .ts-card-feat { border-color: rgba(198, 97, 63, 0.55); background: linear-gradient(180deg, rgba(198, 97, 63, 0.13), rgba(198, 97, 63, 0.02)); box-shadow: 0 4px 12px rgba(158, 78, 48, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -3px 0 rgba(158, 78, 48, 0.12); }
+        [data-theme="light"] .ts-card-feat:active { border-color: rgba(198, 97, 63, 0.55); box-shadow: 0 1px 4px rgba(158, 78, 48, 0.15), inset 0 2px 8px rgba(158, 78, 48, 0.15); }
         /* Task 492: верхние табы скрыты — заменены нижним баром */
         .ts-tabs { display: none; }
         /* Task 492: отступ контента под фиксированный нижний бар */
@@ -1359,14 +1371,14 @@
     body:has(#page-temp-sensors.active) .ts-bottom-bar { display: grid; }
     @media (min-width: 1024px) { body:has(#page-temp-sensors.active) .ts-bottom-bar { display: none !important; } }
     .ts-bottom-bar::before { content: ''; position: absolute; left: 50%; top: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); width: 1px; background: rgba(74, 143, 199, 0.25); transform: translateX(-50%); pointer-events: none; z-index: 1; }
-    [data-theme="light"] .ts-bottom-bar::before { background: rgba(43, 111, 163, 0.2); }
+    [data-theme="light"] .ts-bottom-bar::before { background: rgba(198, 97, 63, 0.2); }
     #tsBottomBar .ts-tab { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 56px; padding: 16px 10px calc(16px + env(safe-area-inset-bottom, 0px)); border: none; border-radius: 0; background: transparent; color: rgba(74, 143, 199, 0.6); font-family: 'Inter', sans-serif; font-size: 17px; font-weight: 600; cursor: pointer; pointer-events: auto; touch-action: manipulation; -webkit-tap-highlight-color: transparent; box-shadow: none; transition: background 0.2s, color 0.2s; position: relative; z-index: 2; }
     #tsBottomBar .ts-tab:active { background: rgba(74, 143, 199, 0.08); opacity: 0.75; }
     #tsBottomBar .ts-tab.active { background: transparent; color: #4a8fc7; }
     #tsBottomBar .ts-tab-count { min-width: 18px; height: 18px; border-radius: 9px; font-size: 11px; line-height: 18px; }
-    [data-theme="light"] #tsBottomBar .ts-tab { color: rgba(43, 111, 163, 0.55); }
-    [data-theme="light"] #tsBottomBar .ts-tab:active { background: rgba(74, 143, 199, 0.06); }
-    [data-theme="light"] #tsBottomBar .ts-tab.active { color: #2b6fa3; }
+    [data-theme="light"] #tsBottomBar .ts-tab { color: rgba(198, 97, 63, 0.6); }
+    [data-theme="light"] #tsBottomBar .ts-tab:active { background: rgba(198, 97, 63, 0.07); }
+    [data-theme="light"] #tsBottomBar .ts-tab.active { color: #C6613F; }
     @media (max-width: 400px) { #tsBottomBar .ts-tab { font-size: 15px; padding: 14px 8px calc(14px + env(safe-area-inset-bottom, 0px)); gap: 4px; } }
 
     .method-indicator { background: rgba(30, 42, 56, 0.75); backdrop-filter: blur(8px); margin: 10px 0; padding: 12px 14px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(74, 143, 199, 0.15); position: relative; z-index: 2; }
@@ -18512,21 +18524,24 @@
             <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Шкала-сигнал</div></div>
             <div class="conv-columns">
                 <div class="conv-col conv-col-input">
+            <!-- Task 501 (заявка): блок произвольных значений — НАД панелью
+             расчёта шкалы (как ППР датчиков температуры, эффект
+             выступа), единицы полей живые — пресеты/свои значения. -->
+            <div class="ts-calc-panel" id="scaleQueryPanel"><div style="color:rgba(255,255,255,0.25); font-size:11px; margin-bottom:10px; line-height:1.4;">Введите значение в любое поле — другое рассчитается автоматически</div><div class="scale-form-label">Значение шкалы (<span id="scaleQueryUnit">ед.</span>)</div><input type="text" inputmode="numeric" id="queryScaleVal" class="scale-field" placeholder="Например: 50" oninput="queryFromScaleLive()" autocomplete="off" enterkeyhint="done"><div class="scale-form-label">Сигнал (<span id="scaleQuerySigUnit">мА</span>)</div><input type="text" inputmode="numeric" id="querySigVal" class="scale-field" placeholder="Например: 12" oninput="queryFromSignalLive()" autocomplete="off" enterkeyhint="done"></div>
             <!-- Task 500 (заявка): блоки полей ввода объединены в ОДНУ панель
              стиля «Датчиков температуры» (Task 495 — углублённый
              «колодец», обёртки бывших блоков сняты); группы разделены
              линией-разделителем с отступом. -->
-            <div class="ts-calc-panel ts-calc-inset" id="scaleFormPanel"><div class="scale-form-label">Тип шкалы</div><select id="scaleType" class="scale-field" autocomplete="off"><option value="linear" selected data-hint="прямая">Линейная</option><option value="quadratic" data-hint="сигнал ∝ X²">Квадратичная</option><option value="sqrt" data-hint="сигнал ∝ √X">Корнеизвлекающая</option></select><div style="color:rgba(255,255,255,0.25); font-size:10px; margin-top:4px; padding-left:4px;">Линейная: прямая зависимость · Квадратичная: сигнал ∝ (шкала)² · Корнеизвлекающая: сигнал ∝ √(шкала)</div>
-            <div class="scale-form-label ts-calc-sep">Диапазон шкалы измерения</div><select id="scalePreset" class="scale-field" onchange="setScaleDefaults()" autocomplete="off"><option value="0_100" selected>0 – 100 %</option><option value="4_20" data-hint="ток">4 – 20 мА</option><option value="0_20" data-hint="ток">0 – 20 мА</option><option value="0_5mA" data-hint="ток">0 – 5 мА</option><option value="0_10V" data-hint="напряжение">0 – 10 В</option><option value="1_5V" data-hint="напряжение">1 – 5 В</option><option value="0_5V" data-hint="напряжение">0 – 5 В</option><option value="bipolar_10" data-hint="напряжение">-10 – +10 В</option><option value="20_100_kPa" data-hint="пневматика">20 – 100 кПа</option><option value="0_2_1_0_bar" data-hint="пневматика">0,2 – 1,0 бар</option><option value="3_15_psi" data-hint="пневматика">3 – 15 psi</option><option value="0_2_1_0_kgf_cm2" data-hint="пневматика">0,2 – 1,0 кгс/см²</option><option value="custom" data-hint="Вручную">Своё значение</option></select><div id="scaleCustomRange" style="margin-top:12px;"><input type="text" inputmode="numeric" id="scaleMin" class="scale-field" placeholder="Минимум шкалы" value="0" style="margin-bottom:6px;" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)"><input type="text" inputmode="numeric" id="scaleMax" class="scale-field" placeholder="Максимум шкалы" value="100" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)"><input type="text" inputmode="text" id="scaleUnitName" class="scale-field" placeholder="Ед. измерения" value="%" style="margin-top:6px;" autocomplete="off" enterkeyhint="done" ></div>
+            <div class="ts-calc-panel ts-calc-inset" id="scaleFormPanel"><div class="scale-form-label">Тип шкалы</div><select id="scaleType" class="scale-field" autocomplete="off"><option value="linear" selected data-hint="прямая">Линейная</option><option value="quadratic" data-hint="сигнал ∝ X²">Квадратичная</option><option value="sqrt" data-hint="сигнал ∝ √X">Корнеизвлекающая</option></select>
+            <div class="scale-form-label ts-calc-sep">Диапазон шкалы измерения</div><select id="scalePreset" class="scale-field" onchange="setScaleDefaults()" autocomplete="off"><option value="0_100" selected>0 – 100 %</option><option value="4_20" data-hint="ток">4 – 20 мА</option><option value="0_20" data-hint="ток">0 – 20 мА</option><option value="0_5mA" data-hint="ток">0 – 5 мА</option><option value="0_10V" data-hint="напряжение">0 – 10 В</option><option value="1_5V" data-hint="напряжение">1 – 5 В</option><option value="0_5V" data-hint="напряжение">0 – 5 В</option><option value="bipolar_10" data-hint="напряжение">-10 – +10 В</option><option value="20_100_kPa" data-hint="пневматика">20 – 100 кПа</option><option value="0_2_1_0_bar" data-hint="пневматика">0,2 – 1,0 бар</option><option value="3_15_psi" data-hint="пневматика">3 – 15 psi</option><option value="0_2_1_0_kgf_cm2" data-hint="пневматика">0,2 – 1,0 кгс/см²</option><option value="custom" data-hint="Вручную">Своё значение</option></select><div id="scaleCustomRange" style="margin-top:12px;"><input type="text" inputmode="numeric" id="scaleMin" class="scale-field" placeholder="Минимум шкалы" value="0" style="margin-bottom:6px;" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)"><input type="text" inputmode="numeric" id="scaleMax" class="scale-field" placeholder="Максимум шкалы" value="100" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)"><input type="text" inputmode="text" id="scaleUnitName" class="scale-field" placeholder="Ед. измерения" value="%" style="margin-top:6px;" autocomplete="off" enterkeyhint="done"  oninput="updateScaleQueryUnits()"></div>
             <div class="scale-form-label ts-calc-sep">Тип выходного сигнала</div><select id="sigType" class="scale-field" onchange="setSignalDefaults()" autocomplete="off"><optgroup label="Токовые"><option value="4_20">4 – 20 мА</option><option value="0_20">0 – 20 мА</option><option value="0_5mA">0 – 5 мА</option></optgroup><optgroup label="Напряжения"><option value="0_10V">0 – 10 В</option><option value="1_5V">1 – 5 В</option><option value="0_5V">0 – 5 В</option><option value="bipolar_10">-10 – +10 В</option></optgroup><optgroup label="Пневматические"><option value="20_100_kPa">20 – 100 кПа</option><option value="0_2_1_0_bar">0,2 – 1,0 бар</option><option value="3_15_psi">3 – 15 psi</option><option value="0_2_1_0_kgf_cm2" selected>0,2 – 1,0 кгс/см²</option></optgroup><optgroup label="Другие"><option value="0_100_pct">0 – 100 %</option><option value="custom">Своё</option></optgroup></select>
-            <div id="sigCustomRange" style="margin-top:8px;"><div class="scale-form-label">Диапазон сигнала</div><input type="text" inputmode="numeric" id="sigMin" class="scale-field" placeholder="Минимум" style="margin-bottom:6px;" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)"><input type="text" inputmode="numeric" id="sigMax" class="scale-field" placeholder="Максимум" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)"><input type="text" inputmode="text" id="sigUnitCustom" class="scale-field" placeholder="Ед. измерения" value="мА" style="margin-top:6px;" autocomplete="off" enterkeyhint="done" ><div style="color:rgba(255,255,255,0.25); font-size:10px; margin-top:4px; padding-left:4px;" id="sigUnitLabel">мА</div></div></div>
+            <div id="sigCustomRange" style="margin-top:8px;"><div class="scale-form-label">Диапазон сигнала</div><input type="text" inputmode="numeric" id="sigMin" class="scale-field" placeholder="Минимум" style="margin-bottom:6px;" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)"><input type="text" inputmode="numeric" id="sigMax" class="scale-field" placeholder="Максимум" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)"><input type="text" inputmode="text" id="sigUnitCustom" class="scale-field" placeholder="Ед. измерения" value="мА" style="margin-top:6px;" autocomplete="off" enterkeyhint="done"  oninput="updateScaleQueryUnits()"><div style="color:rgba(255,255,255,0.25); font-size:10px; margin-top:4px; padding-left:4px;" id="sigUnitLabel">мА</div></div></div>
             <button type="button" class="scale-calc-btn" onclick="calcScaleSignal()"><svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg>Рассчитать</button>
                 </div>
                 <div class="conv-col conv-col-table">
                     <div class="conv-table-placeholder"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg><div class="ctp-title">Результаты расчёта</div><div class="ctp-text">Заполните параметры и нажмите «Рассчитать». Здесь появится таблица с расчётными значениями.</div></div>
-            <div id="scaleResultsArea" class="converter-result-group" style="display:none;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;"><div class="converter-result-label-title">Расчётные значения</div><button type="button" class="query-btn" onclick="copyScaleTable()" style="width:auto; padding:5px 10px; font-size:11px;"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</button></div><div id="scaleTableContainer" style="overflow-x:auto;border-radius:10px;border:1px solid rgba(255,255,255,0.05);"></div><div id="scaleInfo" style="margin-top:14px; padding:14px 18px; background:rgba(13,17,23,0.5); border-radius:10px; font-size:15px; color:rgba(255,255,255,0.35); line-height:1.6;"></div><div id="scaleCustomCalcPanel" style="display:none;"><div class="converter-result-label-title" style="margin-top:16px;">Расчёт произвольных значений</div><!-- Task 500: панель произвольных значений — как ППР датчиков
-                 температуры (эффект выступа). -->
-                <div class="ts-calc-panel" id="scaleQueryPanel"><div style="color:rgba(255,255,255,0.25); font-size:11px; margin-bottom:10px; line-height:1.4;">Введите значение в любое поле — другое рассчитается автоматически</div><div class="scale-form-label">Значение шкалы (<span id="scaleQueryUnit">ед.</span>)</div><input type="text" inputmode="numeric" id="queryScaleVal" class="scale-field" placeholder="Например: 50" oninput="queryFromScaleLive()" autocomplete="off" enterkeyhint="done"><div class="scale-form-label">Сигнал (<span id="scaleQuerySigUnit">мА</span>)</div><input type="text" inputmode="numeric" id="querySigVal" class="scale-field" placeholder="Например: 12" oninput="queryFromSignalLive()" autocomplete="off" enterkeyhint="done"></div></div></div>
+            <div id="scaleResultsArea" class="converter-result-group" style="display:none;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;"><div class="converter-result-label-title">Расчётные значения</div><button type="button" class="query-btn" onclick="copyScaleTable()" style="width:auto; padding:5px 10px; font-size:11px;"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</button></div><div id="scaleTableContainer" style="overflow-x:auto;border-radius:10px;border:1px solid rgba(255,255,255,0.05);"></div><div id="scaleInfo" style="margin-top:14px; padding:14px 18px; background:rgba(13,17,23,0.5); border-radius:10px; font-size:15px; color:rgba(255,255,255,0.35); line-height:1.6;"></div>
+                </div>
                 </div>
                 <div class="conv-col conv-col-info">
                     
@@ -18540,7 +18555,11 @@
             <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Автоматический выключатель</div></div>
             <div class="conv-columns">
                 <div class="conv-col conv-col-input">
-                    <div class="scale-form">
+                    <!-- Task 501 (заявка): блоки полей ввода объединены
+             в ОДНУ панель (стиль Task 500, «колодец»);
+             бывшие группы разделены линией-разделителем с отступом (стиль Task 500). -->
+            <div class="ts-calc-panel ts-calc-inset" id="cbFormPanel">
+
                 <div class="scale-form-label">Тип питания</div>
                 <select id="cb_supply_type" class="scale-field" onchange="updateCbForm()" autocomplete="off">
                     <option value="ac220" selected data-hint="AC 50 Гц">~220 В</option>
@@ -18560,18 +18579,16 @@
                         </select>
                     </div>
                 </div>
-            </div>
+            
 
-            <div class="scale-form">
-                <div class="scale-form-label">Тип нагрузки</div>
+                <div class="scale-form-label ts-calc-sep">Тип нагрузки</div>
                 <select id="cb_load_type" class="scale-field" onchange="updateCbForm()" autocomplete="off">
                     <option value="power" selected data-hint="P = U·I">Мощность</option>
                     <option value="current" data-hint="I, А">Ток</option>
                 </select>
-            </div>
-
-            <div class="scale-form" id="cb_power_block">
-                <div class="scale-form-label">Мощность нагрузки (P)</div>
+            
+<div " id="cb_power_block">
+                <div class="scale-form-label ts-calc-sep">Мощность нагрузки (P)</div>
                 <div style="display:flex; gap:8px; margin-bottom:12px; align-items:stretch;">
                     <input type="text" inputmode="numeric" id="cb_power" class="scale-field" style="flex:2; margin-bottom:0;" value="50" placeholder="Вт" autocomplete="off" enterkeyhint="next">
                     <select id="cb_power_unit" class="scale-field" style="flex:1; margin-bottom:0;" autocomplete="off">
@@ -18582,15 +18599,13 @@
                 </div>
                 <div style="color:rgba(255,255,255,0.25); font-size:10px; padding-left:4px;">Суммарная мощность потребителей (КИП, АСУ ТП)</div>
             </div>
-
-            <div class="scale-form" id="cb_current_block" style="display:none;">
-                <div class="scale-form-label">Ток нагрузки (I)</div>
+<div " id="cb_current_block" style="display:none;">
+                <div class="scale-form-label ts-calc-sep">Ток нагрузки (I)</div>
                 <input type="text" inputmode="numeric" id="cb_current" class="scale-field" value="2" placeholder="А" autocomplete="off" enterkeyhint="next">
                 <div style="color:rgba(255,255,255,0.25); font-size:10px; margin-top:4px; padding-left:4px;">Амперы</div>
             </div>
 
-            <div class="scale-form">
-                <div class="scale-form-label">Тип потребителей</div>
+                <div class="scale-form-label ts-calc-sep">Тип потребителей</div>
                 <select id="cb_consumer_type" class="scale-field" onchange="updateCbCosPhi()" autocomplete="off">
                     <option value="kip_resistive" selected data-hint="cos φ=1">КИП (активная)</option>
                     <option value="kip_inductive" data-hint="cos φ<1">КИП (индуктивная)</option>
@@ -18606,10 +18621,9 @@
                     </div>
                     <div style="color:rgba(255,255,255,0.25); font-size:10px; padding-left:4px; margin-top:4px;">cos φ · Коэффициент пускового тока (1,0 = без учёта)</div>
                 </div>
-            </div>
+            
 
-            <div class="scale-form">
-                <div class="scale-form-label">Тип линии и сечение кабеля</div>
+                <div class="scale-form-label ts-calc-sep">Тип линии и сечение кабеля</div>
                 <select id="cb_line_type" class="scale-field" onchange="updateCbCableTable()" autocomplete="off">
                     <option value="signal_0_75" selected data-hint="сигнальный">0,75 мм²</option>
                     <option value="power_1_0" data-hint="силовой">1,0 мм²</option>
@@ -18634,10 +18648,9 @@
                         </select>
                     </div>
                 </div>
-            </div>
+            
 
-            <div class="scale-form">
-                <div class="scale-form-label">Характеристика срабатывания</div>
+                <div class="scale-form-label ts-calc-sep">Характеристика срабатывания</div>
                 <select id="cb_curve" class="scale-field" autocomplete="off">
                     <option value="B" data-hint="чувствит.">B</option>
                     <option value="C" selected data-hint="универс.">C</option>
@@ -18645,13 +18658,15 @@
                     <option value="Z" data-hint="сверхчувст.">Z</option>
                 </select>
                 <div style="color:rgba(255,255,255,0.25); font-size:10px; margin-top:4px; padding-left:4px;">B — чувствительный · C — универсальный · D — инерционный · Z — сверхчувствительный</div>
-            </div>
+            
 
-            <div class="scale-form">
-                <div class="scale-form-label">Количество потребителей (опционально)</div>
+                <div class="scale-form-label ts-calc-sep">Количество потребителей (опционально)</div>
                 <input type="text" inputmode="numeric" id="cb_device_count" class="scale-field" value="1" min="1" placeholder="шт." autocomplete="off" enterkeyhint="done">
                 <div style="color:rgba(255,255,255,0.25); font-size:10px; margin-top:4px; padding-left:4px;">Для расчёта суммарного тока группы приборов</div>
+            
             </div>
+
+            
 
             <button type="button" class="converter-convert-btn" onclick="calcCircuitBreaker()"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 16 16 12 12 8"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Рассчитать автомат</button>
                 </div>
@@ -18691,7 +18706,7 @@
 <text x="92" y="50" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="500">R</text>
 <circle cx="70" cy="70" r="2.6" fill="#5a9fd4"/>
 </svg></div>
-            <div class="scale-form">
+            <div class="scale-form ts-calc-panel ts-calc-inset" style="margin: 8px 0 12px;">
                 <div class="scale-form-label">Диаметр D</div>
                 <input type="text" inputmode="numeric" id="gc_diameter" class="scale-field" value="100" placeholder="мм" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this)">
             </div>
@@ -18716,14 +18731,21 @@
 <text x="70" y="90" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="500">d</text>
 <circle cx="70" cy="70" r="2.6" fill="#5a9fd4"/>
 </svg></div>
-            <div class="scale-form">
+            <!-- Task 501 (заявка): блоки полей ввода объединены
+             в ОДНУ панель (стиль Task 500, «колодец»);
+             бывшие группы разделены линией-разделителем с отступом (стиль Task 500). -->
+            <div class="ts-calc-panel ts-calc-inset" id="grFormPanel">
+
                 <div class="scale-form-label">Наружный диаметр D</div>
                 <input type="text" inputmode="numeric" id="gr_d_outer" class="scale-field" value="100" placeholder="мм" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)">
-            </div>
-            <div class="scale-form">
-                <div class="scale-form-label">Внутренний диаметр d</div>
+            
+
+                <div class="scale-form-label ts-calc-sep">Внутренний диаметр d</div>
                 <input type="text" inputmode="numeric" id="gr_d_inner" class="scale-field" value="80" placeholder="мм" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this)">
+            
             </div>
+
+            
             <button type="button" class="converter-convert-btn scale-calc-btn" onclick="calcGeoRing()"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>Рассчитать</button>
             <div class="converter-result-group" id="gr_results" style="display:none;"></div>
         </div>
@@ -18747,14 +18769,21 @@
 <line x1="18" y1="30" x2="18" y2="108" stroke="#5a9fd4" stroke-width="1.2" marker-start="url(#gcy-as)" marker-end="url(#gcy-ae)"/>
 <text x="11" y="69" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="500" transform="rotate(-90 11 69)">H</text>
 </svg></div>
-            <div class="scale-form">
+            <!-- Task 501 (заявка): блоки полей ввода объединены
+             в ОДНУ панель (стиль Task 500, «колодец»);
+             бывшие группы разделены линией-разделителем с отступом (стиль Task 500). -->
+            <div class="ts-calc-panel ts-calc-inset" id="gcyFormPanel">
+
                 <div class="scale-form-label">Диаметр D</div>
                 <input type="text" inputmode="numeric" id="gcy_diameter" class="scale-field" value="2" placeholder="м" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)">
-            </div>
-            <div class="scale-form">
-                <div class="scale-form-label">Высота H</div>
+            
+
+                <div class="scale-form-label ts-calc-sep">Высота H</div>
                 <input type="text" inputmode="numeric" id="gcy_height" class="scale-field" value="3" placeholder="м" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this)">
+            
             </div>
+
+            
             <button type="button" class="converter-convert-btn scale-calc-btn" onclick="calcGeoCylinder()"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>Рассчитать</button>
             <div class="converter-result-group" id="gcy_results" style="display:none;"></div>
         </div>
@@ -18782,19 +18811,26 @@
 <line x1="80" y1="80" x2="80" y2="66" stroke="#5a9fd4" stroke-width="1.2" marker-start="url(#gh-as)" marker-end="url(#gh-ae)"/>
 <text x="86" y="73" fill="#ffffff" font-size="12" font-weight="500" dominant-baseline="middle">h</text>
 </svg></div>
-            <div class="scale-form">
+            <!-- Task 501 (заявка): блоки полей ввода объединены
+             в ОДНУ панель (стиль Task 500, «колодец»);
+             бывшие группы разделены линией-разделителем с отступом (стиль Task 500). -->
+            <div class="ts-calc-panel ts-calc-inset" id="ghFormPanel">
+
                 <div class="scale-form-label">Длина L</div>
                 <input type="text" inputmode="numeric" id="gh_length" class="scale-field" value="5" placeholder="м" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)">
-            </div>
-            <div class="scale-form">
-                <div class="scale-form-label">Диаметр D</div>
+            
+
+                <div class="scale-form-label ts-calc-sep">Диаметр D</div>
                 <input type="text" inputmode="numeric" id="gh_diameter" class="scale-field" value="2" placeholder="м" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)">
-            </div>
-            <div class="scale-form">
-                <div class="scale-form-label">Уровень жидкости h</div>
+            
+
+                <div class="scale-form-label ts-calc-sep">Уровень жидкости h</div>
                 <input type="text" inputmode="numeric" id="gh_level" class="scale-field" value="1,5" placeholder="м" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this)">
                 <div style="color:rgba(255,255,255,0.25); font-size:10px; margin-top:4px; padding-left:4px;">Высота от дна до зеркала жидкости (0 ≤ h ≤ D)</div>
+            
             </div>
+
+            
             <button type="button" class="converter-convert-btn scale-calc-btn" onclick="calcGeoHorizCyl()"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>Рассчитать</button>
             <div class="converter-result-group" id="gh_results" style="display:none;"></div>
         </div>
@@ -18815,7 +18851,7 @@
 <text x="70" y="86" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="500">D</text>
 <circle cx="70" cy="70" r="2.6" fill="#5a9fd4"/>
 </svg></div>
-            <div class="scale-form">
+            <div class="scale-form ts-calc-panel ts-calc-inset" style="margin: 8px 0 12px;">
                 <div class="scale-form-label">Диаметр D</div>
                 <input type="text" inputmode="numeric" id="gs_diameter" class="scale-field" value="2" placeholder="м" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this)">
             </div>
@@ -18843,14 +18879,21 @@
 <text x="70" y="134" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="500">D</text>
 <text x="96" y="60" fill="#ffffff" font-size="12" font-weight="500" dominant-baseline="middle">L</text>
 </svg></div>
-            <div class="scale-form">
+            <!-- Task 501 (заявка): блоки полей ввода объединены
+             в ОДНУ панель (стиль Task 500, «колодец»);
+             бывшие группы разделены линией-разделителем с отступом (стиль Task 500). -->
+            <div class="ts-calc-panel ts-calc-inset" id="gcoFormPanel">
+
                 <div class="scale-form-label">Диаметр основания D</div>
                 <input type="text" inputmode="numeric" id="gco_diameter" class="scale-field" value="2" placeholder="м" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)">
-            </div>
-            <div class="scale-form">
-                <div class="scale-form-label">Высота H</div>
+            
+
+                <div class="scale-form-label ts-calc-sep">Высота H</div>
                 <input type="text" inputmode="numeric" id="gco_height" class="scale-field" value="3" placeholder="м" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this)">
+            
             </div>
+
+            
             <button type="button" class="converter-convert-btn scale-calc-btn" onclick="calcGeoCone()"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>Рассчитать</button>
             <div class="converter-result-group" id="gco_results" style="display:none;"></div>
         </div>
@@ -32613,11 +32656,16 @@ function showTempTable(fromUnit, toUnit, baseCelsius) {
         window.matchMedia('(min-width: 1024px)').matches;
     if (!skipScrollT) setTimeout(() => tableDiv.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 }
-function setSignalDefaults() { let type=document.getElementById('sigType').value; let def={'4_20':[4,20],'0_20':[0,20],'0_5mA':[0,5],'0_10V':[0,10],'1_5V':[1,5],'0_5V':[0,5],'bipolar_10':[-10,10],'20_100_kPa':[20,100],'0_2_1_0_bar':['0,2','1,0'],'3_15_psi':[3,15],'0_2_1_0_kgf_cm2':['0,2','1,0'],'0_100_pct':[0,100]}; let customDiv=document.getElementById('sigCustomRange'); if(def[type]){document.getElementById('sigMin').value=def[type][0]; document.getElementById('sigMax').value=def[type][1]; customDiv.style.display='none';} else{document.getElementById('sigMin').value='0'; document.getElementById('sigMax').value='100'; document.getElementById('sigUnitCustom').value='%'; customDiv.style.display='block';} document.getElementById('sigUnitLabel').innerText=sigUnitLabels[type]; }
-    function setScaleDefaults() { let type=document.getElementById('scalePreset').value; let def={'0_100':[0,100,'%'],'4_20':[4,20,'мА'],'0_20':[0,20,'мА'],'0_5mA':[0,5,'мА'],'0_10V':[0,10,'В'],'1_5V':[1,5,'В'],'0_5V':[0,5,'В'],'bipolar_10':[-10,10,'В'],'20_100_kPa':[20,100,'кПа'],'0_2_1_0_bar':['0,2','1,0','бар'],'3_15_psi':[3,15,'psi'],'0_2_1_0_kgf_cm2':['0,2','1,0','кгс/см²']}; let customDiv=document.getElementById('scaleCustomRange'); if(def[type]){document.getElementById('scaleMin').value=def[type][0]; document.getElementById('scaleMax').value=def[type][1]; document.getElementById('scaleUnitName').value=def[type][2]; customDiv.style.display='none';} else{customDiv.style.display='block';} }
-    function calcScaleSignal() { let smin=parseLocaleNumber(document.getElementById('scaleMin').value); let smax=parseLocaleNumber(document.getElementById('scaleMax').value); let gmin=parseLocaleNumber(document.getElementById('sigMin').value); let gmax=parseLocaleNumber(document.getElementById('sigMax').value); let scaleType=document.getElementById('scaleType').value; if(isNaN(smin)||isNaN(smax)||isNaN(gmin)||isNaN(gmax)){showToast('Заполните все поля');return;} if(smin===smax||gmin===gmax){showToast('Пределы не должны совпадать');return;} document.getElementById('scaleResultsArea').style.display='block'; let unit=document.getElementById('scaleUnitName').value||'ед.'; let sigRange=getSignalRangeAndUnit(document.getElementById('sigType').value); let sigUnit=sigRange.unit; let typeLabels={linear:'Линейная',quadratic:'Квадратичная',sqrt:'Корнеизвлекающая'}; let pct=[0,5,10,15,20,25,30,40,50,60,70,75,80,90,95,100]; let html='<table style="min-width:100%;width:100%;border-collapse:collapse;"><thead><tr style="background:rgba(22,27,34,0.7);"><th style="padding:10px 12px;font-size:13px;color:#4a8fc7;text-align:left;">%</th><th style="padding:10px 12px;font-size:13px;color:#4a8fc7;text-align:left;">Шкала ('+unit+')</th><th style="padding:10px 12px;font-size:13px;color:#4a8fc7;text-align:left;">Сигнал ('+sigUnit+')</th></tr></thead><tbody>'; for(let i=0;i<pct.length;i++){ let pr=pct[i]/100; let scaleVal=smin+(smax-smin)*pr; let sigVal; if(scaleType==='quadratic'){ sigVal=gmin+(gmax-gmin)*pr*pr; } else if(scaleType==='sqrt'){ sigVal=gmin+(gmax-gmin)*Math.sqrt(pr); } else { sigVal=gmin+(gmax-gmin)*pr; } let bg=i%2?'rgba(22,27,34,0.4)':'rgba(13,17,23,0.4)'; html+=`<tr style="background:${bg};"><td style="padding:8px 12px;font-size:14px;color:rgba(255,255,255,0.4);">${pct[i]}</td><td style="padding:8px 12px;font-size:14px;color:#e0e0e0;">${formatNumber(scaleVal)}</td><td style="padding:8px 12px;font-size:14px;color:#4ac771;">${formatNumber(sigVal)}</td></tr>`; } html+='</tbody></table>'; document.getElementById('scaleTableContainer').innerHTML=html; document.getElementById('scaleInfo').innerHTML='Тип шкалы: <b style="color:#4a8fc7;">'+typeLabels[scaleType]+'</b> · Шкала: '+formatNumber(smin)+' – '+formatNumber(smax)+' '+unit+' · Сигнал: '+sigRange.label; document.getElementById('scaleQueryUnit').textContent=unit; document.getElementById('scaleQuerySigUnit').textContent=sigUnit; document.getElementById('scaleCustomCalcPanel').style.display='block'; document.getElementById('queryScaleVal').value=''; document.getElementById('querySigVal').value=''; setTimeout(()=>document.getElementById('scaleResultsArea').scrollIntoView({behavior:'smooth',block:'start'}),100); }
+function setSignalDefaults() { let type=document.getElementById('sigType').value; let def={'4_20':[4,20],'0_20':[0,20],'0_5mA':[0,5],'0_10V':[0,10],'1_5V':[1,5],'0_5V':[0,5],'bipolar_10':[-10,10],'20_100_kPa':[20,100],'0_2_1_0_bar':['0,2','1,0'],'3_15_psi':[3,15],'0_2_1_0_kgf_cm2':['0,2','1,0'],'0_100_pct':[0,100]}; let customDiv=document.getElementById('sigCustomRange'); if(def[type]){document.getElementById('sigMin').value=def[type][0]; document.getElementById('sigMax').value=def[type][1]; customDiv.style.display='none';} else{document.getElementById('sigMin').value='0'; document.getElementById('sigMax').value='100'; document.getElementById('sigUnitCustom').value='%'; customDiv.style.display='block';} document.getElementById('sigUnitLabel').innerText=sigUnitLabels[type]; updateScaleQueryUnits(); }
+    function setScaleDefaults() { let type=document.getElementById('scalePreset').value; let def={'0_100':[0,100,'%'],'4_20':[4,20,'мА'],'0_20':[0,20,'мА'],'0_5mA':[0,5,'мА'],'0_10V':[0,10,'В'],'1_5V':[1,5,'В'],'0_5V':[0,5,'В'],'bipolar_10':[-10,10,'В'],'20_100_kPa':[20,100,'кПа'],'0_2_1_0_bar':['0,2','1,0','бар'],'3_15_psi':[3,15,'psi'],'0_2_1_0_kgf_cm2':['0,2','1,0','кгс/см²']}; let customDiv=document.getElementById('scaleCustomRange'); if(def[type]){document.getElementById('scaleMin').value=def[type][0]; document.getElementById('scaleMax').value=def[type][1]; document.getElementById('scaleUnitName').value=def[type][2]; customDiv.style.display='none';} else{customDiv.style.display='block';} updateScaleQueryUnits(); }
+    function calcScaleSignal() { let smin=parseLocaleNumber(document.getElementById('scaleMin').value); let smax=parseLocaleNumber(document.getElementById('scaleMax').value); let gmin=parseLocaleNumber(document.getElementById('sigMin').value); let gmax=parseLocaleNumber(document.getElementById('sigMax').value); let scaleType=document.getElementById('scaleType').value; if(isNaN(smin)||isNaN(smax)||isNaN(gmin)||isNaN(gmax)){showToast('Заполните все поля');return;} if(smin===smax||gmin===gmax){showToast('Пределы не должны совпадать');return;} document.getElementById('scaleResultsArea').style.display='block'; let unit=document.getElementById('scaleUnitName').value||'ед.'; let sigRange=getSignalRangeAndUnit(document.getElementById('sigType').value); let sigUnit=sigRange.unit; let typeLabels={linear:'Линейная',quadratic:'Квадратичная',sqrt:'Корнеизвлекающая'}; let pct=[0,5,10,15,20,25,30,40,50,60,70,75,80,90,95,100]; let html='<table style="min-width:100%;width:100%;border-collapse:collapse;"><thead><tr style="background:rgba(22,27,34,0.7);"><th style="padding:10px 12px;font-size:13px;color:#4a8fc7;text-align:left;">%</th><th style="padding:10px 12px;font-size:13px;color:#4a8fc7;text-align:left;">Шкала ('+unit+')</th><th style="padding:10px 12px;font-size:13px;color:#4a8fc7;text-align:left;">Сигнал ('+sigUnit+')</th></tr></thead><tbody>'; for(let i=0;i<pct.length;i++){ let pr=pct[i]/100; let scaleVal=smin+(smax-smin)*pr; let sigVal; if(scaleType==='quadratic'){ sigVal=gmin+(gmax-gmin)*pr*pr; } else if(scaleType==='sqrt'){ sigVal=gmin+(gmax-gmin)*Math.sqrt(pr); } else { sigVal=gmin+(gmax-gmin)*pr; } let bg=i%2?'rgba(22,27,34,0.4)':'rgba(13,17,23,0.4)'; html+=`<tr style="background:${bg};"><td style="padding:8px 12px;font-size:14px;color:rgba(255,255,255,0.4);">${pct[i]}</td><td style="padding:8px 12px;font-size:14px;color:#e0e0e0;">${formatNumber(scaleVal)}</td><td style="padding:8px 12px;font-size:14px;color:#4ac771;">${formatNumber(sigVal)}</td></tr>`; } html+='</tbody></table>'; document.getElementById('scaleTableContainer').innerHTML=html; document.getElementById('scaleInfo').innerHTML='Тип шкалы: <b style="color:#4a8fc7;">'+typeLabels[scaleType]+'</b> · Шкала: '+formatNumber(smin)+' – '+formatNumber(smax)+' '+unit+' · Сигнал: '+sigRange.label; updateScaleQueryUnits(); document.getElementById('queryScaleVal').value=''; document.getElementById('querySigVal').value=''; setTimeout(()=>document.getElementById('scaleResultsArea').scrollIntoView({behavior:'smooth',block:'start'}),100); }
     function queryFromScaleLive(){ let smin=parseLocaleNumber(document.getElementById('scaleMin').value),smax=parseLocaleNumber(document.getElementById('scaleMax').value),gmin=parseLocaleNumber(document.getElementById('sigMin').value),gmax=parseLocaleNumber(document.getElementById('sigMax').value),scaleType=document.getElementById('scaleType').value,q=parseLocaleNumber(document.getElementById('queryScaleVal').value),unit=document.getElementById('scaleUnitName').value||'ед.',sigRange=getSignalRangeAndUnit(document.getElementById('sigType').value),sigUnit=sigRange.unit;if(isNaN(q)){document.getElementById('querySigVal').value='';return;} let p=(q-smin)/(smax-smin); let sig; if(scaleType==='quadratic'){sig=gmin+(gmax-gmin)*p*p;} else if(scaleType==='sqrt'){sig=gmin+(gmax-gmin)*Math.sqrt(p);} else{sig=gmin+(gmax-gmin)*p;} document.getElementById('querySigVal').value=formatNumber(sig); }
     function queryFromSignalLive(){ let smin=parseLocaleNumber(document.getElementById('scaleMin').value),smax=parseLocaleNumber(document.getElementById('scaleMax').value),gmin=parseLocaleNumber(document.getElementById('sigMin').value),gmax=parseLocaleNumber(document.getElementById('sigMax').value),scaleType=document.getElementById('scaleType').value,q=parseLocaleNumber(document.getElementById('querySigVal').value),unit=document.getElementById('scaleUnitName').value||'ед.',sigRange=getSignalRangeAndUnit(document.getElementById('sigType').value),sigUnit=sigRange.unit;if(isNaN(q)){document.getElementById('queryScaleVal').value='';return;} let p=(q-gmin)/(gmax-gmin); let val_lin; if(scaleType==='quadratic'){val_lin=Math.sqrt(p);} else if(scaleType==='sqrt'){val_lin=p*p;} else{val_lin=p;} let val=smin+(smax-smin)*val_lin; document.getElementById('queryScaleVal').value=formatNumber(val); }
+    // Task 501: единицы полей блока произвольных значений — живые:
+    // пресет шкалы/тип сигнала/свои единицы; вызов при загрузке
+    // ставит корректные подписи до первого расчёта.
+    function updateScaleQueryUnits(){ let unit=document.getElementById('scaleUnitName').value||'ед.'; document.getElementById('scaleQueryUnit').textContent=unit; let sigRange=getSignalRangeAndUnit(document.getElementById('sigType').value); document.getElementById('scaleQuerySigUnit').textContent=sigRange.unit; }
+    updateScaleQueryUnits();
 
     // Расчёт погрешности для всех типов
     function toggleErrorClassFields(prefix) {
