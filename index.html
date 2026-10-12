@@ -3217,6 +3217,74 @@
         color: #345582;
     }
 
+    /* Task 505: кнопка-значок ПЕЧАТИ журнала — компактная 32×32
+       (семейство cj-кнопок шапки), СЛЕВА от иконки поиска:
+       [+ 8..40][поиск 48..80][печать 88..120]. Открывает диалог
+       предпросмотра печати/сохранения PDF/Excel (по образцу
+       «Табеля», Tasks 430/438). Значок — принтер (та же SVG-путь,
+       что у кнопки «Печать» табеля). */
+    .cj-print-btn-inline {
+        position: absolute;
+        top: 50%;
+        right: 88px;
+        transform: translateY(-50%);
+        z-index: 5;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 8px;
+        color: rgba(255,255,255,0.7);
+        line-height: 1;
+        font-family: inherit;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        transition: background 0.15s, transform 0.1s, color 0.15s;
+    }
+    .cj-print-btn-inline:active {
+        transform: translateY(-50%) scale(0.94);
+    }
+    .cj-print-btn-inline:hover {
+        background: rgba(106,141,181,0.18);
+        color: #9bb8d9;
+    }
+    .cj-print-btn-inline svg {
+        width: 17px;
+        height: 17px;
+        pointer-events: none;
+    }
+    [data-theme="light"] .cj-print-btn-inline {
+        background: transparent;
+        border-color: rgba(20,20,19,0.18);
+        color: rgba(20,20,19,0.7);
+    }
+    [data-theme="light"] .cj-print-btn-inline:hover {
+        background: rgba(74,108,148,0.14);
+        color: #345582;
+    }
+    /* «+» скрыта (роль без права записи — Task 153) — печать
+       встаёт на место поиска (48..80), поиск прижимается к краю
+       (правило Task 153 ниже по файлу). Печать НЕ скрывается
+       никогда: чтение журнала доступно всем авторизованным */
+    #page-cable-journal-edit .page-inline-header:not(:has(.cj-add-btn-inline:not([style*="display:none"]))) .cj-print-btn-inline {
+        right: 48px;
+    }
+    /* Task 505: заголовок страницы — правый padding под ТРИ кнопки
+       (печать 88..120) — текст не залезает под значки */
+    #page-cable-journal-edit .page-inline-header:has(.cj-print-btn-inline) .page-inline-header-title {
+        padding-right: 128px;
+    }
+    @media (max-width: 359px) {
+        #page-cable-journal-edit .page-inline-header:has(.cj-print-btn-inline) .page-inline-header-title {
+            padding-right: 116px;
+        }
+    }
+
     /* Список во всю ширину, без padding-ов по бокам */
     .cj-list {
         padding: 0;
@@ -18047,6 +18115,20 @@
                 <button type="button" id="cjSearchToggleBtn" class="dev-search-toggle-btn" aria-label="Поиск" data-search-input="cjSearchInput">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 </button>
+                <!-- Task 505 (заявка): кнопка ПЕЧАТИ журнала — компактный
+                     значок принтера в шапке (32×32, стиль cj-кнопок),
+                     слева от иконки поиска. Клик открывает ДИАЛОГ
+                     ПРЕДПРОСМОТРА по образцу «Табеля» (Tasks 430/438/465):
+                     «Печать» (window.print — печатная медиа-секция
+                     скрывает всё, кроме листа #wsPrintSheet), «Сохранить
+                     PDF» (canvas→JPEG→PDF, клиентский генератор) и
+                     «Сохранить Excel» (xlsx-писатель, без библиотек) +
+                     «Отмена» + предпросмотр iframe. Печатается ТЕКУЩИЙ
+                     список this._rows (клиентский фильтр поиска Task 152
+                     учитывается — «то, что видит пользователь»); доступ —
+                     всем, кто видит раздел (чтение — всем авторизованным,
+                     как у страницы просмотра записи) -->
+                <button type="button" class="cj-print-btn-inline" id="cjPrintBtn" onclick="KipCableJournal.printJournal()" aria-label="Печать журнала" title="Печать журнала"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V6z" fill="currentColor"/></svg></button>
                 <button type="button" class="cj-add-btn-inline" id="cjAddBtn" onclick="KipCableJournal.openAdd()" style="display:none;" aria-label="Добавить запись">+</button>
             </div>
 
@@ -21305,9 +21387,9 @@
 
             // Правый край поля = самая ЛЕВАЯ кнопка шапки минус зазор.
             // Учитываем все кнопки-иконки: поиск, «Таблица» (Task 148),
-            // cj-кнопки, «Удалить все» на Избранном (Task 164) —
-            // поле не должно наезжать ни на одну.
-            var buttons = header.querySelectorAll('.dev-search-toggle-btn, .dev-table-toggle-btn, .cj-icon-btn-inline, .cj-add-btn-inline, .fav-header-clear-btn');
+            // cj-кнопки (Task 505: и значок печати), «Удалить все» на
+            // Избранном (Task 164) — поле не должно наезжать ни на одну.
+            var buttons = header.querySelectorAll('.dev-search-toggle-btn, .dev-table-toggle-btn, .cj-icon-btn-inline, .cj-add-btn-inline, .cj-print-btn-inline, .fav-header-clear-btn');
             var inputRight = headerRect.width; // fallback — правый край шапки
             buttons.forEach(function (b) {
                 if (b === input) return;
@@ -40201,6 +40283,981 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             html += '</div>';
             return html;
+        },
+
+        // ============================================================
+        // Task 505: ПЕЧАТЬ ЖУРНАЛА — кнопка-принтер в шапке раздела.
+        // Полный набор по образцу печати «Табеля» (Tasks 430/438/465):
+        // диалог предпросмотра (iframe standalone-документ АЛЬБОМНОГО
+        // листа + «Печать»/«Сохранить PDF»/«Сохранить Excel»/«Отмена»),
+        // печатный лист #wsPrintSheet.cj-sheet в <body> (общий id с
+        // печатью табеля: @media print скрывает всё, кроме листа),
+        // клиентские генераторы PDF (canvas→JPEG→PDF) и Excel (xlsx-
+        // писатель Task 430) — без библиотек. Печатается ТЕКУЩИЙ
+        // список this._rows (клиентский фильтр Task 152 учтён —
+        // «печатается то, что видит пользователь»)
+        // ============================================================
+        printJournal: function() {
+            // журнал пуст (не загружен/фильтр ничего не нашёл) —
+            // честный тост вместо пустого листа
+            if (!(this._rows && this._rows.length)) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Нет записей для печати — журнал пуст');
+                }
+                return;
+            }
+            var model = this._printModel();
+            var printHtml = this._buildCjPrintHtml(model);
+            // печатный лист в корне <body> (id wsPrintSheet — ОБЩИЙ с
+            // печатью табеля: печатная медиа-секция скрывает всё, кроме
+            // него; класс cj-sheet подключает табличную вёрстку журнала)
+            var sheet = document.getElementById('wsPrintSheet');
+            if (!sheet) {
+                sheet = document.createElement('div');
+                sheet.id = 'wsPrintSheet';
+                document.body.appendChild(sheet);
+            }
+            sheet.className = 'cj-sheet';
+            sheet.innerHTML = printHtml;
+            this._cjInjectPrintStyle();
+            var opened = false;
+            try {
+                opened = this._openCjPreview(model);
+            } catch (e) { opened = false; }
+            // диалог не открылся (нет DOM/iframe — экзотика) — фолбэк:
+            // печать сразу (приём Task 341/430)
+            if (!opened) window.print();
+        },
+
+        // Task 505: МОДЕЛЬ печатной формы (чистая, без DOM — VM-тести-
+        // руемая). Группировка — как в списке на экране (_render):
+        // по «Отделению, производство» (пустое → «(без отделения)»),
+        // группы по алфавиту, строки внутри группы — в порядке данных.
+        // Ячейки — готовые отображаемые строки (числа длин — с
+        // запятой), № — сквозная нумерация журнала (как «№ п/п»
+        // листа). filtered — активен клиентский фильтр поиска
+        // (Task 152): в подзаголовке «из N»
+        _printModel: function() {
+            var self = this;
+            var srcRows = (this._rows || []).slice();
+            var groupOrder = [];
+            var groups = {};
+            srcRows.forEach(function(row) {
+                var g = (row.department && String(row.department).trim()) ||
+                        '(без отделения)';
+                if (!groups[g]) {
+                    groups[g] = [];
+                    groupOrder.push(g);
+                }
+                groups[g].push(row);
+            });
+            groupOrder.sort(function(a, b) {
+                var va = a.toString().toLowerCase();
+                var vb = b.toString().toLowerCase();
+                if (va < vb) return -1;
+                if (va > vb) return 1;
+                return 0;
+            });
+            var cols = this._cjPrintCols();
+            var num = 0;
+            var out = groupOrder.map(function(g) {
+                var rows = groups[g].map(function(row) {
+                    num++;
+                    var cells = {};
+                    cols.forEach(function(c) {
+                        cells[c.key] = (c.key === 'num')
+                            ? String(num)
+                            : self._cjCellVal(row, c.key);
+                    });
+                    return { cells: cells, src: row };
+                });
+                return { name: g, rows: rows };
+            });
+            var totalAll = (this._allRows && this._allRows.length)
+                ? this._allRows.length : srcRows.length;
+            return {
+                groups: out,
+                total: srcRows.length,
+                totalAll: totalAll,
+                filtered: !!(this._allRows &&
+                             this._allRows.length !== srcRows.length)
+            };
+        },
+
+        // Task 505: колонки печатной таблицы (та же таблица в HTML/
+        // PDF/Excel). w — ширина в pt (A4 альбомная 842 − 2×28 = 786);
+        // в HTML переводится в мм (265мм контента). Двухуровневая
+        // шапка: одиночные колонки (rowspan 2) + пары «По проекту»/
+        // «Проложен» (colspan 3) над Марка/Жилы/Длина — как в
+        // классическом бланке кабельного журнала
+        _cjPrintCols: function() {
+            return [
+                { key: 'num',           label: '№',             w: 22,  rowspan: 2 },
+                { key: 'designation',   label: 'Обозначение',   w: 60,  rowspan: 2 },
+                { key: 'start',         label: 'Начало трассы', w: 108, rowspan: 2 },
+                { key: 'end',           label: 'Конец трассы',  w: 108, rowspan: 2 },
+                { key: 'section',       label: 'Участок',       w: 44,  rowspan: 2 },
+                { key: 'mark_project',  label: 'Марка',         w: 80,  head: 'По проекту' },
+                { key: 'cores_project', label: 'Жилы',          w: 46,  head: 'По проекту' },
+                { key: 'length_project',label: 'Длина, м',      w: 48,  head: 'По проекту' },
+                { key: 'mark_actual',   label: 'Марка',         w: 80,  head: 'Проложен' },
+                { key: 'cores_actual',  label: 'Жилы',          w: 46,  head: 'Проложен' },
+                { key: 'length_actual', label: 'Длина, м',      w: 48,  head: 'Проложен' },
+                { key: 'purpose',       label: 'Назначение',    w: 96,  rowspan: 2 }
+            ];
+        },
+
+        // Task 505: значение ячейки печатной таблицы из строки
+        // журнала (числа — с запятой как разделителем, пустое → '')
+        _cjCellVal: function(row, key) {
+            var v = row ? row[key] : '';
+            if (v === null || v === undefined) return '';
+            if (typeof v === 'number' && isFinite(v)) {
+                return this._cjFmtNum(v);
+            }
+            return String(v);
+        },
+
+        // Task 505: число → строка с запятой (60 → «60», 43.5 → «43,5»)
+        _cjFmtNum: function(v) {
+            var r = Math.round(v * 100) / 100;
+            return String(r).replace('.', ',');
+        },
+
+        // Task 505: подзаголовок листа/диалога/книги — «отделений: N
+        // · записей: M [из K]» (из K — когда активен фильтр поиска)
+        _cjSub: function(model) {
+            var s = 'отделений: ' + model.groups.length +
+                    ' · записей: ' + model.total;
+            if (model.filtered && model.totalAll &&
+                    model.totalAll !== model.total) {
+                s += ' из ' + model.totalAll;
+            }
+            return s;
+        },
+
+        // Task 505: HTML печатного листа (классы cjpr-*, вёрстка —
+        // приём Task 465 wsev-*): шапка «Кабельный журнал / отделений
+        // · записей», таблица с двухуровневой шапкой (table-header-
+        // group — повтор на каждой странице, строки не рвутся),
+        // строки-подзаголовки отделений (colspan 12), зебра строк
+        _buildCjPrintHtml: function(model) {
+            var self = this;
+            var cols = this._cjPrintCols();
+            // pt → мм: 786pt контента PDF = 265мм контента листа
+            var mm = function(pt) {
+                return (Math.round(pt * 265 / 786 * 10) / 10) + 'mm';
+            };
+            var html = '<div class="cjpr-head">' +
+                '<div class="cjpr-title">Кабельный журнал</div>' +
+                '<div class="cjpr-sub">' +
+                this._esc(this._cjSub(model)) + '</div></div>';
+            html += '<table class="cjpr-table"><colgroup>';
+            cols.forEach(function(c) {
+                html += '<col style="width:' + mm(c.w) + '">';
+            });
+            html += '</colgroup><thead><tr>';
+            cols.forEach(function(c) {
+                if (c.rowspan) {
+                    html += '<th rowspan="2">' +
+                            self._esc(c.label) + '</th>';
+                }
+            });
+            // пары «По проекту»/«Проложен» — colspan 3 над своими
+            // подколонками (порядок в cols уже сгруппирован)
+            html += '<th colspan="3" class="cjpr-th-grp">По проекту</th>' +
+                    '<th colspan="3" class="cjpr-th-grp">Проложен</th>';
+            html += '</tr><tr class="cjpr-subhead">';
+            cols.forEach(function(c) {
+                if (!c.rowspan) {
+                    html += '<th>' + self._esc(c.label) + '</th>';
+                }
+            });
+            html += '</tr></thead><tbody>';
+            if (model.groups.length) {
+                var n = 0;
+                model.groups.forEach(function(g) {
+                    html += '<tr class="cjpr-grp"><td colspan="12">' +
+                        self._esc(g.name) + ' · ' + g.rows.length + ' ' +
+                        self._plural(g.rows.length,
+                                     ['запись', 'записи', 'записей']) +
+                        '</td></tr>';
+                    g.rows.forEach(function(r) {
+                        n++;
+                        html += '<tr class="' +
+                                (n % 2 ? 'cjpr-odd' : 'cjpr-even') + '">';
+                        cols.forEach(function(c) {
+                            var cls = (c.key === 'num')
+                                ? ' class="cjpr-c-num"'
+                                : (c.key === 'designation'
+                                   ? ' class="cjpr-c-des"' : '');
+                            html += '<td' + cls + '>' +
+                                    self._esc(r.cells[c.key]) + '</td>';
+                        });
+                        html += '</tr>';
+                    });
+                });
+            } else {
+                html += '<tr><td colspan="12" class="cjpr-none">' +
+                        'нет записей в журнале</td></tr>';
+            }
+            html += '</tbody></table>';
+            return html;
+        },
+
+        // Task 505: CSS печатного листа журнала текстом (приём Task
+        // 430/447/465 _TALONS_PRINT_CSS/_EVENTS_PRINT_CSS): ОДИН набор
+        // правил в трёх местах — инжект-стиль печати (в <head>: rules
+        // @media print приложения уже дают A4 АЛЬБОМНУЮ и прячут всё,
+        // кроме #wsPrintSheet — переопределять @page не нужно),
+        // standalone-документ предпросмотра-iframe; вёрстка печати
+        // совпадает с предпросмотром. Шрифт — Arial (семья печати
+        // табеля), табличная сетка 1px #8f99a3, шапка #eef1f4,
+        // строки отделений #dde4ea, зебра #f6f8fa
+        _CJ_PRINT_CSS:
+            '#wsPrintSheet.cj-sheet { font: 11px/1.35 Arial, Helvetica, sans-serif; color: #1b1f24; } ' +
+            '#wsPrintSheet.cj-sheet .cjpr-head { margin-bottom: 3mm; } ' +
+            '#wsPrintSheet.cj-sheet .cjpr-title { font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; } ' +
+            '#wsPrintSheet.cj-sheet .cjpr-sub { font-size: 14px; font-weight: 600; margin-top: 1mm; } ' +
+            '#wsPrintSheet.cj-sheet .cjpr-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 1mm; } ' +
+            '#wsPrintSheet.cj-sheet .cjpr-table thead { display: table-header-group; } ' +
+            '#wsPrintSheet.cj-sheet .cjpr-table tr { page-break-inside: avoid; } ' +
+            '#wsPrintSheet.cj-sheet .cjpr-table th { border: 1px solid #8f99a3; background: #eef1f4; font-weight: 700; padding: 1.2mm 1mm; text-align: center; font-size: 10px; overflow-wrap: break-word; -webkit-print-color-adjust: exact; print-color-adjust: exact; } ' +
+            '#wsPrintSheet.cj-sheet .cjpr-table th.cjpr-th-grp { background: #dde4ea; } ' +
+            '#wsPrintSheet.cj-sheet .cjpr-table td { border: 1px solid #8f99a3; padding: 1.2mm 1mm; vertical-align: middle; overflow-wrap: break-word; font-size: 10px; } ' +
+            '#wsPrintSheet.cj-sheet td.cjpr-c-num { text-align: center; } ' +
+            '#wsPrintSheet.cj-sheet td.cjpr-c-des { font-weight: 700; text-align: center; } ' +
+            '#wsPrintSheet.cj-sheet tr.cjpr-grp td { background: #dde4ea; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; } ' +
+            '#wsPrintSheet.cj-sheet tr.cjpr-odd td { background: #f6f8fa; -webkit-print-color-adjust: exact; print-color-adjust: exact; } ' +
+            '#wsPrintSheet.cj-sheet .cjpr-none { color: #4c5660; text-align: center; } ',
+
+        // Task 505: инжект-стиль печати в <head> (позже стилей
+        // приложения — каскад побеждает; id cjPrintStyle). @page НЕ
+        // переопределяется: альбомная 8мм уже задана печатной
+        // секцией приложения (печать табеля), CJ-правила только
+        // добавляют табличную вёрстку журнала
+        _cjInjectPrintStyle: function() {
+            var st = document.getElementById('cjPrintStyle');
+            if (st) return;
+            st = document.createElement('style');
+            st.id = 'cjPrintStyle';
+            st.textContent = '@media print { ' + this._CJ_PRINT_CSS + ' }';
+            var head = document.head || document.documentElement;
+            if (head && head.appendChild) head.appendChild(st);
+        },
+
+        _cjRemovePrintStyle: function() {
+            var st = document.getElementById('cjPrintStyle');
+            if (st && st.parentNode && st.parentNode.removeChild) {
+                st.parentNode.removeChild(st);
+            }
+        },
+
+        // Task 505: standalone-документ предпросмотра: белый АЛЬБОМНЫЙ
+        // лист 281мм (A4 ландшафт минус поля 2×8мм @96dpi = 1063px —
+        // базовая ширина .wspprev-frame) на подложке (приём
+        // _buildEventsFileHtml Task 465 / _buildPrintFileHtml Task 430)
+        _buildCjFileHtml: function(printHtml) {
+            var title = 'Кабельный журнал';
+            return '<!DOCTYPE html>\n<html><head>' +
+                '<meta charset="utf-8">' +
+                '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+                '<title>' + this._esc(title) + '</title>' +
+                '<style>' +
+                '@page { size: A4 landscape; margin: 8mm; } ' +
+                'html { background: #566170; } ' +
+                'body { margin: 0; padding: 6mm 0; display: flex; justify-content: center; } ' +
+                '#wsPrintSheet { background: #fff; box-shadow: 0 1mm 4mm rgba(0,0,0,0.45); ' +
+                'padding: 8mm; width: 281mm; ' +
+                'font: 11px/1.35 Arial, Helvetica, sans-serif; color: #1b1f24; } ' +
+                this._CJ_PRINT_CSS +
+                '</style></head><body>' +
+                '<div id="wsPrintSheet" class="cj-sheet">' + printHtml +
+                '</div></body></html>';
+        },
+
+        // Task 505: ДИАЛОГ ПРЕДПРОСМОТРА журнала (вёрстка классов Task
+        // 430 wspprev-*; кнопочный ряд Task 438 — как у печати
+        // графика/списка мероприятий): шапка «Предпросмотр печати /
+        // Кабельный журнал — отделений · записей», тело — iframe
+        // standalone-документ АЛЬБОМНОГО листа (базовая ширина
+        // .wspprev-frame 1063px), низ — «Печать» (window.print
+        // основного документа: печатная медиа-секция скрывает всё,
+        // кроме #wsPrintSheet) / «Сохранить PDF» / «Сохранить Excel»
+        // / «Отмена» + подсказка «A4 · альбомная». Esc/затемнение/
+        // «Отмена» закрывают (с инжект-стилем). Возвращает true при
+        // успехе; false — без DOM (фолбэк printJournal: печать сразу)
+        _openCjPreview: function(model) {
+            if (typeof document === 'undefined' ||
+                !document.createElement || !document.body ||
+                !document.body.appendChild) {
+                return false;
+            }
+            var self = this;
+            // взаимоисключающие диалоги печати: закрыть возможные
+            // предпросмотры табеля (график/талоны/список) — на экране
+            // ОДИН диалог печати (их закрывание снимает и их
+            // инжект-стили @page)
+            if (typeof WorkSchedule !== 'undefined' && WorkSchedule) {
+                ['_closePrintPreview', '_closeTalonsPreview',
+                 '_closeEventsPreview'].forEach(function(fn) {
+                    if (typeof WorkSchedule[fn] === 'function') {
+                        try { WorkSchedule[fn](); } catch (e) {}
+                    }
+                });
+            }
+            var overlay = document.createElement('div');
+            overlay.id = 'cjPrintPrevModal';
+            overlay.className = 'wspprev-overlay';
+            if (overlay.addEventListener) {
+                overlay.addEventListener('click', function(ev) {
+                    if (ev && ev.target === overlay) {
+                        self._closeCjPreview();
+                    }
+                });
+            }
+
+            var dlg = document.createElement('div');
+            dlg.className = 'wspprev-dialog';
+
+            var head = document.createElement('div');
+            head.className = 'wspprev-head';
+            head.innerHTML = '<span class="wspprev-title">Предпросмотр ' +
+                             'печати</span>' +
+                             '<span class="wspprev-sub">Кабельный журнал — ' +
+                             this._esc(this._cjSub(model)) + '</span>';
+            var closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'wspprev-close';
+            if (closeBtn.setAttribute) {
+                closeBtn.setAttribute('aria-label', 'Закрыть предпросмотр');
+            }
+            closeBtn.innerHTML = '✕';
+            if (closeBtn.addEventListener) {
+                closeBtn.addEventListener('click', function() {
+                    self._closeCjPreview();
+                });
+            }
+            head.appendChild(closeBtn);
+
+            var body = document.createElement('div');
+            body.className = 'wspprev-body';
+            var paper = document.createElement('div');
+            paper.className = 'wspprev-paper';
+            var frame = document.createElement('iframe');
+            // АЛЬБОМНАЯ ширина iframe — БАЗОВАЯ .wspprev-frame 1063px
+            // (281мм @96dpi, как у предпросмотра графика табеля) —
+            // переопределение не нужно (wsev-prev-frame Task 467
+            // переопределял на 794px КНИЖНУЮ у списка мероприятий)
+            frame.className = 'wspprev-frame';
+            if (frame.setAttribute) {
+                frame.setAttribute('title', 'Предпросмотр печатного листа');
+            }
+            frame.style.height = '800px';
+            frame._natH = 800;
+            paper.appendChild(frame);
+            body.appendChild(paper);
+
+            var foot = document.createElement('div');
+            foot.className = 'wspprev-foot';
+            foot.innerHTML =
+                '<button type="button" class="wspprev-btn wspprev-print">' +
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V6z" fill="currentColor"/></svg>' +
+                'Печать</button>' +
+                '<button type="button" class="wspprev-btn wspprev-pdf">' +
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6H6zm7 7V3.5L18.5 9H13z" fill="currentColor"/></svg>' +
+                'Сохранить PDF</button>' +
+                '<button type="button" class="wspprev-btn wspprev-xlsx">' +
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 19H5v-2h4v2zm0-4H5v-2h4v2zm0-4H5V9h4v2zm10 8h-4v-2h4v2zm0-4h-4v-2h4v2zm0-4h-4V9h4v2z" fill="currentColor"/></svg>' +
+                'Сохранить Excel</button>' +
+                '<button type="button" class="wspprev-btn ' +
+                'wspprev-cancel">Отмена</button>' +
+                '<span class="wspprev-hint">A4 · альбомная</span>';
+
+            dlg.appendChild(head);
+            dlg.appendChild(body);
+            dlg.appendChild(foot);
+            overlay.appendChild(dlg);
+            document.body.appendChild(overlay);
+
+            // содержимое iframe: standalone-документ листа. Слушатель
+            // load — ДО srcdoc (иначе событие теряется); высота — по
+            // scrollHeight содержимого, затем масштаб под окно
+            if (frame.addEventListener) {
+                frame.addEventListener('load', function() {
+                    var h = 0;
+                    try {
+                        var doc = frame.contentDocument;
+                        if (doc && doc.documentElement) {
+                            h = doc.documentElement.scrollHeight;
+                        }
+                    } catch (e) { h = 0; }
+                    frame._natH = (h > 200) ? h : 800;
+                    try { frame.style.height = frame._natH + 'px'; }
+                    catch (e2) {}
+                    self._cjPrevFit();
+                });
+            }
+            frame.srcdoc = this._buildCjFileHtml(
+                this._buildCjPrintHtml(model));
+            this._cjPrevFit();
+
+            var printBtn = foot.querySelector('.wspprev-print');
+            var pdfBtn = foot.querySelector('.wspprev-pdf');
+            var xlsxBtn = foot.querySelector('.wspprev-xlsx');
+            var cancelBtn = foot.querySelector('.wspprev-cancel');
+            if (printBtn && printBtn.addEventListener) {
+                printBtn.addEventListener('click', function() {
+                    try { window.print(); } catch (e) {}
+                });
+            }
+            if (pdfBtn && pdfBtn.addEventListener) {
+                pdfBtn.addEventListener('click', function() {
+                    self._saveCjPdf(model);
+                });
+            }
+            if (xlsxBtn && xlsxBtn.addEventListener) {
+                xlsxBtn.addEventListener('click', function() {
+                    self._saveCjXlsx(model);
+                });
+            }
+            if (cancelBtn && cancelBtn.addEventListener) {
+                cancelBtn.addEventListener('click', function() {
+                    self._closeCjPreview();
+                });
+            }
+
+            // Esc — закрыть; resize — перемасштабировать
+            this._cjPrevEsc = function(ev) {
+                if (ev && ev.key === 'Escape') self._closeCjPreview();
+            };
+            this._cjPrevResize = function() { self._cjPrevFit(); };
+            if (typeof window !== 'undefined' && window.addEventListener) {
+                window.addEventListener('keydown', this._cjPrevEsc);
+                window.addEventListener('resize', this._cjPrevResize);
+            }
+            return true;
+        },
+
+        // Task 505: масштаб предпросмотра под окно: АЛЬБОМНЫЙ лист
+        // 1063px (281мм @96dpi) сжимается transform:scale до ширины
+        // тела диалога (приём _wsPrevFit графика табеля Task 430)
+        _cjPrevFit: function() {
+            if (typeof document === 'undefined') return;
+            var overlay = document.getElementById('cjPrintPrevModal');
+            if (!overlay) return;
+            var body = overlay.querySelector('.wspprev-body');
+            var paper = overlay.querySelector('.wspprev-paper');
+            var frame = overlay.querySelector('.wspprev-frame');
+            if (!body || !paper || !frame) return;
+            var W = 1063;
+            var avail = (body.clientWidth || 0) - 28;
+            if (!(avail > 0)) avail = W;
+            var k = Math.min(1, avail / W);
+            var h = frame._natH || 800;
+            try {
+                frame.style.transformOrigin = 'top left';
+                frame.style.transform = 'scale(' + k + ')';
+                paper.style.width = Math.round(W * k) + 'px';
+                paper.style.height = Math.round(h * k) + 'px';
+            } catch (e) { /* моки без style — тихо */ }
+        },
+
+        // Task 505: закрыть диалог предпросмотра — снять слушатели
+        // окна, удалить элемент из <body>, СНЯТЬ инжект-стиль (печать
+        // табеля снова чистая альбомная)
+        _closeCjPreview: function() {
+            if (typeof window !== 'undefined' && window.removeEventListener) {
+                if (this._cjPrevEsc) {
+                    try { window.removeEventListener('keydown',
+                                                    this._cjPrevEsc); }
+                    catch (e) {}
+                }
+                if (this._cjPrevResize) {
+                    try { window.removeEventListener('resize',
+                                                    this._cjPrevResize); }
+                    catch (e) {}
+                }
+            }
+            this._cjPrevEsc = null;
+            this._cjPrevResize = null;
+            if (typeof document === 'undefined' ||
+                !document.getElementById) return;
+            var overlay = document.getElementById('cjPrintPrevModal');
+            if (overlay && overlay.parentNode &&
+                overlay.parentNode.removeChild) {
+                try { overlay.parentNode.removeChild(overlay); }
+                catch (e) {}
+            }
+            this._cjRemovePrintStyle();
+        },
+
+        // Task 505: «Сохранить PDF» диалога — модель → раскладка →
+        // отрисовка страниц (canvas ×2, Arial, тот же вид, что у
+        // печати графика/списка) → PDF в загрузки; имя —
+        // «Кабельный_журнал_‹ГГГГ-ММ-ДД›.pdf» (паттерн архива
+        // работников Task 445)
+        _saveCjPdf: function(model) {
+            var name = 'Кабельный_журнал_' + this._cjIsoDate() + '.pdf';
+            var ok = false;
+            try {
+                var lay = this._cjPdfLayout(model);
+                var jpegs = [];
+                for (var p = 0; p < lay.pages.length; p++) {
+                    var jp = this._cjPdfPaintPage(lay, model, p);
+                    if (jp) jpegs.push(jp);
+                }
+                if (!jpegs.length) throw new Error('нет страниц');
+                var bytes = WorkSchedule._buildPdfDocument(jpegs, lay.W, lay.H);
+                ok = this._cjDownload(bytes, 'application/pdf', name);
+            } catch (e) { ok = false; }
+            if (typeof KipToast !== 'undefined' && KipToast.show) {
+                KipToast.show(ok
+                    ? ('Журнал сохранён — файл «' + name + '»')
+                    : 'Не удалось сохранить PDF журнала');
+            }
+        },
+
+        // Task 505: раскладка PDF журнала (чистая — VM-тестируемая,
+        // приём _eventsPdfLayout Task 465): A4 АЛЬБОМНАЯ 842×595pt,
+        // поля 28pt; шапка (только первая страница) 44pt, двух-
+        // строчная шапка таблицы 16+14pt (повторяется на каждой
+        // странице — как table-header-group в HTML), строка — по
+        // числу строк текста (перенос по словам, оценка ~4.6pt на
+        // символ 8px Arial), строка-подзаголовок отделения 18pt (не
+        // отрывается от своей первой строки данных). Колонки —
+        // _cjPrintCols (сумма ширин 786pt)
+        _cjPdfLayout: function(model) {
+            var W = 842, H = 595, M = 28;
+            var headH = 44, thTop = 16, thSub = 14, grpH = 18;
+            var lineH = 11, rowPad = 8;
+            var thH = thTop + thSub;
+            var cols = [];
+            var cx = M;
+            var colDefs = this._cjPrintCols();
+            for (var c = 0; c < colDefs.length; c++) {
+                cols.push({ x: cx, w: colDefs[c].w, key: colDefs[c].key,
+                            label: colDefs[c].label,
+                            rowspan: !!colDefs[c].rowspan,
+                            head: colDefs[c].head || '' });
+                cx += colDefs[c].w;
+            }
+            var budget = H - 2 * M;
+            // оценка ширины текста: ~4.6pt на символ 8px Arial
+            // (приём _eventsPdfLayout)
+            var estW = function(s) {
+                return String(s || '').length * 4.6;
+            };
+            var wrapN = function(s, maxW) {
+                var words = String(s || '').split(' ');
+                var lines = [], cur = '';
+                for (var i = 0; i < words.length; i++) {
+                    var cand = cur ? cur + ' ' + words[i] : words[i];
+                    if (estW(cand) <= maxW || !cur) cur = cand;
+                    else { lines.push(cur); cur = words[i]; }
+                }
+                if (cur) lines.push(cur);
+                return lines.length || 1;
+            };
+            // элементы потока: подзаголовки отделений + строки данных
+            var items = [];
+            var idx = 0;
+            model.groups.forEach(function(g) {
+                items.push({ type: 'grp', name: g.name,
+                             count: g.rows.length });
+                g.rows.forEach(function(r) {
+                    idx++;
+                    var lines = 1;
+                    cols.forEach(function(col) {
+                        if (col.key === 'num') return;
+                        lines = Math.max(lines,
+                            wrapN(r.cells[col.key], col.w - 6));
+                    });
+                    items.push({ type: 'row', cells: r.cells,
+                                 lines: lines, idx: idx });
+                });
+            });
+            if (!items.length) {
+                items.push({ type: 'none' });
+            }
+            // пагинация: шапка таблицы на каждой странице; подзаголовок
+            // отделения не висит последним внизу — требует места для
+            // себя + первой строки данных
+            var pages = [];
+            var page = null;
+            var y = 0;
+            var thDrawn = false;
+            var newPage = function(first) {
+                page = { first: !!first, items: [] };
+                pages.push(page);
+                y = 0;
+                thDrawn = false;
+            };
+            newPage(true);
+            y = headH;
+            for (var i = 0; i < items.length; i++) {
+                var it = items[i];
+                var h = (it.type === 'grp') ? grpH
+                        : (it.type === 'none') ? (lineH + rowPad)
+                        : (it.lines * lineH + rowPad);
+                var lead = thDrawn ? 0 : thH;
+                var extra = (it.type === 'grp') ? (lineH + rowPad) : 0;
+                if ((thDrawn || y > 0) && y + lead + h + extra > budget) {
+                    newPage(false);
+                    lead = thH;
+                }
+                if (!thDrawn) { y += thH; thDrawn = true; }
+                page.items.push(it);
+                y += h;
+            }
+            return { pages: pages, W: W, H: H, M: M, headH: headH,
+                     thTop: thTop, thSub: thSub, thH: thH, grpH: grpH,
+                     lineH: lineH, rowPad: rowPad, cols: cols,
+                     total: model.total };
+        },
+
+        // Task 505: ОТРИСОВКА СТРАНИЦЫ PDF журнала на canvas (браузер;
+        // в VM-тестах не вызывается — раскладку строит чистый
+        // _cjPdfLayout). Координаты — pt (842×595), canvas ×2 для
+        // чёткости текста; шапка — на первой странице, двухстрочная
+        // шапка таблицы — на каждой; строки-подзаголовки отделений,
+        // зебра (нечётные строки), ячейки с переносом; № и Обозначение
+        // — по центру; итог — JPEG {bytes, w, h} или null
+        _cjPdfPaintPage: function(lay, model, pi) {
+            if (typeof document === 'undefined' ||
+                !document.createElement) return null;
+            var page = lay.pages[pi];
+            if (!page) return null;
+            var cnv = document.createElement('canvas');
+            if (!cnv || !cnv.getContext) return null;
+            var scale = 2;
+            cnv.width = lay.W * scale;
+            cnv.height = lay.H * scale;
+            var ctx = cnv.getContext('2d');
+            if (!ctx || !ctx.fillText) return null;
+            try { ctx.scale(scale, scale); } catch (e) { return null; }
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, lay.W, lay.H);
+            var x0 = lay.M;
+            var y = lay.M;
+            var line = function(x, yy, w, h) {
+                ctx.strokeStyle = '#c9d1d9';
+                ctx.lineWidth = 0.5;
+                ctx.strokeRect(x, yy, w, h);
+            };
+            var wrapDraw = function(text, x, yTop, maxW) {
+                var words = String(text || '').split(' ');
+                var cur = '', ly = yTop;
+                for (var i = 0; i < words.length; i++) {
+                    var cand = cur ? cur + ' ' + words[i] : words[i];
+                    if (ctx.measureText(cand).width <= maxW || !cur) {
+                        cur = cand;
+                    } else {
+                        ctx.fillText(cur, x, ly);
+                        ly += lay.lineH;
+                        cur = words[i];
+                    }
+                }
+                if (cur) ctx.fillText(cur, x, ly);
+            };
+            // шапка листа — только первая страница
+            if (page.first) {
+                ctx.fillStyle = '#1b1f24';
+                ctx.font = '700 16px Arial';
+                ctx.fillText('КАБЕЛЬНЫЙ ЖУРНАЛ', x0, y + 14);
+                ctx.fillStyle = '#3c4650';
+                ctx.font = '600 10.5px Arial';
+                ctx.fillText(this._cjSub(model), x0, y + 29);
+                y += lay.headH;
+            }
+            var cols = lay.cols;
+            var thW = lay.W - 2 * lay.M;
+            // шапка таблицы (двухстрочная): rowspan-колонки во всю
+            // высоту, пары «По проекту»/«Проложен» сверху, Марка/
+            // Жилы/Длина, м — снизу
+            var drawTh = function() {
+                var cI;
+                for (cI = 0; cI < cols.length; cI++) {
+                    if (!cols[cI].rowspan) continue;
+                    ctx.fillStyle = '#eef1f4';
+                    ctx.fillRect(cols[cI].x, y, cols[cI].w, lay.thH);
+                    line(cols[cI].x, y, cols[cI].w, lay.thH);
+                    ctx.fillStyle = '#1b1f24';
+                    ctx.font = '700 7.5px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(cols[cI].label,
+                                 cols[cI].x + cols[cI].w / 2,
+                                 y + lay.thH / 2 + 3);
+                    ctx.textAlign = 'left';
+                }
+                // пары (colspan 3): подколонки с ОДИНАКОВЫМ полем
+                // head («По проекту»/«Проложен») сливаются в одну
+                // ячейку верхней строки (подколонки идут ПОДРЯД —
+                // разделителя-rowspan между парами нет)
+                var pairX = -1, pairW = 0, pairHead = '';
+                for (cI = 0; cI <= cols.length; cI++) {
+                    var head = (cI < cols.length)
+                        ? (cols[cI].head || '') : '';
+                    if (head && head === pairHead) {
+                        pairW += cols[cI].w;
+                    } else {
+                        if (pairX >= 0) {
+                            ctx.fillStyle = '#dde4ea';
+                            ctx.fillRect(pairX, y, pairW, lay.thTop);
+                            line(pairX, y, pairW, lay.thTop);
+                            ctx.fillStyle = '#1b1f24';
+                            ctx.font = '700 7.5px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(pairHead,
+                                         pairX + pairW / 2,
+                                         y + lay.thTop / 2 + 3);
+                            ctx.textAlign = 'left';
+                            pairX = -1; pairW = 0; pairHead = '';
+                        }
+                        if (head) {
+                            pairX = cols[cI].x;
+                            pairW = cols[cI].w;
+                            pairHead = head;
+                        }
+                    }
+                }
+                // нижняя строка шапки: подписи подколонок
+                for (cI = 0; cI < cols.length; cI++) {
+                    if (cols[cI].rowspan) continue;
+                    ctx.fillStyle = '#eef1f4';
+                    ctx.fillRect(cols[cI].x, y + lay.thTop,
+                                 cols[cI].w, lay.thSub);
+                    line(cols[cI].x, y + lay.thTop, cols[cI].w, lay.thSub);
+                    ctx.fillStyle = '#1b1f24';
+                    ctx.font = '700 7.5px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(cols[cI].label,
+                                 cols[cI].x + cols[cI].w / 2,
+                                 y + lay.thTop + lay.thSub / 2 + 3);
+                    ctx.textAlign = 'left';
+                }
+                y += lay.thH;
+            };
+            drawTh();
+            // строки
+            for (var r = 0; r < page.items.length; r++) {
+                var it = page.items[r];
+                if (it.type === 'grp') {
+                    var gh = lay.grpH;
+                    ctx.fillStyle = '#dde4ea';
+                    ctx.fillRect(x0, y, thW, gh);
+                    line(x0, y, thW, gh);
+                    ctx.fillStyle = '#1b1f24';
+                    ctx.font = '700 8px Arial';
+                    ctx.fillText(it.name + ' · ' + it.count,
+                                 x0 + 3, y + gh / 2 + 3);
+                    y += gh;
+                } else if (it.type === 'none') {
+                    var nh = lay.lineH + lay.rowPad;
+                    line(x0, y, thW, nh);
+                    ctx.fillStyle = '#4c5660';
+                    ctx.font = '8px Arial';
+                    ctx.fillText('нет записей в журнале',
+                                 x0 + 3, y + lay.rowPad / 2 + 8);
+                    y += nh;
+                } else {
+                    var h = it.lines * lay.lineH + lay.rowPad;
+                    // зебра: нечётные строки журнала — светлая заливка
+                    if (it.idx % 2 === 1) {
+                        ctx.fillStyle = '#f6f8fa';
+                        ctx.fillRect(x0, y, thW, h);
+                    }
+                    var tTop = y + lay.rowPad / 2 + 8;
+                    for (var c2 = 0; c2 < cols.length; c2++) {
+                        var col = cols[c2];
+                        line(col.x, y, col.w, h);
+                        ctx.fillStyle = '#1b1f24';
+                        ctx.font = '8px Arial';
+                        if (col.key === 'num' || col.key === 'designation') {
+                            if (col.key === 'designation') {
+                                ctx.font = '700 8px Arial';
+                            }
+                            ctx.textAlign = 'center';
+                            ctx.fillText(it.cells[col.key],
+                                         col.x + col.w / 2, tTop);
+                            ctx.textAlign = 'left';
+                        } else {
+                            wrapDraw(it.cells[col.key], col.x + 3, tTop,
+                                     col.w - 6);
+                        }
+                    }
+                    y += h;
+                }
+            }
+            var dataUrl;
+            try {
+                dataUrl = cnv.toDataURL('image/jpeg', 0.92);
+            } catch (e4) { return null; }
+            var bytes = WorkSchedule._wsDataUrlBytes(dataUrl);
+            if (!bytes.length) return null;
+            return { bytes: bytes, w: cnv.width, h: cnv.height };
+        },
+
+        // Task 505: «Сохранить Excel» диалога — книга «Кабельный
+        // журнал» (.xlsx) в загрузки; имя — «Кабельный_журнал_‹ГГГГ-
+        // ММ-ДД›.xlsx». Числа длин — ЧИСЛАМИ (редактируемые,
+        // сортируемые — паттерн Task 488 «простой редактируемый
+        // xlsx»), заголовок — одна строка с пояснениями в скобках
+        _saveCjXlsx: function(model) {
+            var wb = null;
+            try {
+                wb = this._buildCjWorkbook(model);
+            } catch (e) { wb = null; }
+            var ok = false;
+            if (wb) {
+                ok = this._cjDownload(
+                    wb.bytes,
+                    'application/vnd.openxmlformats-officedocument.' +
+                    'spreadsheetml.sheet', wb.name);
+            }
+            if (typeof KipToast !== 'undefined' && KipToast.show) {
+                KipToast.show(ok
+                    ? ('Журнал сохранён — файл «' +
+                       (wb ? wb.name : '') + '»')
+                    : 'Не удалось сохранить Excel журнала');
+            }
+        },
+
+        // Task 505: КНИГА .xlsx «Кабельный журнал» (чистая — VM-тесты;
+        // помощники Task 430/465: _wsXlsZip/_wsXlsBytes/_wsXlsColName
+        // /_wsXlsEsc/_wsXlsDocProps + лист/стили событий): заголовок +
+        // подзаголовок, таблица с шапкой и строками-подзаголовками
+        // отделений; пустой журнал — строка-заглушка (как в печати)
+        _buildCjWorkbook: function(model) {
+            var self = this;
+            var cols = this._cjPrintCols();
+            // в Excel шапка ОДНОстрочная — подписи пар с пояснением
+            var xlLabel = {
+                mark_project: 'Марка (по проекту)',
+                cores_project: 'Жилы (по проекту)',
+                length_project: 'Длина, м (по проекту)',
+                mark_actual: 'Марка (проложен)',
+                cores_actual: 'Жилы (проложен)',
+                length_actual: 'Длина, м (проложен)'
+            };
+            var rows = [];
+            rows.push([{ v: 'Кабельный журнал', s: 1 }]);
+            rows.push([{ v: this._cjSub(model), s: 2 }]);
+            rows.push([]);
+            rows.push(cols.map(function(c) {
+                return { v: xlLabel[c.key] || c.label, s: 3 };
+            }));
+            if (model.groups.length) {
+                var n = 0;
+                model.groups.forEach(function(g) {
+                    rows.push([{ v: g.name + ' · ' + g.rows.length + ' ' +
+                                 self._plural(g.rows.length,
+                                     ['запись', 'записи', 'записей']),
+                                 s: 2 }]);
+                    g.rows.forEach(function(r) {
+                        n++;
+                        var cells = cols.map(function(c, ci) {
+                            if (c.key === 'num') return { v: n, s: 4 };
+                            var raw = r.src ? r.src[c.key] : '';
+                            if (raw !== null && raw !== undefined &&
+                                typeof raw === 'number' &&
+                                isFinite(raw)) {
+                                return { v: raw, s: 6 };
+                            }
+                            return { v: (raw === null || raw === undefined)
+                                ? '' : String(raw),
+                                     s: (ci === 1 ? 5 : 6) };
+                        });
+                        rows.push(cells);
+                    });
+                });
+            } else {
+                rows.push([{ v: 'нет записей в журнале', s: 6 }]);
+            }
+            // Task 488 (простой редактируемый xlsx): + docProps
+            // (core/app) и bookViews — тот же паттерн, что у книг
+            // «Табель»/«Мероприятия»
+            var dp = WorkSchedule._wsXlsDocProps();
+            var files = [];
+            var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+                '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+                '<Default Extension="xml" ContentType="application/xml"/>' +
+                '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+                '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+                '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+                dp.ct +
+                '</Types>';
+            files.push({ name: '[Content_Types].xml',
+                         data: WorkSchedule._wsXlsBytes(ct) });
+            files.push({
+                name: '_rels/.rels',
+                data: WorkSchedule._wsXlsBytes(
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+                    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"' +
+                    ' Target="xl/workbook.xml"/>' + dp.rels +
+                    '</Relationships>')
+            });
+            for (var dpi = 0; dpi < dp.files.length; dpi++) {
+                files.push(dp.files[dpi]);
+            }
+            files.push({
+                name: 'xl/workbook.xml',
+                data: WorkSchedule._wsXlsBytes(
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"' +
+                    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+                    '<bookViews><workbookView/></bookViews>' +
+                    '<sheets><sheet name="Кабельный журнал" sheetId="1" r:id="rId1"/>' +
+                    '</sheets></workbook>')
+            });
+            files.push({
+                name: 'xl/_rels/workbook.xml.rels',
+                data: WorkSchedule._wsXlsBytes(
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+                    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"' +
+                    ' Target="worksheets/sheet1.xml"/>' +
+                    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"' +
+                    ' Target="styles.xml"/></Relationships>')
+            });
+            files.push({
+                name: 'xl/worksheets/sheet1.xml',
+                data: WorkSchedule._wsXlsBytes(
+                    WorkSchedule._eventsSheetXml(rows, {
+                        widths: [5, 16, 30, 30, 12, 18, 10, 9, 18, 10, 9, 24],
+                        active: true }))
+            });
+            files.push({ name: 'xl/styles.xml',
+                         data: WorkSchedule._wsXlsBytes(
+                             WorkSchedule._eventsStylesXml()) });
+            return {
+                name: 'Кабельный_журнал_' + this._cjIsoDate() + '.xlsx',
+                bytes: WorkSchedule._wsXlsZip(files),
+                counts: { groups: model.groups.length,
+                          total: model.total }
+            };
+        },
+
+        // Task 505: локальная дата в ISO «ГГГГ-ММ-ДД» (имена файлов
+        // выгрузок; локальная зона, не toISOString-UTC)
+        _cjIsoDate: function(d) {
+            d = d || new Date();
+            var m = d.getMonth() + 1, day = d.getDate();
+            return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m +
+                   '-' + (day < 10 ? '0' : '') + day;
+        },
+
+        // Task 505: скачивание блоба (делегат общему помощнику
+        // выгрузок табеля Task 430 — xlsx-архив и PDF); вне браузера
+        // (VM) — false
+        _cjDownload: function(bytes, mime, name) {
+            if (typeof WorkSchedule === 'undefined' || !WorkSchedule ||
+                typeof WorkSchedule._wsDownload !== 'function') {
+                return false;
+            }
+            return WorkSchedule._wsDownload(bytes, mime, name);
         },
 
         // ============================================================
