@@ -39086,6 +39086,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     //   cableJournal.list / getColumns / getFilters / appendRow
     //   cableJournal.updateRow / cableJournal.deleteRow
     // Доступ: чтение — всем авторизованным, добавление/правка/удаление — Админ, ИТР ИОС, КИП ИОС pro.
+    // Task 508 — АРХИВ ЖУРНАЛА (сервер CableJournal.gs Task 508):
+    //   удалённые записи помечаются флагом _archived (колонка «Архив»
+    //   листа = «Удалён»); активные — список/печать/PDF, архивные —
+    //   только Excel-экспорт (_excelModel + блок «Архив» книги).
+    //   «Последний редактор»/«Дата правки» (P/Q листа) — кто последний
+    //   вносил правки (name из users KIP8_Access).
     // ============================================================
     const KipCableJournal = {
 
@@ -39096,6 +39102,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _searchTimer: null,
         _viewing: null,     // текущая просматриваемая запись ({_row: N, ...}) или null
         _editingRow: null,  // запись в режиме правки (мобильная форма) или null
+        _archivedRows: null,  // Task 508: архивные записи (удалённые) — только для Excel-экспорта
         _cacheKey: 'kip8_cj_cache_v1',  // localStorage-ключ для кэша списка
         _cacheColsKey: 'kip8_cj_cols_v1',  // localStorage-ключ для кэша колонок
 
@@ -39187,8 +39194,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (dataJson) {
                     const cached = JSON.parse(dataJson);
                     if (cached && Array.isArray(cached.rows)) {
-                        this._rows = cached.rows;
-                        this._total = cached.total || cached.rows.length;
+                        // Task 508: кэш — полный снапшот (активные +
+                        // архивные); архивные — только в Excel-экспорт
+                        const split = this._splitArchived(cached.rows);
+                        this._rows = split.active;
+                        this._archivedRows = split.archived;
+                        this._total = cached.total || split.active.length;
                         this._render();
                     }
                 }
@@ -39253,8 +39264,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }).then(function(cached) {
                 if (cached && Array.isArray(cached.rows)) {
                     if (!(self._rows && self._rows.length > 0)) {
-                        self._rows = cached.rows;
-                        self._total = cached.total || cached.rows.length;
+                        // Task 508: полный снапшот (с архивом) — активные
+                        // в список, архивные для Excel-экспорта
+                        const split = self._splitArchived(cached.rows);
+                        self._rows = split.active;
+                        self._archivedRows = split.archived;
+                        self._total = cached.total || split.active.length;
                         self._allRows = self._rows.slice();
                         self._render();
                     }
@@ -39295,11 +39310,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     limit: 1000  // максимум на стороне сервера (см. CableJournal.gs)
                 }
             }).then(function(data) {
-                self._rows = data.rows || [];
-                self._total = data.total || 0;
+                // Task 508: сервер помечает архивные записи (удалённые,
+                // причина «Удалён») флагом _archived — активные идут в
+                // список/печать/PDF, архивные только в Excel-экспорт
+                const split = self._splitArchived(data.rows || []);
+                self._rows = split.active;
+                self._archivedRows = split.archived;
+                self._total = data.total || split.active.length;
                 self._canEdit = !!data.canEdit;
                 document.getElementById('cjAddBtn').style.display = self._canEdit ? '' : 'none';
-                self._persistData(self._rows, self._total);
+                // Кэш — ПОЛНЫЙ снапшот (активные + архив): офлайн-Excel
+                // тоже видит удалённые записи
+                self._persistData(data.rows || [], self._total);
                 // Полный список — в _allRows; применить поиск, если активен
                 self._allRows = self._rows.slice();
                 const q = (document.getElementById('cjSearchInput').value || '').trim();
@@ -39485,6 +39507,36 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // Task 156: счётчик результатов (после _render, чтобы не перезаписался)
             kipRenderSearchCounter(document.getElementById('cjList'),
                 this._rows.length, this._allRows.length, q);
+        },
+
+        // ============================================================
+        // Task 508: строка архивная? Сервер (CableJournal.gs Task 508)
+        // помечает удалённые записи колонкой «Архив» (причина
+        // «Удалён») и флагом _archived. До обновления сервера строк с
+        // пометкой нет — поведение прежнее.
+        // ============================================================
+        _rowArchived: function(row) {
+            if (!row) return false;
+            if (row._archived === true) return true;
+            if (row.archived === true) return true;
+            if (typeof row.archived === 'string' &&
+                    row.archived.trim() !== '') return true;
+            return false;
+        },
+
+        // Task 508: полный список сервера → активные + архивные.
+        // Активные — обычный конвейер (список, поиск, печать, PDF);
+        // архивные — только Excel-экспорт (заявка: удалённый кабель
+        // «в excel отображается», в печать/PDF не попадает).
+        _splitArchived: function(rows) {
+            var active = [], archived = [];
+            if (Array.isArray(rows)) {
+                for (var i = 0; i < rows.length; i++) {
+                    if (this._rowArchived(rows[i])) archived.push(rows[i]);
+                    else active.push(rows[i]);
+                }
+            }
+            return { active: active, archived: archived };
         },
 
         // ============================================================
@@ -40132,7 +40184,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         confirmDelete: function() {
             if (!this._canEdit || !this._viewing) return;
             const designation = this._viewing.designation || ('Запись №' + (this._viewing.num || '?'));
-            const msg = 'Удалить кабель «' + designation + '»?\nЭто действие нельзя отменить.';
+            // Task 508: запись остаётся в архиве журнала (колонки
+            // «Архив»/«Кем удалён»/«Дата удаления» листа) — честно
+            // предупреждаем, что она сохранится с пометкой «Удалён»
+            const msg = 'Удалить кабель «' + designation + '»?\nЗапись останется в архиве журнала с пометкой «Удалён».';
             kipConfirm(msg, { danger: true }).then(function(ok) {
                 if (ok) {
                     this.submitDelete();
@@ -40149,7 +40204,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             const rowNum = this._viewing._row;
             this._api('cableJournal.deleteRow', { row: rowNum }).then(function(res) {
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
-                    KipToast.show('Запись удалена');
+                    KipToast.show('Запись удалена — в архиве журнала');
                 }
                 self._viewing = null;
                 if (isDesktop()) {
@@ -40383,6 +40438,75 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             };
         },
 
+        // ============================================================
+        // Task 508: модель ДЛЯ EXCEL — активные строки + архивные
+        // (заявка: «а в excel отображается»): печать/PDF строятся по
+        // _printModel (только активные), Excel — по этой модели.
+        // Поиск (Task 152) применяется и к архиву; сортировка — та
+        // же «как в исходном файле» (№ п/п). archived — сколько
+        // архивных строк в модели: по этому числу _buildCjWorkbook
+        // добавляет блок колонок «Архив» (Статус/Кем удалён/Дата
+        // удаления/Последний редактор/Дата правки).
+        // ============================================================
+        _excelModel: function() {
+            var self = this;
+            var active = (this._rows || []).slice();
+            var arch = (this._archivedRows || []).slice();
+            var q = '';
+            try {
+                var inp = document.getElementById('cjSearchInput');
+                q = ((inp && inp.value) || '').trim();
+            } catch (e) { q = ''; }
+            if (q && arch.length && typeof kipSearchFilter === 'function') {
+                arch = kipSearchFilter(arch, q, function (row) {
+                    return [
+                        row.department, row.designation, row.start, row.end,
+                        row.mark, row.mark_actual, row.cores, row.cores_actual,
+                        row.length, row.length_actual, row.notes
+                    ].join(' ');
+                });
+            }
+            var all = active.concat(arch);
+            // сортировка «как в исходном файле» — № п/п (приём
+            // _printModel: строки без номера — в конце, сортировка
+            // стабильна)
+            var numOf = function(row) {
+                var n = row && row.num;
+                if (typeof n === 'number' && isFinite(n)) return n;
+                if (typeof n === 'string' && n.trim() &&
+                        isFinite(parseFloat(n))) {
+                    return parseFloat(n);
+                }
+                return null;
+            };
+            all.sort(function(a, b) {
+                var va = numOf(a), vb = numOf(b);
+                if (va === null && vb === null) return 0;
+                if (va === null) return 1;
+                if (vb === null) return -1;
+                return va - vb;
+            });
+            var cols = this._cjPrintCols();
+            var out = all.map(function(row) {
+                var cells = {};
+                cols.forEach(function(c) {
+                    cells[c.key] = self._cjCellVal(row, c.key);
+                });
+                return { cells: cells, src: row };
+            });
+            var archShown = 0;
+            out.forEach(function(r) {
+                if (self._rowArchived(r.src)) archShown++;
+            });
+            return {
+                rows: out,
+                total: out.length,
+                totalAll: out.length,
+                filtered: false,
+                archived: archShown
+            };
+        },
+
         // Task 506: колонки печатной таблицы — РОВНО как в шаблоне
         // исходной Google-таблицы (10 колонок A–J, подписи ДОСЛОВНО):
         // Обозначение/Начало/Конец/Участок + пары «По проекту»/
@@ -40438,6 +40562,36 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
             }
             return String(v);
+        },
+
+        // Task 508: колонки блока «Архив» в Excel-экспорте — статус
+        // («Удалён»), кем/когда удалён, последний редактор/дата
+        // правки. Добавляются к 10 колонкам шаблона ТОЛЬКО когда в
+        // модели есть архивные строки (заявка: удалённые кабели — в
+        // Excel, не в печать/PDF). w — pt-эквивалент для симметрии с
+        // _cjPrintCols (в Excel ширины блока — из xlW книги).
+        _cjArchiveCols: function() {
+            return [
+                { key: 'archived',     label: 'Статус',             w: 57, align: 'ctr', head: 'Архив' },
+                { key: 'archived_by',  label: 'Кем удалён',         w: 78, align: 'left', head: 'Архив' },
+                { key: 'archived_at',  label: 'Дата удаления',      w: 57, align: 'ctr', head: 'Архив' },
+                { key: 'last_editor',  label: 'Последний редактор', w: 86, align: 'left', head: 'Архив' },
+                { key: 'edited_at',    label: 'Дата правки',        w: 57, align: 'ctr', head: 'Архив' }
+            ];
+        },
+
+        // Task 508: дата архива (ISO/строка) → «ДД.ММ.ГГГГ» для ячеек
+        // Excel; не-дата — как есть (пустая — '')
+        _cjArchDate: function(v) {
+            if (v === null || v === undefined || v === '') return '';
+            if (typeof v === 'number' && isFinite(v)) {
+                return this._cjFmtNum(v);
+            }
+            var d = new Date(v);
+            if (isNaN(d.getTime())) return String(v);
+            var p2 = function(n) { return (n < 10 ? '0' : '') + n; };
+            return p2(d.getDate()) + '.' + p2(d.getMonth() + 1) + '.' +
+                   d.getFullYear();
         },
 
         // Task 505: число → строка с запятой (60 → «60», 43.5 → «43,5»)
@@ -41137,8 +41291,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _saveCjXlsx: function(model) {
             var wb = null;
             try {
-                wb = this._buildCjWorkbook(model);
-            } catch (e) { wb = null; }
+                // Task 508: Excel — модель с АРХИВОМ (удалённые записи
+                // отображаются, с блоком колонок «Архив»); фолбэк при
+                // ошибке — прежняя модель печати
+                wb = this._buildCjWorkbook(this._excelModel());
+            } catch (e) {
+                try { wb = this._buildCjWorkbook(model); } catch (e2) { wb = null; }
+            }
             var ok = false;
             if (wb) {
                 ok = this._cjDownload(
@@ -41168,12 +41327,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // (Print_Titles 1:2, A4 альбомная). БЕЗ строк-заголовка и
         // отделений — «просто таблица»; числа — ЧИСЛАМИ (Task 488)
         _buildCjWorkbook: function(model) {
+            var self = this;
             var esc = WorkSchedule._wsXlsEsc;
             var colName = WorkSchedule._wsXlsColName;
             var cols = this._cjPrintCols();
+            // Task 508: блок «Архив» — только когда в модели есть
+            // архивные строки (Excel показывает удалённые кабели;
+            // печать/PDF — нет)
+            var archCols = (model.archived && model.archived > 0)
+                ? this._cjArchiveCols() : [];
+            var allCols = cols.concat(archCols);
             // ширины колонок шаблона (Excel-юниты)
             var xlW = [17, 19.71, 21, 18.71, 17, 16.71,
                        11.43, 17, 16.71, 9.43];
+            if (archCols.length) {
+                // Task 508: ширины блока «Архив» (K–O)
+                xlW = xlW.concat([12, 16, 12, 16.5, 12]);
+            }
             // стиль ячейки данных: 2 — влево, 3 — центр,
             // 4 — «По проекту» влево, 5 — «По проекту» центр
             // (шапка — везде стиль 1: жирная, центр, сетка)
@@ -41206,28 +41376,31 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // --- шапка (r1: одиночные + пары; r2: подписи) ---
             var r1 = [], r2 = [];
             var i, ci;
-            for (i = 0; i < cols.length; i++) {
-                if (!cols[i].rowspan) break;
-                r1.push(cellXml(1, i + 1, cols[i].label, 1, false));
+            for (i = 0; i < allCols.length; i++) {
+                if (!allCols[i].rowspan) break;
+                r1.push(cellXml(1, i + 1, allCols[i].label, 1, false));
                 r2.push(cellXml(2, i + 1, '', 1, false));
             }
             var pairs = [];
-            for (i = 0; i < cols.length; i++) {
-                if (cols[i].rowspan) continue;
+            for (i = 0; i < allCols.length; i++) {
+                if (allCols[i].rowspan) continue;
                 if (!pairs.length ||
-                        pairs[pairs.length - 1].head !== cols[i].head) {
-                    pairs.push({ head: cols[i].head, at: i });
+                        pairs[pairs.length - 1].head !== allCols[i].head) {
+                    pairs.push({ head: allCols[i].head, at: i, len: 1 });
+                } else {
+                    // Task 508: пара может быть длиннее 3 («Архив» — 5)
+                    pairs[pairs.length - 1].len++;
                 }
             }
             pairs.forEach(function(p) {
                 var c1 = p.at + 1;
-                var c2 = Math.min(p.at + 3, cols.length);
+                var c2 = Math.min(p.at + p.len, allCols.length);
                 r1.push(cellXml(1, c1, p.head, 1, false));
                 for (ci = c1 + 1; ci <= c2; ci++) {
                     r1.push(cellXml(1, ci, '', 1, false));
                 }
                 for (ci = c1; ci <= c2; ci++) {
-                    r2.push(cellXml(2, ci, cols[ci - 1].label,
+                    r2.push(cellXml(2, ci, allCols[ci - 1].label,
                                     1, false));
                 }
             });
@@ -41240,10 +41413,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 model.rows.forEach(function(rw, ri) {
                     var rr = ri + 3;
                     var cs = [];
-                    cols.forEach(function(c, ci) {
+                    allCols.forEach(function(c, ci) {
                         var raw = rw.src ? rw.src[c.key] : '';
                         var v = '', num = false;
-                        if (raw !== null && raw !== undefined) {
+                        if (c.key === 'archived_at' ||
+                                c.key === 'edited_at') {
+                            // Task 508: даты архива — «ДД.ММ.ГГГГ»
+                            v = self._cjArchDate(raw);
+                        } else if (raw !== null && raw !== undefined) {
                             if (typeof raw === 'number' &&
                                     isFinite(raw)) {
                                 v = raw; num = true;
@@ -41281,6 +41458,24 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                           (ci + 1) + '" width="' + w +
                           '" customWidth="1"/>';
             });
+            // Task 508: объединения шапки — динамически: одиночные
+            // (A1:A2…D1:D2) + пары «По проекту»/«Проложен» (+ блок
+            // «Архив» K1:O1, когда архивные строки есть)
+            var mergesXml = '';
+            var merges = [];
+            for (i = 0; i < allCols.length; i++) {
+                if (allCols[i].rowspan) {
+                    var ref = colName(i) + '1:' + colName(i) + '2';
+                    merges.push(ref);
+                    mergesXml += '<mergeCell ref="' + ref + '"/>';
+                }
+            }
+            pairs.forEach(function(p) {
+                var pref = colName(p.at) + '1:' +
+                           colName(p.at + p.len - 1) + '1';
+                merges.push(pref);
+                mergesXml += '<mergeCell ref="' + pref + '"/>';
+            });
             var sheet =
                 '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
                 '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
@@ -41289,10 +41484,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 '</sheetView></sheetViews>' +
                 '<cols>' + colXml + '</cols>' +
                 '<sheetData>' + rowsXml.join('') + '</sheetData>' +
-                '<mergeCells count="6">' +
-                '<mergeCell ref="A1:A2"/><mergeCell ref="B1:B2"/>' +
-                '<mergeCell ref="C1:C2"/><mergeCell ref="D1:D2"/>' +
-                '<mergeCell ref="E1:G1"/><mergeCell ref="H1:J1"/>' +
+                '<mergeCells count="' + merges.length + '">' +
+                mergesXml +
                 '</mergeCells>' +
                 '<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.2" footer="0.2"/>' +
                 '<pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/>' +
