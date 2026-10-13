@@ -53597,8 +53597,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // не показываются); в режиме дня — истекающие ровно в
             // выбранный день. ПУСТАЯ секция скрыта (окно не шумит
             // зря); заголовок — та же плашка со счётчиком, строки —
-            // формат «точка · даты · текст»; ПРОШЕДШИЕ (дата раньше
-            // «сегодня») — прозрачный фон .ws-ep-past (Tasks 380/389)
+            // формат «точка · текст»; ПРОШЕДШИЕ (дата раньше
+            // «сегодня») — прозрачный фон .ws-ep-past (Tasks 380/389).
+            // Task 520 (заявка): формат строки месяца УПРОЩЁН — БЕЗ
+            // жирной даты «до дд.мм» и БЕЗ префикса «СИЗ · » (было
+            // «до 01.10 / СИЗ · Обувь … · Чикризов Ю.», стало
+            // «Обувь … · Чикризов Ю.»): месяц и так в заголовке
+            // плашки, дублирование в каждой строке убрано
             var ppeList = [];
             var ppeAll = this._PPE || [];
             for (var pzI = 0; pzI < ppeAll.length; pzI++) {
@@ -53625,13 +53630,68 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     var pFio = fioIdx[ppz['таб_номер']] || ('таб. №' + ppz['таб_номер']);
                     var pPast = (String(ppz['дата_окончания'] || '') < todayIso)
                         ? ' ws-ep-past' : '';
+                    // Task 520: БЕЗ <b class="ws-ep-date">до дд.мм</b> и
+                    // БЕЗ префикса «СИЗ · » — только наименование и ФИО
                     html += '<span class="ws-ep-item' + pPast + '">' +
                             '<i class="ws-ep-dot ws-ep-dot-ppe"></i>' +
-                            '<b class="ws-ep-date">до ' +
-                            this._esc(fmtDay(ppz['дата_окончания'])) + '</b>' +
                             '<span class="ws-ep-text">' +
-                            this._esc('СИЗ · ' + String(ppz['наименование'] || '') +
+                            this._esc(String(ppz['наименование'] || '') +
                                       ' · ' + pFio) + '</span></span>';
+                }
+            }
+
+            // Task 520 (заявка): НОВАЯ группа — ПРОСРОЧЕННАЯ выдача
+            // СИЗ ЗА ВСЁ ВРЕМЯ (не только открытый месяц): записи,
+            // чья дата_окончания УЖЕ раньше «сегодня» (граница — ISO
+            // «сегодня», как у .ws-ep-past выше и красной даты СИЗ в
+            // карточке Task 444); «До износа»/без даты — не
+            // показываются. Отличия от секции месяца: (а) НЕ зависит
+            // от открытого месяца и выбранного дня — «за всё время»;
+            // (б) МЕСЯЦ И ГОД окончания — КРАСНЫЙ .ws-ep-date-bad
+            // (приём Task 504): сразу видно, насколько просрочена
+            // выдача; (в) сортировка ПО ФАМИЛИЯМ работников (заявка),
+            // затем дата и наименование; (г) БЕЗ .ws-ep-past — группа
+            // вся про просроченное, красные даты не «выцветают».
+            // Запись, истекающая в текущем месяце и уже просроченная
+            // (например «до 01.10» при «сегодня» 13.10), ОСТАЁТСЯ и в
+            // секции месяца (сводка «истекает в этом месяце»), и
+            // здесь — два отчёта с разными смыслами, дубли — не баг
+            var ppeOver = [];
+            for (var poI = 0; poI < ppeAll.length; poI++) {
+                var oRec = ppeAll[poI];
+                // Task 399: min — СИЗ мастеров не показываются
+                if (hideMasters && masterTabs[oRec['таб_номер']]) continue;
+                var oExpIso = String(oRec['дата_окончания'] || '').trim();
+                if (!oExpIso || oExpIso === 'До износа') continue;
+                if (oExpIso >= todayIso) continue;
+                ppeOver.push(oRec);
+            }
+            ppeOver.sort(function(a, b) {
+                return String(fioIdx[a['таб_номер']] || a['таб_номер'])
+                           .localeCompare(
+                    String(fioIdx[b['таб_номер']] || b['таб_номер'])) ||
+                       String(a['дата_окончания'])
+                           .localeCompare(String(b['дата_окончания'])) ||
+                       String(a['наименование'] || '')
+                           .localeCompare(String(b['наименование'] || ''));
+            });
+            if (ppeOver.length) {
+                html += '<span class="ws-cp-cap ws-ep-cap ws-ep-cap-ppe">' +
+                        'Просроченная выдача СИЗ · ' + ppeOver.length + '</span>';
+                for (var po2 = 0; po2 < ppeOver.length; po2++) {
+                    var oR = ppeOver[po2];
+                    var oFio = fioIdx[oR['таб_номер']] ||
+                               ('таб. №' + oR['таб_номер']);
+                    // месяц и год окончания: «мм.гггг» из ISO-даты
+                    var oMy = String(oR['дата_окончания']).slice(5, 7) + '.' +
+                              String(oR['дата_окончания']).slice(0, 4);
+                    html += '<span class="ws-ep-item">' +
+                            '<i class="ws-ep-dot ws-ep-dot-ppe"></i>' +
+                            '<b class="ws-ep-date ws-ep-date-bad">' +
+                            this._esc(oMy) + '</b>' +
+                            '<span class="ws-ep-text">' +
+                            this._esc(String(oR['наименование'] || '') +
+                                      ' · ' + oFio) + '</span></span>';
                 }
             }
             el.innerHTML = html;

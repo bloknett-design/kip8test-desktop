@@ -193,8 +193,14 @@ describe('Task 394 — SRC: CSS сетки и окна мероприятий', 
             'заголовок секции СИЗ');
         assertTrue(m.indexOf('ws-ep-dot-ppe') !== -1,
             'точка секции СИЗ');
-        assertTrue(m.indexOf("'СИЗ · ' + String(ppz['наименование']") !== -1,
-            'текст строки секции');
+        assertTrue(m.indexOf("this._esc(String(ppz['наименование'] || '') +") !== -1,
+            'текст строки секции: наименование · ФИО (Task 520 — без префикса «СИЗ · »)');
+        // Task 520: жирная дата «до дд.мм» и префикс «СИЗ · » убраны;
+        // мм.гггг красным — только в НОВОЙ группе просрочки
+        assertFalse(m.indexOf("'СИЗ · ' + String") !== -1,
+            'префикса «СИЗ · » в строках СИЗ больше НЕТ (Task 520)');
+        assertFalse(m.indexOf("'<b class=\"ws-ep-date\">до ' +") !== -1,
+            'даты «до дд.мм» в строках СИЗ больше НЕТ (Task 520)');
         assertTrue(m.indexOf('pExpIso !== selIso') !== -1,
             'режим выбранного дня: СИЗ — истекающие ровно в день');
         assertTrue(m.indexOf('ppeList.length') !== -1,
@@ -525,38 +531,77 @@ describe('Task 394 — VM: окно мероприятий — СИЗ', () => {
           'дата_окончания': '2026-10-05', 'примечание': '' },
     ];
 
-    test('СИЗ с датой окончания в месяце — секция «СИЗ»', () => {
+    test('СИЗ с датой окончания в месяце — секция «СИЗ» (формат Task 520)', () => {
         const el = panelHost({ month: 9, ppe: PPE });
         assertTrue(el.innerHTML.indexOf('СИЗ · сентябрь 2026 · 1') !== -1,
             'секция «СИЗ» с месяцем и счётчиком');
-        assertTrue(el.innerHTML.indexOf('до 17.09') !== -1,
-            'дата окончания строкой «до 17.09»');
-        assertTrue(el.innerHTML.indexOf('СИЗ · Каска защитная · Иванов Иван Иванович') !== -1,
-            'текст: СИЗ · наименование · ФИО');
+        // Task 520: строка — «наименование · ФИО», БЕЗ «до дд.мм» и
+        // БЕЗ префикса «СИЗ · » (просроченная каска дополнительно
+        // попадает в новую группу — формат ниже в test-task520.js)
+        assertTrue(el.innerHTML.indexOf('Каска защитная · Иванов Иван Иванович') !== -1,
+            'текст: наименование · ФИО (Task 520)');
+        assertFalse(el.innerHTML.indexOf('до 17.09') !== -1,
+            'жирной даты «до 17.09» больше нет (Task 520)');
+        assertFalse(el.innerHTML.indexOf('СИЗ · Каска') !== -1,
+            'префикса «СИЗ · » в строке больше нет (Task 520)');
         assertTrue(el.innerHTML.indexOf('ws-ep-dot-ppe') !== -1,
             'точка СИЗ');
     });
 
-    test('«До износа» и чужой месяц — не показываются', () => {
-        const el = panelHost({ month: 9, ppe: PPE });
+    test('«До износа» и чужой месяц — не показываются (динамич. даты)', () => {
+        // Task 520: новая группа «Просроченная выдача СИЗ» видна в
+        // ЛЮБОМ месяце («за всё время») — фиксированные прошедшие
+        // даты (сентябрь/октябрь 2026) стали бы «просроченными» и
+        // ломали assertFalse. Приём Task 380: даты относительно
+        // «сегодня» — «чужой месяц» = СЛЕДУЮЩИЙ (всегда будущий,
+        // никогда не просрочен), открытый = текущий
+        const NOW = new Date();
+        const Y = NOW.getFullYear(), M = NOW.getMonth() + 1;
+        const NX = (M === 12) ? { y: Y + 1, m: 1 } : { y: Y, m: M + 1 };
+        const pad = function(n) { return (n < 10 ? '0' : '') + n; };
+        const iso = function(y, m, d) { return y + '-' + pad(m) + '-' + pad(d); };
+        const monthsNom = ['январь','февраль','март','апрель','май','июнь',
+                           'июль','август','сентябрь','октябрь','ноябрь','декабрь'];
+        const ppe = [
+            { id: 1, 'таб_номер': '0871', 'наименование': 'Каска защитная',
+              'дата_выдачи': '2025-09-17', 'срок_годности': '1 год',
+              'дата_окончания': iso(Y, M, 17), 'примечание': '' },
+            { id: 2, 'таб_номер': '0871', 'наименование': 'Очки закрытые',
+              'дата_выдачи': '', 'срок_годности': 'До износа',
+              'дата_окончания': 'До износа', 'примечание': '' },
+            { id: 3, 'таб_номер': '0871', 'наименование': 'Ботинки',
+              'дата_выдачи': '2024-10-05', 'срок_годности': '2 года',
+              'дата_окончания': iso(NX.y, NX.m, 5), 'примечание': '' },
+        ];
+        const el = panelHost({ year: Y, month: M, ppe: ppe });
         assertFalse(el.innerHTML.indexOf('Очки закрытые') !== -1,
             '«До износа» — без даты окончания, скрыто');
         assertFalse(el.innerHTML.indexOf('Ботинки') !== -1,
-            'окончание в октябре — в сентябре скрыто');
-        const el10 = panelHost({ month: 10, ppe: PPE });
-        assertTrue(el10.innerHTML.indexOf('СИЗ · октябрь 2026 · 1') !== -1,
-            'октябрь — ботинки видны');
-        assertTrue(el10.innerHTML.indexOf('до 05.10') !== -1,
-            'дата окончания октября');
+            'окончание в следующем месяце — в текущем скрыто (и не просрочено)');
+        const elN = panelHost({ year: NX.y, month: NX.m, ppe: ppe });
+        assertTrue(elN.innerHTML.indexOf(
+            'СИЗ · ' + monthsNom[NX.m - 1] + ' ' + NX.y + ' · 1') !== -1,
+            'следующий месяц — ботинки видны');
+        assertTrue(elN.innerHTML.indexOf('Ботинки · Иванов Иван Иванович') !== -1,
+            'формат строки: наименование · ФИО (Task 520)');
     });
 
     test('выбранный день — СИЗ, истекающие РОВНО в день', () => {
-        const el5 = panelHost({ month: 9, selDay: 17, ppe: PPE });
-        assertTrue(el5.innerHTML.indexOf('СИЗ · 17.09 · 1') !== -1,
+        // Task 520: фикстуры — СЛЕДУЮЩИЙ месяц (всегда будущий, не
+        // просрочен): прошедшая каска ломала бы assertFalse ниже —
+        // группа «Просроченная выдача СИЗ» не зависит от дня
+        const NOW = new Date();
+        const Y = NOW.getFullYear(), M = NOW.getMonth() + 1;
+        const NX = (M === 12) ? { y: Y + 1, m: 1 } : { y: Y, m: M + 1 };
+        const pad = function(n) { return (n < 10 ? '0' : '') + n; };
+        const ppe = [{ 'таб_номер': '0871', 'наименование': 'Каска защитная',
+                       'дата_окончания': NX.y + '-' + pad(NX.m) + '-17' }];
+        const el5 = panelHost({ year: NX.y, month: NX.m, selDay: 17, ppe: ppe });
+        assertTrue(el5.innerHTML.indexOf('СИЗ · 17.' + pad(NX.m) + ' · 1') !== -1,
             'день 17 = дата окончания каски');
-        const el6 = panelHost({ month: 9, selDay: 18, ppe: PPE });
+        const el6 = panelHost({ year: NX.y, month: NX.m, selDay: 18, ppe: ppe });
         assertFalse(el6.innerHTML.indexOf('СИЗ · ') !== -1,
-            'другой день — секция СИЗ скрыта');
+            'другой день — секция СИЗ скрыта (просрочки нет — будущее)');
     });
 
     test('прошедшие — класс ws-ep-past (динамические даты)', () => {
@@ -584,12 +629,20 @@ describe('Task 394 — VM: окно мероприятий — СИЗ', () => {
         // «1-е число» — прошедшее iff 1-е < сегодня (в этом же месяце)
         const expPast = iso(Y, M, 1) < iso(Y, M, NOW.getDate());
         // Task 404: отпуска НЕ показываются — в окне только 2 строки
-        // СИЗ; прошедшая из них — «1-го числа» iff 1-е < сегодня
+        // СИЗ; прошедшая из них — «1-го числа» iff 1-е < сегодня.
+        // Task 520: БЕЗ ws-ep-past в новой группе просрочки (даты там
+        // КРАСНЫЕ, не «выцветают») — nPast не меняется
         const nPast = (el.innerHTML.match(/ws-ep-past/g) || []).length;
         assertEqual(nPast, expPast ? 1 : 0,
-            'классов ws-ep-past столько, сколько СИЗ с прошедшей датой');
-        assertEqual((el.innerHTML.match(/<span class="ws-ep-item/g) || []).length, 2,
-            'строки: 2 СИЗ (отпуска не показываются — Task 404)');
+            'классов ws-ep-past столько, сколько СИЗ с прошедшей датой (группа просрочки Task 520 — без past)');
+        // Task 520: просроченная «1-го числа» ОСТАЁТСЯ в секции месяца
+        // И попадает в группу «Просроченная выдача СИЗ» (+1 строка)
+        assertEqual((el.innerHTML.match(/<span class="ws-ep-item/g) || []).length,
+            expPast ? 3 : 2,
+            'строки: 2 СИЗ месяца (+1 копия в группе просрочки iff просрочена — Task 520)');
+        assertEqual(el.innerHTML.indexOf('Просроченная выдача СИЗ · 1') !== -1,
+            expPast,
+            'группа «Просроченная выдача СИЗ» — iff есть просроченная (Task 520)');
     });
 });
 
@@ -635,10 +688,10 @@ describe('Task 394 — VM: окно мероприятий — порядок с
 // ============================================================
 describe('Task 394 — SW', () => {
 
-    test('SW: kipia-test-v732', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v732'") !== -1,
+    test('SW: kipia-test-v733', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v733'") !== -1,
             'SWVersion bumped');
-        assertTrue(SW_SRC.indexOf('kipia-test-v733') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v734') === -1,
             'двойного бампа не было');
     });
 });
