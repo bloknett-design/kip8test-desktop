@@ -89,6 +89,81 @@ var FlowmeterArchive = {
   },
 
   // ============================================================
+  // _normEntryType / _isDuplicateArchiveRow — Task 366: защита
+  // архива от дублей строк при повторной доставке показания.
+  // ============================================================
+  // Повторы приходят с ИДЕНТИЧНЫМ payload (outbox ретраит запись
+  // после потерянного ответа; sendBeacon «последнего шанса» летит
+  // рядом с живым fetch'ем при закрытии; два окна приложения флашат
+  // один localStorage) — ключ записи meterId (A) + prev (C) + curr (D)
+  // + dateCurr (G) + entryType (R) у повтора совпадает полностью.
+  // Разные показания расходятся хотя бы одним полем ключа (новое
+  // значение → curr; новая дата → dateCurr; правка в окне 1 ч идёт
+  // через updateLatestReading — на месте, без appendToArchive).
+  //
+  // Task 375 («окно 1 часа»): ДВА правила дубля —
+  //   1) точный ключ A+C+D+G+R (повтор доставки одного payload);
+  //   2) «свежий повтор значения»: тот же meterId + curr + dateCurr +
+  //      entryType записан НЕ БОЛЕЕ ЧАСА НАЗАД (O-таймштамп строки),
+  //      независимо от prev. Ловит «двойной сдвиг» prev при повторном
+  //      срабатывании «Сохранить» (второй payload = prev сдвинут,
+  //      точный ключ не совпадает) и прочие задвоения в окне правки —
+  //      ровно тот период, когда повторная запись той же даты/значения
+  //      всегда избыточна. Позже часа правило не действует (не мешает
+  //      редким осознанным повторным вводам).
+  // Сканируем хвост архива (последние 50 строк) — дубль всегда среди
+  // свежих строк. Вызывается ТОЛЬКО из appendToArchive внутри
+  // Utils.withLock (атомарность «прочитал хвост → дописал»; замок
+  // НЕ реентерабельный — внутри только операции листа). Сбой
+  // проверки = «не дубль»: лучше редкий дубль, чем потерянная запись.
+  // ============================================================
+  _normEntryType: function(v) {
+    var s = String(v || '').trim().toLowerCase();
+    return (s === '' || s === 'сутки') ? 'сутки' : s;   // legacy '' = сутки
+  },
+
+  _isDuplicateArchiveRow: function(sheet, meterId, prev, curr, dateCurr, entryType) {
+    try {
+      var lastRow = sheet.getLastRow();
+      if (lastRow < this.DATA_START_ROW) return false;
+      var scan = Math.min(50, lastRow - this.DATA_START_ROW + 1);
+      var values = sheet.getRange(lastRow - scan + 1, 1, scan, 18).getValues();
+      var idNeedle = String(parseInt(meterId, 10));
+      var prevNeedle = String(parseFloat(prev || 0));
+      var currNeedle = String(parseFloat(curr || 0));
+      var etNeedle = this._normEntryType(entryType);
+      var needleDate = Flowmeter._clientToDateObj(dateCurr);
+      if (!needleDate) return false;   // дату не разобрали — дубль не подтвердить
+      var needleDay = needleDate.getFullYear() * 10000 +
+                      (needleDate.getMonth() + 1) * 100 + needleDate.getDate();
+      for (var i = values.length - 1; i >= 0; i--) {
+        var row = values[i] || [];
+        if (String(parseInt(row[0], 10)) !== idNeedle) continue;      // A: meterId
+        if (String(parseFloat(row[3])) !== currNeedle) continue;      // D: curr
+        if (this._normEntryType(row[17]) !== etNeedle) continue;       // R: entryType
+        var g = row[6];                                                // G: dateCurr (Date)
+        if (!(g instanceof Date) ||
+            g.getFullYear() * 10000 + (g.getMonth() + 1) * 100 + g.getDate() !== needleDay) {
+          continue;
+        }
+        // Правило 1 (Task 366): точный ключ — совпадает и prev
+        if (String(parseFloat(row[2])) === prevNeedle) return true;   // C: prev
+        // Правило 2 (Task 375): «свежий повтор значения» — та же запись
+        // того же значения за ту же дату моложе 1 часа (O: timestamp),
+        // независимо от prev («двойной сдвиг» при повторном «Сохранить»)
+        var o = row[14];                                               // O: timestamp
+        if (o instanceof Date && (new Date() - o) <= 60 * 60 * 1000) {
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      Logger.log('Archive dedup check failed (append anyway): ' + e.message);
+      return false;
+    }
+  },
+
+  // ============================================================
   // appendToArchive — добавить запись в архив
   // Вызывается из Flowmeter.updateReading() после записи новых показаний
   // ============================================================
@@ -157,36 +232,93 @@ var FlowmeterArchive = {
       }
     }
 
-    // Добавляем строку в конец листа.
-    // Структура (18 столбцов A–R, Task 100 добавил K=Gcal, Task 197 — P=comment,
-    // Task 199 — Q=anomaly, Task 286 — R=entryType):
-    //   A meterId, B hoz, C prev, D curr, E consumption,
-    //   F datePrev, G dateCurr, H daysBetween, I unit, J temp,
-    //   K Gcal (Task 100), L period, M modRole, N modName, O timestamp,
-    //   P comment (Task 197), Q anomaly (Task 199), R entryType (Task 286)
-    sheet.appendRow([
-      meterId,                                                                    // A: meterId
-      hoz || '',                                                                  // B: hoz
-      prev || 0,                                                                  // C: prev
-      curr || 0,                                                                  // D: curr
-      consumption,                                                                // E: consumption
-      datePrevObj || '',                                                          // F: datePrev (Date object)
-      dateCurrObj || '',                                                          // G: dateCurr (Date object)
-      daysBetween,                                                                // H: daysBetween
-      unit || '',                                                                 // I: unit (раньше было в J, но в архиве порядок другой — см. заголовки)
-      (temp !== null && temp !== undefined && temp !== '') ? parseFloat(temp) : '',  // J: temp
-      (gcal !== null && gcal !== undefined && gcal !== '') ? parseFloat(gcal) : '',  // K: Gcal (Task 100)
-      period || '',                                                               // L: period
-      role || '',                                                                 // M: modRole
-      name || '',                                                                 // N: modName
-      new Date(),                                                                  // O: timestamp
-      String(comment || ''),                                                       // P: comment (Task 197)
-      String(anomaly || ''),                                                       // Q: anomaly (Task 199)
-      String(entryType || '')                                                      // R: entryType (Task 286)
-    ]);
+    // Task 366: запись под замком (Utils.withLock, Task 348) — атомарная
+    // пара «проверил хвост на дубль → дописал». Без замка две доставки
+    // одного показания (ретрай outbox / beacon рядом с fetch / два окна
+    // приложения) успевали прочитать хвост ДО чужой записи — и обе
+    // дописывали строку. Замок НЕ реентерабельный: внутри только
+    // операции листа (никаких withLock-функций). Дубль по ключу
+    // meterId+prev+curr+dateCurr+entryType — НЕ дописываем: meters-
+    // строка уже актуальна, история не обрастает копиями.
+    //
+    // Task 376: РЕТРАИ записи — замок скрипта ОДИН на все выполнения
+    // (соседние appendToArchive, сессии, крон). При вводе всех 12
+    // расходомеров подряд или параллельных beacon-доставках при
+    // закрытии приложения очередь на замок длинная, и ПОСЛЕДНИЙ в
+    // очереди (№12) упирался в tryLock-таймаут → server_busy →
+    // ошибка глоталась вызывающим как «non-critical» → строка архива
+    // ТЕРЯЛАСЬ при записанном meters. Теперь: 3 попытки (10 c + 4 c +
+    // 4 c, пауза 1 c) — транзиент очереди/квоты рассасывается за
+    // секунды; после последней неудачи ПЕРЕБРАСЫВАЕМ исключение
+    // вызывающему (updateReading/_writePeriodEntry вернут клиенту
+    // archive_write_failed, запись останется в outbox и уйдёт позже;
+    // повторная запись meters идемпотентна, дедуп Task 366/375 не
+    // даст дубль строки). «Дубль» (false) ошибкой НЕ считается:
+    // строка уже в архиве — миссия выполнена.
+    var self = this;
+    var attempts = [10000, 4000, 4000];
+    var appended = null;
+    var lastErr = null;
+    for (var ai = 0; ai < attempts.length; ai++) {
+      try {
+        appended = Utils.withLock(function() {
+          if (self._isDuplicateArchiveRow(sheet, meterId, prev, curr, dateCurr, entryType)) {
+            Logger.log('Archive (Task 366): дубль пропущен — meterId=' + meterId +
+                       ', prev=' + prev + ', curr=' + curr + ', dateCurr=' + dateCurr +
+                       (entryType ? (', entryType=' + entryType) : ''));
+            return false;
+          }
+          // Добавляем строку в конец листа.
+          // Структура (18 столбцов A–R, Task 100 добавил K=Gcal, Task 197 — P=comment,
+          // Task 199 — Q=anomaly, Task 286 — R=entryType):
+          //   A meterId, B hoz, C prev, D curr, E consumption,
+          //   F datePrev, G dateCurr, H daysBetween, I unit, J temp,
+          //   K Gcal (Task 100), L period, M modRole, N modName, O timestamp,
+          //   P comment (Task 197), Q anomaly (Task 199), R entryType (Task 286)
+          sheet.appendRow([
+            meterId,                                                                    // A: meterId
+            hoz || '',                                                                  // B: hoz
+            prev || 0,                                                                  // C: prev
+            curr || 0,                                                                  // D: curr
+            consumption,                                                                // E: consumption
+            datePrevObj || '',                                                          // F: datePrev (Date object)
+            dateCurrObj || '',                                                          // G: dateCurr (Date object)
+            daysBetween,                                                                // H: daysBetween
+            unit || '',                                                                 // I: unit (раньше было в J, но в архиве порядок другой — см. заголовки)
+            (temp !== null && temp !== undefined && temp !== '') ? parseFloat(temp) : '',  // J: temp
+            (gcal !== null && gcal !== undefined && gcal !== '') ? parseFloat(gcal) : '',  // K: Gcal (Task 100)
+            period || '',                                                               // L: period
+            role || '',                                                                 // M: modRole
+            name || '',                                                                 // N: modName
+            new Date(),                                                                  // O: timestamp
+            String(comment || ''),                                                       // P: comment (Task 197)
+            String(anomaly || ''),                                                       // Q: anomaly (Task 199)
+            String(entryType || '')                                                      // R: entryType (Task 286)
+          ]);
+          return true;
+        }, attempts[ai]);
+        lastErr = null;
+        break;
+      } catch (writeErr) {
+        lastErr = writeErr;
+        Logger.log('Archive write attempt ' + (ai + 1) + '/' + attempts.length +
+                   ' failed: ' + writeErr.message);
+        if (ai < attempts.length - 1) {
+          Utilities.sleep(1000);
+        }
+      }
+    }
+    if (lastErr) {
+      // Task 376: все попытки не удались — НЕ глотаем (так строка архива
+      // терялась навсегда при записанном meters): вызывающий честно
+      // вернёт archive_write_failed, клиент доставит запись повторно.
+      throw lastErr;
+    }
 
-    Logger.log('Archive: meterId=' + meterId + ', prev=' + prev + ', curr=' + curr + ', consumption=' + consumption + ', gcal=' + (gcal || '—') +
-               (entryType ? (', entryType=' + entryType) : ''));
+    if (appended) {
+      Logger.log('Archive: meterId=' + meterId + ', prev=' + prev + ', curr=' + curr + ', consumption=' + consumption + ', gcal=' + (gcal || '—') +
+                 (entryType ? (', entryType=' + entryType) : ''));
+    }
   },
 
   // ============================================================

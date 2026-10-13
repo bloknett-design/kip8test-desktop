@@ -520,7 +520,16 @@ var Flowmeter = {
     // при исходном вводе не удалась — archive write non-critical) —
     // создаём строку appendToArchive'ом, комментарий записи (если
     // был в meters.O) переносится в P новой строки.
-    // Ошибка архива не блокирует основной ответ (тихо логируется).
+    // Task 376: ошибка архива больше НЕ «тихо логируется». Так терялась
+    // строка архива при записанном meters: клиент получал ok:true, удалял
+    // запись из outbox — повторной доставки не было (дедуп флаша к тому
+    // же сверялся только с meters). Теперь при неудаче всех ретраев
+    // appendToArchive — честный ответ archive_write_failed: meters уже
+    // записан, запись ОСТАЁТСЯ в outbox клиента и будет доставлена
+    // автоматически (повторная запись meters идемпотентна, серверный
+    // дедуп Task 366/375 не даст дубль строки архива). «Дубль»
+    // (appendToArchive вернул false — строка уже есть) ошибкой НЕ
+    // считается.
     try {
       var hozName = String(sheet.getRange(rowNum, 2).getValue() || '');
       var unitVal = String(sheet.getRange(rowNum, 8).getValue() || '');
@@ -558,7 +567,12 @@ var Flowmeter = {
         );
       }
     } catch (archiveErr) {
-      Logger.log('Archive write failed (non-critical): ' + archiveErr.message);
+      Logger.log('Archive write failed: ' + archiveErr.message);
+      // Task 376: meters записан, архив — нет: честный отказ, клиент
+      // оставит запись в outbox и доставит её повторно автоматически.
+      return { ok: false, error: 'archive_write_failed',
+               message: 'Показания сохранены, но запись в архив временно ' +
+                        'не удалась — она будет отправлена повторно автоматически' };
     }
 
     return { ok: true, data: { id: id } };
@@ -656,7 +670,12 @@ var Flowmeter = {
       );
     } catch (archiveErr) {
       Logger.log('Archive write failed (period entry): ' + archiveErr.message);
-      return { ok: false, error: 'Ошибка записи в архив: ' + archiveErr.message };
+      // Task 376: стабильный код ошибки (раньше текст в error не позволял
+      // клиенту отличить «окончательный отказ» от «доставим позже»):
+      // запись остаётся в outbox и уйдёт повторно.
+      return { ok: false, error: 'archive_write_failed',
+               message: 'Запись в архив не удалась — она будет отправлена ' +
+                        'повторно автоматически (' + archiveErr.message + ')' };
     }
 
     return { ok: true, data: { id: id, entryType: entryType } };
@@ -848,99 +867,3 @@ var Flowmeter = {
     return cache;
   }
 };
-
-// ============================================================
-// flowmeterCleanupCommentMetadata — Одноразовая миграция (Task 212)
-// ============================================================
-// Запускается один раз вручную из редактора Apps Script:
-//   1. Выбрать функцию flowmeterCleanupCommentMetadata
-//   2. Нажать ▶ Run
-//   3. Проверить лог — сколько строк исправлено
-//   4. После миграции функцию можно удалить из проекта
-//
-// Что делает:
-//   • Проходит по столбцу P (16) листа hozraschet_meters и листа
-//     hozraschet_archive.
-//   • В каждой ячейке ищет шаблон «[ISO-timestamp | email]: текст»
-//     (формат preview, который писался в meters.P до Task 211).
-//   • Если совпало — заменяет значение на чистый «текст» без метаданных.
-//   • Если не совпало — оставляет как есть (plain text уже).
-//
-// Цель: привести исторические данные к единому plain-text формату,
-// который используется после Task 211. После миграции НОВЫЕ записи
-// тоже будут plain text (см. Flowmeter.updateReading → appendToArchive
-// и отсутствие записи в meters.P).
-// ============================================================
-function flowmeterCleanupCommentMetadata() {
-  var SPREADSHEET_ID = '1enZSq7K8pwJVzaAI_tbXZtvATqARTxH0lSU4c-wc1eY';
-  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-
-  // Шаблон: [2026-08-27T22:51:15.659Z | email@host]: текст
-  //Capture group 1 = текст после «]: »
-  var pattern = /^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z \| [^\]]+\]:\s*(.*)$/;
-  var COL = 16; // P=16
-
-  var result = { metersProcessed: 0, metersFixed: 0,
-                 archiveProcessed: 0, archiveFixed: 0 };
-
-  // 1) hozraschet_meters — столбец P, строки 2+ (до 12 позиций, но берём все)
-  try {
-    var metersSheet = ss.getSheetByName('hozraschet_meters');
-    if (metersSheet) {
-      var metersLastRow = metersSheet.getLastRow();
-      if (metersLastRow >= 2) {
-        var metersRange = metersSheet.getRange(2, COL, metersLastRow - 1, 1);
-        var metersVals = metersRange.getValues();
-        var metersChanged = false;
-        for (var i = 0; i < metersVals.length; i++) {
-          result.metersProcessed++;
-          var v = String(metersVals[i][0] || '');
-          var m = v.match(pattern);
-          if (m) {
-            metersVals[i][0] = m[1]; // только текст
-            result.metersFixed++;
-            metersChanged = true;
-          }
-        }
-        if (metersChanged) {
-          metersRange.setValues(metersVals);
-        }
-      }
-    }
-  } catch (e) {
-    Logger.log('Cleanup meters failed: ' + e.message);
-  }
-
-  // 2) hozraschet_archive — столбец P, строки 2+
-  try {
-    var archiveSheet = ss.getSheetByName('hozraschet_archive');
-    if (archiveSheet) {
-      var archiveLastRow = archiveSheet.getLastRow();
-      if (archiveLastRow >= 2) {
-        var archiveRange = archiveSheet.getRange(2, COL, archiveLastRow - 1, 1);
-        var archiveVals = archiveRange.getValues();
-        var archiveChanged = false;
-        for (var j = 0; j < archiveVals.length; j++) {
-          result.archiveProcessed++;
-          var av = String(archiveVals[j][0] || '');
-          var am = av.match(pattern);
-          if (am) {
-            archiveVals[j][0] = am[1];
-            result.archiveFixed++;
-            archiveChanged = true;
-          }
-        }
-        if (archiveChanged) {
-          archiveRange.setValues(archiveVals);
-        }
-      }
-    }
-  } catch (e) {
-    Logger.log('Cleanup archive failed: ' + e.message);
-  }
-
-  var msg = 'Cleanup done. meters: ' + result.metersFixed + '/' + result.metersProcessed +
-            ' fixed, archive: ' + result.archiveFixed + '/' + result.archiveProcessed + ' fixed.';
-  Logger.log(msg);
-  return msg;
-}

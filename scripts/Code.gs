@@ -44,6 +44,12 @@
  *                           permissions, granted, warnings}
  *     Гейт GATE_ACTIONS: admin* → admin.panel, каб. журнал (записи)
  *     → cablejournal.edit — по матрице KIP8_Access (до модуля).
+ *   PlanEvents (Task 463/464) — «Плановые мероприятия»: отметки
+ *     выполнения, архив файла Мероприятия_КИП_ИОС:
+ *     PlanEvents.list(payload)   → {ok, data/error}
+ *     PlanEvents.mark(payload)  → {ok, data/error} (идемпотентно)
+ *     PlanEvents.update(payload) → {ok, data/error} (Task 464: дата)
+ *     PlanEvents.unmark(payload) → {ok, data/error} (Task 464: снятие)
  * ============================================================
  */
 
@@ -297,6 +303,12 @@ function doPost(e) {
       case 'workSchedule.deleteTraining':
         return _json(WorkSchedule.deleteTraining(payload));
 
+      // Task 418: отметка о выполнении записи «Инструктажей» —
+      // столбцы «выполнение» (F) + пересчёт «просрочен» (G);
+      // галочка в блоке «Повторные инструктажи…» карточки работника
+      case 'workSchedule.setTrainingDone':
+        return _json(WorkSchedule.setTrainingDone(payload));
+
       // Task 274: отпуска — план периодов (лист «Отпуска» таблицы
       // табель_КИП_ИОС), автоматическая расстановка «О» в шахматке
       case 'workSchedule.listVacations':
@@ -307,6 +319,69 @@ function doPost(e) {
 
       case 'workSchedule.deleteVacation':
         return _json(WorkSchedule.deleteVacation(payload));
+
+      // Task 384: правка данных сотрудника (B..G, J..K; таб_№ — PK,
+      // не меняется) — шторка «Правка сотрудника» из карточки
+      case 'workSchedule.updateEmployee':
+        return _json(WorkSchedule.updateEmployee(payload));
+
+      // Task 384: правка периода отпуска (B..F по id; проверки
+      // пересечения/дубля части не считают саму строку)
+      case 'workSchedule.updateVacation':
+        return _json(WorkSchedule.updateVacation(payload));
+
+      // Task 392: СИЗ — средства индивидуальной защиты работников
+      // (лист «СИЗ» таблицы табель_КИП_ИОС); карточка работника:
+      // секция СИЗ с правкой/добавлением/удалением записей
+      case 'workSchedule.listPpe':
+        return _json(WorkSchedule.listPpe(payload));
+
+      case 'workSchedule.addPpe':
+        return _json(WorkSchedule.addPpe(payload));
+
+      case 'workSchedule.updatePpe':
+        return _json(WorkSchedule.updatePpe(payload));
+
+      case 'workSchedule.deletePpe':
+        return _json(WorkSchedule.deletePpe(payload));
+
+      // === Плановые мероприятия: отметки выполнения (Task 463) ===
+      // PlanEvents.gs — архив файла Мероприятия_КИП_ИОС (лист
+      // «Архив», создаётся PlanEventsInit.gs); доступ — право
+      // plan.events матрицы KIP8_Access (Task 462)
+      case 'planEvents.list':
+        return _json(PlanEvents.list(payload));
+
+      case 'planEvents.mark':
+        return _json(PlanEvents.mark(payload));
+
+      // Task 464: правка даты отметки + снятие отметки
+      case 'planEvents.update':
+        return _json(PlanEvents.update(payload));
+
+      case 'planEvents.unmark':
+        return _json(PlanEvents.unmark(payload));
+
+      // === Task 471: годы архива + работы месяца ===
+      // planEvents.years — годы листа «Архив» (кнопка переключения
+      // годов в шапке таблицы «Плановых мероприятий»); planWorks.* —
+      // работы листа «Работы на месяц» файла Мероприятия_КИП_ИОС
+      // (создаётся PlanWorksInit.gs). Доступ — то же право
+      // plan.events (Task 462)
+      case 'planEvents.years':
+        return _json(PlanEvents.years(payload));
+
+      case 'planWorks.list':
+        return _json(PlanEvents.listWorks(payload));
+
+      case 'planWorks.add':
+        return _json(PlanEvents.addWork(payload));
+
+      case 'planWorks.remove':
+        return _json(PlanEvents.removeWork(payload));
+
+      case 'planWorks.setStatus':
+        return _json(PlanEvents.setWorkStatus(payload));
 
       default:
         return _json({ ok: false, error: 'Unknown action: ' + action });

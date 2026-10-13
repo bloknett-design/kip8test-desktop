@@ -224,6 +224,15 @@ def parse_cables(xlsx_path, sheet_name):
             if h:
                 record[h] = v
 
+        # Task 508: архивные записи (удалённые кабели, колонка «Архив»
+        # непустая) в снимок data/cables.json НЕ попадают — это снимок
+        # АКТИВНОГО журнала (счётчик на кнопке входа, офлайн-данные);
+        # сами записи остаются в Google-таблице и в Excel-экспорте.
+        arch_val = record.get('Архив', '')
+        if isinstance(arch_val, str) and arch_val.strip():
+            skipped += 1
+            continue
+
         # Пропускаем строки без № п/п и без Обозначения кабеля, провода
         id_val = record.get('№ п/п', '')
         name_val = record.get('Обозначение кабеля, провода', '')
