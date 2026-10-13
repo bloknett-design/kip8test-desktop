@@ -65625,7 +65625,8 @@ if (typeof updateLogoImage === 'function') updateLogoImage();
      (sync-to-desktop.yml: sw.js, scripts/*.gs + sync-*.py, tests/, data/,
      images/, системный промт). Комментарий-триггер: paths-синк срабатывает
      на index.html, а workflow_dispatch недоступен PAT без actions:write.
-     На рендер не влияет. -->
+     Правка v2: корневые артефакты Task 345 удаляются git rm (rm -f без
+     стейджинга оставлял их в зеркале). На рендер не влияет. -->
 
 </body>
 </html>
