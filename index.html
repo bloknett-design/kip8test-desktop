@@ -23458,50 +23458,6 @@
         if (typeof KipFav !== 'undefined') KipFav.updateHeaderIcon();
     }
 
-
-    // === Фильтр по типу ===
-    function devUpdateFilterButton() {
-        const btn = document.getElementById('devFilterType');
-        const label = document.getElementById('devFilterTypeLabel');
-        if (!btn || !label) return;
-        if (devFilterType) {
-            btn.classList.add('active');
-            const shortType = devFilterType.length > 20 ? devFilterType.substring(0, 18) + '…' : devFilterType;
-            label.textContent = 'Тип: ' + shortType;
-        } else {
-            btn.classList.remove('active');
-            label.textContent = 'Все типы';
-        }
-    }
-
-    function devToggleTypeFilter() {
-        // Показать список всех уникальных типов — через prompt
-        if (!devLoaded || !devData) return;
-        const types = [...new Set(devData.devices.map(d => d['Тип'] || '').filter(t => t))];
-        types.sort();
-        let msg = 'Доступно типов: ' + types.length + '\n\nВведите тип или часть названия.\nДля сброса — оставьте пустым:\n\n';
-        // Покажем первые 15 типов для ориентира
-        for (let i = 0; i < Math.min(15, types.length); i++) {
-            msg += '  ' + types[i] + '\n';
-        }
-        if (types.length > 15) msg += '  ... и ещё ' + (types.length - 15) + '\n';
-        kipPrompt(msg, devFilterType || '').then(function(input) {
-            if (input === null) return;
-            const trimmed = input.trim();
-            if (!trimmed) {
-                devFilterType = null;
-            } else {
-                // Точное совпадение или частичное
-                const exact = types.find(t => t.toLowerCase() === trimmed.toLowerCase());
-                devFilterType = exact || trimmed;
-            }
-            // Сброс пагинации
-            devVisibleCount = DEV_DEFAULT_LIMIT;
-            if (navigator.vibrate) navigator.vibrate(25);
-            devRender();
-        });
-    }
-
     // Конвертация Excel serial date (число дней с 1899-12-30) в формат DD.MM.YYYY
     function devExcelDateToString(serial) {
         if (!serial) return '';
@@ -23603,14 +23559,6 @@
             }
         }
         span.textContent = dateStr || '—';
-    }
-
-    function devPlural(n, forms) {
-        const n10 = n % 10;
-        const n100 = n % 100;
-        if (n10 === 1 && n100 !== 11) return forms[0];
-        if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return forms[1];
-        return forms[2];
     }
 
     function devInit() {
@@ -24305,22 +24253,6 @@
         kipBindSarFilterBadge(list, 'devices', function() { devRenderGroup(); });
     }
 
-    function devScrollToGroup(el) {
-        if (!el) return;
-        const mode = el.getAttribute('data-mode') || 'type';
-        const ph = document.querySelector('#page-devices-' + mode + ' .page-inline-header');
-        const stickyHeight = ph ? ph.offsetHeight : 56;
-        const rect = el.getBoundingClientRect();
-        const targetY = window.scrollY + rect.top - stickyHeight - 8;
-        window.scrollTo({ top: Math.max(0, targetY), behavior: 'auto' });
-    }
-
-        function devShowMoreSorted(mode) {
-        if (!devSortedVisibleCount[mode]) devSortedVisibleCount[mode] = 50;
-        devSortedVisibleCount[mode] += 50;
-        devRenderSorted(mode);
-    }
-
     // ===== БЛОКИРОВКИ =====
     // Поля соответствуют листу "Блокировки_app" таблицы Google Sheets
     // https://docs.google.com/spreadsheets/d/1ZKOPBsD9x4wdlC5rDjz09UypD86G0Cee/edit (тот же файл, что и для приборов)
@@ -24387,15 +24319,6 @@
         if (/^\d{2}\.\d{2}\.\d{4}$/.test(str)) return str;
         return str;
     }
-    function lockGetLastUpdateDate() {
-        try {
-            const raw = localStorage.getItem('lockoutsLastUpdate');
-            if (!raw) return '';
-            const d = new Date(raw);
-            if (isNaN(d.getTime())) return '';
-            return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
-        } catch (e) { return ''; }
-    }
 
     async function lockInitSorted(mode) {
         if (!lockLoaded || !lockData) {
@@ -24415,13 +24338,6 @@
             }
         }
         lockRenderSorted(mode);
-    }
-
-    function lockForceRefresh(mode) {
-        lockData = null;
-        lockLoaded = false;
-        lockInitSorted(mode);
-        if (navigator.vibrate) navigator.vibrate(40);
     }
 
     function lockRenderSorted(mode) {
@@ -24708,16 +24624,6 @@
         if (typeof KipFav !== 'undefined') KipFav.wrapKipCardsForFavSwipe('.lock-card', 'lock', 'data-lock-id');
     }
 
-    function lockScrollToGroup(el) {
-        if (!el) return;
-        const mode = el.getAttribute('data-mode') || 'type';
-        const ph = document.querySelector('#page-lockouts-' + mode + ' .page-inline-header');
-        const stickyHeight = ph ? ph.offsetHeight : 56;
-        const rect = el.getBoundingClientRect();
-        const targetY = window.scrollY + rect.top - stickyHeight - 8;
-        window.scrollTo({ top: Math.max(0, targetY), behavior: 'auto' });
-    }
-
     // ===== Открытие карточки блокировки (отдельная страница, как у приборов) =====
     function lockOpenDetail(lockId) {
         if (!lockId) return;
@@ -24881,15 +24787,6 @@
         if (/^\d{2}\.\d{2}\.\d{4}$/.test(str)) return str;
         return str;
     }
-    function valveGetLastUpdateDate() {
-        try {
-            const raw = localStorage.getItem('valvesLastUpdate');
-            if (!raw) return '';
-            const d = new Date(raw);
-            if (isNaN(d.getTime())) return '';
-            return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
-        } catch (e) { return ''; }
-    }
 
     async function valveInitSorted(mode) {
         if (!valveLoaded || !valveData) {
@@ -24909,13 +24806,6 @@
             }
         }
         valveRenderSorted(mode);
-    }
-
-    function valveForceRefresh(mode) {
-        valveData = null;
-        valveLoaded = false;
-        valveInitSorted(mode);
-        if (navigator.vibrate) navigator.vibrate(40);
     }
 
     function valveRenderSorted(mode) {
@@ -25403,16 +25293,6 @@
         if (typeof KipFav !== 'undefined') KipFav.wrapKipCardsForFavSwipe('.valve-card', 'valve', 'data-valve-id');
     }
 
-    function valveScrollToGroup(el) {
-        if (!el) return;
-        const mode = el.getAttribute('data-mode') || 'type';
-        const ph = document.querySelector('#page-valves-' + mode + ' .page-inline-header');
-        const stickyHeight = ph ? ph.offsetHeight : 56;
-        const rect = el.getBoundingClientRect();
-        const targetY = window.scrollY + rect.top - stickyHeight - 8;
-        window.scrollTo({ top: Math.max(0, targetY), behavior: 'auto' });
-    }
-
     // ===== Открытие карточки клапана (отдельная страница, как у приборов/блокировок) =====
     function valveOpenDetail(valveId) {
         if (!valveId) return;
@@ -25733,15 +25613,6 @@
         if (/^\d{2}\.\d{2}\.\d{4}$/.test(str)) return str;
         return str;
     }
-    function regulatorGetLastUpdateDate() {
-        try {
-            const raw = localStorage.getItem('regulatorsLastUpdate');
-            if (!raw) return '';
-            const d = new Date(raw);
-            if (isNaN(d.getTime())) return '';
-            return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
-        } catch (e) { return ''; }
-    }
 
     async function regulatorInitSorted(mode) {
         if (!regulatorLoaded || !regulatorData) {
@@ -25761,13 +25632,6 @@
             }
         }
         regulatorRenderSorted(mode);
-    }
-
-    function regulatorForceRefresh(mode) {
-        regulatorData = null;
-        regulatorLoaded = false;
-        regulatorInitSorted(mode);
-        if (navigator.vibrate) navigator.vibrate(40);
     }
 
     function regulatorRenderSorted(mode) {
@@ -26076,16 +25940,6 @@
         if (typeof KipFav !== 'undefined') KipFav.wrapKipCardsForFavSwipe('.regulator-card', 'reg', 'data-regulator-id');
     }
 
-    function regulatorScrollToGroup(el) {
-        if (!el) return;
-        const mode = el.getAttribute('data-mode') || 'type';
-        const ph = document.querySelector('#page-regulators-' + mode + ' .page-inline-header');
-        const stickyHeight = ph ? ph.offsetHeight : 56;
-        const rect = el.getBoundingClientRect();
-        const targetY = window.scrollY + rect.top - stickyHeight - 8;
-        window.scrollTo({ top: Math.max(0, targetY), behavior: 'auto' });
-    }
-
     // ===== Открытие карточки регулятора (отдельная страница, как у приборов/блокировок/клапанов) =====
     function regulatorOpenDetail(regulatorId) {
         if (!regulatorId) return;
@@ -26299,15 +26153,6 @@
         if (/^\d{2}\.\d{2}\.\d{4}$/.test(str)) return str;
         return str;
     }
-    function projectGetLastUpdateDate() {
-        try {
-            const raw = localStorage.getItem('projectsLastUpdate');
-            if (!raw) return '';
-            const d = new Date(raw);
-            if (isNaN(d.getTime())) return '';
-            return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
-        } catch (e) { return ''; }
-    }
     function projectStatusClass(status) {
         const s = String(status || '').toLowerCase().trim();
         if (s === 'выполнен')   return 'project-card-status-done';
@@ -26405,13 +26250,6 @@
             }
         }
         projectsRenderSorted(mode);
-    }
-
-    function projectsForceRefresh(mode) {
-        projectData = null;
-        projectLoaded = false;
-        projectInitSorted(mode);
-        if (navigator.vibrate) navigator.vibrate(40);
     }
 
     function projectsRenderSorted(mode) {
@@ -26708,16 +26546,6 @@
         kipRenderSearchCounter(list, items.length, __searchTotal, rawQuery);
         // Добавить кликабельность значка избранного на карточках проектов
         if (typeof KipFav !== 'undefined') KipFav.wrapKipCardsForFavSwipe('.project-card', 'proj', 'data-project-id');
-    }
-
-    function projectsScrollToGroup(el) {
-        if (!el) return;
-        const mode = el.getAttribute('data-mode') || 'prod';
-        const ph = document.querySelector('#page-projects-' + mode + ' .page-inline-header');
-        const stickyHeight = ph ? ph.offsetHeight : 56;
-        const rect = el.getBoundingClientRect();
-        const targetY = window.scrollY + rect.top - stickyHeight - 8;
-        window.scrollTo({ top: Math.max(0, targetY), behavior: 'auto' });
     }
 
     // ===== Открытие карточки проекта (отдельная страница) =====
@@ -28650,14 +28478,6 @@
         bodyEl.scrollTop = 0;
     }
 
-    // Рендер билета в detail-panel при навигации (для десктопа)
-    function ticketRenderDetailInPanel() {
-        const catId = window._ticketDetailCatId;
-        const ti = window._ticketDetailIndex || 0;
-        if (!catId) return;
-        ticketSelectItem(catId, ti);
-    }
-
     // Картика загрузилась успешно — убрать таймаут, оставить <img> видимым
     function ticketImgOk(imgId) {
         const img = document.getElementById(imgId);
@@ -29009,11 +28829,6 @@
     /** Определяет, работает ли приложение в десктопном режиме */
     function isDesktop() {
         return window.matchMedia('(min-width: 1024px)').matches;
-    }
-
-    /** Определяет, работает ли приложение в планшетном режиме */
-    function isTablet() {
-        return window.matchMedia('(min-width: 768px) and (max-width: 1023px)').matches;
     }
 
     /** Страницы, которые на десктопе открывают detail-panel вместо перехода */
@@ -32616,9 +32431,6 @@ function kipPrompt(msg, defaultVal) {
     function validatePositiveField(input) {
         return validateField(input, (val) => !isNaN(val) && val > 0, 'Должно быть положительным числом');
     }
-    function validateNonNegativeField(input) {
-        return validateField(input, (val) => !isNaN(val) && val >= 0, 'Должно быть неотрицательным числом');
-    }
     function validateRangeField(input, min, max) {
         return validateField(input, (val) => !isNaN(val) && val >= min && val <= max,
             'Должно быть в диапазоне ' + min + '–' + max);
@@ -32780,31 +32592,6 @@ function setSignalDefaults() { let type=document.getElementById('sigType').value
     function updateScaleQueryUnits(){ let unit=document.getElementById('scaleUnitName').value||'ед.'; document.getElementById('scaleQueryUnit').textContent=unit; let sigRange=getSignalRangeAndUnit(document.getElementById('sigType').value); document.getElementById('scaleQuerySigUnit').textContent=sigRange.unit; }
     updateScaleQueryUnits();
 
-    // Расчёт погрешности для всех типов
-    function toggleErrorClassFields(prefix) {
-        let form = document.getElementById(prefix + 'class_form').value;
-        let groups = ['group_simple', 'group_underline', 'group_circle', 'group_fraction'];
-        groups.forEach(g => {
-            let el = document.getElementById(prefix + g);
-            if (el) el.style.display = 'none';
-        });
-        let showMap = {
-            'number': 'group_simple',
-            'underline': 'group_underline',
-            'circle': 'group_circle',
-            'fraction': 'group_fraction'
-        };
-        let showEl = document.getElementById(prefix + showMap[form]);
-        if (showEl) showEl.style.display = 'block';
-        let infoEl = document.getElementById(prefix + 'class_info');
-        if (infoEl) {
-            if (form === 'number') infoEl.innerHTML = 'Xн = ВПИ − НПИ (диапазон измерения)';
-            else if (form === 'underline') infoEl.innerHTML = 'Xн = длина шкалы (в единицах измерения)';
-            else if (form === 'circle') infoEl.innerHTML = 'Относительная погрешность постоянна во всём диапазоне';
-            else if (form === 'fraction') infoEl.innerHTML = 'c/d — аддитивная/мультипликативная составляющие относительной погрешности';
-        }
-    }
-
     // Переключение видимости поля "Своё значение" для датчиков давления
     function toggleEpCustomClass() {
         let sel = document.getElementById('ep_class_val');
@@ -32908,71 +32695,6 @@ function setSignalDefaults() { let type=document.getElementById('sigType').value
         html += '<div class="converter-result-item"><span class="converter-result-label">Класс точности</span><span class="converter-result-value"><span class="greek-delta">δ</span> = ' + formatNumber(cls) + '% (относительная)</span></div>';
         html += '<div class="converter-result-item"><span class="converter-result-label">Текущее значение (X)</span><span class="converter-result-value">' + formatNumber(xCurrent) + '</span></div>';
         html += '<div class="converter-result-item"><span class="converter-result-label">Абсолютная погрешность (±Δ)</span><span class="converter-result-value" style="color:#4ac771;">± ' + formatNumber(absErr) + ' ед.изм.</span></div>';
-        html += '<div class="converter-result-item" style="flex-direction:column;align-items:flex-start;gap:4px;"><span class="converter-result-label">Формула расчёта</span><span style="font-size:13px;color:rgba(140,180,210,0.9);line-height:1.5;">' + formulaHTML + ' ед.изм.</span></div>';
-        document.getElementById(prefix + 'results').innerHTML = html;
-        document.getElementById(prefix + 'results').style.display = 'block';
-        setTimeout(() => document.getElementById(prefix + 'results').scrollIntoView({behavior:'smooth',block:'start'}), 100);
-    }
-
-    function calcErrorGOST(prefix) {
-        let form = document.getElementById(prefix + 'class_form').value;
-        let absErr, relErr, formulaHTML, xNorm, xNormDesc, xCurrent;
-        if (form === 'number') {
-            let cls = parseLocaleNumber(document.getElementById(prefix + 'class_val').value);
-            let xmin = parseLocaleNumber(document.getElementById(prefix + 'xmin').value);
-            let xmax = parseLocaleNumber(document.getElementById(prefix + 'xmax').value);
-            xCurrent = parseLocaleNumber(document.getElementById(prefix + 'x_current').value);
-            if (isNaN(cls) || cls <= 0) { showToast('Введите класс точности'); return; }
-            if (isNaN(xmin) || isNaN(xmax)) { showToast('Введите диапазон измерения'); return; }
-            if (xmin >= xmax) { showToast('НПИ должен быть меньше ВПИ'); return; }
-            xNorm = xmax - xmin;
-            xNormDesc = 'Xн = ВПИ − НПИ = ' + formatNumber(xmax) + ' − ' + (xmin < 0 ? '(' + formatNumber(xmin) + ')' : formatNumber(xmin)) + ' = ' + formatNumber(xNorm);
-            absErr = (cls / 100) * xNorm;
-            formulaHTML = 'Δ = ±(<span class="greek-gamma">γ</span>/100)·Xн = ±(' + formatNumber(cls) + '/100)·' + formatNumber(xNorm) + ' = ±' + formatNumber(absErr);
-            if (!isNaN(xCurrent) && xCurrent !== 0) {
-                relErr = (absErr / Math.abs(xCurrent)) * 100;
-                formulaHTML += '<br><span class="greek-delta">δ</span> = ±(Δ/|X|)·100 = ±(' + formatNumber(absErr) + '/' + formatNumber(Math.abs(xCurrent)) + ')·100 = ±' + formatNumber(relErr) + '%';
-            }
-        } else if (form === 'underline') {
-            let cls = parseLocaleNumber(document.getElementById(prefix + 'class_val_u').value);
-            xNorm = parseLocaleNumber(document.getElementById(prefix + 'xn_scale').value);
-            xCurrent = parseLocaleNumber(document.getElementById(prefix + 'x_current_u').value);
-            if (isNaN(cls) || cls <= 0) { showToast('Введите класс точности'); return; }
-            if (isNaN(xNorm) || xNorm <= 0) { showToast('Введите нормирующее значение'); return; }
-            absErr = (cls / 100) * xNorm;
-            formulaHTML = 'Δ = ±(<span class="greek-gamma">γ</span>/100)·Xн = ±(' + formatNumber(cls) + '/100)·' + formatNumber(xNorm) + ' = ±' + formatNumber(absErr);
-            if (!isNaN(xCurrent) && xCurrent !== 0) {
-                relErr = (absErr / Math.abs(xCurrent)) * 100;
-                formulaHTML += '<br><span class="greek-delta">δ</span> = ±(Δ/|X|)·100 = ±' + formatNumber(relErr) + '%';
-            }
-        } else if (form === 'circle') {
-            let cls = parseLocaleNumber(document.getElementById(prefix + 'class_val_c').value);
-            xCurrent = parseLocaleNumber(document.getElementById(prefix + 'x_current_c').value);
-            if (isNaN(cls) || cls <= 0) { showToast('Введите класс точности'); return; }
-            if (isNaN(xCurrent) || xCurrent === 0) { showToast('Введите текущее значение (X≠0)'); return; }
-            relErr = cls;
-            absErr = (cls / 100) * Math.abs(xCurrent);
-            formulaHTML = 'Δ = ±(<span class="greek-delta">δ</span>/100)·|X| = ±(' + formatNumber(cls) + '/100)·' + formatNumber(Math.abs(xCurrent)) + ' = ±' + formatNumber(absErr);
-            formulaHTML += '<br><span class="greek-delta">δ</span> = ±' + formatNumber(cls) + '% (постоянная)';
-        } else if (form === 'fraction') {
-            let c = parseLocaleNumber(document.getElementById(prefix + 'c_val').value);
-            let d = parseLocaleNumber(document.getElementById(prefix + 'd_val').value);
-            let xmax = parseLocaleNumber(document.getElementById(prefix + 'xmax_f').value);
-            xCurrent = parseLocaleNumber(document.getElementById(prefix + 'x_current_f').value);
-            if (isNaN(c) || isNaN(d) || c <= 0 || d <= 0) { showToast('Введите c и d'); return; }
-            if (isNaN(xmax) || xmax <= 0) { showToast('Введите ВПИ'); return; }
-            if (isNaN(xCurrent) || xCurrent === 0) { showToast('Введите текущее значение (X≠0)'); return; }
-            relErr = c + d * (Math.abs(xmax / xCurrent) - 1);
-            absErr = (relErr / 100) * Math.abs(xCurrent);
-            formulaHTML = '<span class="greek-delta">δ</span> = ±[c + d·(|Xmax/X| − 1)] = ±[' + formatNumber(c) + ' + ' + formatNumber(d) + '·(|' + formatNumber(xmax) + '/' + formatNumber(Math.abs(xCurrent)) + '| − 1)] = ±' + formatNumber(relErr) + '%';
-            formulaHTML += '<br>Δ = ±(<span class="greek-delta">δ</span>/100)·|X| = ±' + formatNumber(absErr);
-        }
-        let formNames = {'number': 'число (приведённая)', 'underline': 'число с подчёркиванием (приведённая)', 'circle': 'число в кружке (относительная)', 'fraction': 'дробь c/d (относительная)'};
-        let html = '<div class="converter-result-label-title">Результаты расчёта (ГОСТ 8.401-80)</div>';
-        html += '<div class="converter-result-item"><span class="converter-result-label">Форма класса точности</span><span class="converter-result-value">' + formNames[form] + '</span></div>';
-        if (xNorm !== undefined) html += '<div class="converter-result-item"><span class="converter-result-label">Нормирующее значение (Xн)</span><span class="converter-result-value">' + formatNumber(xNorm) + ' <span style="font-size:11px;color:rgba(140,180,210,0.7);">(' + xNormDesc + ')</span></span></div>';
-        html += '<div class="converter-result-item"><span class="converter-result-label">Абсолютная погрешность (±Δ)</span><span class="converter-result-value" style="color:#4ac771;">± ' + formatNumber(absErr) + ' ед.изм.</span></div>';
-        if (relErr !== undefined) html += '<div class="converter-result-item"><span class="converter-result-label">Относительная погрешность (±<span class="greek-delta">δ</span>)</span><span class="converter-result-value" style="color:#4ac771;">± ' + formatNumber(relErr) + ' %</span></div>';
         html += '<div class="converter-result-item" style="flex-direction:column;align-items:flex-start;gap:4px;"><span class="converter-result-label">Формула расчёта</span><span style="font-size:13px;color:rgba(140,180,210,0.9);line-height:1.5;">' + formulaHTML + ' ед.изм.</span></div>';
         document.getElementById(prefix + 'results').innerHTML = html;
         document.getElementById(prefix + 'results').style.display = 'block';
@@ -33186,31 +32908,6 @@ function setSignalDefaults() { let type=document.getElementById('sigType').value
             calcElcScaleError();
         } else {
             calcElsScaleError();
-        }
-    }
-
-    // Пределы погрешности по ГОСТ OIML R 76-1-2011 (таблица 3)
-    // mpe = ±e при 0 < m ≤ 500e; ±2e при 500e < m ≤ 2000e; ±3e при 2000e < m ≤ Max
-    // Для класса I: mpe = ±e при 0 < m ≤ 50000e; ±2e при 50000e < m ≤ 200000e; ±3e при 200000e < m
-    function getOimlMpe(oimlClass, loadInE) {
-        // loadInE = нагрузка, выраженная в числе поверочных делений e
-        if (loadInE <= 0) return 0;
-        if (oimlClass === 'I') {
-            if (loadInE <= 50000) return 1;
-            if (loadInE <= 200000) return 2;
-            return 3;
-        } else if (oimlClass === 'II') {
-            if (loadInE <= 5000) return 1;
-            if (loadInE <= 20000) return 2;
-            return 3;
-        } else if (oimlClass === 'III') {
-            if (loadInE <= 500) return 1;
-            if (loadInE <= 2000) return 2;
-            return 3;
-        } else { // IIII
-            if (loadInE <= 50) return 1;
-            if (loadInE <= 200) return 2;
-            return 3;
         }
     }
 
@@ -36397,22 +36094,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // ============================================================
-        // Системная кнопка "← Назад" в верхнем углу экрана входа.
-        // Контекстно-зависимое поведение:
-        //   - Шаг 2 (OTP активен) → вернуться на Шаг 1 (backToStep1).
-        //   - Шаг 1 (email) → cancelLogin (закрыть экран, гостевой режим).
-        // ============================================================
-        handleBackButton: function() {
-            const step2 = document.getElementById('authStep2');
-            const onStep2 = step2 && step2.classList.contains('active');
-            if (onStep2) {
-                this.backToStep1();
-            } else {
-                this.cancelLogin();
-            }
-        },
-
-        // ============================================================
         // Отмена входа: закрыть экран входа и вернуться в гостевой
         // режим ("Общий доступ"). Токен при этом не трогается (его
         // нет у гостя), heartbeat не запускается. Пользователь
@@ -36472,31 +36153,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // ============================================================
         _showError: function(msg) {
             document.getElementById('authError').textContent = msg || '';
-        },
-
-        // ============================================================
-        // Получить текущего пользователя (с кэшированием 30 сек).
-        // ============================================================
-        getCurrentUser: function() {
-            const token = this.getToken();
-            if (!token) return Promise.reject(new Error('no_session'));
-
-            if (this._cachedRole && (Date.now() - this._lastRoleFetch) < this.ROLE_CACHE_TTL) {
-                return Promise.resolve({
-                    userId: this._cachedUserId,
-                    email: this._cachedEmail,
-                    role: this._cachedRole
-                });
-            }
-
-            const self = this;
-            return this.api('getCurrentUser', { token: token }).then(function(data) {
-                self._cachedRole = data.role;
-                self._cachedEmail = data.email;
-                self._cachedUserId = data.userId;
-                self._lastRoleFetch = Date.now();
-                return data;
-            });
         },
 
         // ============================================================
@@ -39537,20 +39193,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
             }
             return { active: active, archived: archived };
-        },
-
-        // ============================================================
-        // Toggle компактного поиска в шапке.
-        // Кнопка-иконка переключает видимость поля ввода.
-        // При раскрытии — фокус на поле; при скрытии — очистка + reload.
-        // ============================================================
-        // Task 152: переключение поиска теперь общим делегированным
-        // обработчиком (.dev-search-toggle-btn, data-search-input) —
-        // как на всех страницах. Функция оставлена для совместимости
-        // (вдруг где-то вызывается напрямую) и пробрасывает клик.
-        toggleSearch: function() {
-            const btn = document.getElementById('cjSearchToggleBtn');
-            if (btn) btn.click();
         },
 
         // ============================================================
@@ -64067,13 +63709,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return (r % 1 === 0) ? String(r) : String(r).replace('.', ',');
         },
 
-        _fmtDateTime: function(ms) {
-            var d = new Date(ms);
-            var p2 = function(v) { return (v < 10 ? '0' : '') + v; };
-            return p2(d.getDate()) + '.' + p2(d.getMonth() + 1) + '.' + d.getFullYear() +
-                   ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes());
-        },
-
         _esc: function(s) {
             if (s === null || s === undefined) return '';
             return String(s)
@@ -65738,82 +65373,6 @@ function updateConnectionIndicator() {
         el.classList.remove('cloud-visible');  // в офлайне зелёное не нужно
         el.title = 'Офлайн — обновление недоступно';
         el.setAttribute('aria-label', 'Офлайн — обновление недоступно');
-    }
-}
-
-// Главная функция обновления данных приложения.
-// В десктопной версии (Electron) выполняет принудительное обновление:
-// очищает кэш Service Worker, unregister SW и перезагружает страницу.
-// В мобильной версии — мягкое обновление данных (как раньше).
-async function refreshAppData() {
-    const el = document.getElementById('connectionIndicator');
-    if (!el) return;
-
-    // Десктоп (Electron): принудительное обновление — очистка кэша + жёсткая перезагрузка
-    if (typeof process !== 'undefined' && process.type === 'renderer') {
-        // Electron renderer
-        forceDesktopRefresh();
-        return;
-    }
-
-    // Также определяем десктоп через matchMedia (надёжнее для PWA в Electron)
-    if (window.matchMedia('(min-width: 1024px)').matches && window.__isElectron) {
-        forceDesktopRefresh();
-        return;
-    }
-
-    if (!navigator.onLine) {
-        showToast('Нет подключения к интернету');
-        return;
-    }
-
-    if (el.classList.contains('refreshing')) {
-        return;
-    }
-
-    el.classList.add('refreshing');
-    el.classList.remove('cloud-visible');  // скрываем облако на время обновления
-    el.title = 'Обновление…';
-    const startTime = Date.now();
-    const MIN_ANIMATION_MS = 800;
-
-    try {
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-            navigator.serviceWorker.ready.then(reg => reg.update()).catch(() => {});
-        }
-
-        if (typeof _ticketsData !== 'undefined') {
-            _ticketsData = null;
-        }
-        if (typeof loadTicketsData === 'function') {
-            await loadTicketsData(true);
-        }
-
-        if (typeof renderTickets === 'function') {
-            const activePage = document.querySelector('.page-content.active');
-            if (activePage) {
-                const pageId = activePage.id.replace('page-', '');
-                if (pageId && pageId.indexOf('tickets-') === 0) {
-                    renderTickets(pageId, '');
-                }
-            }
-        }
-
-        // Обновить кнопку «Избранное» на дашборде (после обновления данных)
-        if (typeof KipFav !== 'undefined') KipFav.updateDashboardButton();
-
-        showToast('Данные обновлены');
-    } catch (e) {
-        showToast('Ошибка обновления: ' + (e.message || e));
-    } finally {
-        const elapsed = Date.now() - startTime;
-        const remaining = Math.max(0, MIN_ANIMATION_MS - elapsed);
-        setTimeout(() => {
-            el.classList.remove('refreshing');
-            updateConnectionIndicator();
-            // Показываем зелёное облако на 5 секунд после обновления
-            showCloudBriefly();
-        }, remaining);
     }
 }
 
