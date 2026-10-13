@@ -40,6 +40,13 @@ const { extractFunctions } = require('./extract-functions.js');
 const INDEX_SRC = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const SW_SRC = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
 
+// Гвард окружения (по образцу Task 517 в test-task480.js): синк в
+// десктоп-зеркала тянет только scripts/*.gs и scripts/sync-*.py —
+// scripts/task518-audit.js (и task518-bump-sw.py) в зеркале НЕТ;
+// ассерт существования — только для PWA-репо.
+const AUDIT_SCRIPT_PRESENT = fs.existsSync(
+    path.join(__dirname, '..', 'scripts', 'task518-audit.js'));
+
 // Извлечение исходника function-декларации по имени (баланс фигурных
 // скобок) — как в test-task371.js
 function grabFn(name) {
@@ -83,7 +90,7 @@ describe('Task 518 — SRC: защита номиналов обратного �
         assertTrue(fn.indexOf('Task 518') !== -1, 'маркер Task 518');
     });
 
-    test('Аудит-скрипт scripts/task518-audit.js существует', () => {
+    if (AUDIT_SCRIPT_PRESENT) test('Аудит-скрипт scripts/task518-audit.js существует', () => {
         assertTrue(fs.existsSync(path.join(__dirname, '..', 'scripts', 'task518-audit.js')),
             'двусторонний аудит (до фикса 56 находок, после — 0)');
     });
