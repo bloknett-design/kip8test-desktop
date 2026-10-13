@@ -797,6 +797,12 @@ require('./test-task508.js');
 // setupTriggers из Utils.gs и 8 мёртвых backend-функций.
 // SW v731.
 require('./test-task513.js');
+// Task 518: заявка Cu50 (50 Ом → −1,2970e−14 °C вместо 0) +
+// аудит всех Инженерных калькуляторов: гвард номинала и сглаживание
+// в tempCalcInvertValue, якорь E(0)=0 в calcTcVoltage
+// (scripts/task518-audit.js: 102 пробы, было 56 находок).
+// SW v732.
+require('./test-task518.js');
 require('./test-deploy-url.js');
 
 // Запускаем
