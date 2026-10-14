@@ -5,8 +5,9 @@
 //      дневного персонала — по часам, которые указали при
 //      добавлении кода в ячейку шахматки» — д/н считаются
 //      ПЕРЕРАБОТКОЙ (не явки/часы/Д/Н): сменному 12 ч, дневному —
-//      часы из правки ячейки (малая форма часов в попапе при
-//      выборе д/н; шит «Дополнительно…» — поле «Часы»; поле
+//      часы из правки ячейки (Task 521: при выборе д/н в попапе —
+//      поля «Время начала/окончания работ», часы считаются
+//      автоматически; шит «Дополнительно…» — поле «Часы»; поле
 //      «часы» записи, серверная колонка K «Записи_графика»),
 //      фолбэк 8 ч для старых записей без часов.
 //   2) «Вместо кодов в шапке итогов учёта используй слова» —
@@ -25,8 +26,10 @@
 //   (ws-tt-over), полная высота панели + скрытие сетки (ws-tt-open),
 //   малая форма часов (.ws-dn-*).
 //   Клиент VM: onPopupStatus (сменный — сразу, дневной — форма);
-//   _renderDnHoursForm (префилл 8/текущие часы, кнопки, Enter);
-//   applyDnHours (валидация 0,5..24, округление до 0,1, тосты);
+//   _renderDnHoursForm (Task 521: поля «Время начала/окончания
+//   работ», префилл 7:30/19:30 + текущие часы как длительность,
+//   кнопки, Enter); applyDnHours (Task 521: часы = «окончание −
+//   начало», полночь +24 ч, округление до 0,1, тосты);
 //   dnHoursBack (возврат к кодам без перепозиционирования);
 //   _applyCellStatus (поле «часы»: д/н+часы → число, без — null,
 //   не-д/н → null); submitCellForm (часы: валидные/пустые/ошибка);
@@ -35,7 +38,7 @@
 //   Сервер: listEntries читает 11 колонок (часы: число/null/
 //   нормализация «7,2»); setManualEntry валидирует 0,5..24, пишет
 //   колонку K (обновление и вставка), часы=null без поля, аудит.
-//   SW: kipia-test-v733.
+//   SW: kipia-test-v734.
 //
 // Запуск: через tests/run-all.js (require './test-task322.js').
 
@@ -236,17 +239,18 @@ describe('Task 322 — VM: onPopupStatus — перехват д/н', () => {
 
 // ============================================================
 // 4. VM: _renderDnHoursForm / applyDnHours / dnHoursBack
+// Task 521: форма ПЕРЕДЕЛАНА — поля «Время начала/окончания
+// работ» (type=time) вместо ручного ввода часов; часы считаются
+// автоматически («окончание − начало», полночь +24 ч).
+// Моки: #wsDnStart/#wsDnEnd/#wsDnCalc.
 // ============================================================
-describe('Task 322 — VM: малая форма часов', () => {
+describe('Task 322/521 — VM: малая форма времени работ', () => {
 
     const TOASTS = [];
-    const inputMock = { value: '', focus: function() {} };
-    const popupEl = {
-        innerHTML: '',
-        querySelector: function(sel) {
-            return (sel === '#wsDnHours') ? inputMock : null;
-        }
-    };
+    const startMock = { value: '', focus: function() {} };
+    const endMock = { value: '', focus: function() {} };
+    const calcMock = { textContent: '' };
+    const popupEl = { innerHTML: '' };
 
     function toastOn() {
         TOASTS.length = 0;
@@ -255,7 +259,9 @@ describe('Task 322 — VM: малая форма часов', () => {
     function toastOff() { delete global.KipToast; }
 
     // реальные чистые методы + мок-функции контекста
+    // Task 521: +dnHoursRecalc/_dnParseTime/_dnMinutesToHHMM
     const FORM_METHODS = ['_renderDnHoursForm', 'applyDnHours', 'dnHoursBack',
+                          'dnHoursRecalc', '_dnParseTime', '_dnMinutesToHHMM',
                           '_statusMeta', '_esc', '_escAttr', '_fmtTotalsNum'];
     const STATUS_CODES = [
         { code: 'д', name: 'День в вых./праздник', color: '#FFD54F' },
@@ -271,88 +277,98 @@ describe('Task 322 — VM: малая форма часов', () => {
             _STATUS_CODES: STATUS_CODES,
             _effectiveEntry: function() { return effEntry; },
             _applyCellStatus: function(d, t, c, h) { applied.push({ c: c, h: h }); },
-            closeCellPopup: function() { popupEl.innerHTML = ''; inputMock.value = ''; },
+            closeCellPopup: function() { popupEl.innerHTML = ''; },
             _renderGrid: function() {},
             _updateSaveBtn: function() {},
             _renderCellPopup: function() { return 'CODES-LIST'; }
-        }, mockDoc({ wsCellPopup: popupEl, wsDnHours: inputMock }));
+        }, mockDoc({ wsCellPopup: popupEl, wsDnStart: startMock,
+                     wsDnEnd: endMock, wsDnCalc: calcMock }));
         host.__applied = applied;
         return host;
     }
 
-    test('форма: заголовок с ФИО, поле, префилл 8, подсказка, Enter', () => {
+    test('форма: заголовок с ФИО, поля времени, префилл 8 ч, Enter', () => {
         const host = makeFormHost(null);
         host._renderDnHoursForm('д', '2026-09-05', '023');
         const h = popupEl.innerHTML;
         assertTrue(h.indexOf('2026-09-05') !== -1 && h.indexOf('Петров П.П.') !== -1,
             'заголовок: дата · ФИО');
-        assertTrue(h.indexOf('id="wsDnHours"') !== -1, 'поле ввода часов');
-        assertTrue(h.indexOf('value="8"') !== -1, 'префилл 8 (обычный день дневного)');
-        assertTrue(h.indexOf('Часы переработки в этот день') !== -1, 'подпись поля');
+        assertTrue(h.indexOf('id="wsDnStart"') !== -1 && h.indexOf('id="wsDnEnd"') !== -1,
+            'два поля времени (Task 521)');
+        assertTrue(h.indexOf('value="07:30"') !== -1 && h.indexOf('value="15:30"') !== -1,
+            'префилл 7:30–15:30 (8 ч — обычный день дневного)');
+        assertTrue(h.indexOf('Время начала работ') !== -1 &&
+            h.indexOf('Время окончания работ') !== -1, 'подписи полей');
+        assertTrue(h.indexOf('id="wsDnCalc"') !== -1, 'строка живого расчёта');
         assertTrue(h.indexOf('Готово') !== -1 && h.indexOf('Назад к кодам') !== -1,
             'кнопки Готово/Назад');
         assertTrue(h.indexOf('applyDnHours') !== -1, 'применение по кнопке');
         assertTrue(h.indexOf("event.key==='Enter'") !== -1, 'Enter применяет');
         assertTrue(h.indexOf('День в вых./праздник') !== -1, 'название кода в форме');
-        assertTrue(h.indexOf('Дневному персоналу переработка считается') !== -1,
-            'подсказка о смысле часов');
+        assertTrue(h.indexOf('рассчитываются автоматически') !== -1,
+            'подсказка об автоматическом расчёте');
     });
 
-    test('форма: существующие часы префиллом (7,2)', () => {
+    test('форма: существующие часы — длительность префилла (7,2)', () => {
         const host = makeFormHost({ 'статус': 'д', 'часы': 7.2 });
         host._renderDnHoursForm('д', '2026-09-05', '023');
-        assertTrue(popupEl.innerHTML.indexOf('value="7,2"') !== -1,
-            'текущие часы с запятой');
+        assertTrue(popupEl.innerHTML.indexOf('value="14:42"') !== -1,
+            'окончание = 7:30 + 7,2 ч (текущие часы записи)');
     });
 
-    test('форма: чужой код в ячейке — префилл 8 (не чужие часы)', () => {
+    test('форма: чужой код в ячейке — префилл 8 ч (не чужие часы)', () => {
         const host = makeFormHost({ 'статус': 'Д', 'часы': 12 });
         host._renderDnHoursForm('д', '2026-09-05', '023');
-        assertTrue(popupEl.innerHTML.indexOf('value="8"') !== -1,
+        assertTrue(popupEl.innerHTML.indexOf('value="15:30"') !== -1,
             'часы берутся только у того же кода');
     });
 
-    test('applyDnHours: валидные часы (запятая) → правка с числом', () => {
+    test('applyDnHours: 08:00–15:12 → правка с числом 7,2', () => {
         toastOn();
         try {
             const host = makeFormHost(null);
             host._renderDnHoursForm('д', '2026-09-05', '023');
-            inputMock.value = '7,2';
+            startMock.value = '08:00';
+            endMock.value = '15:12';
             host.applyDnHours('д');
             assertEqual(host.__applied.length, 1, 'правка применена');
             assertEqual(host.__applied[0].c, 'д', 'код д');
-            assertTrue(Math.abs(host.__applied[0].h - 7.2) < 1e-9, 'часы 7,2 (запятая)');
+            assertTrue(Math.abs(host.__applied[0].h - 7.2) < 1e-9, 'часы 7,2 (из минут)');
             assertEqual(popupEl.innerHTML, '', 'попап закрыт');
             assertEqual(TOASTS.length, 0, 'без тостов');
         } finally { toastOff(); }
     });
 
-    test('applyDnHours: округление до 0,1 (7,17 → 7,2)', () => {
+    test('applyDnHours: округление до 0,1 (07:00–14:10 → 7,2)', () => {
         toastOn();
         try {
             const host = makeFormHost(null);
             host._renderDnHoursForm('д', '2026-09-05', '023');
-            inputMock.value = '7.17';
+            startMock.value = '07:00';
+            endMock.value = '14:10';
             host.applyDnHours('д');
             assertTrue(Math.abs(host.__applied[0].h - 7.2) < 1e-9, 'округлено к 0,1');
         } finally { toastOff(); }
     });
 
-    test('applyDnHours: мусор/мало/много — тост, правки нет', () => {
+    test('applyDnHours: мусор/пусто/совпало/мало — тост, правки нет', () => {
         toastOn();
         try {
-            ['', 'abc', '0', '0,2', '25', '-3'].forEach(function(raw) {
+            [['', '15:00'], ['07:30', ''], ['07:30', 'abc'],
+             ['08:00', '08:00'], ['08:00', '08:20']].forEach(function(pair) {
                 const host = makeFormHost(null);
                 host._renderDnHoursForm('д', '2026-09-05', '023');
-                inputMock.value = raw;
+                startMock.value = pair[0];
+                endMock.value = pair[1];
                 host.applyDnHours('д');
-                assertEqual(host.__applied.length, 0, 'правки нет для «' + raw + '»');
+                assertEqual(host.__applied.length, 0,
+                    'правки нет для «' + pair[0] + '»–«' + pair[1] + '»');
                 assertTrue(popupEl.innerHTML.indexOf('ws-dn-form') !== -1,
                     'форма остаётся');
             });
-            assertEqual(TOASTS.length, 6, 'по тосту на каждую ошибку');
-            assertTrue(TOASTS[0].indexOf('0,5') !== -1 && TOASTS[0].indexOf('24') !== -1,
-                'тост поясняет диапазон');
+            assertEqual(TOASTS.length, 5, 'по тосту на каждую ошибку');
+            assertTrue(TOASTS[0].indexOf('Укажите время начала и окончания') !== -1,
+                'первый тост поясняет незаполненное время');
         } finally { toastOff(); }
     });
 
@@ -947,10 +963,10 @@ describe('Task 322 — итоги: слова в шапке и колонка П
 // 11. SW: версия кэша
 // ============================================================
 describe('Task 322 — SW: версия кэша', () => {
-    test('SW: кэш поднят до kipia-test-v733 (Task 322)', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v733'") !== -1,
-            'CACHE_VERSION = kipia-test-v733');
-        assertFalse(SW_SRC.indexOf('kipia-test-v734') !== -1,
+    test('SW: кэш поднят до kipia-test-v734 (Task 322)', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v734'") !== -1,
+            'CACHE_VERSION = kipia-test-v734');
+        assertFalse(SW_SRC.indexOf('kipia-test-v735') !== -1,
             'v566 не существует (один инкремент на Task 326)');
     });
 });

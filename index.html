@@ -5791,10 +5791,12 @@
         color: var(--accent-blue, #4a8fc7);
         font-weight: 600;
     }
-    /* Task 322: МАЛАЯ ФОРМА ЧАСОВ в попапе ячейки — выбор «д»/«н»
-       дневным персоналом: строка кода (свотч/код/название — как в
-       списке), поле ввода часов (0,5..24), кнопки «Готово»/
-       «Назад к кодам», подсказка. Стили — в духе попапа */
+    /* Task 322: МАЛАЯ ФОРМА в попапе ячейки — выбор «д»/«н» дневным
+       персоналом: строка кода (свотч/код/название — как в списке),
+       поля, кнопки «Готово»/«Назад к кодам», подсказка. Task 521:
+       поле ввода часов заменено парой «Время начала работ»/
+       «Время окончания работ» (.ws-dn-times/.ws-dn-time) + строка
+       АВТООРАСЧЁТА часов (.ws-dn-calc). Стили — в духе попапа */
     .ws-dn-form {
         padding: 8px 10px 4px 10px;
         display: flex;
@@ -5882,6 +5884,38 @@
         padding-bottom: 4px;
     }
     [data-theme="light"] .ws-dn-hint { color: #777777; }
+    /* Task 521: время начала/окончания работ — ДВА поля в ряд
+       (малая форма д/н: часы переработки считаются автоматически,
+       поле ручного ввода часов удалено); строка живого расчёта
+       .ws-dn-calc — ЯНТАРНАЯ, как колонка «Переработка» итогов
+       (ws-tt-over, Task 322) */
+    .ws-dn-times {
+        display: flex;
+        gap: 8px;
+    }
+    .ws-dn-time {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .ws-dn-calc {
+        font-size: 12.5px;
+        font-weight: 700;
+        color: #e0a23c;
+        padding: 2px 2px 0 2px;
+    }
+    [data-theme="light"] .ws-dn-calc { color: #a06a13; }
+    /* нативный индикатор type=time (часы справа) — светлый в тёмной
+       теме (Chromium/Electron), в светлой — без фильтра */
+    .ws-dn-input::-webkit-calendar-picker-indicator {
+        filter: invert(1) opacity(0.75);
+        cursor: pointer;
+    }
+    [data-theme="light"] .ws-dn-input::-webkit-calendar-picker-indicator {
+        filter: none;
+    }
     /* Task 318: строка «Уволить…» в карточке сотрудника — опасное
        действие: КРАСНАЯ (как ✕ удаления мероприятия), а не
        акцент-синяя; наведение — красная подложка, не синяя */
@@ -56861,15 +56895,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Выбор статуса в попапе: применяется ЛОКАЛЬНО (в _PENDING),
         // мгновенной отправки на сервер нет. Ячейка сразу перекрашивается.
         // Task 322: коды «д»/«н» (работа в вых./праздник) у ДНЕВНОГО
-        // персонала (и без типа) — сначала МАЛАЯ ФОРМА ЧАСОВ в том же
-        // попапе: переработка дневного считается по часам, которые
-        // указали при добавлении кода (сменному — 12 ч, без вопроса).
+        // персонала (и без типа) — сначала МАЛАЯ ФОРМА в том же попапе:
+        // Task 521 (заявка) — часы переработки дневного РАССЧИТЫВАЮТСЯ
+        // АВТОМАТИЧЕСКИ из введённых времени начала и времени окончания
+        // работ в этот день (сменному — 12 ч, без вопроса).
         onPopupStatus: function(code) {
             if (!this._popupCell) return;
             var date = this._popupCell.date;
             var tabNo = this._popupCell['таб_номер'];
-            // Task 322: д/н НЕ сменному → форма часов (ввод обязателен
-            // для учёта переработки по фактическим часам)
+            // Task 322: д/н НЕ сменному → форма времени работ (часы
+            // переработки считаются из введённого времени, Task 521)
             if (code === 'д' || code === 'н') {
                 var emp = null;
                 for (var j = 0; j < this._EMPLOYEES.length; j++) {
@@ -56887,28 +56922,44 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._updateSaveBtn();
         },
 
-        // Task 322: МАЛАЯ ФОРМА ЧАСОВ в попапе ячейки — вместо списка
-        // кодов показывается ввод «Сколько часов?» для выбранного кода
-        // «д»/«н» (дневной персонал: переработка по указанным часам).
-        // Префилл: часы уже стоящие в записи/правке ячейки, иначе 8
-        // (обычный рабочий день дневного). Enter — применить,
-        // «Назад» — к списку кодов. Попап НЕ переизмеряется по месту
-        // (габариты близки к списку кодов) — перерисовка на месте.
+        // Task 322 → 521: МАЛАЯ ФОРМА ВРЕМЕНИ РАБОТ в попапе ячейки —
+        // вместо списка кодов показывается пара полей «Время начала
+        // работ» (#wsDnStart) и «Время окончания работ» (#wsDnEnd) для
+        // выбранного кода «д»/«н» (дневной персонал). Task 521 (заявка:
+        // «часы переработки в этот день должны рассчитываться
+        // автоматически в зависимости от введённых данных время начала
+        // и время окончания работ в этот день»): часы НЕ вводятся
+        // вручную — считаются автоматически как «окончание − начало»
+        // (окончание раньше начала — работа через полночь, +24 ч);
+        // живая строка #wsDnCalc («Переработка: N ч») обновляется на
+        // каждый ввод (dnHoursRecalc, oninput обоих полей). Префилл:
+        // «д» — с 7:30 (начало дневной смены), «н» — с 19:30;
+        // длительность — часы той же записи/правки, иначе 8 ч (обычный
+        // рабочий день дневного — дефолт Task 322 сохранён). Enter —
+        // применить, «Назад» — к списку кодов. Попап НЕ
+        // переизмеряется по месту (габариты близки к списку кодов) —
+        // перерисовка на месте.
         _renderDnHoursForm: function(code, date, tabNo) {
             var popup = document.getElementById('wsCellPopup');
             if (!popup) return;
             var meta = this._statusMeta(code) || {};
             var eff = this._effectiveEntry(date, tabNo) || {};
+            // Task 521: длительность префилла — часы той же записи
+            // (правки), иначе 8; переводится в пару «начало–окончание»
             var cur = (eff['статус'] === code) ? eff['часы'] : null;
-            var prefill = (typeof cur === 'number' && isFinite(cur) && cur > 0)
-                ? String(cur).replace('.', ',')
-                : '8';
+            var durH = (typeof cur === 'number' && isFinite(cur) && cur > 0)
+                ? (Math.round(cur * 10) / 10) : 8;
+            var startMin = (code === 'н') ? 19 * 60 + 30 : 7 * 60 + 30;
+            var endMin = (startMin + Math.round(durH * 60)) % (24 * 60);
+            var startVal = this._dnMinutesToHHMM(startMin);
+            var endVal = this._dnMinutesToHHMM(endMin);
             var title = this._esc(date) + ' · таб. №' + this._esc(tabNo);
             var emp = null;
             for (var j = 0; j < this._EMPLOYEES.length; j++) {
                 if (this._EMPLOYEES[j]['таб_номер'] === tabNo) { emp = this._EMPLOYEES[j]; break; }
             }
             if (emp) title = this._esc(date) + ' · ' + this._esc(emp['ФИО']);
+            var keyAttr = this._esc(code);
             popup.innerHTML =
                 '<div class="ws-popup-title">' + title + '</div>' +
                 '<div class="ws-dn-form">' +
@@ -56918,23 +56969,62 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         '<span class="ws-popup-code">' + this._esc(code) + '</span>' +
                         '<span class="ws-popup-name">' + this._esc(meta.name || '') + '</span>' +
                     '</div>' +
-                    '<label class="ws-dn-label" for="wsDnHours">Часы переработки в этот день</label>' +
-                    '<input type="text" inputmode="decimal" id="wsDnHours" class="ws-dn-input"' +
-                        ' value="' + this._escAttr(prefill) + '" autocomplete="off"' +
-                        ' enterkeyhint="done"' +
-                        ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();WorkSchedule.applyDnHours(\'' +
-                            this._esc(code) + '\')}">' +
+                    '<div class="ws-dn-times">' +
+                        '<div class="ws-dn-time">' +
+                            '<label class="ws-dn-label" for="wsDnStart">Время начала работ</label>' +
+                            '<input type="time" id="wsDnStart" class="ws-dn-input"' +
+                                ' value="' + startVal + '" autocomplete="off"' +
+                                ' oninput="WorkSchedule.dnHoursRecalc()"' +
+                                ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();WorkSchedule.applyDnHours(\'' +
+                                    keyAttr + '\')}">' +
+                        '</div>' +
+                        '<div class="ws-dn-time">' +
+                            '<label class="ws-dn-label" for="wsDnEnd">Время окончания работ</label>' +
+                            '<input type="time" id="wsDnEnd" class="ws-dn-input"' +
+                                ' value="' + endVal + '" autocomplete="off"' +
+                                ' oninput="WorkSchedule.dnHoursRecalc()"' +
+                                ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();WorkSchedule.applyDnHours(\'' +
+                                    keyAttr + '\')}">' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="ws-dn-calc" id="wsDnCalc">Переработка: ' +
+                        this._fmtTotalsNum(durH) + ' ч</div>' +
                     '<div class="ws-dn-buttons">' +
                         '<button type="button" class="ws-dn-ok" onclick="WorkSchedule.applyDnHours(\'' +
-                            this._esc(code) + '\')">Готово</button>' +
+                            keyAttr + '\')">Готово</button>' +
                         '<button type="button" class="ws-dn-back" onclick="WorkSchedule.dnHoursBack(\'' +
                             this._esc(date) + '\',\'' + this._esc(tabNo) + '\')">Назад к кодам</button>' +
                     '</div>' +
-                    '<div class="ws-dn-hint">Дневному персоналу переработка считается по этим часам</div>' +
+                    '<div class="ws-dn-hint">Часы переработки рассчитываются автоматически: время окончания минус время начала (работа через полночь учитывается)</div>' +
                 '</div>';
-            var input = popup.querySelector('#wsDnHours');
+            var input = document.getElementById('wsDnStart');
             if (input && input.focus) {
                 try { input.focus(); if (input.select) input.select(); } catch (e) {}
+            }
+        },
+
+        // Task 521: живой пересчёт строки «Переработка: N ч» при вводе
+        // времени (oninput обоих полей малой формы). Незаполненное или
+        // негодное время — прочерк; окончание раньше начала — работа
+        // через полночь (+24 ч, пометка в скобках); округление к 0,1 ч —
+        // как в итогах (_fmtTotalsNum)
+        dnHoursRecalc: function() {
+            var calcEl = document.getElementById('wsDnCalc');
+            if (!calcEl) return;
+            var startEl = document.getElementById('wsDnStart');
+            var endEl = document.getElementById('wsDnEnd');
+            var s = this._dnParseTime(startEl ? startEl.value : '');
+            var e = this._dnParseTime(endEl ? endEl.value : '');
+            if (s === null || e === null) {
+                calcEl.textContent = 'Переработка: —';
+                return;
+            }
+            var diff = e - s;
+            if (diff < 0) {
+                calcEl.textContent = 'Переработка: ' +
+                    this._fmtTotalsNum((diff + 24 * 60) / 60) + ' ч (через полночь)';
+            } else {
+                calcEl.textContent = 'Переработка: ' + this._fmtTotalsNum(diff / 60) + ' ч';
             }
         },
 
@@ -56948,20 +57038,45 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             popup.innerHTML = this._renderCellPopup(date, tabNo);
         },
 
-        // Task 322: применить «д»/«н» с часами из мини-формы (клетка
-        // попапа та же): валидация 0,5..24 (запятая/точка), ошибка —
-        // тост и форма остаётся; успех — правка в _PENDING (поле
-        // «часы»), попап закрывается как при обычном выборе кода
+        // Task 322 → 521: применить «д»/«н» с часами, РАССЧИТАННЫМИ
+        // из времени начала/окончания работ (клетка попапа та же):
+        // часы = «окончание − начало» (_dnParseTime обоих полей);
+        // окончание раньше начала — работа через полночь (+24 ч).
+        // Ошибки (тост, форма остаётся): незаполненное/негодное время;
+        // одинаковое начало и окончание; меньше 0,5 ч (серверный
+        // диапазон 0,5..24 — больше 24 ч из двух моментов суток
+        // получить нельзя). Округление к 0,1 ч — как в итогах/сервере.
+        // Успех — правка в _PENDING (поле «часы»), попап закрывается
+        // как при обычном выборе кода
         applyDnHours: function(code) {
             if (!this._popupCell) return;
-            var input = document.getElementById('wsDnHours');
-            var raw = input ? String(input.value || '') : '';
-            var val = parseFloat(raw.replace(',', '.').replace(' ', ''));
-            if (!isFinite(val) || val < 0.5 || val > 24) {
+            var startEl = document.getElementById('wsDnStart');
+            var endEl = document.getElementById('wsDnEnd');
+            var s = this._dnParseTime(startEl ? startEl.value : '');
+            var e = this._dnParseTime(endEl ? endEl.value : '');
+            if (s === null || e === null) {
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
-                    KipToast.show('Укажите часы от 0,5 до 24 (например, 8 или 7,2)');
+                    KipToast.show('Укажите время начала и окончания работ (например, 7:30 и 15:30)');
                 }
-                if (input && input.focus) { try { input.focus(); } catch (e) {} }
+                var badEl = (s === null) ? startEl : endEl;
+                if (badEl && badEl.focus) { try { badEl.focus(); } catch (e2) {} }
+                return;
+            }
+            var diff = e - s;
+            if (diff < 0) diff += 24 * 60;
+            var val = diff / 60;
+            if (val === 0) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Время окончания совпадает с временем начала — проверьте');
+                }
+                if (endEl && endEl.focus) { try { endEl.focus(); } catch (e2) {} }
+                return;
+            }
+            if (val < 0.5) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Получается меньше 0,5 ч переработки — проверьте время');
+                }
+                if (endEl && endEl.focus) { try { endEl.focus(); } catch (e2) {} }
                 return;
             }
             val = Math.round(val * 10) / 10;
@@ -56971,6 +57086,28 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this.closeCellPopup();
             this._renderGrid();
             this._updateSaveBtn();
+        },
+
+        // Task 521: парсинг «чч:мм» (нативный input type=time или
+        // ручной ввод «7:30») → минуты от полуночи; пустое/негодное
+        // (часы > 23, минуты > 59, чужой формат) — null
+        _dnParseTime: function(v) {
+            var m = String(v || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+            if (!m) return null;
+            var h = parseInt(m[1], 10);
+            var mi = parseInt(m[2], 10);
+            if (h > 23 || mi > 59) return null;
+            return h * 60 + mi;
+        },
+
+        // Task 521: минуты от полуночи → «чч:мм» для value полей
+        // type=time (префилл пары «начало–окончание» в малой форме;
+        // отрицательные/суточные значения заворачиваются по модулю 24 ч)
+        _dnMinutesToHHMM: function(min) {
+            var m = ((Math.round(min) % (24 * 60)) + (24 * 60)) % (24 * 60);
+            var h = Math.floor(m / 60);
+            var mi = m % 60;
+            return (h < 10 ? '0' : '') + h + ':' + (mi < 10 ? '0' : '') + mi;
         },
 
         // «Дополнительно…» — открыть прежний bottom-sheet с расширенными
