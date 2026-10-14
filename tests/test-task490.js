@@ -291,9 +291,9 @@ describe('Task 490 — VM: пары ТС по градуировке', () => {
 // ============================================================
 describe('Task 490 — SW: версия кеша', () => {
 
-    test('SW: кэш поднят до kipia-test-v738', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v738'") !== -1,
-            'CACHE_VERSION = kipia-test-v738 (Task 490)');
+    test('SW: кэш поднят до kipia-test-v739', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v739'") !== -1,
+            'CACHE_VERSION = kipia-test-v739 (Task 490)');
         assertFalse(SW_SRC.indexOf('kipia-test-v713') !== -1,
             'старой версии v713 нет');
     });

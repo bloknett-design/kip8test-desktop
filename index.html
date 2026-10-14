@@ -361,10 +361,95 @@
        по расположению и габаритам с остальными кнопками главной. */
     .menu-btn-row-secret-pair .menu-btn { min-width: 0; }
 
-    /* Контейнер для SVG-схем в разделах Геометрии — точно по шаблону: */
-    /* светло-голубые линии, белые подписи, двусторонние стрелки, тёмный фон */
-    .geo-svg-container { text-align: center; padding: 10px 16px 4px; }
-    .geo-svg { max-width: 220px; width: 55%; height: auto; opacity: 0.98; }
+    /* Task 526: пояснительные схемы геометрии — «живые» картинки.
+       Заявка: «…переделай пояснительные картинки, сделай их
+       анимированными с отображением реальных расчётов фигур, и
+       переделай их отображение немного больше и без погрешностей в
+       отображении линий и прочего, отобрази их в рамках с непрозрачным
+       фоном бежевого-бело-молочного цвета в светлой теме и на твой
+       выбор в тёмной теме.»
+       Каждая схема живёт в рамке .geo-fig-frame с НЕПРОЗРАЧНЫМ фоном:
+       тёмная тема — тёмный графитово-синий «чертёжный лист» (выбор
+       агента), светлая — бежево-бело-молочная бумага. Внутри: SVG с
+       РЕАЛЬНЫМИ пропорциями фигуры (кольцо d/D, цилиндр H/D, конус
+       H/D, горизонтальный цилиндр L/D и уровень h/D), размеры
+       подписаны фактическими значениями из полей, под схемой — формула
+       и результат ЖИВОГО расчёта. Схема заметно больше прежней
+       (было max-width 220px / 55% ширины). Точность линий: контуры и
+       стрелки размеров вычисляются в JS в координатах viewBox
+       (SVG-маркеры убраны — их refX давал смещения остриёв,
+       «погрешности отображения»). Анимация — CSS-классы gf-*:
+       контур «прочерчивается» (штрих-маска), жидкость поднимается,
+       размеры и результат проявляются; класс .geo-static на рамке
+       отключает анимацию (мгновенная перестройка при вводе в поля). */
+    .geo-fig-frame {
+        --gf-ink: #8FBCE8;                     /* контур фигуры */
+        --gf-dim: #E2A96E;                     /* размерные линии, стрелки, подписи размеров */
+        --gf-tx:  #C9D6E4;                     /* текст формул */
+        --gf-sub: #8FA3B8;                     /* приглушённый текст */
+        --gf-val: #4ac771;                     /* результат (канон значений) */
+        --gf-liquid: rgba(95, 163, 224, 0.32); /* жидкость (горизонтальный цилиндр) */
+        --gf-face: rgba(143, 188, 232, 0.10);  /* лёгкая заливка граней */
+        --gf-line: rgba(143, 163, 184, 0.35);  /* разделитель блока расчёта */
+        display: flex; flex-direction: column; align-items: center;
+        width: min(100%, 320px); box-sizing: border-box;
+        margin: 8px auto 10px; padding: 10px 12px 11px;
+        background: #17222E;                   /* непрозрачный фон — тёмная тема */
+        border: 1px solid rgba(127, 176, 222, 0.30);
+        border-radius: 14px;
+    }
+    [data-theme="light"] .geo-fig-frame {
+        --gf-ink: #2F5687;                     /* чернила на бежевой бумаге */
+        --gf-dim: #B05537;                     /* размеры — терракота (тёплый акцент светлой темы) */
+        --gf-tx:  #3D3428;
+        --gf-sub: #6B5F4B;
+        --gf-val: #4d7a30;
+        --gf-liquid: rgba(47, 86, 135, 0.20);
+        --gf-face: rgba(47, 86, 135, 0.07);
+        --gf-line: rgba(107, 95, 75, 0.38);
+        background: #F7F2E6;                   /* бежево-бело-молочная бумага — непрозрачная */
+        border-color: rgba(122, 96, 58, 0.42);
+    }
+    .geo-fig-svg { width: 100%; height: auto; display: block; }
+    .geo-fig-svg .gf-ink   { stroke: var(--gf-ink); fill: none; }
+    .geo-fig-svg .gf-hidden{ stroke: var(--gf-ink); fill: none; stroke-opacity: 0.55; }
+    .geo-fig-svg .gf-dimln { stroke: var(--gf-dim); fill: none; }
+    .geo-fig-svg .gf-dimar { fill: var(--gf-dim); stroke: none; }
+    .geo-fig-svg .gf-tx    { fill: var(--gf-tx); }
+    .geo-fig-svg .gf-dimtx { fill: var(--gf-dim); }
+    .geo-fig-svg .gf-liquid{ fill: var(--gf-liquid); stroke: none; }
+    .geo-fig-svg .gf-inkfill { fill: var(--gf-face); stroke: none; }
+    .geo-fig-svg .gf-dot   { fill: var(--gf-ink); stroke: none; }
+    .geo-fig-res { width: 100%; margin-top: 9px; padding-top: 8px;
+        border-top: 1px solid var(--gf-line);
+        display: flex; flex-direction: column; gap: 4px; }
+    .geo-fig-res-row { display: flex; justify-content: space-between;
+        align-items: baseline; gap: 10px; font-size: 12.5px; line-height: 1.35; }
+    .geo-fig-res-f { color: var(--gf-tx); font-weight: 500; }
+    .geo-fig-res-v { color: var(--gf-val); font-weight: 600; white-space: nowrap; }
+    /* --- Анимация (Task 526) --- */
+    @keyframes gf-draw { from { stroke-dashoffset: 460; } to { stroke-dashoffset: 0; } }
+    @keyframes gf-fade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes gf-dim  { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes gf-res  { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes gf-rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes gf-sweep { 0% { transform: rotate(-405deg); opacity: 0; } 8% { opacity: 1; } 100% { transform: rotate(-45deg); opacity: 1; } }
+    .geo-fig-frame:not(.geo-static) .gf-draw { stroke-dasharray: 460; stroke-dashoffset: 460; animation: gf-draw 0.9s cubic-bezier(0.45, 0.05, 0.35, 1) forwards; }
+    .geo-fig-frame:not(.geo-static) .gf-fade { opacity: 0; animation: gf-fade 0.45s ease-out forwards; }
+    .geo-fig-frame:not(.geo-static) .gf-dim  { opacity: 0; animation: gf-dim 0.4s ease-out forwards; }
+    .geo-fig-frame:not(.geo-static) .gf-rise { opacity: 0; animation: gf-rise 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+    .geo-fig-frame:not(.geo-static) .gf-sweep { animation: gf-sweep 1.1s cubic-bezier(0.5, 0.05, 0.3, 1) forwards; }
+    .geo-fig-frame:not(.geo-static) .geo-fig-res { opacity: 0; animation: gf-res 0.45s ease-out forwards; }
+    /* Доступность: при prefers-reduced-motion схема показывается
+       сразу в конечном состоянии, без проигрывания анимаций. */
+    @media (prefers-reduced-motion: reduce) {
+        .geo-fig-frame .gf-draw, .geo-fig-frame .gf-fade, .geo-fig-frame .gf-dim,
+        .geo-fig-frame .gf-rise, .geo-fig-frame .gf-sweep, .geo-fig-frame .geo-fig-res {
+            animation: none !important; opacity: 1 !important;
+            stroke-dasharray: none !important; stroke-dashoffset: 0 !important;
+            transform: none !important;
+        }
+    }
 
     /* ===== Группы блоков на главной странице ===== */
 
@@ -18915,21 +19000,16 @@
         <div id="page-geo-circle" class="page-content">
             <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Круг</div></div>
 
-            <div class="geo-svg-container"><svg viewBox="0 0 140 140" class="geo-svg" font-family="Inter, sans-serif">
-<defs>
-<marker id="gc-as" markerWidth="8" markerHeight="8" refX="3" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M7,1 L3,4 L7,7" fill="none" stroke="#5a9fd4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="gc-ae" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L5,4 L1,7" fill="none" stroke="#5a9fd4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></marker>
-</defs>
-<circle cx="70" cy="70" r="42" fill="none" stroke="#5a9fd4" stroke-width="2"/>
-<line x1="28" y1="70" x2="112" y2="70" stroke="#5a9fd4" stroke-width="1.2" marker-start="url(#gc-as)" marker-end="url(#gc-ae)"/>
-<text x="70" y="86" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="500">D</text>
-<line x1="70" y1="70" x2="99.7" y2="40.3" stroke="#5a9fd4" stroke-width="1.2" marker-end="url(#gc-ae)"/>
-<text x="92" y="50" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="500">R</text>
-<circle cx="70" cy="70" r="2.6" fill="#5a9fd4"/>
-</svg></div>
+            <!-- Task 526 (заявка): статичная пояснительная картинка заменена
+                 на «живую» анимированную схему: пропорции и подписи размеров —
+                 из полей ввода, под схемой — формула и результат живого
+                 расчёта; рамка с непрозрачным фоном (светлая тема —
+                 бежево-бело-молочная, тёмная — графитово-синяя). Рендер —
+                 geoFigPlay/geoFigUpdate. -->
+            <div class="geo-fig-frame" id="gcFigFrame"><svg id="gcFig" class="geo-fig-svg" viewBox="0 0 240 190" font-family="Inter, sans-serif" role="img" aria-label="Схема: круг"></svg><div class="geo-fig-res" id="gcFigRes"></div></div>
             <div class="scale-form ts-calc-panel ts-calc-inset" style="margin: 8px 0 12px;">
                 <div class="scale-form-label">Диаметр D</div>
-                <input type="text" inputmode="numeric" id="gc_diameter" class="scale-field" value="100" placeholder="мм" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this)">
+                <input type="text" inputmode="numeric" id="gc_diameter" class="scale-field" value="100" placeholder="мм" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this); geoFigUpdate('gc')">
             </div>
             <button type="button" class="converter-convert-btn scale-calc-btn" onclick="calcGeoCircle()"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>Рассчитать</button>
             <div class="converter-result-group" id="gc_results" style="display:none;"></div>
@@ -18939,30 +19019,24 @@
         <div id="page-geo-ring" class="page-content">
             <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Кольцо</div></div>
 
-            <div class="geo-svg-container"><svg viewBox="0 0 140 140" class="geo-svg" font-family="Inter, sans-serif">
-<defs>
-<marker id="gr-as" markerWidth="8" markerHeight="8" refX="3" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M7,1 L3,4 L7,7" fill="none" stroke="#5a9fd4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="gr-ae" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L5,4 L1,7" fill="none" stroke="#5a9fd4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></marker>
-</defs>
-<circle cx="70" cy="70" r="42" fill="none" stroke="#5a9fd4" stroke-width="2"/>
-<circle cx="70" cy="70" r="24" fill="none" stroke="#5a9fd4" stroke-width="2"/>
-<line x1="29" y1="64" x2="111" y2="64" stroke="#5a9fd4" stroke-width="1.2" marker-start="url(#gr-as)" marker-end="url(#gr-ae)"/>
-<text x="70" y="58" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="500">D</text>
-<line x1="48" y1="78" x2="92" y2="78" stroke="#5a9fd4" stroke-width="1.2" marker-start="url(#gr-as)" marker-end="url(#gr-ae)"/>
-<text x="70" y="90" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="500">d</text>
-<circle cx="70" cy="70" r="2.6" fill="#5a9fd4"/>
-</svg></div>
+            <!-- Task 526 (заявка): статичная пояснительная картинка заменена
+                 на «живую» анимированную схему: пропорции кольца d/D — из
+                 полей ввода, подписи размеров — фактические значения, под
+                 схемой — формула и результат живого расчёта; рамка с
+                 непрозрачным фоном (светлая тема — бежево-бело-молочная,
+                 тёмная — графитово-синяя). Рендер — geoFigPlay/geoFigUpdate. -->
+            <div class="geo-fig-frame" id="grFigFrame"><svg id="grFig" class="geo-fig-svg" viewBox="0 0 240 190" font-family="Inter, sans-serif" role="img" aria-label="Схема: кольцо"></svg><div class="geo-fig-res" id="grFigRes"></div></div>
             <!-- Task 501 (заявка): блоки полей ввода объединены
              в ОДНУ панель (стиль Task 500, «колодец»);
              бывшие группы разделены линией-разделителем с отступом (стиль Task 500). -->
             <div class="ts-calc-panel ts-calc-inset" id="grFormPanel">
 
                 <div class="scale-form-label">Наружный диаметр D</div>
-                <input type="text" inputmode="numeric" id="gr_d_outer" class="scale-field" value="100" placeholder="мм" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)">
+                <input type="text" inputmode="numeric" id="gr_d_outer" class="scale-field" value="100" placeholder="мм" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this); geoFigUpdate('gr')">
             
 
                 <div class="scale-form-label ts-calc-sep">Внутренний диаметр d</div>
-                <input type="text" inputmode="numeric" id="gr_d_inner" class="scale-field" value="80" placeholder="мм" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this)">
+                <input type="text" inputmode="numeric" id="gr_d_inner" class="scale-field" value="80" placeholder="мм" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this); geoFigUpdate('gr')">
             
             </div>
 
@@ -18975,32 +19049,24 @@
         <div id="page-geo-cylinder" class="page-content">
             <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Цилиндр вертикальный</div></div>
 
-            <div class="geo-svg-container"><svg viewBox="0 0 140 140" class="geo-svg" font-family="Inter, sans-serif">
-<defs>
-<marker id="gcy-as" markerWidth="8" markerHeight="8" refX="3" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M7,1 L3,4 L7,7" fill="none" stroke="#5a9fd4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="gcy-ae" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L5,4 L1,7" fill="none" stroke="#5a9fd4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></marker>
-</defs>
-<ellipse cx="70" cy="30" rx="38" ry="8" fill="none" stroke="#5a9fd4" stroke-width="2"/>
-<line x1="32" y1="30" x2="32" y2="108" stroke="#5a9fd4" stroke-width="2"/>
-<line x1="108" y1="30" x2="108" y2="108" stroke="#5a9fd4" stroke-width="2"/>
-<path d="M 32 108 A 38 8 0 0 0 108 108" fill="none" stroke="#5a9fd4" stroke-width="2"/>
-<path d="M 32 108 A 38 8 0 0 1 108 108" fill="none" stroke="#5a9fd4" stroke-width="1.2" stroke-dasharray="4,3" opacity="0.55"/>
-<line x1="32" y1="18" x2="108" y2="18" stroke="#5a9fd4" stroke-width="1.2" marker-start="url(#gcy-as)" marker-end="url(#gcy-ae)"/>
-<text x="70" y="12" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="500">D</text>
-<line x1="18" y1="30" x2="18" y2="108" stroke="#5a9fd4" stroke-width="1.2" marker-start="url(#gcy-as)" marker-end="url(#gcy-ae)"/>
-<text x="11" y="69" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="500" transform="rotate(-90 11 69)">H</text>
-</svg></div>
+            <!-- Task 526 (заявка): статичная пояснительная картинка заменена
+                 на «живую» анимированную схему: пропорции H/D — из полей
+                 ввода, подписи размеров — фактические значения, под схемой —
+                 формула и результат живого расчёта; рамка с непрозрачным
+                 фоном (светлая тема — бежево-бело-молочная, тёмная —
+                 графитово-синяя). Рендер — geoFigPlay/geoFigUpdate. -->
+            <div class="geo-fig-frame" id="gcyFigFrame"><svg id="gcyFig" class="geo-fig-svg" viewBox="0 0 240 190" font-family="Inter, sans-serif" role="img" aria-label="Схема: цилиндр вертикальный"></svg><div class="geo-fig-res" id="gcyFigRes"></div></div>
             <!-- Task 501 (заявка): блоки полей ввода объединены
              в ОДНУ панель (стиль Task 500, «колодец»);
              бывшие группы разделены линией-разделителем с отступом (стиль Task 500). -->
             <div class="ts-calc-panel ts-calc-inset" id="gcyFormPanel">
 
                 <div class="scale-form-label">Диаметр D</div>
-                <input type="text" inputmode="numeric" id="gcy_diameter" class="scale-field" value="2" placeholder="м" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)">
+                <input type="text" inputmode="numeric" id="gcy_diameter" class="scale-field" value="2" placeholder="м" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this); geoFigUpdate('gcy')">
             
 
                 <div class="scale-form-label ts-calc-sep">Высота H</div>
-                <input type="text" inputmode="numeric" id="gcy_height" class="scale-field" value="3" placeholder="м" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this)">
+                <input type="text" inputmode="numeric" id="gcy_height" class="scale-field" value="3" placeholder="м" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this); geoFigUpdate('gcy')">
             
             </div>
 
@@ -19013,40 +19079,29 @@
         <div id="page-geo-horiz" class="page-content">
             <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Цилиндр горизонтальный</div></div>
 
-            <div class="geo-svg-container"><svg viewBox="0 0 160 100" class="geo-svg" font-family="Inter, sans-serif">
-<defs>
-<marker id="gh-as" markerWidth="8" markerHeight="8" refX="3" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M7,1 L3,4 L7,7" fill="none" stroke="#5a9fd4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="gh-ae" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L5,4 L1,7" fill="none" stroke="#5a9fd4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></marker>
-</defs>
-<path d="M 30 20 A 8 30 0 0 1 30 80" fill="none" stroke="#5a9fd4" stroke-width="2"/>
-<path d="M 30 20 A 8 30 0 0 0 30 80" fill="none" stroke="#5a9fd4" stroke-width="1.2" stroke-dasharray="4,3" opacity="0.55"/>
-<ellipse cx="130" cy="50" rx="8" ry="30" fill="none" stroke="#5a9fd4" stroke-width="2"/>
-<line x1="30" y1="20" x2="130" y2="20" stroke="#5a9fd4" stroke-width="2"/>
-<line x1="30" y1="80" x2="130" y2="80" stroke="#5a9fd4" stroke-width="2"/>
-<path d="M 37 66 L 123 66 A 8 30 0 0 1 130 80 L 30 80 A 8 30 0 0 1 37 66 Z" fill="#3a7fbf" fill-opacity="0.5" stroke="none"/>
-<line x1="30" y1="66" x2="130" y2="66" stroke="#5a9fd4" stroke-width="1.2" stroke-dasharray="4,3" opacity="0.55"/>
-<line x1="30" y1="10" x2="130" y2="10" stroke="#5a9fd4" stroke-width="1.2" marker-start="url(#gh-as)" marker-end="url(#gh-ae)"/>
-<text x="80" y="7" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="500">L</text>
-<line x1="14" y1="20" x2="14" y2="80" stroke="#5a9fd4" stroke-width="1.2" marker-start="url(#gh-as)" marker-end="url(#gh-ae)"/>
-<text x="7" y="50" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="500" transform="rotate(-90 7 50)">D</text>
-<line x1="80" y1="80" x2="80" y2="66" stroke="#5a9fd4" stroke-width="1.2" marker-start="url(#gh-as)" marker-end="url(#gh-ae)"/>
-<text x="86" y="73" fill="#ffffff" font-size="12" font-weight="500" dominant-baseline="middle">h</text>
-</svg></div>
+            <!-- Task 526 (заявка): статичная пояснительная картинка заменена
+                 на «живую» анимированную схему: пропорции L/D и уровень
+                 жидкости h/D — из полей ввода, жидкость «наливается»
+                 анимацией, подписи размеров — фактические значения, под
+                 схемой — формула и результат живого расчёта; рамка с
+                 непрозрачным фоном (светлая тема — бежево-бело-молочная,
+                 тёмная — графитово-синяя). Рендер — geoFigPlay/geoFigUpdate. -->
+            <div class="geo-fig-frame" id="ghFigFrame"><svg id="ghFig" class="geo-fig-svg" viewBox="0 0 240 190" font-family="Inter, sans-serif" role="img" aria-label="Схема: цилиндр горизонтальный с уровнем жидкости"></svg><div class="geo-fig-res" id="ghFigRes"></div></div>
             <!-- Task 501 (заявка): блоки полей ввода объединены
              в ОДНУ панель (стиль Task 500, «колодец»);
              бывшие группы разделены линией-разделителем с отступом (стиль Task 500). -->
             <div class="ts-calc-panel ts-calc-inset" id="ghFormPanel">
 
                 <div class="scale-form-label">Длина L</div>
-                <input type="text" inputmode="numeric" id="gh_length" class="scale-field" value="5" placeholder="м" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)">
+                <input type="text" inputmode="numeric" id="gh_length" class="scale-field" value="5" placeholder="м" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this); geoFigUpdate('gh')">
             
 
                 <div class="scale-form-label ts-calc-sep">Диаметр D</div>
-                <input type="text" inputmode="numeric" id="gh_diameter" class="scale-field" value="2" placeholder="м" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)">
+                <input type="text" inputmode="numeric" id="gh_diameter" class="scale-field" value="2" placeholder="м" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this); geoFigUpdate('gh')">
             
 
                 <div class="scale-form-label ts-calc-sep">Уровень жидкости h</div>
-                <input type="text" inputmode="numeric" id="gh_level" class="scale-field" value="1,5" placeholder="м" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this)">
+                <input type="text" inputmode="numeric" id="gh_level" class="scale-field" value="1,5" placeholder="м" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this); geoFigUpdate('gh')">
                 <div style="color:rgba(255,255,255,0.25); font-size:10px; margin-top:4px; padding-left:4px;">Высота от дна до зеркала жидкости (0 ≤ h ≤ D)</div>
             
             </div>
@@ -19060,21 +19115,16 @@
         <div id="page-geo-sphere" class="page-content">
             <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Сфера</div></div>
 
-            <div class="geo-svg-container"><svg viewBox="0 0 140 140" class="geo-svg" font-family="Inter, sans-serif">
-<defs>
-<marker id="gs-as" markerWidth="8" markerHeight="8" refX="3" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M7,1 L3,4 L7,7" fill="none" stroke="#5a9fd4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="gs-ae" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L5,4 L1,7" fill="none" stroke="#5a9fd4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></marker>
-</defs>
-<circle cx="70" cy="70" r="42" fill="none" stroke="#5a9fd4" stroke-width="2"/>
-<ellipse cx="70" cy="70" rx="42" ry="13" fill="none" stroke="#5a9fd4" stroke-width="1.2" stroke-dasharray="4,3" opacity="0.55"/>
-<ellipse cx="70" cy="70" rx="13" ry="42" fill="none" stroke="#5a9fd4" stroke-width="1.2" stroke-dasharray="4,3" opacity="0.55"/>
-<line x1="28" y1="70" x2="112" y2="70" stroke="#5a9fd4" stroke-width="1.2" marker-start="url(#gs-as)" marker-end="url(#gs-ae)"/>
-<text x="70" y="86" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="500">D</text>
-<circle cx="70" cy="70" r="2.6" fill="#5a9fd4"/>
-</svg></div>
+            <!-- Task 526 (заявка): статичная пояснительная картинка заменена
+                 на «живую» анимированную схему: подписи размеров —
+                 фактические значения из поля ввода, под схемой — формула
+                 и результат живого расчёта; рамка с непрозрачным фоном
+                 (светлая тема — бежево-бело-молочная, тёмная —
+                 графитово-синяя). Рендер — geoFigPlay/geoFigUpdate. -->
+            <div class="geo-fig-frame" id="gsFigFrame"><svg id="gsFig" class="geo-fig-svg" viewBox="0 0 240 190" font-family="Inter, sans-serif" role="img" aria-label="Схема: сфера"></svg><div class="geo-fig-res" id="gsFigRes"></div></div>
             <div class="scale-form ts-calc-panel ts-calc-inset" style="margin: 8px 0 12px;">
                 <div class="scale-form-label">Диаметр D</div>
-                <input type="text" inputmode="numeric" id="gs_diameter" class="scale-field" value="2" placeholder="м" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this)">
+                <input type="text" inputmode="numeric" id="gs_diameter" class="scale-field" value="2" placeholder="м" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this); geoFigUpdate('gs')">
             </div>
             <button type="button" class="converter-convert-btn scale-calc-btn" onclick="calcGeoSphere()"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>Рассчитать</button>
             <div class="converter-result-group" id="gs_results" style="display:none;"></div>
@@ -19084,33 +19134,25 @@
         <div id="page-geo-cone" class="page-content">
             <div class="page-inline-header"><div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div><div class="page-inline-header-title">Конус</div></div>
 
-            <div class="geo-svg-container"><svg viewBox="0 0 140 140" class="geo-svg" font-family="Inter, sans-serif">
-<defs>
-<marker id="gco-as" markerWidth="8" markerHeight="8" refX="3" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M7,1 L3,4 L7,7" fill="none" stroke="#5a9fd4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="gco-ae" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L5,4 L1,7" fill="none" stroke="#5a9fd4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></marker>
-</defs>
-<line x1="28" y1="110" x2="70" y2="18" stroke="#5a9fd4" stroke-width="2"/>
-<line x1="70" y1="18" x2="112" y2="110" stroke="#5a9fd4" stroke-width="2" marker-start="url(#gco-as)" marker-end="url(#gco-ae)"/>
-<path d="M 28 110 A 42 9 0 0 0 112 110" fill="none" stroke="#5a9fd4" stroke-width="2"/>
-<path d="M 28 110 A 42 9 0 0 1 112 110" fill="none" stroke="#5a9fd4" stroke-width="1.2" stroke-dasharray="4,3" opacity="0.55"/>
-<line x1="70" y1="18" x2="70" y2="110" stroke="#5a9fd4" stroke-width="1.2" stroke-dasharray="4,3" opacity="0.55"/>
-<line x1="124" y1="18" x2="124" y2="110" stroke="#5a9fd4" stroke-width="1.2" marker-start="url(#gco-as)" marker-end="url(#gco-ae)"/>
-<text x="131" y="64" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="500" transform="rotate(-90 131 64)">H</text>
-<line x1="28" y1="122" x2="112" y2="122" stroke="#5a9fd4" stroke-width="1.2" marker-start="url(#gco-as)" marker-end="url(#gco-ae)"/>
-<text x="70" y="134" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="500">D</text>
-<text x="96" y="60" fill="#ffffff" font-size="12" font-weight="500" dominant-baseline="middle">L</text>
-</svg></div>
+            <!-- Task 526 (заявка): статичная пояснительная картинка заменена
+                 на «живую» анимированную схему: пропорции H/D — из полей
+                 ввода, подписи размеров (в т.ч. образующая L) — фактические
+                 значения, под схемой — формула и результат живого расчёта;
+                 рамка с непрозрачным фоном (светлая тема —
+                 бежево-бело-молочная, тёмная — графитово-синяя). Рендер —
+                 geoFigPlay/geoFigUpdate. -->
+            <div class="geo-fig-frame" id="gcoFigFrame"><svg id="gcoFig" class="geo-fig-svg" viewBox="0 0 240 190" font-family="Inter, sans-serif" role="img" aria-label="Схема: конус"></svg><div class="geo-fig-res" id="gcoFigRes"></div></div>
             <!-- Task 501 (заявка): блоки полей ввода объединены
              в ОДНУ панель (стиль Task 500, «колодец»);
              бывшие группы разделены линией-разделителем с отступом (стиль Task 500). -->
             <div class="ts-calc-panel ts-calc-inset" id="gcoFormPanel">
 
                 <div class="scale-form-label">Диаметр основания D</div>
-                <input type="text" inputmode="numeric" id="gco_diameter" class="scale-field" value="2" placeholder="м" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this)">
+                <input type="text" inputmode="numeric" id="gco_diameter" class="scale-field" value="2" placeholder="м" autocomplete="off" enterkeyhint="next" oninput="validateNumericField(this); geoFigUpdate('gco')">
             
 
                 <div class="scale-form-label ts-calc-sep">Высота H</div>
-                <input type="text" inputmode="numeric" id="gco_height" class="scale-field" value="3" placeholder="м" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this)">
+                <input type="text" inputmode="numeric" id="gco_height" class="scale-field" value="3" placeholder="м" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this); geoFigUpdate('gco')">
             
             </div>
 
@@ -29428,6 +29470,11 @@
         if (page === 'projects-status') { setTimeout(() => { if (typeof projectInitSorted === 'function') projectInitSorted('status'); }, 30); } // Task 369
         if (page === 'project-detail') { setTimeout(() => { if (typeof projectRenderDetail === 'function') projectRenderDetail(); }, 30); }
         if (page === 'project-group') { setTimeout(() => { if (typeof projectsRenderGroup === 'function') projectsRenderGroup(); }, 30); }
+        // Task 526: геометрия — при открытии страницы строится «живая»
+        // схема (реальные пропорции + живой расчёт) с анимацией.
+        if (GEO_FIG_PAGES[page]) {
+            setTimeout(function () { if (typeof geoFigPlay === 'function') geoFigPlay(GEO_FIG_PAGES[page]); }, 30);
+        }
         // Task 372: «Датчики температуры» — карточки списка рендерятся при
         // открытии страницы; детальная страница без выбранного датчика
         // (прямой переход по hash после перезагрузки) уходит на список.
@@ -30827,6 +30874,7 @@
     function calcGeoCircle() {
         let Dmm = parseLocaleNumber(document.getElementById('gc_diameter').value);
         if (isNaN(Dmm) || Dmm <= 0) { showToast('Введите диаметр D'); return; }
+        geoFigPlay('gc');   // Task 526: живая схема — пересчитать с анимацией
         // Перевод в см и м для площади
         const Dcm = Dmm / 10;
         const Dm  = Dmm / 1000;
@@ -30852,6 +30900,7 @@
         if (isNaN(Dmm) || Dmm <= 0) { showToast('Введите наружный диаметр D'); return; }
         if (isNaN(dmm) || dmm <= 0) { showToast('Введите внутренний диаметр d'); return; }
         if (dmm >= Dmm) { showToast('d должен быть меньше D'); return; }
+        geoFigPlay('gr');   // Task 526: живая схема — пересчитать с анимацией
         const Dcm = Dmm / 10, dcm = dmm / 10;
         const Dm  = Dmm / 1000, dm = dmm / 1000;
         const areaCm2 = Math.PI * (Dcm * Dcm - dcm * dcm) / 4;
@@ -30874,6 +30923,7 @@
         let H = parseLocaleNumber(document.getElementById('gcy_height').value);
         if (isNaN(D) || D <= 0) { showToast('Введите диаметр D'); return; }
         if (isNaN(H) || H <= 0) { showToast('Введите высоту H'); return; }
+        geoFigPlay('gcy');  // Task 526: живая схема — пересчитать с анимацией
         const volume = Math.PI * D * D * H / 4;          // м³
         const sideArea = Math.PI * D * H;                // м²
         const fullArea = Math.PI * D * (D / 2 + H);      // м²
@@ -30901,6 +30951,7 @@
         if (isNaN(D) || D <= 0) { showToast('Введите диаметр D'); return; }
         if (isNaN(h) || h < 0) { showToast('Введите уровень h'); return; }
         if (h > D) { showToast('h не может быть больше D'); return; }
+        geoFigPlay('gh');   // Task 526: живая схема — пересчитать с анимацией
         const R = D / 2;
         let segmentArea;
         if (h === 0) {
@@ -30934,6 +30985,7 @@
     function calcGeoSphere() {
         let D = parseLocaleNumber(document.getElementById('gs_diameter').value);
         if (isNaN(D) || D <= 0) { showToast('Введите диаметр D'); return; }
+        geoFigPlay('gs');   // Task 526: живая схема — пересчитать с анимацией
         const volume = Math.PI * D * D * D / 6;          // м³
         const surface = Math.PI * D * D;                 // м²
         const waterMass = volume * 998;                  // кг
@@ -30955,6 +31007,7 @@
         let H = parseLocaleNumber(document.getElementById('gco_height').value);
         if (isNaN(D) || D <= 0) { showToast('Введите диаметр D'); return; }
         if (isNaN(H) || H <= 0) { showToast('Введите высоту H'); return; }
+        geoFigPlay('gco');  // Task 526: живая схема — пересчитать с анимацией
         const R = D / 2;
         const volume = Math.PI * D * D * H / 12;         // м³
         const baseArea = Math.PI * D * D / 4;            // м²
@@ -30970,6 +31023,449 @@
         res.style.display = 'block';
         setTimeout(() => res.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     }
+
+    // ============================================================
+    // Task 526: ГЕОМЕТРИЯ — анимированные пояснительные схемы
+    // ============================================================
+    // [Task 526 geo-fig engine: BEGIN]
+    // Заявка: «В разделе Главная / Инженерные калькуляторы /
+    // Геометрия … переделай пояснительные картинки, сделай их
+    // анимированными с отображением реальных расчётов фигур …»
+    //
+    // Каждая страница геометрии получает «живую» схему в рамке
+    // .geo-fig-frame (CSS Task 526):
+    //   • фигура строится ЦЕЛИКОМ в JS из текущих значений полей —
+    //     пропорции реальные (кольцо d/D, цилиндр H/D, конус H/D,
+    //     горизонтальный цилиндр L/D и уровень h/D);
+    //   • размерные линии — со стрелками-треугольниками, вычисленными
+    //     точно в координатах viewBox (SVG-маркеры не используются:
+    //     их refX смещал остриё — источник «погрешностей отображения
+    //     линий» в прежних статичных картинках);
+    //   • подписи размеров — фактические значения («D = 100 мм»);
+    //   • под схемой — «живой» расчёт: формула = результат (та же
+    //     математика и то же форматирование formatNumber, что в
+    //     calcGeo* — совпадает с панелью «Результат»).
+    // Анимация (CSS gf-*): открытие страницы и «Рассчитать» —
+    // geoFigPlay (контур прочерчивается, жидкость поднимается,
+    // размеры и результат проявляются); ввод в поля — geoFigUpdate
+    // (мгновенная перестройка, класс .geo-static). Браузер с
+    // prefers-reduced-motion показывает схему сразу в конечном
+    // состоянии (правило в CSS Task 526).
+
+    // Карта: страница навигации → ключ схемы (= префикс id полей).
+    const GEO_FIG_PAGES = {
+        'geo-circle':   'gc',
+        'geo-ring':     'gr',
+        'geo-cylinder': 'gcy',
+        'geo-horiz':    'gh',
+        'geo-sphere':   'gs',
+        'geo-cone':     'gco'
+    };
+
+    // Координаты — в user units viewBox 240×190, один знак после
+    // запятой — числа в разметке не «дрожат» разрядностью.
+    function gfN(v) { return (Math.round(v * 10) / 10).toFixed(1); }
+
+    // Стрелка размерной линии: ТОЧНЫЙ треугольник остриём в точке
+    // (x, y), направленный вдоль угла ang (радианы). Возвращает
+    // замкнутый фрагмент path.
+    function gfArrow(x, y, ang) {
+        const L = 6, W = 2.3;                    // длина и полуширина
+        const c = Math.cos(ang), s = Math.sin(ang);
+        const bx = x - L * c, by = y - L * s;    // центр основания
+        const px = -s * W, py = c * W;           // перпендикуляр
+        return 'M' + gfN(x) + ',' + gfN(y) +
+               'L' + gfN(bx + px) + ',' + gfN(by + py) +
+               'L' + gfN(bx - px) + ',' + gfN(by - py) + 'Z';
+    }
+
+    // Горизонтальный размер: линия на y между x1..x2; выносные линии
+    // exts = [[x, yFrom], …] — от точки фигуры (со сквозным зазором
+    // 2.5) до размера и на 4 за него; стрелки внутрь (при коротком
+    // размере — наружу); подпись над серединой.
+    function gfDimH(x1, x2, y, label, exts) {
+        const mid = (x1 + x2) / 2;
+        let s = '';
+        (exts || []).forEach(function (e) {
+            const dir = (y >= e[1]) ? 1 : -1;
+            s += '<line class="gf-dimln" stroke-width="1" x1="' + gfN(e[0]) +
+                 '" y1="' + gfN(e[1] + 2.5 * dir) + '" x2="' + gfN(e[0]) +
+                 '" y2="' + gfN(y + 4 * dir) + '"/>';
+        });
+        s += '<line class="gf-dimln" stroke-width="1" x1="' + gfN(x1) + '" y1="' +
+             gfN(y) + '" x2="' + gfN(x2) + '" y2="' + gfN(y) + '"/>';
+        if (x2 - x1 >= 22) {
+            s += '<path class="gf-dimar" d="' + gfArrow(x1, y, 0) + gfArrow(x2, y, Math.PI) + '"/>';
+        } else {
+            s += '<path class="gf-dimar" d="' + gfArrow(x1, y, Math.PI) + gfArrow(x2, y, 0) + '"/>';
+        }
+        s += '<text class="gf-dimtx" font-size="11.5" font-weight="600" text-anchor="middle" x="' +
+             gfN(mid) + '" y="' + gfN(y - 5) + '">' + label + '</text>';
+        return s;
+    }
+
+    // Вертикальный размер: линия на x между y1..y2; выносные exts =
+    // [[y, xFrom], …]; подпись повёрнута −90° у середины, со стороны
+    // labelSide ('left' | 'right').
+    function gfDimV(y1, y2, x, label, exts, labelSide) {
+        const mid = (y1 + y2) / 2;
+        let s = '';
+        (exts || []).forEach(function (e) {
+            const dir = (x >= e[1]) ? 1 : -1;
+            s += '<line class="gf-dimln" stroke-width="1" x1="' + gfN(e[1] + 2.5 * dir) +
+                 '" y1="' + gfN(e[0]) + '" x2="' + gfN(x + 4 * dir) + '" y2="' + gfN(e[0]) + '"/>';
+        });
+        s += '<line class="gf-dimln" stroke-width="1" x1="' + gfN(x) + '" y1="' +
+             gfN(y1) + '" x2="' + gfN(x) + '" y2="' + gfN(y2) + '"/>';
+        if (Math.abs(y2 - y1) >= 22) {
+            s += '<path class="gf-dimar" d="' + gfArrow(x, y1, Math.PI / 2) + gfArrow(x, y2, -Math.PI / 2) + '"/>';
+        } else {
+            s += '<path class="gf-dimar" d="' + gfArrow(x, y1, -Math.PI / 2) + gfArrow(x, y2, Math.PI / 2) + '"/>';
+        }
+        const lx = (labelSide === 'right') ? x + 5 : x - 5;
+        s += '<text class="gf-dimtx" font-size="11.5" font-weight="600" text-anchor="middle" x="' +
+             gfN(lx) + '" y="' + gfN(mid) + '" transform="rotate(-90 ' + gfN(lx) + ' ' + gfN(mid) +
+             ')">' + label + '</text>';
+        return s;
+    }
+
+    // КРУГ: окружность «прочерчивается» обегающим радиусом (останавливается
+    // под 45°), диаметр — сквозной размер через центр; живой расчёт S и P
+    // (формулы те же, что в calcGeoCircle).
+    function geoFigCircleSVG(Dmm) {
+        const cx = 120, cy = 84, R = 56;
+        const areaCm2 = Math.PI * (Dmm / 10) * (Dmm / 10) / 4;
+        const perimeter = Math.PI * Dmm;
+        let s = '';
+        s += '<g class="gf-fade" style="animation-delay:.62s"><circle class="gf-inkfill" cx="' +
+             gfN(cx) + '" cy="' + gfN(cy) + '" r="' + gfN(R) + '"/></g>';
+        s += '<g class="gf-draw"><circle class="gf-ink" stroke-width="2" cx="' +
+             gfN(cx) + '" cy="' + gfN(cy) + '" r="' + gfN(R) + '"/></g>';
+        s += '<g class="gf-sweep" style="transform-origin:' + gfN(cx) + 'px ' + gfN(cy) +
+             'px;animation-delay:.1s"><line class="gf-ink" stroke-width="1.5" x1="' + gfN(cx) +
+             '" y1="' + gfN(cy) + '" x2="' + gfN(cx + R) + '" y2="' + gfN(cy) + '"/></g>';
+        s += '<g class="gf-fade" style="animation-delay:.5s"><circle class="gf-dot" cx="' +
+             gfN(cx) + '" cy="' + gfN(cy) + '" r="2.4"/></g>';
+        s += '<g class="gf-dim" style="animation-delay:.9s">' +
+             '<line class="gf-dimln" stroke-width="1" x1="' + gfN(cx - R) + '" y1="' + gfN(cy) +
+             '" x2="' + gfN(cx + R) + '" y2="' + gfN(cy) + '"/>' +
+             '<path class="gf-dimar" d="' + gfArrow(cx - R, cy, 0) + gfArrow(cx + R, cy, Math.PI) + '"/>' +
+             '<text class="gf-dimtx" font-size="11.5" font-weight="600" text-anchor="middle" x="' +
+             gfN(cx) + '" y="' + gfN(cy + 17) + '">D = ' + formatNumber(Dmm) + ' мм</text></g>';
+        const ex = cx + R * Math.SQRT1_2, ey = cy - R * Math.SQRT1_2;
+        s += '<g class="gf-dim" style="animation-delay:1.1s">' +
+             '<text class="gf-dimtx" font-size="11.5" font-weight="600" x="' + gfN(ex + 5) +
+             '" y="' + gfN(ey - 3) + '">R = ' + formatNumber(Dmm / 2) + ' мм</text></g>';
+        return {
+            svg: s,
+            rows: [
+                ['S = π·D²/4', formatNumber(areaCm2) + ' см²'],
+                ['P = π·D', formatNumber(perimeter) + ' мм']
+            ]
+        };
+    }
+
+    // КОЛЬЦО: пропорция отверстия РЕАЛЬНАЯ (d/D); размеры D и d — на
+    // одной горизонтальной оси (стандарт чертежа соосных окружностей);
+    // живой расчёт S и Dэкв (формулы те же, что в calcGeoRing).
+    function geoFigRingSVG(Dmm, dmm) {
+        const cx = 120, cy = 86, Ro = 58;
+        let Ri = Ro * (dmm / Dmm);
+        if (Ri < 7) Ri = 7;              // тонкое кольцо — мин. видимость
+        if (Ri > Ro - 3) Ri = Ro - 3;    // d ≈ D — мин. видимая ширина
+        const areaCm2 = Math.PI * ((Dmm / 10) * (Dmm / 10) - (dmm / 10) * (dmm / 10)) / 4;
+        const dEq = Dmm - dmm;
+        let s = '';
+        s += '<g class="gf-fade" style="animation-delay:.62s"><path class="gf-inkfill" fill-rule="evenodd" d="M' +
+             gfN(cx + Ro) + ',' + gfN(cy) + 'A' + gfN(Ro) + ',' + gfN(Ro) + ' 0 1 0 ' + gfN(cx - Ro) + ',' +
+             gfN(cy) + 'A' + gfN(Ro) + ',' + gfN(Ro) + ' 0 1 0 ' + gfN(cx + Ro) + ',' + gfN(cy) +
+             'ZM' + gfN(cx + Ri) + ',' + gfN(cy) + 'A' + gfN(Ri) + ',' + gfN(Ri) + ' 0 1 0 ' + gfN(cx - Ri) +
+             ',' + gfN(cy) + 'A' + gfN(Ri) + ',' + gfN(Ri) + ' 0 1 0 ' + gfN(cx + Ri) + ',' + gfN(cy) + 'Z"/></g>';
+        s += '<g class="gf-draw"><circle class="gf-ink" stroke-width="2" cx="' +
+             gfN(cx) + '" cy="' + gfN(cy) + '" r="' + gfN(Ro) + '"/></g>';
+        s += '<g class="gf-draw" style="animation-delay:.25s"><circle class="gf-ink" stroke-width="2" cx="' +
+             gfN(cx) + '" cy="' + gfN(cy) + '" r="' + gfN(Ri) + '"/></g>';
+        s += '<g class="gf-fade" style="animation-delay:.5s"><circle class="gf-dot" cx="' +
+             gfN(cx) + '" cy="' + gfN(cy) + '" r="2.2"/></g>';
+        s += '<g class="gf-dim" style="animation-delay:.9s">' +
+             '<line class="gf-dimln" stroke-width="1" x1="' + gfN(cx - Ro) + '" y1="' + gfN(cy) +
+             '" x2="' + gfN(cx + Ro) + '" y2="' + gfN(cy) + '"/>' +
+             '<path class="gf-dimar" d="' + gfArrow(cx - Ro, cy, 0) + gfArrow(cx + Ro, cy, Math.PI) + '"/>' +
+             '<text class="gf-dimtx" font-size="11.5" font-weight="600" text-anchor="middle" x="' +
+             gfN(cx) + '" y="' + gfN(cy + 16) + '">D = ' + formatNumber(Dmm) + ' мм</text></g>';
+        s += '<g class="gf-dim" style="animation-delay:1.05s">' +
+             '<path class="gf-dimar" d="' + gfArrow(cx - Ri, cy, 0) + gfArrow(cx + Ri, cy, Math.PI) + '"/>' +
+             '<text class="gf-dimtx" font-size="11.5" font-weight="600" text-anchor="middle" x="' +
+             gfN(cx) + '" y="' + gfN(cy - 11) + '">d = ' + formatNumber(dmm) + ' мм</text></g>';
+        return {
+            svg: s,
+            rows: [
+                ['S = π·(D²−d²)/4', formatNumber(areaCm2) + ' см²'],
+                ['Dэкв = D − d', formatNumber(dEq) + ' мм']
+            ]
+        };
+    }
+
+    // ЦИЛИНДР ВЕРТИКАЛЬНЫЙ: пропорция H/D реальная; размеры D (сверху)
+    // и H (слева); живой расчёт V и Sполн (как в calcGeoCylinder).
+    function geoFigCylSVG(D, H) {
+        const sc = Math.min(112 / D, 116 / H);    // поле фигуры без размеров
+        const rx = D * sc / 2;
+        const Hpx = H * sc;
+        const ry = Math.max(6, rx * 0.18);
+        const cx = 122;
+        const totalH = Hpx + 2 * ry;
+        const cyT = (190 - totalH) / 2 + ry + 2;
+        const cyB = cyT + Hpx;
+        const xL = cx - rx, xR = cx + rx;
+        const volume = Math.PI * D * D * H / 4;
+        const fullArea = Math.PI * D * (D / 2 + H);
+        let g = '';
+        g += '<g class="gf-fade" style="animation-delay:.6s"><rect class="gf-inkfill" x="' + gfN(xL) +
+             '" y="' + gfN(cyT) + '" width="' + gfN(2 * rx) + '" height="' + gfN(Hpx) +
+             '"/><ellipse class="gf-inkfill" cx="' + gfN(cx) + '" cy="' + gfN(cyT) + '" rx="' +
+             gfN(rx) + '" ry="' + gfN(ry) + '"/></g>';
+        g += '<g class="gf-draw"><ellipse class="gf-ink" stroke-width="2" cx="' + gfN(cx) + '" cy="' +
+             gfN(cyT) + '" rx="' + gfN(rx) + '" ry="' + gfN(ry) + '"/></g>';
+        g += '<g class="gf-draw" style="animation-delay:.2s">' +
+             '<line class="gf-ink" stroke-width="2" x1="' + gfN(xL) + '" y1="' + gfN(cyT) +
+             '" x2="' + gfN(xL) + '" y2="' + gfN(cyB) + '"/>' +
+             '<line class="gf-ink" stroke-width="2" x1="' + gfN(xR) + '" y1="' + gfN(cyT) +
+             '" x2="' + gfN(xR) + '" y2="' + gfN(cyB) + '"/>' +
+             '<path class="gf-ink" stroke-width="2" d="M' + gfN(xL) + ',' + gfN(cyB) + ' A' + gfN(rx) +
+             ',' + gfN(ry) + ' 0 0 0 ' + gfN(xR) + ',' + gfN(cyB) + '"/></g>';
+        g += '<g class="gf-fade" style="animation-delay:.5s"><path class="gf-hidden" stroke-width="1.2" stroke-dasharray="4,3" d="M' +
+             gfN(xL) + ',' + gfN(cyB) + ' A' + gfN(rx) + ',' + gfN(ry) + ' 0 0 1 ' + gfN(xR) + ',' + gfN(cyB) + '"/></g>';
+        g += '<g class="gf-dim" style="animation-delay:.9s">' + gfDimH(xL, xR, cyT - ry - 14,
+             'D = ' + formatNumber(D) + ' м', [[xL, cyT], [xR, cyT]]) + '</g>';
+        g += '<g class="gf-dim" style="animation-delay:1.05s">' + gfDimV(cyT, cyB, xL - 16,
+             'H = ' + formatNumber(H) + ' м', [[cyT, xL], [cyB, xL]], 'left') + '</g>';
+        return {
+            svg: g,
+            rows: [
+                ['V = π·D²·H/4', formatNumber(volume) + ' м³'],
+                ['Sполн = π·D·(D/2 + H)', formatNumber(fullArea) + ' м²']
+            ]
+        };
+    }
+
+    // ЦИЛИНДР ГОРИЗОНТАЛЬНЫЙ: пропорции L/D и уровень h/D реальные;
+    // жидкость «наливается» (gf-rise, прямоугольник уровня обрезан
+    // clipPath по силуэту резервуара — точная площадь зеркала);
+    // размеры L (сверху), D (слева), h (справа, от дна до зеркала);
+    // живой расчёт V, Vполн, % заполнения (как в calcGeoHorizCyl).
+    function geoFigHorizSVG(L, D, h) {
+        const sc = Math.min(168 / (L + 0.3 * D), 88 / D);
+        const R = D * sc / 2;
+        const Lpx = L * sc;
+        const capRx = R * 0.3;                    // эллиптичность крышек
+        const totalW = Lpx + 2 * capRx;
+        const xL = (240 - totalW) / 2 + capRx;    // левый край корпуса
+        const xR = xL + Lpx;
+        const cy = 96;
+        const yTop = cy - R, yBot = cy + R;
+        const yLevel = yBot - h * sc;
+        // площадь сегмента — формула calcGeoHorizCyl, дословно
+        const Rm = D / 2;
+        let segmentArea;
+        if (h === 0) segmentArea = 0;
+        else if (h === D) segmentArea = Math.PI * Rm * Rm;
+        else if (h === Rm) segmentArea = Math.PI * Rm * Rm / 2;
+        else segmentArea = Rm * Rm * Math.acos((Rm - h) / Rm) - (Rm - h) * Math.sqrt(2 * Rm * h - h * h);
+        const volume = segmentArea * L;
+        const totalVolume = Math.PI * Rm * Rm * L;
+        const fillPercent = totalVolume > 0 ? (volume / totalVolume) * 100 : 0;
+        // силуэт: корпус + левая выпуклая крышка + правая крышка
+        const sil = 'M' + gfN(xL) + ',' + gfN(yTop) + 'L' + gfN(xR) + ',' + gfN(yTop) +
+                    'A' + gfN(capRx) + ',' + gfN(R) + ' 0 0 1 ' + gfN(xR) + ',' + gfN(yBot) +
+                    'L' + gfN(xL) + ',' + gfN(yBot) +
+                    'A' + gfN(capRx) + ',' + gfN(R) + ' 0 0 1 ' + gfN(xL) + ',' + gfN(yTop) + 'Z';
+        let g = '';
+        g += '<clipPath id="ghFigClip"><path d="' + sil + '"/></clipPath>';
+        g += '<g class="gf-fade" style="animation-delay:.6s"><path class="gf-inkfill" d="' + sil + '"/></g>';
+        if (h > 0) {
+            const full = h >= D;
+            const ly = full ? yTop : yLevel;
+            const lh = full ? 2 * R : (yBot - yLevel);
+            g += '<g class="gf-rise" style="animation-delay:.3s"><rect class="gf-liquid" clip-path="url(#ghFigClip)" x="' +
+                 gfN(xL - capRx - 1) + '" y="' + gfN(ly) + '" width="' + gfN(totalW + 2) +
+                 '" height="' + gfN(lh + R + 1) + '"/></g>';
+        }
+        g += '<g class="gf-draw"><line class="gf-ink" stroke-width="2" x1="' + gfN(xL) + '" y1="' + gfN(yTop) +
+             '" x2="' + gfN(xR) + '" y2="' + gfN(yTop) + '"/>' +
+             '<line class="gf-ink" stroke-width="2" x1="' + gfN(xL) + '" y1="' + gfN(yBot) +
+             '" x2="' + gfN(xR) + '" y2="' + gfN(yBot) + '"/></g>';
+        g += '<g class="gf-draw" style="animation-delay:.2s">' +
+             // левая крышка — видимая дуга, выпуклая влево
+             '<path class="gf-ink" stroke-width="2" d="M' + gfN(xL) + ',' + gfN(yTop) + ' A' + gfN(capRx) +
+             ',' + gfN(R) + ' 0 0 0 ' + gfN(xL) + ',' + gfN(yBot) + '"/>' +
+             '<ellipse class="gf-ink" stroke-width="2" cx="' + gfN(xR) + '" cy="' + gfN(cy) +
+             '" rx="' + gfN(capRx) + '" ry="' + gfN(R) + '"/></g>';
+        // невидимая задняя кромка левой крышки
+        g += '<g class="gf-fade" style="animation-delay:.5s"><path class="gf-hidden" stroke-width="1.2" stroke-dasharray="4,3" d="M' +
+             gfN(xL) + ',' + gfN(yTop) + ' A' + gfN(capRx) + ',' + gfN(R) + ' 0 0 1 ' + gfN(xL) + ',' + gfN(yBot) + '"/></g>';
+        g += '<g class="gf-dim" style="animation-delay:.9s">' + gfDimH(xL, xR, yTop - 13,
+             'L = ' + formatNumber(L) + ' м', [[xL, yTop], [xR, yTop]]) + '</g>';
+        g += '<g class="gf-dim" style="animation-delay:1.05s">' + gfDimV(yTop, yBot, xL - capRx - 13,
+             'D = ' + formatNumber(D) + ' м', [[yTop, xL], [yBot, xL]], 'left') + '</g>';
+        if (h > 0 && h < D) {
+            // зеркало жидкости: штриховая линия по корпусу + размер h
+            g += '<g class="gf-fade" style="animation-delay:.7s"><line class="gf-hidden" stroke-width="1.2" stroke-dasharray="4,3" x1="' +
+                 gfN(xL) + '" y1="' + gfN(yLevel) + '" x2="' + gfN(xR) + '" y2="' + gfN(yLevel) + '"/></g>';
+            const xh = xR + capRx + 13;
+            const u = (yLevel - cy) / R;
+            const cc = Math.sqrt(Math.max(0, 1 - u * u));
+            const xSurf = xR + capRx * cc;       // точка зеркала на правой крышке
+            g += '<g class="gf-dim" style="animation-delay:1.2s">' + gfDimV(yBot, yLevel, xh,
+                 'h = ' + formatNumber(h) + ' м', [[yBot, xR], [yLevel, xSurf]], 'right') + '</g>';
+        }
+        return {
+            svg: g,
+            rows: [
+                ['V = S·L', formatNumber(volume) + ' м³'],
+                ['Vполн = π·D²·L/4', formatNumber(totalVolume) + ' м³'],
+                ['Заполнение', formatNumber(fillPercent) + ' %']
+            ]
+        };
+    }
+
+    // СФЕРА: окружность + штриховые экватор/меридиан; сквозной диаметр;
+    // живой расчёт V и S (как в calcGeoSphere).
+    function geoFigSphereSVG(D) {
+        const cx = 120, cy = 86, R = 56;
+        const volume = Math.PI * D * D * D / 6;
+        const surface = Math.PI * D * D;
+        let g = '';
+        g += '<g class="gf-fade" style="animation-delay:.62s"><circle class="gf-inkfill" cx="' +
+             gfN(cx) + '" cy="' + gfN(cy) + '" r="' + gfN(R) + '"/></g>';
+        g += '<g class="gf-draw"><circle class="gf-ink" stroke-width="2" cx="' +
+             gfN(cx) + '" cy="' + gfN(cy) + '" r="' + gfN(R) + '"/></g>';
+        g += '<g class="gf-fade" style="animation-delay:.45s">' +
+             '<ellipse class="gf-hidden" stroke-width="1.2" stroke-dasharray="4,3" cx="' + gfN(cx) +
+             '" cy="' + gfN(cy) + '" rx="' + gfN(R) + '" ry="' + gfN(R * 0.3) + '"/>' +
+             '<ellipse class="gf-hidden" stroke-width="1.2" stroke-dasharray="4,3" cx="' + gfN(cx) +
+             '" cy="' + gfN(cy) + '" rx="' + gfN(R * 0.3) + '" ry="' + gfN(R) + '"/></g>';
+        g += '<g class="gf-fade" style="animation-delay:.5s"><circle class="gf-dot" cx="' +
+             gfN(cx) + '" cy="' + gfN(cy) + '" r="2.2"/></g>';
+        g += '<g class="gf-dim" style="animation-delay:.9s">' +
+             '<line class="gf-dimln" stroke-width="1" x1="' + gfN(cx - R) + '" y1="' + gfN(cy) +
+             '" x2="' + gfN(cx + R) + '" y2="' + gfN(cy) + '"/>' +
+             '<path class="gf-dimar" d="' + gfArrow(cx - R, cy, 0) + gfArrow(cx + R, cy, Math.PI) + '"/>' +
+             '<text class="gf-dimtx" font-size="11.5" font-weight="600" text-anchor="middle" x="' +
+             gfN(cx) + '" y="' + gfN(cy + 26) + '">D = ' + formatNumber(D) + ' м</text></g>';
+        return {
+            svg: g,
+            rows: [
+                ['V = π·D³/6', formatNumber(volume) + ' м³'],
+                ['S = π·D²', formatNumber(surface) + ' м²']
+            ]
+        };
+    }
+
+    // КОНУС: пропорция H/D реальная; размеры D (снизу) и H (справа),
+    // образующая L — подпись у правого ребра; живой расчёт V и L
+    // (как в calcGeoCone).
+    function geoFigConeSVG(D, H) {
+        const sc = Math.min(112 / D, 114 / H);
+        const rx = D * sc / 2;
+        const Hpx = H * sc;
+        const ry = Math.max(5, rx * 0.16);
+        const cx = 122;
+        const totalH = Hpx + 2 * ry;
+        const yA = (190 - totalH) / 2 + ry;
+        const yB = yA + Hpx;
+        const volume = Math.PI * D * D * H / 12;
+        const slant = Math.sqrt(H * H + (D / 2) * (D / 2));
+        let g = '';
+        g += '<g class="gf-fade" style="animation-delay:.6s"><path class="gf-inkfill" d="M' + gfN(cx) + ',' +
+             gfN(yA) + 'L' + gfN(cx - rx) + ',' + gfN(yB) + 'A' + gfN(rx) + ',' + gfN(ry) + ' 0 0 0 ' +
+             gfN(cx + rx) + ',' + gfN(yB) + 'Z"/></g>';
+        g += '<g class="gf-draw">' +
+             '<line class="gf-ink" stroke-width="2" x1="' + gfN(cx) + '" y1="' + gfN(yA) +
+             '" x2="' + gfN(cx - rx) + '" y2="' + gfN(yB) + '"/>' +
+             '<line class="gf-ink" stroke-width="2" x1="' + gfN(cx) + '" y1="' + gfN(yA) +
+             '" x2="' + gfN(cx + rx) + '" y2="' + gfN(yB) + '"/></g>';
+        g += '<g class="gf-draw" style="animation-delay:.2s"><path class="gf-ink" stroke-width="2" d="M' +
+             gfN(cx - rx) + ',' + gfN(yB) + 'A' + gfN(rx) + ',' + gfN(ry) + ' 0 0 0 ' + gfN(cx + rx) + ',' + gfN(yB) + '"/></g>';
+        // невидимая верхняя дуга основания + высота (ось)
+        g += '<g class="gf-fade" style="animation-delay:.5s">' +
+             '<path class="gf-hidden" stroke-width="1.2" stroke-dasharray="4,3" d="M' + gfN(cx - rx) + ',' +
+             gfN(yB) + 'A' + gfN(rx) + ',' + gfN(ry) + ' 0 0 1 ' + gfN(cx + rx) + ',' + gfN(yB) + '"/>' +
+             '<line class="gf-hidden" stroke-width="1.2" stroke-dasharray="4,3" x1="' + gfN(cx) + '" y1="' +
+             gfN(yA) + '" x2="' + gfN(cx) + '" y2="' + gfN(yB) + '"/></g>';
+        g += '<g class="gf-dim" style="animation-delay:.9s">' + gfDimH(cx - rx, cx + rx, yB + ry + 12,
+             'D = ' + formatNumber(D) + ' м', [[cx - rx, yB], [cx + rx, yB]]) + '</g>';
+        g += '<g class="gf-dim" style="animation-delay:1.05s">' + gfDimV(yA, yB, cx + rx + 15,
+             'H = ' + formatNumber(H) + ' м', [[yA, cx], [yB, cx + rx]], 'right') + '</g>';
+        const mx = cx + rx / 2, my = (yA + yB) / 2;
+        g += '<g class="gf-dim" style="animation-delay:1.2s">' +
+             '<text class="gf-dimtx" font-size="11.5" font-weight="600" x="' + gfN(mx + 7) + '" y="' +
+             gfN(my - 4) + '">L = ' + formatNumber(slant) + ' м</text></g>';
+        return {
+            svg: g,
+            rows: [
+                ['V = π·D²·H/12', formatNumber(volume) + ' м³'],
+                ['L = √(H²+(D/2)²)', formatNumber(slant) + ' м']
+            ]
+        };
+    }
+
+    // Текущие значения полей схемы; null — если хоть одно поле
+    // незаполнено/невалидно (схема остаётся в последнем валидном виде).
+    function geoFigVals(key) {
+        function num(id) {
+            const e = document.getElementById(id);
+            return e ? parseLocaleNumber(e.value) : NaN;
+        }
+        function pos(v) { return !isNaN(v) && v > 0; }
+        if (key === 'gc') { const D = num('gc_diameter'); return pos(D) ? { D: D } : null; }
+        if (key === 'gr') { const D = num('gr_d_outer'), d = num('gr_d_inner'); return (pos(D) && pos(d) && d < D) ? { D: D, d: d } : null; }
+        if (key === 'gcy') { const D = num('gcy_diameter'), H = num('gcy_height'); return (pos(D) && pos(H)) ? { D: D, H: H } : null; }
+        if (key === 'gh') {
+            const L = num('gh_length'), D = num('gh_diameter'), h = num('gh_level');
+            return (pos(L) && pos(D) && !isNaN(h) && h >= 0 && h <= D) ? { L: L, D: D, h: h } : null;
+        }
+        if (key === 'gs') { const D = num('gs_diameter'); return pos(D) ? { D: D } : null; }
+        if (key === 'gco') { const D = num('gco_diameter'), H = num('gco_height'); return (pos(D) && pos(H)) ? { D: D, H: H } : null; }
+        return null;
+    }
+
+    // Сборка схемы по ключу и значениям (чистая функция — проверяется
+    // в test-task526.js без DOM).
+    function geoFigBuild(key, v) {
+        if (key === 'gc') return geoFigCircleSVG(v.D);
+        if (key === 'gr') return geoFigRingSVG(v.D, v.d);
+        if (key === 'gcy') return geoFigCylSVG(v.D, v.H);
+        if (key === 'gh') return geoFigHorizSVG(v.L, v.D, v.h);
+        if (key === 'gs') return geoFigSphereSVG(v.D);
+        if (key === 'gco') return geoFigConeSVG(v.D, v.H);
+        return { svg: '', rows: [] };
+    }
+
+    // Рендер: перерисовка SVG + блока живого расчёта. animate=true —
+    // проиграть анимацию (открытие страницы / «Рассчитать»), false —
+    // мгновенно (ввод в поля, класс .geo-static).
+    function geoFigRender(key, animate) {
+        const frame = document.getElementById(key + 'FigFrame');
+        const svgEl = document.getElementById(key + 'Fig');
+        const resEl = document.getElementById(key + 'FigRes');
+        if (!frame || !svgEl || !resEl) return;
+        const v = geoFigVals(key);
+        if (v === null) return;
+        const b = geoFigBuild(key, v);
+        svgEl.innerHTML = b.svg;
+        resEl.innerHTML = b.rows.map(function (r) {
+            return '<div class="geo-fig-res-row"><span class="geo-fig-res-f">' + r[0] +
+                   '</span><span class="geo-fig-res-v">' + r[1] + '</span></div>';
+        }).join('');
+        frame.classList.toggle('geo-static', !animate);
+    }
+
+    // Открытие страницы геометрии / кнопка «Рассчитать» — с анимацией.
+    function geoFigPlay(key) { geoFigRender(key, true); }
+    // Ввод в поля — мгновенная перестройка схемы (без анимации).
+    function geoFigUpdate(key) { geoFigRender(key, false); }
+    // [Task 526 geo-fig engine: END]
 
     // Открытие bottom sheet для pin/unpin указанного подраздела.
     function openPinSheet(key) {
