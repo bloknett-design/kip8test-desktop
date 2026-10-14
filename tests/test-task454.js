@@ -321,11 +321,11 @@ describe('Task 454 — VM: colgroup печатной формы', () => {
 // 5. SW — версия кэша
 // ============================================================
 describe('Task 454 — SW', () => {
-    test('SW: кэш поднят до kipia-test-v737 (Task 454)', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v737'") !== -1,
-            'CACHE_VERSION = kipia-test-v737');
-        assertTrue(SW_SRC.indexOf('kipia-test-v738') === -1,
-            'kipia-test-v738 не существует');
+    test('SW: кэш поднят до kipia-test-v738 (Task 454)', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v738'") !== -1,
+            'CACHE_VERSION = kipia-test-v738');
+        assertTrue(SW_SRC.indexOf('kipia-test-v739') === -1,
+            'kipia-test-v739 не существует');
         assertTrue(SW_SRC.indexOf('Task 454') !== -1,
             'комментарий Task 454 в истории версий');
     });

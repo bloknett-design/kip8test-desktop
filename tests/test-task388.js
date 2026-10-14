@@ -263,10 +263,10 @@ describe('Task 388 — SRC: итоги учёта доступны в любом
             'тосты сменного/дневного вида обещают итоги');
     });
 
-    test('SW: кэш поднят до kipia-test-v737', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v737'") !== -1,
-            'CACHE_VERSION = kipia-test-v737 (Task 388 — фронтенд менялся)');
-        assertFalse(SW_SRC.indexOf('kipia-test-v738') !== -1,
+    test('SW: кэш поднят до kipia-test-v738', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v738'") !== -1,
+            'CACHE_VERSION = kipia-test-v738 (Task 388 — фронтенд менялся)');
+        assertFalse(SW_SRC.indexOf('kipia-test-v739') !== -1,
             'v617 ещё не существует (guard)');
     });
 });

@@ -478,6 +478,12 @@
     .menu-btn-text { position: relative; z-index: 1; text-align: left; flex: 1; pointer-events: none; }
     .menu-btn-label { font-size: 18px; color: #e8e8e8; font-weight: 600; line-height: 1.25; }
     .menu-btn-sublabel { font-size: 14px; color: rgba(255,255,255,0.3); margin-top: 3px; line-height: 1.3; }
+    /* Task 525: строка статуса «Отменена» на кнопке отменённого документа
+       (Библиотека/Электробезопасность — инструкция СО 153-34.03.603-2003,
+       отменена приказом Минэнерго России от 01.12.2023 № 1105). Красный —
+       канон «плохих» дат Task 520 (.ws-ep-date-bad): #ef5350 тёмная тема;
+       светлая — в блоке [data-theme="light"] ниже. */
+    .menu-btn-cancelled { font-size: 13px; color: #ef5350; font-weight: 600; margin-top: 4px; line-height: 1.3; }
     /* В библиотечных разделах текст кнопок всегда прижат к верху, чтобы
        многострочные подписи не ломали выравнивание при одинаковой высоте. */
     #page-library-internal .menu-btn-text,
@@ -2221,6 +2227,10 @@
     }
     [data-theme="light"] .menu-btn-sublabel {
         color: rgba(20, 20, 19, 0.45);
+    }
+    /* Task 525: светлая тема — строка «Отменена» (канон .ws-ep-date-bad) */
+    [data-theme="light"] .menu-btn-cancelled {
+        color: #c62828;
     }
     [data-theme="light"] .nav-btn {
         color: rgba(20, 20, 19, 0.8);
@@ -19667,6 +19677,12 @@
                     <div class="menu-btn-text">
                         <div class="menu-btn-label">Инструкция СО 153-34.03.603-2003</div>
                         <div class="menu-btn-sublabel">Применение и испытание средств защиты, используемых в электроустановках</div>
+                        <!-- Task 525: инструкция отменена с 01.12.2023 — заметная строка
+                             статуса с документом отмены (приказ Минэнерго России
+                             от 01.12.2023 № 1105 «Об отмене приказа Минэнерго России
+                             от 30.06.2003 № 261», отмена без замены). Ссылка на Google
+                             Drive сохранена — документ доступен для ознакомления. -->
+                        <div class="menu-btn-cancelled">Отменена — приказ Минэнерго России от 01.12.2023 № 1105</div>
                     </div>
                     <svg class="menu-btn-arrow" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: rgba(255,255,255,0.12); fill: none; stroke-width: 2; stroke-linecap: round;"><polyline points="9 18 15 12 9 6"/></svg>
                 </a>
