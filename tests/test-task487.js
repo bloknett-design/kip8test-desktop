@@ -497,8 +497,8 @@ describe('Task 487 — VM: onCellHover/onCellLeave/ховер-окно', () => {
 // ==========================================================================
 describe('Task 487 — SW: инкремент версии', () => {
 
-    test("sw.js: CACHE_VERSION = 'kipia-test-v735'", () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v735'") !== -1,
+    test("sw.js: CACHE_VERSION = 'kipia-test-v736'", () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v736'") !== -1,
             'версия кэша инкрементирована v710 → v711');
         assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v710'") === -1,
             'старой версии нет');

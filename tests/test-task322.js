@@ -38,7 +38,7 @@
 //   Сервер: listEntries читает 11 колонок (часы: число/null/
 //   нормализация «7,2»); setManualEntry валидирует 0,5..24, пишет
 //   колонку K (обновление и вставка), часы=null без поля, аудит.
-//   SW: kipia-test-v735.
+//   SW: kipia-test-v736.
 //
 // Запуск: через tests/run-all.js (require './test-task322.js').
 
@@ -848,8 +848,9 @@ describe('Task 322 — Сервер WorkSchedule.gs: часы переработ
         assertTrue(WS_GS_SRC.indexOf('//   K: часы (Task 322') !== -1,
             'структура листа описывает K');
         assertTrue(WS_GS_SRC.indexOf('_wsNumOrNull') !== -1, 'хелпер нормализации часов');
-        assertTrue(WS_GS_SRC.indexOf('lastRow - 1, 11') !== -1,
-            'listEntries читает 11 колонок');
+        // Task 523: listEntries читает 13 колонок — K часы + L/M времена
+        assertTrue(WS_GS_SRC.indexOf('lastRow - 1, 13') !== -1,
+            'listEntries читает 13 колонок (K+L/M, Task 523)');
     });
 });
 
@@ -963,10 +964,10 @@ describe('Task 322 — итоги: слова в шапке и колонка П
 // 11. SW: версия кэша
 // ============================================================
 describe('Task 322 — SW: версия кэша', () => {
-    test('SW: кэш поднят до kipia-test-v735 (Task 322)', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v735'") !== -1,
-            'CACHE_VERSION = kipia-test-v735');
-        assertFalse(SW_SRC.indexOf('kipia-test-v736') !== -1,
+    test('SW: кэш поднят до kipia-test-v736 (Task 322)', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v736'") !== -1,
+            'CACHE_VERSION = kipia-test-v736');
+        assertFalse(SW_SRC.indexOf('kipia-test-v737') !== -1,
             'v566 не существует (один инкремент на Task 326)');
     });
 });

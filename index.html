@@ -56652,9 +56652,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 322/521 — «дневной» и без типа; сменному часы не
         // положены, у него фиксированные смены 12 ч). Возвращает объект
         // { code, часы, auto, meta } или null. Часы — КОЛОНКА K листа
-        // «Записи_графика» (Task 322; единственное хранилище «времени»
-        // дневного персонала: времена начала/окончания из малой формы
-        // Task 521 НЕ сохраняются — из них считаются только часы);
+        // «Записи_графика» (Task 322; Task 523 — времена начала/
+        // окончания работ ДОВАВЛЕНЫ в КОЛОНКИ L/M «время_начала»/
+        // «время_окончания»: пара «чч:мм» из малой формы Task 521,
+        // сервер пересчитывает часы K из той же пары);
         // auto — материализованный авто-«д»/«н» замещения отпуска
         // (Task 458, реестр _autoDnIsKey). Гвард typeof _effectiveEntry
         // — старые VM-хосты без хелпера получают null (секции нет)
@@ -56673,10 +56674,23 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var isShift = emp && String(emp['тип'] || '').trim() === 'сменный';
             if (isShift) return null;
             var h = eff['часы'];
+            // Task 523: времена — строго ПАРА «чч:мм» (половина
+            // пары = данных нет); мусор в полях игнорируется
+            var ts = (typeof eff['время_начала'] === 'string' &&
+                      typeof this._dnParseTime === 'function' &&
+                      this._dnParseTime(eff['время_начала']) !== null)
+                ? eff['время_начала'] : null;
+            var te = (typeof eff['время_окончания'] === 'string' &&
+                      typeof this._dnParseTime === 'function' &&
+                      this._dnParseTime(eff['время_окончания']) !== null)
+                ? eff['время_окончания'] : null;
+            if (!(ts && te)) { ts = null; te = null; }
             return {
                 code: code,
                 'часы': (typeof h === 'number' && isFinite(h) && h > 0)
                     ? (Math.round(h * 10) / 10) : null,
+                'время_начала': ts,
+                'время_окончания': te,
                 auto: (typeof this._autoDnIsKey === 'function') &&
                       !!this._autoDnIsKey(isoDate + '|' + tabNo),
                 meta: (typeof this._statusMeta === 'function')
@@ -56684,24 +56698,50 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             };
         },
 
-        // Task 522: рендер секции «Статус дня» для окна «Мероприятия в
-        // этот день» (клик зрителя/редактора и ДЕСКТОП-ховер Task 487):
-        // свотч + код + ПОЛНОЕ название из справочника «Коды_статусов»
-        // («информация по этому коду» из заявки; текст переносится —
-        // у «д»/«н» он длинный, многопредложенческий), строка времени
-        // работы «Время работы: N ч» из колонки K («время работы» из
-        // заявки; янтарь — как живой расчёт малой формы Task 521 и
+        // Task 522 → 523: рендер секции «Статус дня» для окна
+        // «Мероприятия в этот день» (клик зрителя/редактора и
+        // ДЕСКТОП-ховер Task 487): свотч + код + ПОЛНОЕ название из
+        // справочника «Коды_статусов» («информация по этому коду» из
+        // заявки; текст переносится — у «д»/«н» он длинный,
+        // многопредложенческий), строка времени работы из колонок
+        // K/L/M «Записи_графика» («время работы» из заявки):
+        // Task 523 — при паре времён (L/M) «Время работы: 07:30–15:30 ·
+        // 7,2 ч» (янтарь — как живой расчёт малой формы Task 521 и
         // колонка «Переработка» итогов; формат с запятой —
-        // _fmtTotalsNum), пустые часы — курсив «Время работы: не
-        // указано» (колонка K пуста = часы не вводились), авто-«д»/«н» —
-        // italic-строка «Авто: замещение отпуска» (происхождение кода).
-        // Ячейка без д/н-справки → '' (секции нет). Строки НЕ кликабельны
-        // — окно справочное (Task 487)
+        // _fmtTotalsNum), окончание ≤ начала — пометка «(через
+        // полночь)» (как строка расчёта малой формы); только часы
+        // (пара пуста) — прежнее «Время работы: N ч»; пусто всё —
+        // курсив «Время работы: не указано»; авто-«д»/«н» —
+        // italic-строка «Авто: замещение отпуска» (происхождение
+        // кода). Ячейка без д/н-справки → '' (секции нет). Строки НЕ
+        // кликабельны — окно справочное (Task 487)
         _renderDnDayInfo: function(isoDate, tabNo) {
             var info = (typeof this._dnDayInfoAt === 'function')
                 ? this._dnDayInfoAt(isoDate, tabNo) : null;
             if (!info) return '';
             var meta = info.meta || {};
+            // Task 523: текст времени работы — из пары L/M + часов K
+            var hasTimes = !!(info['время_начала'] && info['время_окончания']);
+            var timeText;
+            if (hasTimes) {
+                timeText = 'Время работы: ' + this._esc(info['время_начала']) + '–' +
+                    this._esc(info['время_окончания']) +
+                    (info['часы'] !== null
+                        ? ' · ' + this._fmtTotalsNum(info['часы']) + ' ч' : '');
+                // окончание ≤ начала — работа через полночь (как
+                // живой расчёт малой формы Task 521)
+                var sm = (typeof this._dnParseTime === 'function')
+                    ? this._dnParseTime(info['время_начала']) : null;
+                var em = (typeof this._dnParseTime === 'function')
+                    ? this._dnParseTime(info['время_окончания']) : null;
+                if (sm !== null && em !== null && em <= sm) {
+                    timeText += ' (через полночь)';
+                }
+            } else if (info['часы'] !== null) {
+                timeText = 'Время работы: ' + this._fmtTotalsNum(info['часы']) + ' ч';
+            } else {
+                timeText = 'Время работы: не указано';
+            }
             var html = '<div class="ws-dn-info">' +
                     '<div class="ws-dn-info-row">' +
                         (meta.color
@@ -56713,10 +56753,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             this._esc(meta.name || '') + '</span>' +
                     '</div>' +
                     '<div class="ws-dn-info-time' +
-                        (info['часы'] === null ? ' ws-dn-info-empty' : '') + '">' +
-                        (info['часы'] === null
-                            ? 'Время работы: не указано'
-                            : 'Время работы: ' + this._fmtTotalsNum(info['часы']) + ' ч') +
+                        (!hasTimes && info['часы'] === null ? ' ws-dn-info-empty' : '') + '">' +
+                        timeText +
                     '</div>' +
                     (info.auto
                         ? '<div class="ws-dn-info-auto">Авто: замещение отпуска</div>'
@@ -57097,20 +57135,26 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 322 → 521: МАЛАЯ ФОРМА ВРЕМЕНИ РАБОТ в попапе ячейки —
         // вместо списка кодов показывается пара полей «Время начала
         // работ» (#wsDnStart) и «Время окончания работ» (#wsDnEnd) для
-        // выбранного кода «д»/«н» (дневной персонал). Task 521 (заявка:
-        // «часы переработки в этот день должны рассчитываться
-        // автоматически в зависимости от введённых данных время начала
-        // и время окончания работ в этот день»): часы НЕ вводятся
-        // вручную — считаются автоматически как «окончание − начало»
-        // (окончание раньше начала — работа через полночь, +24 ч);
-        // живая строка #wsDnCalc («Переработка: N ч») обновляется на
-        // каждый ввод (dnHoursRecalc, oninput обоих полей). Префилл:
-        // «д» — с 7:30 (начало дневной смены), «н» — с 19:30;
-        // длительность — часы той же записи/правки, иначе 8 ч (обычный
-        // рабочий день дневного — дефолт Task 322 сохранён). Enter —
-        // применить, «Назад» — к списку кодов. Попап НЕ
-        // переизмеряется по месту (габариты близки к списку кодов) —
-        // перерисовка на месте.
+        // выбранного кода «д»/«н» (дневной персонал; коды СИММЕТРИЧНЫ
+        // — заявка Task 523: «для кода "н" такой же функционал, как
+        // для "д"»). Task 521 (заявка: «часы переработки в этот день
+        // должны рассчитываться автоматически в зависимости от
+        // введённых данных время начала и время окончания работ в этот
+        // день»): часы НЕ вводятся вручную — считаются автоматически
+        // как «окончание − начало» (окончание раньше начала — работа
+        // через полночь, +24 ч); живая строка #wsDnCalc («Переработка:
+        // N ч») обновляется на каждый ввод (dnHoursRecalc, oninput
+        // обоих полей). Task 523: введённые времена СОХРАНЯЮТСЯ в
+        // колонках L/M «Записи_графика» и отображаются в окне ячейки
+        // (секция «Статус дня» Task 522) и в префилле этой формы.
+        // Префилл: СОХРАНЁННАЯ пара времен той же записи (Task 523 —
+        // точный раунд-трип, без дрейфа через округление часов),
+        // иначе пара из часов записи (Task 521), иначе: «д» — с 7:30
+        // (начало дневной смены), «н» — с 19:30; длительность — дефолт
+        // 8 ч (обычный рабочий день дневного — дефолт Task 322
+        // сохранён). Enter — применить, «Назад» — к списку кодов.
+        // Попап НЕ переизмеряется по месту (габариты близки к списку
+        // кодов) — перерисовка на месте.
         _renderDnHoursForm: function(code, date, tabNo) {
             var popup = document.getElementById('wsCellPopup');
             if (!popup) return;
@@ -57118,13 +57162,44 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var eff = this._effectiveEntry(date, tabNo) || {};
             // Task 521: длительность префилла — часы той же записи
             // (правки), иначе 8; переводится в пару «начало–окончание»
+            // Task 523: если у записи СОХРАНЁННЫЕ времена (колонки
+            // L/M) — префилл ТОЧНО ими (07:12–16:05 не превратится в
+            // 07:30–14:42 через округление часов к 0,1)
             var cur = (eff['статус'] === code) ? eff['часы'] : null;
+            var curStart = (eff['статус'] === code) ? (eff['время_начала'] || null) : null;
+            var curEnd = (eff['статус'] === code) ? (eff['время_окончания'] || null) : null;
             var durH = (typeof cur === 'number' && isFinite(cur) && cur > 0)
                 ? (Math.round(cur * 10) / 10) : 8;
             var startMin = (code === 'н') ? 19 * 60 + 30 : 7 * 60 + 30;
             var endMin = (startMin + Math.round(durH * 60)) % (24 * 60);
-            var startVal = this._dnMinutesToHHMM(startMin);
-            var endVal = this._dnMinutesToHHMM(endMin);
+            // Task 523: сохранённые времена валидируются и
+            // нормализуются в «чч:мм» (сырой мусор — фолбэк на часы)
+            var sSaved = (typeof this._dnParseTime === 'function')
+                ? this._dnParseTime(curStart) : null;
+            var eSaved = (typeof this._dnParseTime === 'function')
+                ? this._dnParseTime(curEnd) : null;
+            var startVal = (sSaved !== null && eSaved !== null)
+                ? this._dnMinutesToHHMM(sSaved) : this._dnMinutesToHHMM(startMin);
+            var endVal = (sSaved !== null && eSaved !== null)
+                ? this._dnMinutesToHHMM(eSaved) : this._dnMinutesToHHMM(endMin);
+            // Task 523: НАЧАЛЬНАЯ строка расчёта — из ФАКТИЧЕСКОЙ пары
+            // префилла (ночную пару 19:30–07:30 сразу видно «через
+            // полночь», как в живом пересчёте dnHoursRecalc; прежде —
+            // всегда «N ч» без пометки до первого ввода)
+            var calcS = this._dnParseTime(startVal);
+            var calcE = this._dnParseTime(endVal);
+            var calcText;
+            if (calcS === null || calcE === null) {
+                calcText = 'Переработка: ' + this._fmtTotalsNum(durH) + ' ч';
+            } else {
+                var calcDiff = calcE - calcS;
+                if (calcDiff < 0) {
+                    calcText = 'Переработка: ' +
+                        this._fmtTotalsNum((calcDiff + 24 * 60) / 60) + ' ч (через полночь)';
+                } else {
+                    calcText = 'Переработка: ' + this._fmtTotalsNum(calcDiff / 60) + ' ч';
+                }
+            }
             var title = this._esc(date) + ' · таб. №' + this._esc(tabNo);
             var emp = null;
             for (var j = 0; j < this._EMPLOYEES.length; j++) {
@@ -57159,8 +57234,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                     keyAttr + '\')}">' +
                         '</div>' +
                     '</div>' +
-                    '<div class="ws-dn-calc" id="wsDnCalc">Переработка: ' +
-                        this._fmtTotalsNum(durH) + ' ч</div>' +
+                    '<div class="ws-dn-calc" id="wsDnCalc">' + calcText + '</div>' +
                     '<div class="ws-dn-buttons">' +
                         '<button type="button" class="ws-dn-ok" onclick="WorkSchedule.applyDnHours(\'' +
                             keyAttr + '\')">Готово</button>' +
@@ -57210,16 +57284,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             popup.innerHTML = this._renderCellPopup(date, tabNo);
         },
 
-        // Task 322 → 521: применить «д»/«н» с часами, РАССЧИТАННЫМИ
-        // из времени начала/окончания работ (клетка попапа та же):
-        // часы = «окончание − начало» (_dnParseTime обоих полей);
-        // окончание раньше начала — работа через полночь (+24 ч).
-        // Ошибки (тост, форма остаётся): незаполненное/негодное время;
-        // одинаковое начало и окончание; меньше 0,5 ч (серверный
-        // диапазон 0,5..24 — больше 24 ч из двух моментов суток
-        // получить нельзя). Округление к 0,1 ч — как в итогах/сервере.
-        // Успех — правка в _PENDING (поле «часы»), попап закрывается
-        // как при обычном выборе кода
+        // Task 322 → 521 → 523: применить «д»/«н» с часами,
+        // РАССЧИТАННЫМИ из времени начала/окончания работ (клетка
+        // попапа та же): часы = «окончание − начало» (_dnParseTime
+        // обоих полей); окончание раньше начала — работа через
+        // полночь (+24 ч). Task 523: ОБА времени передаются дальше —
+        // _applyCellStatus кладёт их в _PENDING, saveAll отправляет
+        // на сервер → КОЛОНКИ L/M «Записи_графика» («время_начала»/
+        // «время_окончания»); сервер пересчитывает часы из той же
+        // пары — K/L/M не расходятся. Ошибки (тост, форма остаётся):
+        // незаполненное/негодное время; одинаковое начало и
+        // окончание; меньше 0,5 ч (серверный диапазон 0,5..24 —
+        // больше 24 ч из двух моментов суток получить нельзя).
+        // Округление к 0,1 ч — как в итогах/сервере. Успех — правка в
+        // _PENDING (поля «часы»/«время_начала»/«время_окончания»),
+        // попап закрывается как при обычном выборе кода
         applyDnHours: function(code) {
             if (!this._popupCell) return;
             var startEl = document.getElementById('wsDnStart');
@@ -57254,7 +57333,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             val = Math.round(val * 10) / 10;
             var date = this._popupCell.date;
             var tabNo = this._popupCell['таб_номер'];
-            this._applyCellStatus(date, tabNo, code, val);
+            // Task 523: оба времени летят в правку (нативный type=time
+            // отдаёт «чч:мм») — до сервера и колонок L/M
+            this._applyCellStatus(date, tabNo, code, val,
+                startEl ? String(startEl.value || '') : '',
+                endEl ? String(endEl.value || '') : '');
             this.closeCellPopup();
             this._renderGrid();
             this._updateSaveBtn();
@@ -60748,7 +60831,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // число 0,5..24 или null (сменный/не д-н — всегда null,
         // переработка сменного = 12 ч без поля). Отправка на сервер —
         // saveAll (поле «часы», колонка K «Записи_графика»)
-        _applyCellStatus: function(isoDate, tabNo, code, hours) {
+        // Task 523: время_начала/время_окончания («чч:мм» из малой
+        // формы) — летят в правку и в payload saveAll → КОЛОНКИ L/M
+        // «Записи_графика»; коды «д»/«н» СИММЕТРИЧНЫ (заявка: «для
+        // "н" — такой же функционал, как для "д"»); сбрасываются
+        // вместе с часами при смене статуса на не-д/н
+        _applyCellStatus: function(isoDate, tabNo, code, hours, время_начала, время_окончания) {
             var key = isoDate + '|' + tabNo;
             var server = this._serverEntry(isoDate, tabNo);
             var pending = this._PENDING[key];
@@ -60762,12 +60850,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     ? ((typeof hours === 'number' && isFinite(hours) && hours > 0)
                         ? Math.round(hours * 10) / 10 : null)
                     : null;
+                // Task 523: пара «чч:мм» (строго ОБЕ — половина
+                // пары не сохраняется); малая форма всегда вводит
+                // оба поля, шит/сменный — без времён (null)
+                var dnTimes = (code === 'д' || code === 'н') &&
+                              (typeof время_начала === 'string' && время_начала) &&
+                              (typeof время_окончания === 'string' && время_окончания)
+                    ? { 'время_начала': время_начала, 'время_окончания': время_окончания }
+                    : { 'время_начала': null, 'время_окончания': null };
                 this._PENDING[key] = {
                     'статус': code,
                     'переработка': (base.переработка === 1 || base.переработка === '1') ? 1 : 0,
                     'замещает': base.замещает || null,
                     'комментарий': base.комментарий || '',
-                    'часы': dnHours
+                    'часы': dnHours,
+                    'время_начала': dnTimes['время_начала'],
+                    'время_окончания': dnTimes['время_окончания']
                 };
                 // Task 458: ручной код поверх авто — метка реестра
                 // снята (ячейка пользовательская); «д»/«н» метку
@@ -60797,7 +60895,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     'переработка': 0,
                     'замещает': null,
                     'комментарий': '',
-                    'часы': null
+                    'часы': null,
+                    // Task 523: у планового выходного нет и времён
+                    'время_начала': null,
+                    'время_окончания': null
                 };
                 if (typeof this._autoDnUnmark === 'function') {
                     this._autoDnUnmark(key);
@@ -60824,7 +60925,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     'переработка': 0,
                     'замещает': null,
                     'комментарий': '',
-                    'часы': null
+                    'часы': null,
+                    // Task 523: у планового выходного нет и времён
+                    'время_начала': null,
+                    'время_окончания': null
                 };
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
                     KipToast.show('Выходной поставлен поверх авто-записи. Нажмите «Сохранить»');
@@ -60897,6 +61001,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         payload['часы'] = (typeof p['часы'] === 'number' &&
                                            isFinite(p['часы']) && p['часы'] > 0)
                             ? p['часы'] : null;
+                        // Task 523: время начала/окончания работ д/н —
+                        // колонки L/M «Записи_графика» (пара «чч:мм»
+                        // или чистка null); сервер пересчитает часы
+                        // из той же пары — единый источник K/L/M.
+                        // Старый Apps Script поля игнорирует —
+                        // обратная совместимость без ошибок
+                        payload['время_начала'] = (typeof p['время_начала'] === 'string' &&
+                                                   p['время_начала']) ? p['время_начала'] : null;
+                        payload['время_окончания'] = (typeof p['время_окончания'] === 'string' &&
+                                                     p['время_окончания']) ? p['время_окончания'] : null;
                         call = self._api('workSchedule.setManualEntry', payload);
                     }
                     return call.then(function() {
@@ -61052,6 +61166,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 322: поле «Часы» — для кодов д/н (переработка
         // дневного по указанным часам): пусто/не число → null
         // (не указано), число 0,5..24 — сохраняется (запятая/точка)
+        // Task 523: времена работ (L/M) ПЕРЕНОСЯТСЯ из записи, если
+        // часы НЕ менялись (время — источник часов малой формы;
+        // правка только переработки/замещения/комментария не стирает
+        // времена); смена часов вручную чистит времена — часы теперь
+        // сами по себе (K и L/M не расходятся); не-д/н — чистка
         submitCellForm: function() {
             if (!this._editingCell) return;
             var status = document.getElementById('wsCellStatus').value;
@@ -61073,6 +61192,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             var cell = this._editingCell;
 
+            // Task 523: перенос времён из ЭФФЕКТИВНОЙ записи шита —
+            // только при неизменных часах (см. комментарий метода)
+            var effEntry = (cell && cell.entry) || {};
+            var effH = (typeof effEntry['часы'] === 'number')
+                ? Math.round(effEntry['часы'] * 10) / 10 : null;
+            var keepTimes = (status === 'д' || status === 'н') &&
+                            hours !== null && hours === effH;
+            var times = keepTimes
+                ? { 'время_начала': (typeof effEntry['время_начала'] === 'string'
+                       ? effEntry['время_начала'] : null),
+                    'время_окончания': (typeof effEntry['время_окончания'] === 'string'
+                       ? effEntry['время_окончания'] : null) }
+                : { 'время_начала': null, 'время_окончания': null };
+
             if (!status) {
                 // «выходной» — очистка ячейки (та же семантика, что в попапе)
                 this._applyCellStatus(cell.date, cell['таб_номер'], '');
@@ -61082,7 +61215,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     'переработка': overtime,
                     'замещает': substitute || null,
                     'комментарий': comment,
-                    'часы': hours
+                    'часы': hours,
+                    'время_начала': times['время_начала'],
+                    'время_окончания': times['время_окончания']
                 });
                 // Task 458: правка «Дополнительно…» поверх
                 // авто-«д»/«н» — метка реестра снята (ячейка
