@@ -25,7 +25,7 @@
 //   • виртуальный слой Task 456/457 удалён: _renderCell/_printCell/
 //     _printModel/_autoDnEntries — записи/правки штатно (см.
 //     test-task456/457);
-//   • sw.js → kipia-test-v736.
+//   • sw.js → kipia-test-v737.
 // ============================================================
 
 const fs = require('fs');
@@ -236,9 +236,9 @@ describe('Task 458 — SRC: «Выходной» поверх авто-«д»/«
 // ============================================================
 // 4. SRC — SW
 // ============================================================
-describe('Task 458 — SRC: SW kipia-test-v736', () => {
-    test('CACHE_VERSION = kipia-test-v736, прежней v681 нет', () => {
-        assertTrue(SW_SRC.indexOf("'kipia-test-v736'") !== -1,
+describe('Task 458 — SRC: SW kipia-test-v737', () => {
+    test('CACHE_VERSION = kipia-test-v737, прежней v681 нет', () => {
+        assertTrue(SW_SRC.indexOf("'kipia-test-v737'") !== -1,
             'новая версия SW v682');
         assertEqual(SW_SRC.indexOf("'kipia-test-v681'"), -1,
             'старой версии v681 не осталось');

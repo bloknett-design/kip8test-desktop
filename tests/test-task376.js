@@ -657,9 +657,9 @@ describe('Task 376 — VM клиент: обработка archive_write_failed'
 // ============================================================
 describe('Task 376 — SW', () => {
     test('SW поднят до v605 (guard v606)', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v736'") !== -1,
-            'CACHE_VERSION = kipia-test-v736');
-        assertTrue(SW_SRC.indexOf('kipia-test-v737') === -1,
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v737'") !== -1,
+            'CACHE_VERSION = kipia-test-v737');
+        assertTrue(SW_SRC.indexOf('kipia-test-v738') === -1,
             'guard-версии v606 в sw.js нет');
     });
 });
