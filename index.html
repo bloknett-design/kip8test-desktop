@@ -5689,6 +5689,60 @@
         font-style: italic;
         color: var(--text-secondary, rgba(255,255,255,0.45));
     }
+    /* Task 522: секция «Статус дня» в окне ячейки («Мероприятия в
+       этот день») — справка по коду «д»/«н» ДНЕВНОГО персонала:
+       свотч + код + ПОЛНОЕ название из справочника (переносится
+       строками, не обрезается — это и есть «информация по коду»),
+       строка времени работы из колонки K («Время работы: 7,2 ч»,
+       янтарь — как расчёт малой формы Task 521 и колонка
+       «Переработка» итогов; пусто — курсив «не указано»), малая
+       italic-строка происхождения авто-«д»/«н» (замещение
+       отпуска). Секция идёт ПОД подзаголовком «дата · ФИО», НАД
+       списком мероприятий — статус дня первичнее событий */
+    .ws-events-popup .ws-dn-info {
+        padding: 6px 10px 7px;
+        border-bottom: 1px solid var(--card-border, rgba(255,255,255,0.08));
+    }
+    .ws-dn-info-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    .ws-dn-info-row .ws-popup-swatch {
+        flex: none;
+        margin-top: 3px;
+    }
+    .ws-dn-info-code {
+        flex: none;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-primary, #fff);
+    }
+    .ws-dn-info-name {
+        font-size: 10px;
+        line-height: 1.35;
+        color: var(--text-secondary, rgba(255,255,255,0.6));
+        white-space: normal;
+        overflow: visible;
+        min-width: 0;
+    }
+    .ws-dn-info-time {
+        margin-top: 5px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #e0a23c;
+    }
+    .ws-dn-info-time.ws-dn-info-empty {
+        color: var(--text-secondary, rgba(255,255,255,0.45));
+        font-style: italic;
+        font-weight: 400;
+    }
+    .ws-dn-info-auto {
+        margin-top: 3px;
+        font-size: 10px;
+        font-style: italic;
+        color: var(--text-secondary, rgba(255,255,255,0.5));
+    }
     .ws-popup-title {
         padding: 8px 10px 6px;
         font-size: 11px;
@@ -9671,6 +9725,16 @@
         border-bottom-color: rgba(0, 0, 0, 0.08);
     }
     [data-theme="light"] .ws-events-popup .ws-events-empty { color: #999; }
+    /* Task 522: светлая тема — секция «Статус дня»: янтарь светлее
+       (#a06a13, как .ws-dn-calc Task 521), тексты — тёмно-серые */
+    [data-theme="light"] .ws-events-popup .ws-dn-info {
+        border-bottom-color: rgba(0, 0, 0, 0.08);
+    }
+    [data-theme="light"] .ws-dn-info-code { color: #222; }
+    [data-theme="light"] .ws-dn-info-name { color: #666; }
+    [data-theme="light"] .ws-dn-info-time { color: #a06a13; }
+    [data-theme="light"] .ws-dn-info-time.ws-dn-info-empty { color: #999; }
+    [data-theme="light"] .ws-dn-info-auto { color: #777; }
     [data-theme="light"] .ws-save-btn { background: #2e8b57; }
     /* Task 308: светлая тема — «+ Отпуск» в тон селектов тулбара.
        Task 312: правило УДАЛЕНО вместе с кнопкой (стиль мёртв —
@@ -56367,10 +56431,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // (pointer: fine) — планшет/телефон ховера не получает
         // (tap-«mouseenter» совместимости отсекается). Гварды:
         // пакетное сохранение (_saving) и ОТКРЫТЫЙ КЛИКОМ попап
-        // (_popupCell) — ховер им не мешает; ячейка без мероприятий
-        // окно не открывает. Повторный вход в ту же ячейку (выход на
-        // бейдж/соседа и назад в grace-окне 350 мс) — не дёргает
-        // рендер, только гасит отложенное закрытие.
+        // (_popupCell) — ховер им не мешает; Task 522: ячейка без
+        // мероприятий открывает окно, если у неё есть д/н-справка
+        // (статус «д»/«н» дневного персонала — секция «Статус дня»,
+        // заявка «попап с информацией по коду и временем работы»).
+        // Повторный вход в ту же ячейку (выход на бейдж/соседа и
+        // назад в grace-окне 350 мс) — не дёргает рендер, только
+        // гасит отложенное закрытие.
         onCellHover: function(ev, isoDate, tabNo) {
             if (typeof window === 'undefined' || !window.matchMedia) return;
             if (!window.matchMedia('(min-width: 1024px)').matches) return;
@@ -56385,8 +56452,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             // реальный ховер (движение мыши) работает как прежде
             if (this._popupClosedAt &&
                     (Date.now() - this._popupClosedAt) < 400) return;
-            // ячейка без мероприятий — окно «Мероприятия» не открываем
-            if (!this._eventsAt(isoDate, tabNo).length) return;
+            // Task 487: ячейка без мероприятий — окно «Мероприятия» не
+            // открываем. Task 522 (заявка: «при НАВЕДЕНИИ курсора на
+            // ячейку с кодом «д» для дневного персонала — попап с
+            // информацией по коду и временем работы»): окно
+            // открывается и для ячеек «д»/«н» дневного персонала БЕЗ
+            // мероприятий — секция «Статус дня» несёт справку сама
+            // (гейт _dnDayInfoAt: статус д/н + не сменный). Сменный
+            // «д»/«н» без мероприятий окно по-прежнему не открывает
+            // (часов у него нет — нечего показывать, а сетка сменного
+            // почти вся из «д»/«н» — ховер-шум по всей шахматке)
+            if (!this._eventsAt(isoDate, tabNo).length &&
+                    !(typeof this._dnDayInfoAt === 'function' &&
+                      this._dnDayInfoAt(isoDate, tabNo))) return;
             if (this._hoverOn && this._hoverCell &&
                     this._hoverCell.date === isoDate &&
                     String(this._hoverCell['таб_номер']) === String(tabNo)) {
@@ -56564,6 +56642,89 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return html;
         },
 
+        // Task 522 (заявка: «При нажатии или наведении курсора мыши на
+        // ячейку с кодом «д» для дневного персонала, должен появляться
+        // попап с информацией по этому коду и временем работы»):
+        // ПРЕДИКАТ секции «Статус дня» — определяет, есть ли у ячейки
+        // справка для окна «Мероприятия в этот день». Условия:
+        // эффективный статус (запись/правка _PENDING — _effectiveEntry)
+        // «д» ИЛИ «н» И сотрудник НЕ сменный (как гейт малой формы
+        // Task 322/521 — «дневной» и без типа; сменному часы не
+        // положены, у него фиксированные смены 12 ч). Возвращает объект
+        // { code, часы, auto, meta } или null. Часы — КОЛОНКА K листа
+        // «Записи_графика» (Task 322; единственное хранилище «времени»
+        // дневного персонала: времена начала/окончания из малой формы
+        // Task 521 НЕ сохраняются — из них считаются только часы);
+        // auto — материализованный авто-«д»/«н» замещения отпуска
+        // (Task 458, реестр _autoDnIsKey). Гвард typeof _effectiveEntry
+        // — старые VM-хосты без хелпера получают null (секции нет)
+        _dnDayInfoAt: function(isoDate, tabNo) {
+            if (typeof this._effectiveEntry !== 'function') return null;
+            var eff = this._effectiveEntry(isoDate, tabNo);
+            if (!eff) return null;
+            var code = String(eff['статус'] || '');
+            if (code !== 'д' && code !== 'н') return null;
+            var emp = null;
+            for (var j = 0; j < (this._EMPLOYEES || []).length; j++) {
+                if (String(this._EMPLOYEES[j]['таб_номер']) === String(tabNo)) {
+                    emp = this._EMPLOYEES[j]; break;
+                }
+            }
+            var isShift = emp && String(emp['тип'] || '').trim() === 'сменный';
+            if (isShift) return null;
+            var h = eff['часы'];
+            return {
+                code: code,
+                'часы': (typeof h === 'number' && isFinite(h) && h > 0)
+                    ? (Math.round(h * 10) / 10) : null,
+                auto: (typeof this._autoDnIsKey === 'function') &&
+                      !!this._autoDnIsKey(isoDate + '|' + tabNo),
+                meta: (typeof this._statusMeta === 'function')
+                    ? (this._statusMeta(code) || {}) : {}
+            };
+        },
+
+        // Task 522: рендер секции «Статус дня» для окна «Мероприятия в
+        // этот день» (клик зрителя/редактора и ДЕСКТОП-ховер Task 487):
+        // свотч + код + ПОЛНОЕ название из справочника «Коды_статусов»
+        // («информация по этому коду» из заявки; текст переносится —
+        // у «д»/«н» он длинный, многопредложенческий), строка времени
+        // работы «Время работы: N ч» из колонки K («время работы» из
+        // заявки; янтарь — как живой расчёт малой формы Task 521 и
+        // колонка «Переработка» итогов; формат с запятой —
+        // _fmtTotalsNum), пустые часы — курсив «Время работы: не
+        // указано» (колонка K пуста = часы не вводились), авто-«д»/«н» —
+        // italic-строка «Авто: замещение отпуска» (происхождение кода).
+        // Ячейка без д/н-справки → '' (секции нет). Строки НЕ кликабельны
+        // — окно справочное (Task 487)
+        _renderDnDayInfo: function(isoDate, tabNo) {
+            var info = (typeof this._dnDayInfoAt === 'function')
+                ? this._dnDayInfoAt(isoDate, tabNo) : null;
+            if (!info) return '';
+            var meta = info.meta || {};
+            var html = '<div class="ws-dn-info">' +
+                    '<div class="ws-dn-info-row">' +
+                        (meta.color
+                            ? '<span class="ws-popup-swatch" style="background:' +
+                              meta.color + ';"></span>'
+                            : '') +
+                        '<span class="ws-dn-info-code">' + this._esc(info.code) + '</span>' +
+                        '<span class="ws-dn-info-name">' +
+                            this._esc(meta.name || '') + '</span>' +
+                    '</div>' +
+                    '<div class="ws-dn-info-time' +
+                        (info['часы'] === null ? ' ws-dn-info-empty' : '') + '">' +
+                        (info['часы'] === null
+                            ? 'Время работы: не указано'
+                            : 'Время работы: ' + this._fmtTotalsNum(info['часы']) + ' ч') +
+                    '</div>' +
+                    (info.auto
+                        ? '<div class="ws-dn-info-auto">Авто: замещение отпуска</div>'
+                        : '') +
+                '</div>';
+            return html;
+        },
+
         // Task 313: содержимое ОТДЕЛЬНОГО окна «Мероприятия в этот
         // день» — открывается НАД окном кодов при клике по ячейке
         // (по заявке пользователя секция переехала из окна кодов).
@@ -56589,6 +56750,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                        '<div class="ws-events-sub">' +
                        this._esc(this._fmtDateRu(isoDate)) + ' · ' +
                        this._esc(emp ? emp['ФИО'] : 'таб. №' + tabNo) + '</div>';
+            // Task 522 (заявка: попап с информацией по коду «д» и
+            // временем работы): секция «Статус дня» — справка по коду
+            // «д»/«н» ДНЕВНОГО персонала + «Время работы: N ч» из
+            // колонки K. Идёт ПОД подзаголовком, НАД списком
+            // мероприятий (статус дня первичнее событий; окно
+            // открывается и БЕЗ мероприятий — гейт onCellHover).
+            // Гвард typeof — старые VM-хосты без новых хелперов не
+            // падают (секции нет, прежний рендер)
+            if (typeof this._renderDnDayInfo === 'function') {
+                html += this._renderDnDayInfo(isoDate, tabNo) || '';
+            }
             var dayEvents = this._eventsAt(isoDate, tabNo);
             if (!dayEvents.length) {
                 html += '<div class="ws-events-empty">нет мероприятий</div>';

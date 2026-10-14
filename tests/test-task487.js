@@ -21,7 +21,9 @@
 //      (_renderCell), гейты в onCellHover (вьюпорт ≥1024px И media
 //      (hover: hover)+(pointer: fine) — планшет/телефон ховера не
 //      получают; _saving; открытый кликом попап _popupCell —
-//      неприкосновенен; пустая ячейка — окно не открывается),
+//      неприкосновенен; пустая ячейка — окно не открывается;
+//      Task 522: «д»/«н» дневного персонала открывает окно и БЕЗ
+//      мероприятий — секция «Статус дня» _renderDnDayInfo),
 //      _openHoverPopup (тот же _renderEventsPopup + позиционирование
 //      как у _openEventsOnlyPopup, БЕЗ кловера #wsPopupCloser и БЕЗ
 //      записи _popupCell; mouseenter окна гасит grace-таймер,
@@ -147,7 +149,12 @@ describe('Task 487 — SRC: ховер-хендлеры ячеек и метод
         assertTrue(h.indexOf('if (this._popupCell) return;') !== -1,
             'открытый кликом попап неприкосновенен');
         assertTrue(h.indexOf('this._eventsAt(isoDate, tabNo).length') !== -1,
-            'окно — только если в ячейке ЕСТЬ мероприятие');
+            'гейт мероприятий жив (Task 522: ИЛИ д/н-справка дневного)');
+        // Task 522 (заявка: ховер на «д» дневного — попап с информацией
+        // по коду и временем работы): гейт расширен — окно открывается
+        // и БЕЗ мероприятий, если есть д/н-справка (_dnDayInfoAt)
+        assertTrue(h.indexOf('this._dnDayInfoAt(isoDate, tabNo)') !== -1,
+            'Task 522: альтернативный гейт — д/н-справка дневного персонала');
         assertTrue(h.indexOf('this._openHoverPopup(td, isoDate, tabNo)') !== -1,
             'открытие — через _openHoverPopup');
     });
@@ -490,8 +497,8 @@ describe('Task 487 — VM: onCellHover/onCellLeave/ховер-окно', () => {
 // ==========================================================================
 describe('Task 487 — SW: инкремент версии', () => {
 
-    test("sw.js: CACHE_VERSION = 'kipia-test-v734'", () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v734'") !== -1,
+    test("sw.js: CACHE_VERSION = 'kipia-test-v735'", () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v735'") !== -1,
             'версия кэша инкрементирована v710 → v711');
         assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v710'") === -1,
             'старой версии нет');
