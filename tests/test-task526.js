@@ -35,7 +35,7 @@
 //     + clip ghFigClip; при h=0 нет; при h=D полная), в разметке НЕТ
 //     ни marker, ни #ffffff (белые подписи старых картинок не
 //     читались в светлой теме).
-//   SW: kipia-test-v740.
+//   SW: kipia-test-v741.
 //
 // Запуск: через tests/run-all.js (require './test-task526.js').
 
@@ -89,15 +89,16 @@ function engineCtx() {
 
 // Карта: ключ схемы → (pageId, id рамки, id SVG, id блока расчёта,
 // viewBox). Task 527: блок расчёта #xxFigRes убран — данные в SVG
-// под фигурой; высота viewBox выросла (240 — 2 строки расчёта,
-// 257 — гориз. цилиндр с 3 строками).
+// под фигурой. Task 528: высота viewBox = 206 + 17·строк (все
+// результаты — в блоке с фигурой: 257 — 3 строки, 240 — 2 строки,
+// 274 — 4 строки, 291 — гориз. цилиндр с 5 строками).
 const FIGS = [
-    ['gc',  'geo-circle',   'gcFigFrame',  'gcFig',  'gcFigRes',  '0 0 240 240'],
+    ['gc',  'geo-circle',   'gcFigFrame',  'gcFig',  'gcFigRes',  '0 0 240 257'],
     ['gr',  'geo-ring',     'grFigFrame',  'grFig',  'grFigRes',  '0 0 240 240'],
-    ['gcy', 'geo-cylinder', 'gcyFigFrame', 'gcyFig', 'gcyFigRes', '0 0 240 240'],
-    ['gh',  'geo-horiz',    'ghFigFrame',  'ghFig',  'ghFigRes',  '0 0 240 257'],
-    ['gs',  'geo-sphere',   'gsFigFrame',  'gsFig',  'gsFigRes',  '0 0 240 240'],
-    ['gco', 'geo-cone',     'gcoFigFrame', 'gcoFig', 'gcoFigRes', '0 0 240 240'],
+    ['gcy', 'geo-cylinder', 'gcyFigFrame', 'gcyFig', 'gcyFigRes', '0 0 240 274'],
+    ['gh',  'geo-horiz',    'ghFigFrame',  'ghFig',  'ghFigRes',  '0 0 240 291'],
+    ['gs',  'geo-sphere',   'gsFigFrame',  'gsFig',  'gsFigRes',  '0 0 240 257'],
+    ['gco', 'geo-cone',     'gcoFigFrame', 'gcoFig', 'gcoFigRes', '0 0 240 274'],
 ];
 
 // ============================================================
@@ -274,7 +275,8 @@ describe('Task 526 D: VM — живые схемы (движок + formatNumber)
         assertTrue(b.svg.indexOf('>D = 2 м<') !== -1, 'подпись D');
         assertTrue(b.svg.indexOf('>H = 3 м<') !== -1, 'подпись H');
         assertEqual(b.rows[0][1], '9,4248 м³', 'V совпадает с calcGeoCylinder');
-        assertEqual(b.rows[1][1], '25,1327 м²', 'Sполн совпадает');
+        assertEqual(b.rows[1][1], '18,8496 м²', 'Sбок совпадает (Task 528: все результаты)');
+        assertEqual(b.rows[2][1], '25,1327 м²', 'Sполн совпадает');
         assertTrue(b.svg.indexOf('height="116.0"') !== -1, 'H/D=1.5 → фигура вытянута');
         // вдвое выше: H=6 → та же высота 116, ширина вдвое меньше
         const b2 = CTX.geoFigBuild('gcy', { D: 2, H: 6 });
@@ -322,7 +324,8 @@ describe('Task 526 D: VM — живые схемы (движок + formatNumber)
         assertTrue(b.svg.indexOf('>L = 3,1623 м<') !== -1,
             'образующая L — фактическое значение');
         assertEqual(b.rows[0][1], '3,1416 м³', 'V совпадает с calcGeoCone');
-        assertEqual(b.rows[1][0], 'L = √(H²+(D/2)²)', 'формула образующей');
+        assertEqual(b.rows[1][0], 'Sосн = π·D²/4', 'Sосн (Task 528: все результаты)');
+        assertEqual(b.rows[2][0], 'L = √(H²+(D/2)²)', 'формула образующей');
     });
 
     test('стрелки размеров — ТОЧНЫЕ треугольники (без маркеров)', () => {
@@ -351,16 +354,16 @@ describe('Task 526 D: VM — живые схемы (движок + formatNumber)
 // ============================================================
 describe('Task 526 — SW: версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v740', () => {
+    test('sw.js: CACHE_VERSION = kipia-test-v741', () => {
         const m = SW_SRC.match(/const CACHE_VERSION = '([^']+)'/);
         assertTrue(m, 'CACHE_VERSION найден');
-        assertEqual(m[1], 'kipia-test-v740',
-            'версия бампнута v738 → v739 (правка index.html)');
+        assertEqual(m[1], 'kipia-test-v741',
+            'версия бампнута v740 → v741 (правка index.html, Task 528)');
     });
 
-    test('guard: версия ушла вперёд от v738 (нет двойного бампа)', () => {
+    test('guard: версия ушла вперёд от v740 (нет двойного бампа)', () => {
         const m = SW_SRC.match(/const CACHE_VERSION = '([^']+)'/);
-        assertTrue(m[1] !== 'kipia-test-v738',
-            'v738 — прошлый шаг Task 525, не должен остаться');
+        assertTrue(m[1] !== 'kipia-test-v740',
+            'v740 — прошлый шаг Task 527, не должен остаться');
     });
 });

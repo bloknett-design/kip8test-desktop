@@ -7,9 +7,10 @@
 //
 // ЧТО ПРОВЕРЯЕТСЯ (пятью слоями):
 //   Слой 1 — SRC HTML: HTML-блоки #xxFigRes удалены со всех 6 страниц
-//     (данные — теперь ВНУТРИ картинки), viewBox вырос: 240×240 на
-//     5 страницах (2 строки расчёта), 240×257 на гориз. цилиндре
-//     (3 строки); Task 527 упомянут в комментариях всех 6 рамок.
+//     (данные — теперь ВНУТРИ картинки); Task 527 упомянут в
+//     комментариях всех 6 рамок. Task 528 (адаптация): viewBox
+//     206+17·строк — 240×240 (кольцо, 2), 240×257 (круг/сфера, 3),
+//     240×274 (цилиндр/конус, 4), 240×291 (гориз. цилиндр, 5).
 //   Слой 2 — SRC CSS: рамка 350px («блок немного больше»); классы
 //     .gf-sep (разделитель) / .gf-val (значения); CSS .geo-fig-res*
 //     удалён; анимация и prefers-reduced-motion — на .gf-resg.
@@ -23,7 +24,7 @@
 //   Слой 4 — VM: данные расчёта — в SVG под фигурой (совпадают с
 //     calcGeo*); подпись h/D больше не пересекает выносные линии
 //     (вынесена за пределы размера); юнит-тесты gfDimH/gfDimV.
-//   Слой 5 — SW: kipia-test-v740.
+//   Слой 5 — SW: kipia-test-v741 (Task 528).
 //
 // Запуск: через tests/run-all.js (require './test-task527.js').
 
@@ -91,11 +92,15 @@ describe('Task 527 A: HTML — данные уходят в картинку', (
             'класс geo-fig-res не используется в разметке');
     });
 
-    test('viewBox: 240×240 на 5 страницах, 240×257 на гориз. цилиндре', () => {
-        assertEqual(INDEX_SRC.split('viewBox="0 0 240 240"').length - 1, 5,
-            '5 рамок с двумя строками расчёта');
-        assertEqual(INDEX_SRC.split('viewBox="0 0 240 257"').length - 1, 1,
-            'гориз. цилиндр — 3 строки расчёта (240×257)');
+    test('viewBox: Task 528 — высота 206+17·строк (все результаты в блоке)', () => {
+        assertEqual(INDEX_SRC.split('viewBox="0 0 240 240"').length - 1, 1,
+            'кольцо — 2 строки расчёта (240×240)');
+        assertEqual(INDEX_SRC.split('viewBox="0 0 240 257"').length - 1, 2,
+            'круг и сфера — 3 строки расчёта (240×257)');
+        assertEqual(INDEX_SRC.split('viewBox="0 0 240 274"').length - 1, 2,
+            'цилиндр и конус — 4 строки расчёта (240×274)');
+        assertEqual(INDEX_SRC.split('viewBox="0 0 240 291"').length - 1, 1,
+            'гориз. цилиндр — 5 строк расчёта (240×291)');
         assertEqual(INDEX_SRC.split('viewBox="0 0 240 190"').length - 1, 0,
             'старый viewBox 240×190 не остался');
     });
@@ -187,16 +192,20 @@ describe('Task 527 C: JS — движок', () => {
         assertTrue(b !== null, 'geoFigRender найдена');
         assertFalse(b.indexOf('resEl') !== -1, 'resEl убран');
         assertFalse(b.indexOf('FigRes') !== -1, 'обращений к #xxFigRes нет');
-        assertTrue(b.indexOf("svgEl.innerHTML = geoFigBuild(key, v).svg;") !== -1,
+        assertTrue(b.indexOf("svgEl.innerHTML = b.svg;") !== -1,
             'фигура + зона расчёта — одним SVG');
+        assertTrue(b.indexOf("setAttribute('viewBox', '0 0 240 ' + (206 + b.rows.length * 17))") !== -1,
+            'Task 528: высота viewBox — по числу строк зоны расчёта');
     });
 
-    test('gfDimH: параметр labelPos — подпись ПОД линией для размеров под фигурой', () => {
+    test('gfDimH: Task 528 — подпись ВСЕГДА НАД линией (labelPos убран)', () => {
         const b = fnBlock('gfDimH');
         assertTrue(b !== null, 'gfDimH найдена');
-        assertTrue(b.indexOf('labelPos') !== -1, 'параметр labelPos');
-        assertTrue(b.indexOf("? y + 14 : y - 5") !== -1,
-            "позиция подписи: 'below' → y+14, иначе y−5");
+        assertTrue(b.indexOf('labelPos') === -1, 'параметр labelPos убран');
+        assertTrue(b.indexOf('gfN(y - 5)') !== -1,
+            'базовая линия подписи — над линией (y−5)');
+        assertTrue(b.indexOf('x2 + 8 + lw <= 234') !== -1,
+            'узкий размер — подпись за выносными линиями (справа)');
     });
 
     test('gfDimV: отступ 9 + вынос подписи при коротком размере', () => {
@@ -209,21 +218,25 @@ describe('Task 527 C: JS — движок', () => {
         assertTrue(b.indexOf('top - llen / 2 - 8') !== -1, 'вынос подписи вверх');
     });
 
-    test('круг/сфера/кольцо: D — размер ПОД фигурой (gfDimH …, \'below\')', () => {
-        [['geoFigCircleSVG', 'cy + R + 14'], ['geoFigSphereSVG', 'cy + R + 14'],
-         ['geoFigRingSVG', 'cy + Ro + 14']].forEach(([fn, coord]) => {
+    test('круг/сфера/кольцо: D под фигурой, подпись НАД линией (Task 528)', () => {
+        [['geoFigCircleSVG', 'cy + R + 24'], ['geoFigSphereSVG', 'cy + R + 24'],
+         ['geoFigRingSVG', 'cy + Ro + 24']].forEach(([fn, coord]) => {
             const b = fnBlock(fn);
             assertTrue(b !== null, fn + ' найдена');
-            assertTrue(b.indexOf(coord) !== -1, fn + ': размерная линия под фигурой');
-            assertTrue(b.indexOf("'below'") !== -1, fn + ": labelPos 'below'");
+            assertTrue(b.indexOf(coord) !== -1,
+                fn + ': размерная линия под фигурой, выносные длиннее (+24)');
+            assertTrue(b.indexOf("'below'") === -1, fn + ": labelPos 'below' убран");
         });
     });
 
-    test('кольцо: подпись d — НАД фигурой (вне отверстия)', () => {
+    test('кольцо: подпись d — ВНУТРИ отверстия над линией (Task 528)', () => {
         const b = fnBlock('geoFigRingSVG');
         assertTrue(b !== null, 'geoFigRingSVG найдена');
+        assertTrue(b.indexOf('cy - 5') !== -1,
+            'Task 528: подпись d внутри отверстия, НАД размерной линией');
+        assertTrue(b.indexOf('holeW') !== -1, 'детектор ширины отверстия');
         assertTrue(b.indexOf('cy - Ro - 11') !== -1,
-            'подпись d над кольцом (была внутри отверстия — пересекала линии при малом d)');
+            'fallback при малом d — над кольцом (позиция Task 527)');
     });
 
     test('конус: подпись L — у ЛЕВОГО ребра (anchor end)', () => {
@@ -255,78 +268,88 @@ describe('Task 527 D: VM — живой расчёт в картинке', () =>
         assertTrue(b.svg.indexOf('x="228" y="229"') !== -1, 'вторая строка y=229');
     });
 
-    test('gc: подпись D — под кругом, не внутри', () => {
+    test('gc: подпись D — НАД размерной линией под кругом (Task 528)', () => {
         const b = CTX.geoFigBuild('gc', { D: 100 });
-        assertTrue(b.svg.indexOf('y="168.0">D = 100 мм<') !== -1,
-            'подпись D на y=168 (под кругом: cy+R+28)');
+        assertTrue(b.svg.indexOf('y2="164.0"') !== -1,
+            'размерная линия на y=164 (cy+R+24, выносные длиннее)');
+        assertTrue(b.svg.indexOf('y="159.0">D = 100 мм<') !== -1,
+            'подпись D НАД линией (y=159 = 164−5)');
+        assertFalse(b.svg.indexOf('y="168.0">D =') !== -1,
+            'Task 527 подпись ПОД линией (y=168) не используется');
         assertFalse(b.svg.indexOf('y="101.0"') !== -1,
             'старая позиция внутри круга (y=101) не используется');
     });
 
-    test('gr: D под кольцом, d — над кольцом (вне отверстия)', () => {
+    test('gr: D НАД линией под кольцом, d — ВНУТРИ отверстия (Task 528)', () => {
         const b = CTX.geoFigBuild('gr', { D: 100, d: 80 });
-        assertTrue(b.svg.indexOf('y="172.0">D = 100 мм<') !== -1, 'D под кольцом (y=172)');
-        assertTrue(b.svg.indexOf('y="17.0">d = 80 мм<') !== -1, 'd над кольцом (y=17)');
+        assertTrue(b.svg.indexOf('y="163.0">D = 100 мм<') !== -1,
+            'D НАД размерной линией (y=163, линия 168)');
+        assertTrue(b.svg.indexOf('y="81.0">d = 80 мм<') !== -1,
+            'Task 528: d внутри отверстия НАД размерной линией (y=81)');
         assertFalse(b.svg.indexOf('y="102.0">D') !== -1, 'D больше не в отверстии');
-        assertFalse(b.svg.indexOf('y="75.0">d') !== -1, 'd больше не в отверстии');
-        // малое отверстие: подпись d всё равно вне фигуры
+        // малое отверстие: подпись d вне фигуры (fallback Task 527)
         const b2 = CTX.geoFigBuild('gr', { D: 100, d: 20 });
         assertTrue(b2.svg.indexOf('y="17.0">d = 20 мм<') !== -1,
             'd=20: подпись над кольцом, не на теле кольца');
     });
 
-    test('gs: подпись D — под сферой (меридиан не пересекает)', () => {
+    test('gs: подпись D — НАД размерной линией под сферой (Task 528)', () => {
         const b = CTX.geoFigBuild('gs', { D: 2 });
-        assertTrue(b.svg.indexOf('y="170.0">D = 2 м<') !== -1,
-            'подпись D на y=170 — ниже окружности (низ y=142)');
+        assertTrue(b.svg.indexOf('y2="166.0"') !== -1,
+            'размерная линия y=166 (низ окружности y=142)');
+        assertTrue(b.svg.indexOf('y="161.0">D = 2 м<') !== -1,
+            'подпись D НАД линией (y=161)');
         assertTrue(b.svg.indexOf('>4,1888 м³<') !== -1, 'V в картинке (= calcGeoSphere)');
         assertTrue(b.svg.indexOf('>12,5664 м²<') !== -1, 'S в картинке');
-        // штриховой меридиан (rx=16.8 у x≈103..137) больше не встречает
-        // подпись: текст начинается с y=162 (band 162..170)
         assertFalse(b.svg.indexOf('y="112.0"') !== -1, 'старая позиция y=112 не используется');
     });
 
-    test('gco: L у левого ребра, D — под линией размера', () => {
+    test('gco: L у левого ребра, D — НАД линией размера (Task 528)', () => {
         const b = CTX.geoFigBuild('gco', { D: 2, H: 3 });
         assertTrue(b.svg.indexOf('text-anchor="end" x="96.0"') !== -1,
             'L: anchor end, x=96 — у левого ребра (право края — 75)');
         assertTrue(b.svg.indexOf('>L = 3,1623 м<') !== -1, 'значение L');
-        assertTrue(b.svg.indexOf('y="184.1">D = 2 м<') !== -1,
-            'D: подпись ПОД размерной линией (y=184, линия y=170)');
+        assertTrue(b.svg.indexOf('y="173.1">D = 2 м<') !== -1,
+            'D: подпись НАД размерной линией (y=173.1, линия 178.1)');
         assertTrue(b.svg.indexOf('>3,1416 м³<') !== -1, 'V в картинке (= calcGeoCone)');
     });
 
-    test('gh: 3 строки расчёта в картинке', () => {
+    test('gh: 5 строк расчёта в картинке (Task 528: все результаты)', () => {
         const b = CTX.geoFigBuild('gh', { L: 5, D: 2, h: 1.5 });
         assertTrue(b.svg.indexOf('y="212"') !== -1, 'строка 1 (y=212)');
         assertTrue(b.svg.indexOf('y="229"') !== -1, 'строка 2 (y=229)');
         assertTrue(b.svg.indexOf('y="246"') !== -1, 'строка 3 (y=246)');
+        assertTrue(b.svg.indexOf('y="263"') !== -1, 'строка 4 (y=263, S сегмента)');
+        assertTrue(b.svg.indexOf('y="280"') !== -1, 'строка 5 (y=280, масса воды)');
         assertTrue(b.svg.indexOf('>12,637 м³<') !== -1, 'V в картинке');
         assertTrue(b.svg.indexOf('>15,708 м³<') !== -1, 'Vполн в картинке');
         assertTrue(b.svg.indexOf('>80,4499 %<') !== -1, 'заполнение в картинке');
+        assertTrue(b.svg.indexOf('>S сегмента<') !== -1, 'формула S сегмента');
+        assertTrue(b.svg.indexOf('>Масса воды (ρ=998)<') !== -1, 'масса воды');
     });
 
-    test('gh: подпись h больше НЕ пересекает выносные линии', () => {
-        // Прежде: span 45 < длины подписи ~61 → текст заходил на выносную
-        // линию зеркала (y=81). Теперь подпись вынесена за пределы
-        // размера (вверх, y≈42.7) — вне диапазона 81..126.
+    test('gh: значение h — НАД линией зеркала (Task 528)', () => {
+        // Task 528 (заявка): «значения уровня жидкости так же можно
+        // разместить над линией (сделать вынос линии немного дальше от
+        // фигуры)» — горизонтальный текст НАД штриховой линией зеркала
+        // (y=77 над линией y=81), размерная линия — без подписи,
+        // выносная зеркала тянется дальше от фигуры (до x=228).
         const b = CTX.geoFigBuild('gh', { L: 5, D: 2, h: 1.5 });
-        const m = b.svg.match(/rotate\(-90 [\d.]+ ([\d.]+)\)">h = 1,5 м/);
-        assertTrue(m !== null, 'подпись h найдена в SVG');
-        if (m) {
-            const ly = parseFloat(m[1]);
-            assertTrue(ly < 81 || ly > 126,
-                'центр подписи вне выносных (y=' + m[1] + ', выносные 81 и 126)');
-        }
-        // короткий уровень h=0.2: подпись тоже вне выносных (120..126)
+        assertTrue(b.svg.indexOf('text-anchor="end" x="182.0" y="77.0">h = 1,5 м<') !== -1,
+            'значение h НАД линией зеркала (y=77, у правого края корпуса)');
+        assertFalse(/rotate\(-90 [\d.]+ [\d.]+\)">h = 1,5 м/.test(b.svg),
+            'повернутой подписи h больше нет (значение — над линией)');
+        assertTrue(b.svg.indexOf('x2="228.0" y2="81.0"') !== -1,
+            'выносная зеркала дальше от фигуры (до x=228, было 221)');
+        // короткий уровень h=0.2: значение тоже над линией зеркала
         const b2 = CTX.geoFigBuild('gh', { L: 5, D: 2, h: 0.2 });
-        const m2 = b2.svg.match(/rotate\(-90 [\d.]+ ([\d.]+)\)">h = 0,2 м/);
-        assertTrue(m2 !== null, 'подпись h=0,2 найдена');
-        if (m2) {
-            const ly2 = parseFloat(m2[1]);
-            assertTrue(ly2 < 120 || ly2 > 132,
-                'h=0,2: подпись вне выносных (y=' + m2[1] + ')');
-        }
+        assertTrue(b2.svg.indexOf('y="116.0">h = 0,2 м<') !== -1,
+            'h=0,2: значение над линией зеркала (y=116)');
+        // высокий уровень h=1.9: над линией нет места — повернутая
+        // подпись у размерной линии (fallback Task 527)
+        const b3 = CTX.geoFigBuild('gh', { L: 5, D: 2, h: 1.9 });
+        assertTrue(/rotate\(-90 [\d.]+ [\d.]+\)">h = 1,9 м/.test(b3.svg),
+            'h=1,9: повернутая подпись (fallback)');
     });
 
     test('gcy: фигура не изменилась, расчёт — в картинке', () => {
@@ -338,11 +361,12 @@ describe('Task 527 D: VM — живой расчёт в картинке', () =>
         assertTrue(b.svg.indexOf('>25,1327 м²<') !== -1, 'Sполн в картинке');
     });
 
-    test('юнит: gfDimH labelPos — below/above', () => {
-        const below = CTX.gfDimH(10, 100, 50, 'X', [], 'below');
-        assertTrue(below.indexOf('y="64.0"') !== -1, "labelPos 'below' → y+14");
-        const above = CTX.gfDimH(10, 100, 50, 'X', []);
-        assertTrue(above.indexOf('y="45.0"') !== -1, 'по умолчанию → y−5');
+    test('юнит: gfDimH — подпись всегда над линией (Task 528)', () => {
+        const above = CTX.gfDimH(10, 100, 50, 'X');
+        assertTrue(above.indexOf('y="45.0"') !== -1, 'над линией → y−5');
+        const narrow = CTX.gfDimH(50, 60, 50, 'abcdefghij');
+        assertTrue(narrow.indexOf('text-anchor="start" x="68.0" y="45.0"') !== -1,
+            'узкий размер — подпись справа за выносными (НАД линией)');
     });
 
     test('юнит: gfDimV — короткий размер выносит подпись', () => {
@@ -375,16 +399,16 @@ describe('Task 527 D: VM — живой расчёт в картинке', () =>
 // ============================================================
 describe('Task 527 — SW: версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v740', () => {
+    test('sw.js: CACHE_VERSION = kipia-test-v741', () => {
         const m = SW_SRC.match(/const CACHE_VERSION = '([^']+)'/);
         assertTrue(m, 'CACHE_VERSION найден');
-        assertEqual(m[1], 'kipia-test-v740',
-            'версия бампнута v739 → v740 (правка index.html)');
+        assertEqual(m[1], 'kipia-test-v741',
+            'версия бампнута v740 → v741 (правка index.html, Task 528)');
     });
 
-    test('guard: версия ушла вперёд от v739 (нет двойного бампа)', () => {
+    test('guard: версия ушла вперёд от v740 (нет двойного бампа)', () => {
         const m = SW_SRC.match(/const CACHE_VERSION = '([^']+)'/);
-        assertTrue(m[1] !== 'kipia-test-v739',
-            'v739 — прошлый шаг Task 526, не должен остаться');
+        assertTrue(m[1] !== 'kipia-test-v740',
+            'v740 — прошлый шаг Task 527, не должен остаться');
     });
 });

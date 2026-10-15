@@ -29,7 +29,7 @@
 //      от друга: мероприятия 2025 (fam 0) + инструктажи 2023
 //      (fam 1) одновременно, записи каждого блока — своего года;
 //      попап (не asBlocks) — год шахматки у обоих блоков.
-//   SW: kipia-test-v740 (главный), v660 — прежней нет.
+//   SW: kipia-test-v741 (главный), v660 — прежней нет.
 // ============================================================
 
 const fs = require('fs');
@@ -420,10 +420,10 @@ describe('Task 435 — VM: карточка — блоки не влияют д�
 // ============================================================
 // 4. SW — версия кэша
 // ============================================================
-describe('Task 435 — SW: версия kipia-test-v740', () => {
-    test('CACHE_VERSION = kipia-test-v740, прежней v660 нет', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v740'") !== -1,
-            'CACHE_VERSION = kipia-test-v740');
+describe('Task 435 — SW: версия kipia-test-v741', () => {
+    test('CACHE_VERSION = kipia-test-v741, прежней v660 нет', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v741'") !== -1,
+            'CACHE_VERSION = kipia-test-v741');
         assertFalse(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v660'") !== -1,
             'v660 как активная версия больше не существует');
     });

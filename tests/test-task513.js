@@ -28,7 +28,7 @@
 //     KipDB.del, WorkSchedule.reloadTotals;
 //   • openLibraryViewer (защитный стаб), 7 backend- и 5 frontend-
 //     test-only функций, роуты, guarded-остатки id.
-// SW: kipia-test-v740 (v730 → v731: менялся index.html).
+// SW: kipia-test-v741 (v730 → v731: менялся index.html).
 //
 // Запуск: через tests/run-all.js (require './test-task513.js').
 
@@ -179,13 +179,13 @@ describe('Task 513 — scripts/*.gs: мёртвые функции удален�
 // ------------------------------------------------------------
 // 3. Service Worker: версия поднята (index.html менялся)
 // ------------------------------------------------------------
-describe('Task 513 — SW: кэш поднят до kipia-test-v740', () => {
-    test("CACHE_VERSION = 'kipia-test-v740'", () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v740'") !== -1,
-            'CACHE_VERSION = kipia-test-v740 (Task 513 — уборка мёртвого кода)');
+describe('Task 513 — SW: кэш поднят до kipia-test-v741', () => {
+    test("CACHE_VERSION = 'kipia-test-v741'", () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v741'") !== -1,
+            'CACHE_VERSION = kipia-test-v741 (Task 513 — уборка мёртвого кода)');
     });
     test('kipia-test-v741 не существует', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v741') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v742') === -1,
             'kipia-test-v741 не существует (двойной бамп)');
     });
 });
