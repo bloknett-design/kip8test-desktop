@@ -268,6 +268,10 @@ function doPost(e) {
       case 'workSchedule.getStatusCodes':
         return _json(WorkSchedule.getStatusCodes(payload));
 
+      // Task 530: погода Кемерово с meteoinfo.ru (кэш скрипта 30 мин)
+      case 'workSchedule.getWeather':
+        return _json(WorkSchedule.getWeather(payload));
+
       case 'workSchedule.getPatterns':
         return _json(WorkSchedule.getPatterns(payload));
 

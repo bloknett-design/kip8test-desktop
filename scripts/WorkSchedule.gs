@@ -6,6 +6,8 @@
 //
 // Эндпоинты (вызываются через doPost в Code.gs):
 //   workSchedule.getStatusCodes  — легенда кодов (16 шт., Task 298)
+//   workSchedule.getWeather      — погода Кемерово с meteoinfo.ru
+//                                   (Task 530: UrlFetchApp + кэш 30 мин)
 //   workSchedule.getPatterns     — шаблоны ротации + дни цикла
 //   workSchedule.listEmployees   — справочник сотрудников
 //   workSchedule.listEntries     — записи графика за месяц
@@ -942,6 +944,106 @@ var WorkSchedule = {
       });
     }
     return { ok: true, data: { codes: codes } };
+  },
+
+  // workSchedule.getWeather (Task 530)
+  // payload: { token }
+  // returns: { ok:true, data: { temp, phenomenon, cloud, wind, windDir,
+  //            pressure, humidity, obsLocal, source, fetched } }
+  // Погода в Кемерово — источник https://meteoinfo.ru/ (Гидрометцентр
+  // России), страница текущих наблюдений. Кэш скрипта 30 минут:
+  // наблюдения на станции обновляются ~раз в 3 часа. Сеть/парсинг/
+  // формат — тихий ответ temp:null (клиент показывает «--» и
+  // повторяет позже), это НЕ ошибка запроса.
+  getWeather: function(payload) {
+    var auth = this._requireRead(payload.token);
+    if (auth.error) return auth.error;
+
+    var CACHE_KEY = 'ws_weather_kemerovo_v1';
+    var cached = null;
+    try {
+      if (typeof CacheService !== 'undefined') {
+        var raw = CacheService.getScriptCache().get(CACHE_KEY);
+        if (raw) cached = JSON.parse(raw);
+      }
+    } catch (e2) { /* кэш недоступен — идём в сеть */ }
+    if (cached && cached.temp != null) return { ok: true, data: cached };
+
+    var data = null;
+    try {
+      if (typeof UrlFetchApp !== 'undefined') {
+        var resp = UrlFetchApp.fetch(
+          'https://meteoinfo.ru/pogoda/russia/kemerovo-area/kemerovo',
+          { muteHttpExceptions: true, followRedirects: true });
+        if (resp.getResponseCode() === 200) {
+          data = this._parseMeteoinfo(resp.getContentText('UTF-8'));
+        }
+      }
+    } catch (e) { /* сеть недоступна — тихий ответ ниже */ }
+    if (!data || data.temp == null) {
+      return { ok: true, data: {
+        temp: null, phenomenon: null, cloud: null, wind: null,
+        windDir: null, pressure: null, humidity: null, obsLocal: null,
+        source: 'meteoinfo.ru', note: 'weather_unavailable'
+      } };
+    }
+    try {
+      if (typeof CacheService !== 'undefined') {
+        CacheService.getScriptCache().put(
+          CACHE_KEY, JSON.stringify(data), 1800);      // 30 минут
+      }
+    } catch (e3) { /* кэш не критичен */ }
+    return { ok: true, data: data };
+  },
+
+  // Разбор страницы наблюдений meteoinfo.ru (Кемерово): таблица
+  // «Погода сейчас» — температура, облачность (балл 0..10), ветер,
+  // явление (строка таблицы без подписи). HTML разбирается
+  // регэкспами в границах таблицы (от «Температура воздуха» назад
+  // до «<table» и вперёд до «</table>») — структура страницы
+  // простая и стабильная годами
+  _parseMeteoinfo: function(html) {
+    html = String(html || '');
+    var idx = html.indexOf('Температура воздуха');
+    if (idx === -1) return null;
+    var start = html.lastIndexOf('<table', idx);
+    var end = html.indexOf('</table>', idx);
+    var tbl = (start !== -1 && end !== -1) ? html.slice(start, end) : html;
+    var m;
+    var num = function(re) {
+      m = tbl.match(re);
+      return m ? m[1] : null;
+    };
+    var temp = num('Температура воздуха,\\s*(?:&deg;|\\u00b0)\\s*C<\\/td>\\s*<td[^>]*>\\s*([+\\-\\u2212]?\\d+(?:[.,]\\d+)?)');
+    var cloud = num('Балл общей облачности<\\/td>\\s*<td[^>]*>\\s*(\\d{1,2})');
+    var wind = num('Средняя скорость ветра, м\\/с<\\/td>\\s*<td[^>]*>\\s*(\\d+(?:[.,]\\d+)?)');
+    var windDir = null;
+    m = tbl.match('Направление ветра<\\/td>\\s*<td[^>]*>\\s*([^<]{2,40})');
+    if (m) windDir = m[1].replace(/&nbsp;/g, ' ').trim();
+    // явление погоды — строка таблицы БЕЗ подписи («Слабый снег»,
+    // «Количество облаков не изменилось» и т.п.)
+    var phen = null;
+    m = tbl.match('<tr>\\s*<td[^>]*>\\s*<\\/td>\\s*<td[^>]*>\\s*([^<]{3,80})\\s*<\\/td>\\s*<\\/tr>');
+    if (m) phen = m[1].replace(/&nbsp;/g, ' ').trim();
+    // время наблюдения (местное, Кемерово): «15 октября, 13:00»
+    var obsLocal = null;
+    m = tbl.match('(\\d{1,2})\\s+([а-яё]+)\\s*,\\s*(\\d{1,2}):(\\d{2})');
+    if (m) obsLocal = m[0];
+    var pressure = num('Атмосферное давление на уровне станции,\\s*<nobr>мм рт\\.ст\\.<\\/td>\\s*<td[^>]*>\\s*(\\d{2,4})');
+    var humidity = num('Относительная влажность, %<\\/td>\\s*<td[^>]*>\\s*(\\d+(?:[.,]\\d+)?)');
+    var t = (temp != null) ? parseFloat(String(temp).replace(',', '.')) : null;
+    return {
+      temp: (t != null && !isNaN(t)) ? t : null,
+      phenomenon: phen,
+      cloud: (cloud != null) ? parseInt(cloud, 10) : null,
+      wind: (wind != null) ? parseFloat(String(wind).replace(',', '.')) : null,
+      windDir: windDir,
+      pressure: (pressure != null) ? parseInt(pressure, 10) : null,
+      humidity: (humidity != null) ? parseFloat(String(humidity).replace(',', '.')) : null,
+      obsLocal: obsLocal,
+      source: 'meteoinfo.ru',
+      fetched: new Date().toISOString()
+    };
   },
 
   // workSchedule.getPatterns

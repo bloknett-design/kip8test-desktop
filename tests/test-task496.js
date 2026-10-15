@@ -284,17 +284,17 @@ describe('Task 496 — VM: tempQueryEnterBlur (Enter гасит клавиату
 
 describe('Task 496 — SW: версия кеша v720', () => {
 
-    test('SW: CACHE_VERSION = kipia-test-v742, один инкремент', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v742';") !== -1,
-            'CACHE_VERSION = kipia-test-v742');
+    test('SW: CACHE_VERSION = kipia-test-v743, один инкремент', () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v743';") !== -1,
+            'CACHE_VERSION = kipia-test-v743');
         assertFalse(SW_SRC.indexOf('kipia-test-v719') !== -1,
             'v719 в sw.js отсутствует (ровно один инкремент)');
-        assertFalse(SW_SRC.indexOf('kipia-test-v743') !== -1,
+        assertFalse(SW_SRC.indexOf('kipia-test-v744') !== -1,
             'v721 не существует (guard)');
     });
 
     test('SW: комментарий Task 496 в шапке версий', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v742';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v743';");
         // Task 499: комментарий плейсхолдеров диапазонов (~430 симв.)
         // отодвинул Task 496 до ~1292 — окно 900 → 1600.
         // Task 502: окно 2400 → 2700 (якорь 2500).

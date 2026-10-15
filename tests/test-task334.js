@@ -49,7 +49,7 @@
 //   CSS СУЖЕНИЕ: .ws-grid.ws-narrow th/td.ws-emp-col — 76px,
 //     .ws-tab-no/.ws-emp-pos скрыты; .ws-tt-table.ws-narrow
 //     th/td.ws-tt-emp — 58px, .ws-tt-tabno скрыт (media ≤1023px).
-//   SW: kipia-test-v742.
+//   SW: kipia-test-v743.
 //
 // Запуск: через tests/run-all.js (require './test-task334.js').
 
@@ -561,10 +561,10 @@ describe('Task 334 — сужение ФИО до 4 букв', () => {
 // 6. Service Worker
 // ============================================================
 describe('Task 334 — Service Worker', () => {
-    test('SW: кэш поднят до kipia-test-v742', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v742'") !== -1,
-            'CACHE_VERSION = kipia-test-v742 (Task 334 — только фронтенд)');
-        assertFalse(SW_SRC.indexOf('kipia-test-v743') !== -1,
+    test('SW: кэш поднят до kipia-test-v743', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v743'") !== -1,
+            'CACHE_VERSION = kipia-test-v743 (Task 334 — только фронтенд)');
+        assertFalse(SW_SRC.indexOf('kipia-test-v744') !== -1,
             'лишний инкремент (v577) не сделан');
     });
 });

@@ -9,29 +9,33 @@
 //   выводиться сообщения в две строки (по типу как раньше было на
 //   пейджерах).»
 //
+// Task 530 ПЕРЕРАБОТАЛ окно по новой заявке (одна строка данных,
+// эффект выступа, прямые углы, погода, ровная сетка) — этот файл
+// адаптирован к НОВОЙ архитектуре и остаётся базовой регрессией
+// виджета; глубокие проверки новых функций — в test-task530.js.
+//
 // ЧТО ПРОВЕРЯЕТСЯ (пятью слоями):
 //   Слой 1 — SRC HTML: #wsLcdWrap (кнопка #wsLcdClock с canvas
-//     #wsLcdCanvas 96×17 + #wsLcdCal hidden) внутри бара крошек
+//     #wsLcdCanvas 205×17 + #wsLcdCal hidden) внутри бара крошек
 //     #page-work-schedule, ПОСЛЕ заголовка; aria-атрибуты; onclick.
 //   Слой 2 — SRC CSS: .ws-lcd-wrap скрыт <1024px, ≥1024px — flex
-//     справа (margin-left:auto); «вдавливание» — inset-тени корпуса и
-//     экрана; пропорция экрана 96/17; image-rendering: pixelated;
-//     темы (тёмная «подсветка» / светлая «как на фото») через
-//     --ws-lcd-*; календарь — absolute, z-index 9460, hidden.
-//   Слой 3 — SRC JS: var WsLcdClock — COLS=96/ROWS=17 (задел: 2
+//     справа (margin-left:auto) + РАСТЯНУТ на высоту бара
+//     (align-self: stretch); рамка с эффектом ВЫСТУПА (бордюрчик),
+//     прямые углы (border-radius: 0), светлый корпус в светлой теме;
+//     темы через --ws-lcd-*; календарь — absolute, z-index 9460.
+//   Слой 3 — SRC JS: var WsLcdClock — COLS=205/ROWS=17 (задел: 2
 //     строки 5×7); шрифты FONT5 (кириллица+латиница+цифры+знаки,
-//     7 строк × 5 бит) и FONTBIG (6×9); _DAYS; хук navigateTo
-//     (start при заходе / stop при уходе); слушатель 'ws-lcd-message'.
-//   Слой 4 — VM: _composeDefault — крупные цифры в верхней зоне,
-//     дата справа, день недели и секунды в нижней строке, разделительная
-//     строка 9 пуста; двоеточие мигает (чёт/нечет секунда); сообщение
-//     «пейджер» — две строки на местах 1..7/9..15, одна — по центру;
-//     _splitPages — перенос по словам ≤16 символов, сверхдлинное слово
-//     кусками, страницы по 2 строки; _tick — возврат к часам после
-//     таймаута и листание страниц; draw — 96×17 сегментов (призраки +
-//     включённые), размер canvas в device-пикселях; _calPick — селекты
-//     месяца/года + WorkSchedule.onMonthChange.
-//   Слой 5 — SW: kipia-test-v742.
+//     7 строк × 5 бит), FONTSMALL (3×5) и FONTBIG (6×9); _DAYS; хук
+//     navigateTo (start при заходе / stop при уходе); слушатель
+//     'ws-lcd-message'.
+//   Слой 4 — VM: _composeDefault — данные в ОДНУ строку (время
+//     крупно + секунды малым справа + день + дата + погода);
+//     двоеточие НЕ мигает; сообщение «пейджер» — две строки на
+//     местах 1..7/9..15, одна — по центру; _splitPages — перенос по
+//     словам ≤33 символов; _tick — возврат к часам после таймаута и
+//     листание страниц; draw — сетка ЦЕЛЫМ pitch (без призраков);
+//     _calPick — селекты месяца/года + WorkSchedule.onMonthChange.
+//   Слой 5 — SW: kipia-test-v743.
 //
 // Запуск: через tests/run-all.js (require './test-task529.js').
 
@@ -54,9 +58,9 @@ function headerBlock() {
     return INDEX_SRC.slice(i, j === -1 ? INDEX_SRC.length : j);
 }
 
-// CSS-блок Task 529 (от баннера LCD до комментария Task 315)
+// CSS-блок Task 529→530 (от баннера LCD до комментария Task 315)
 function cssBlock() {
-    const i = INDEX_SRC.indexOf('/* === Task 529: LCD-часы');
+    const i = INDEX_SRC.indexOf('/* === Task 529');
     if (i === -1) return null;
     const j = INDEX_SRC.indexOf('/* Task 315: строка 1 бара', i);
     return INDEX_SRC.slice(i, j === -1 ? INDEX_SRC.length : j);
@@ -76,6 +80,14 @@ function lcdSandbox(docOverrides) {
     const sb = {
         setInterval: function () { return 1; },
         clearInterval: function () {},
+        setTimeout: function () { return 1; },
+        clearTimeout: function () {},
+        localStorage: {
+            _s: {},
+            getItem: function (k) { return this._s[k] || null; },
+            setItem: function (k, v) { this._s[k] = String(v); },
+            removeItem: function (k) { delete this._s[k]; }
+        },
         document: {
             addEventListener: function () {},
             createElement: function () { return { value: '', textContent: '' }; },
@@ -88,7 +100,6 @@ function lcdSandbox(docOverrides) {
             getComputedStyle: function () {
                 return { getPropertyValue: function (n) {
                     return ({ '--ws-lcd-bg': '#0e1a13', '--ws-lcd-seg': '#93e6a4',
-                              '--ws-lcd-ghost': 'rgba(1,2,3,0.1)',
                               '--ws-lcd-glow': 'rgba(1,2,3,0.4)' })[n] || '';
                 } };
             }
@@ -107,7 +118,7 @@ function lcdSandbox(docOverrides) {
 // ============================================================
 // 1. SRC HTML — окно в баре крошек Табеля
 // ============================================================
-describe('Task 529 A: HTML — LCD-окно в баре крошек Табеля', () => {
+describe('Task 529 A (адаптация 530): HTML — LCD-окно в баре крошек Табеля', () => {
 
     test('виджет #wsLcdWrap внутри #page-work-schedule, ПОСЛЕ заголовка бара', () => {
         const h = headerBlock();
@@ -120,12 +131,12 @@ describe('Task 529 A: HTML — LCD-окно в баре крошек Табел�
         assertTrue(h.indexOf('class="ws-lcd-wrap"') !== -1, 'класс .ws-lcd-wrap');
     });
 
-    test('кнопка #wsLcdClock с canvas #wsLcdCanvas 96×17, onclick открывает календарь', () => {
+    test('кнопка #wsLcdClock с canvas #wsLcdCanvas 205×17, onclick открывает календарь', () => {
         const h = headerBlock();
         assertTrue(h.indexOf('id="wsLcdClock"') !== -1, 'кнопка #wsLcdClock');
         assertTrue(h.indexOf('<canvas id="wsLcdCanvas"') !== -1, 'canvas #wsLcdCanvas');
-        assertTrue(h.indexOf('width="96"') !== -1 && h.indexOf('height="17"') !== -1,
-            'атрибуты canvas — разрешение матрицы 96×17');
+        assertTrue(h.indexOf('width="205"') !== -1 && h.indexOf('height="17"') !== -1,
+            'атрибуты canvas — разрешение матрицы 205×17 (Task 530: одна строка данных + 2 строки пейджера)');
         assertTrue(h.indexOf('onclick="WsLcdClock.onClockClick(event)"') !== -1,
             'onclick → WsLcdClock.onClockClick');
     });
@@ -137,11 +148,12 @@ describe('Task 529 A: HTML — LCD-окно в баре крошек Табел�
         assertTrue(h.indexOf('class="ws-lcd-cal" hidden') !== -1, 'скрыт по умолчанию');
     });
 
-    test('aria-атрибуты кнопки (haspopup/expanded/label)', () => {
+    test('aria-атрибуты кнопки (haspopup/expanded/label с погодой)', () => {
         const h = headerBlock();
         assertTrue(h.indexOf('aria-haspopup="true"') !== -1, 'aria-haspopup');
         assertTrue(h.indexOf('aria-expanded="false"') !== -1, 'aria-expanded');
-        assertTrue(h.indexOf('aria-label="Часы и дата') !== -1, 'aria-label с описанием');
+        assertTrue(h.indexOf('aria-label="Часы, дата и погода') !== -1,
+            'aria-label упоминает погоду (Task 530)');
     });
 
     test('заголовок бара не изменён (регресс title из test-work-schedule)', () => {
@@ -158,9 +170,9 @@ describe('Task 529 A: HTML — LCD-окно в баре крошек Табел�
 });
 
 // ============================================================
-// 2. SRC CSS — вдавливание, десктоп ≥1024px, темы, календарь
+// 2. SRC CSS — рамка-выступ, прямые углы, десктоп ≥1024px, темы
 // ============================================================
-describe('Task 529 B: CSS — рамки, вдавливание, темы, календарь', () => {
+describe('Task 529 B (адаптация 530): CSS — выступ, прямые углы, темы', () => {
 
     test('мобильная база: .ws-lcd-wrap скрыт (display: none)', () => {
         const css = cssBlock();
@@ -178,44 +190,68 @@ describe('Task 529 B: CSS — рамки, вдавливание, темы, ка
         assertTrue(css.indexOf('display: flex') !== -1, 'flex-компоновка');
     });
 
-    test('эффект вдавливания: inset-тени корпуса (.ws-lcd)', () => {
+    test('Task 530: обёртка РАСТЯНУТА на высоту бара — рамка вплотную к краям', () => {
+        const css = cssBlock();
+        assertTrue(css.indexOf('align-self: stretch') !== -1,
+            'align-self: stretch — примыкание к верху/низу бара');
+        assertTrue(css.indexOf('height: 100%') !== -1,
+            'кнопка-рамка height:100% — вплотную к краям бара');
+    });
+
+    test('Task 530: заголовок бара — эллипсис при нехватке места', () => {
+        const css = cssBlock();
+        const i = css.indexOf(':has(.ws-lcd-wrap) .page-inline-header-title');
+        assertTrue(i !== -1, 'правило эллипсиса для бара Табеля с LCD');
+        const blk = css.slice(i, css.indexOf('}', i));
+        assertTrue(blk.indexOf('text-overflow: ellipsis') !== -1, 'ellipsis');
+        assertTrue(blk.indexOf('overflow: hidden') !== -1, 'overflow hidden');
+    });
+
+    test('Task 530: рамка — эффект ВЫСТУПА (бордюрчик), прямые углы', () => {
         const css = cssBlock();
         const i = css.indexOf('.ws-lcd {');
         const blk = css.slice(i, css.indexOf('}', i));
-        assertTrue(blk.indexOf('inset 0 1px 0') !== -1, 'блик верхнего бортика внутрь');
-        assertTrue(blk.indexOf('inset 0 -1px 2px') !== -1, 'тень нижнего края внутрь');
-        assertTrue(blk.indexOf('0 1px 3px rgba(0, 0, 0, 0.45)') !== -1, 'внешняя тень «утопленности»');
-        assertTrue(blk.indexOf('border:') !== -1 && blk.indexOf('border-radius: 9px') !== -1,
-            'рамка корпуса со скруглением');
+        assertTrue(blk.indexOf('border-radius: 0') !== -1, 'ПРЯМЫЕ углы (без скруглений)');
+        assertTrue(css.indexOf('inset 0 1px 0 rgba(255, 255, 255, 0.16)') !== -1,
+            'светлый блик ВЕРХНЕГО края — приподнятая панель');
+        assertTrue(css.indexOf('inset 0 -1px 0 rgba(0, 0, 0, 0.5)') !== -1,
+            'тень НИЖНЕГО края — эффект выступа');
+        assertTrue(css.indexOf('0 1px 2px rgba(0, 0, 0, 0.4)') !== -1,
+            'внешняя тень отделяет панель от бара');
     });
 
-    test('экран: пропорция 96/17, pixelated, глубокая внутренняя тень', () => {
+    test('Task 530: экран — прямые углы, размер задаёт JS (кратен матрице)', () => {
         const css = cssBlock();
         const i = css.indexOf('.ws-lcd-screen {');
         const blk = css.slice(i, css.indexOf('}', i));
-        assertTrue(blk.indexOf('width: calc(40px * 96 / 17)') !== -1,
-            'ширина из пропорции матрицы 96×17');
-        assertTrue(blk.indexOf('height: 40px') !== -1, 'высота экрана 40px');
-        assertTrue(blk.indexOf('image-rendering: pixelated') !== -1, 'чёткие квадраты сегментов');
-        assertTrue(blk.indexOf('inset 0 2px 5px') !== -1, 'экран утоплен в корпус');
+        assertTrue(blk.indexOf('border-radius: 0') !== -1, 'прямые углы экрана');
+        assertTrue(blk.indexOf('width:') === -1 || blk.indexOf('width: auto') !== -1,
+            'фиксированной CSS-ширины НЕТ — размер устанавливает draw() в device-пикселях');
+        assertTrue(blk.indexOf('image-rendering') === -1,
+            'pixelated УБРАН — канвас ложится 1:1 на физпиксели');
     });
 
     test('цвета через --ws-lcd-*: тёмная тема — «подсветка»', () => {
         const css = cssBlock();
-        ['--ws-lcd-bg', '--ws-lcd-seg', '--ws-lcd-ghost', '--ws-lcd-glow'].forEach(function (v) {
+        ['--ws-lcd-bg', '--ws-lcd-seg', '--ws-lcd-glow'].forEach(function (v) {
             assertTrue(css.indexOf(v) !== -1, 'переменная ' + v + ' объявлена');
         });
         assertTrue(css.indexOf('--ws-lcd-seg: #93e6a4') !== -1, 'зелёные сегменты тёмной темы');
+        assertFalse(css.indexOf('--ws-lcd-ghost') !== -1,
+            '«призрачная» сетка УДАЛЕНА из тем (Task 530: выключенные сегменты невидимы)');
     });
 
-    test('светлая тема: серо-зелёный ЖК + тёмные символы (как на фото)', () => {
+    test('светлая тема (Task 530): СВЕТЛАЯ рамка + серо-зелёный ЖК с тёмными символами', () => {
         const css = cssBlock();
         const i = css.indexOf('[data-theme="light"] .ws-lcd {');
         assertTrue(i !== -1, 'оверрайд светлой темы есть');
         const blk = css.slice(i, css.indexOf('}', i));
         assertTrue(blk.indexOf('--ws-lcd-bg: #ccd6c5') !== -1, 'серо-зелёный фон ЖК');
         assertTrue(blk.indexOf('--ws-lcd-seg: #232e38') !== -1, 'тёмные символы');
-        assertTrue(css.indexOf('background: #2a2f35') !== -1, 'тёмный пластиковый корпус');
+        assertTrue(blk.indexOf('background: #e7e2d5') !== -1,
+            'СВЕТЛАЯ рамка-бордюрчик (заявка Task 530)');
+        assertFalse(css.indexOf('background: #2a2f35') !== -1,
+            'чёрный корпус светлой темы УДАЛЁН (заявка: светлым цветом)');
     });
 
     test('календарь: absolute у правого края, z-index 9460, [hidden]', () => {
@@ -233,14 +269,14 @@ describe('Task 529 B: CSS — рамки, вдавливание, темы, ка
 // ============================================================
 // 3. SRC JS — модуль, шрифты, хук navigateTo, API сообщений
 // ============================================================
-describe('Task 529 C: JS — модуль WsLcdClock и хук navigateTo', () => {
+describe('Task 529 C (адаптация 530): JS — модуль WsLcdClock и хук navigateTo', () => {
 
-    test('var WsLcdClock определён; COLS=96, ROWS=17 (задел: 2 строки 5×7)', () => {
+    test('var WsLcdClock определён; COLS=205, ROWS=17 (Task 530: одна строка + пейджер)', () => {
         const m = lcdModule();
         assertTrue(m !== null, 'модуль найден в index.html');
         const sb = lcdSandbox();
-        assertEqual(sb.WsLcdClock.COLS, 96, 'COLS = 96 (16 символов 5×7 в строке)');
-        assertEqual(sb.WsLcdClock.ROWS, 17, 'ROWS = 17 (7+1+7 две строки + запас)');
+        assertEqual(sb.WsLcdClock.COLS, 205, 'COLS = 205 (время+сек+день+дата+погода в одну строку)');
+        assertEqual(sb.WsLcdClock.ROWS, 17, 'ROWS = 17 (7+1+7 две строки пейджера + запас)');
         assertTrue(sb.WsLcdClock.PAGE_MS > 0, 'PAGE_MS задан');
     });
 
@@ -254,10 +290,10 @@ describe('Task 529 C: JS — модуль WsLcdClock и хук navigateTo', () =
         assertEqual(missing.length, 0, 'все 32 буквы на месте: ' + missing.join(','));
     });
 
-    test('FONT5: латиница A..Z, цифры 0..9, знаки . : - / пробел', () => {
+    test('FONT5: латиница A..Z, цифры 0..9, знаки . : - / % ° пробел', () => {
         const sb = lcdSandbox();
-        for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.:-/ ') {
-            assertTrue(!!sb.WsLcdClock.FONT5[ch], 'глиф «' + ch + '» есть');
+        for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.:-/ %°') {
+            assertTrue(!!sb.WsLcdClock.FONT5[ch], 'глиф «' + ch + '» есть (° — Task 530 погода)');
         }
     });
 
@@ -274,6 +310,20 @@ describe('Task 529 C: JS — модуль WsLcdClock и хук navigateTo', () =
             });
         });
         assertEqual(bad.length, 0, 'все глифы валидны: ' + bad.slice(0, 5).join('; '));
+    });
+
+    test('FONTSMALL (Task 530): цифры 0..9, каждый глиф 5 строк по 3 бита', () => {
+        const sb = lcdSandbox();
+        let bad = [];
+        for (const ch of '0123456789') {
+            const g = sb.WsLcdClock.FONTSMALL[ch];
+            if (!g) { bad.push(ch + ':нет'); continue; }
+            if (g.length !== 5) { bad.push(ch + ':строк ' + g.length); continue; }
+            g.forEach(function (row) {
+                if (typeof row !== 'number' || row < 0 || row > 7) bad.push(ch + ':ряд ' + row);
+            });
+        }
+        assertEqual(bad.length, 0, 'малый шрифт 3×5 валиден: ' + bad.join('; '));
     });
 
     test('FONTBIG: цифры 0..9 и «:», каждый глиф 9 строк по 6 бит', () => {
@@ -325,67 +375,29 @@ describe('Task 529 C: JS — модуль WsLcdClock и хук navigateTo', () =
 });
 
 // ============================================================
-// 4. VM — компоновка экрана, мигание, сообщения, отрисовка, календарь
+// 4. VM — компоновка экрана, пейджер, отрисовка
 // ============================================================
-describe('Task 529 D: VM — экран 96×17, пейджер, отрисовка', () => {
+describe('Task 529 D (адаптация 530): VM — экран 205×17, пейджер, отрисовка', () => {
 
-    test('_composeDefault: крупные цифры в верхней зоне («1» в 14:56)', () => {
+    test('_composeDefault: крупные цифры времени («1» в 14:56), ряд 4', () => {
         const sb = lcdSandbox();
         const g = sb.WsLcdClock._composeDefault(new Date(2026, 9, 15, 14, 56, 0));
-        // «1» на позиции x=1: ряд 0 — 001100 → колонки 3..4
-        assertEqual(g[0][3], 1, 'левый сегмент верха «1»');
-        assertEqual(g[0][4], 1, 'правый сегмент верха «1»');
-        assertEqual(g[0][1], 0, 'пусто слева от «1»');
-        assertEqual(g[8][4], 1, '«1» доходит до низа верхней зоны (ряд 8)');
+        // «1» на позиции x=1: ряд 4 → 001100 → колонки 3..4 (Task 530: строки 4..12)
+        assertEqual(g[4][3], 1, 'левый сегмент верха «1»');
+        assertEqual(g[4][4], 1, 'правый сегмент верха «1»');
+        assertEqual(g[4][1], 0, 'пусто слева от «1»');
+        assertEqual(g[12][5], 1, '«1» доходит до низа зоны времени (ряд 12)');
     });
 
-    test('_composeDefault: дата справа в верхней зоне (15.10.2026)', () => {
-        const sb = lcdSandbox();
-        const g = sb.WsLcdClock._composeDefault(new Date(2026, 9, 15, 14, 56, 0));
-        // дата «15.10.2026» — 59 колонок, конец на 93; «1» ряд 1 → 00100 → col 37
-        assertEqual(g[1][37], 1, 'первая колонка «1» даты');
-        assertEqual(g[1][36], 0, 'слева от даты пусто');
-        let lit = 0;
-        for (let c = 35; c <= 93; c++) if (g[1][c]) lit++;
-        assertTrue(lit >= 3, 'дата реально нарисована (ряд 1, правая зона)');
-    });
-
-    test('_composeDefault: день недели и секунды в нижней строке, ряд 9 пуст', () => {
-        const sb = lcdSandbox();
-        const g = sb.WsLcdClock._composeDefault(new Date(2026, 9, 15, 14, 56, 0));
-        // 15.10.2026 — ЧЕТВЕРГ: «Ч» ряд 10 → 10001 → колонки 1 и 5
-        assertEqual(g[10][1], 1, '«Ч»: левая ножка');
-        assertEqual(g[10][5], 1, '«Ч»: правая ножка');
-        assertEqual(g[10][3], 0, '«Ч»: середина пуста');
-        // секунды «00» справа: первый «0» на col 83, ряд 10 → 01110 → cols 84..86
-        assertEqual(g[10][84], 1, 'секунды в нижней строке справа');
-        let row9 = 0;
-        for (let c = 0; c < 96; c++) row9 += g[9][c];
-        assertEqual(row9, 0, 'разделительный ряд 9 пуст (две зоны экрана)');
-    });
-
-    test('двоеточие мигает: чётная секунда горит, нечётная — нет', () => {
+    test('двоеточие НЕ мигает (Task 530): горит при чётной И нечётной секунде', () => {
         const sb = lcdSandbox();
         const even = sb.WsLcdClock._composeDefault(new Date(2026, 9, 15, 14, 56, 0));
         const odd  = sb.WsLcdClock._composeDefault(new Date(2026, 9, 15, 14, 56, 1));
-        // «14:56»: двоеточие после «4» (x=15), точки в колонках 17..18, ряды 2..3 и 5..6
-        assertEqual(even[2][17], 1, 'чёт: верхняя точка горит');
-        assertEqual(even[3][18], 1, 'чёт: верхняя точка (правая)');
-        assertEqual(odd[2][17], 0, 'нечёт: точка погашена');
-        assertEqual(odd[3][18], 0, 'нечёт: точка погашена (правая)');
-        // сами цифры не мигают
-        assertEqual(odd[0][3], 1, 'цифра «1» горит всегда');
-    });
-
-    test('общее число сегментов разумное (~200..600), зоны сбалансированы', () => {
-        const sb = lcdSandbox();
-        const g = sb.WsLcdClock._composeDefault(new Date(2026, 9, 15, 14, 56, 0));
-        let lit = 0, top = 0, bottom = 0;
-        for (let r = 0; r < 17; r++) for (let c = 0; c < 96; c++) {
-            if (g[r][c]) { lit++; if (r < 9) top++; else bottom++; }
-        }
-        assertTrue(lit >= 200 && lit <= 600, 'всего сегментов: ' + lit);
-        assertTrue(top > 0 && bottom > 0, 'обе зоны заполнены: верх ' + top + '/низ ' + bottom);
+        // «14:56»: двоеточие на x=15, точки в колонках 17..18, ряды 6..7 и 9..10
+        assertEqual(even[6][17], 1, 'чёт: верхняя точка горит');
+        assertEqual(odd[6][17], 1, 'нечёт: верхняя точка ТОЖЕ горит (не мигает)');
+        assertEqual(odd[10][17], 1, 'нечёт: нижняя точка горит');
+        assertEqual(odd[8][17], 0, 'между точками пусто');
     });
 
     test('_composeMsg: две строки на рядах 1..7 и 9..15', () => {
@@ -397,7 +409,7 @@ describe('Task 529 D: VM — экран 96×17, пейджер, отрисовк
         assertEqual(g[9][2], 1, 'вторая строка — с ряда 9 («О»: верх 01110 → колонка 2)');
         // между строками (ряд 8) пусто
         let row8 = 0;
-        for (let c = 0; c < 96; c++) row8 += g[8][c];
+        for (let c = 0; c < 205; c++) row8 += g[8][c];
         assertEqual(row8, 0, 'между строками пустой ряд');
     });
 
@@ -409,24 +421,15 @@ describe('Task 529 D: VM — экран 96×17, пейджер, отрисовк
         assertEqual(g[1][1], 0, 'ряд 1 пуст');
     });
 
-    test('_splitPages: перенос по словам ≤16 символов, страницы по 2 строки', () => {
+    test('_splitPages: перенос по словам ≤33 символов (ширина 205), страницы по 2 строки', () => {
         const sb = lcdSandbox();
         const pages = sb.WsLcdClock._splitPages('ТЕМПЕРАТУРА В ПОМЕЩЕНИИ В НОРМЕ');
-        assertEqual(pages.length, 2, 'две страницы');
-        assertEqual(pages[0][0], 'ТЕМПЕРАТУРА В', 'строка 1 страницы 1');
-        assertEqual(pages[0][1], 'ПОМЕЩЕНИИ В', 'строка 2 страницы 1');
-        assertEqual(pages[1][0], 'НОРМЕ', 'хвост на странице 2');
+        assertEqual(pages.length, 1, 'короткая фраза (29 символов) — одна страница');
+        assertEqual(pages[0][0], 'ТЕМПЕРАТУРА В ПОМЕЩЕНИИ В НОРМЕ', 'строка 1 — вся фраза (33 символа в строке)');
+        assertEqual(pages[0][1], '', 'строка 2 пуста');
         pages.forEach(function (p) {
-            p.forEach(function (line) { assertTrue(line.length <= 16, 'строка ≤16: «' + line + '»'); });
+            p.forEach(function (line) { assertTrue(line.length <= 33, 'строка ≤33: «' + line + '»'); });
         });
-    });
-
-    test('_splitPages: сверхдлинное слово режется кусками по 16', () => {
-        const sb = lcdSandbox();
-        const pages = sb.WsLcdClock._splitPages('ЭЛЕКТРООБОРУДОВАНИЕ ПРОВЕРЕНО');
-        assertEqual(pages[0][0], 'ЭЛЕКТРООБОРУДОВА', 'кусок ровно 16 символов');
-        assertEqual(pages[0][1], 'НИЕ ПРОВЕРЕНО', 'остаток слова склеен со следующим');
-        assertEqual(pages.length, 1, 'вся фраза на одной странице');
     });
 
     test('_splitPages: пустой текст → пустой список', () => {
@@ -455,8 +458,8 @@ describe('Task 529 D: VM — экран 96×17, пейджер, отрисовк
         sb.WsLcdClock._tick();
         assertEqual(sb.WsLcdClock._msg, null, 'сообщение сброшено');
         assertTrue(sb.WsLcdClock._grid !== null, 'экран перерисован часами');
-        // верхняя зона снова с крупными цифрами
-        assertEqual(sb.WsLcdClock._grid[0][3], 1, 'крупные цифры на месте');
+        // зона времени снова с крупными цифрами (ряд 4)
+        assertEqual(sb.WsLcdClock._grid[4][4], 1, 'крупные цифры на месте');
     });
 
     test('_tick: листание страниц длинного сообщения', () => {
@@ -471,34 +474,64 @@ describe('Task 529 D: VM — экран 96×17, пейджер, отрисовк
         assertTrue(sb.WsLcdClock._msg.nextFlip > Date.now(), 'nextFlip перевён');
     });
 
-    test('draw: 96×17 сегментов (призраки + включённые), canvas в device-пикселях', () => {
+    test('draw: ЦЕЛЫЙ pitch — сетка ровная, без «призраков» (Task 530)', () => {
         let fillRects = 0;
+        const rects = [];
         const ctx = {
             fillStyle: '', shadowColor: '', shadowBlur: 0,
-            fillRect: function () { fillRects++; }
+            fillRect: function (x, y, w, h) { fillRects++; rects.push([x, y, w, h]); }
         };
         const cv = {
-            width: 0, height: 0,
-            getBoundingClientRect: function () { return { width: 300, height: 53 }; },
+            width: 0, height: 0, style: {},
             getContext: function () { return ctx; }
         };
+        const host = {
+            getBoundingClientRect: function () {
+                return { width: 640, height: 56 };
+            }
+        };
+        Object.defineProperty(cv, 'parentElement', { value: host });
         const sb = lcdSandbox({
             getElementById: function (id) { return id === 'wsLcdCanvas' ? cv : null; }
         });
+        sb.window.getComputedStyle = function () {
+            return {
+                getPropertyValue: function (n) {
+                    return ({ paddingTop: '1px', paddingBottom: '1px',
+                              borderTopWidth: '1px', borderBottomWidth: '1px',
+                              '--ws-lcd-bg': '#0e1a13', '--ws-lcd-seg': '#93e6a4',
+                              '--ws-lcd-glow': 'none' })[n] || '';
+                }
+            };
+        };
         sb.WsLcdClock._grid = sb.WsLcdClock._composeDefault(new Date(2026, 9, 15, 14, 56, 0));
+        let lit = 0;
+        for (let r = 0; r < 17; r++) for (let c = 0; c < 205; c++) if (sb.WsLcdClock._grid[r][c]) lit++;
         sb.WsLcdClock.draw();
-        // 1 заливка фона + каждая ячейка матрицы ровно один раз
-        assertEqual(fillRects, 96 * 17 + 1, 'фон + каждая ячейка матрицы: ' + fillRects);
-        assertEqual(cv.width, 600, 'ширина canvas = CSS×DPR (300×2)');
-        assertEqual(cv.height, 106, 'высота canvas = CSS×DPR (53×2)');
+        // 1 фон + ТОЛЬКО включённые сегменты (призрачной сетки НЕТ)
+        assertEqual(fillRects, lit + 1, 'фон + ровно включённые сегменты: ' + fillRects);
+        const pitch = sb.WsLcdClock._pitch;
+        assertTrue(pitch >= 2 && Number.isInteger(pitch), 'pitch целый: ' + pitch);
+        assertEqual(cv.width, 205 * pitch, 'ширина canvas = COLS×pitch (ровная сетка)');
+        assertEqual(cv.height, 17 * pitch, 'высота canvas = ROWS×pitch');
+        // все сегменты — одинакового размера и на кратных pitch позициях
+        let bad = 0;
+        rects.slice(1).forEach(function (rc) {
+            if (rc[2] !== rects[1][2] || rc[3] !== rects[1][2]) bad++;
+            if (rc[0] % pitch !== 0 || rc[1] % pitch !== 0) bad++;
+        });
+        assertEqual(bad, 0, 'все сегменты одинаковы и лежат в решётке pitch: ' + bad);
     });
 
     test('draw: скрытое окно (display:none) не рисует', () => {
         const cv = {
-            width: 10, height: 10,
-            getBoundingClientRect: function () { return { width: 0, height: 0 }; },
+            width: 10, height: 10, style: {},
             getContext: function () { throw new Error('не должен вызываться'); }
         };
+        const host = {
+            getBoundingClientRect: function () { return { width: 0, height: 0 }; }
+        };
+        Object.defineProperty(cv, 'parentElement', { value: host });
         const sb = lcdSandbox({
             getElementById: function (id) { return id === 'wsLcdCanvas' ? cv : null; }
         });
@@ -539,16 +572,15 @@ describe('Task 529 D: VM — экран 96×17, пейджер, отрисовк
 // ============================================================
 // 5. SW — версия кэша
 // ============================================================
-describe('Task 529 — SW: версия кэша', () => {
+describe('Task 529 → 530 — SW: версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v742', () => {
+    test('sw.js: CACHE_VERSION = kipia-test-v743', () => {
         const m = SW_SRC.match(/const CACHE_VERSION = '(kipia-test-v\d+)'/);
         assertTrue(m !== null, 'CACHE_VERSION найден в sw.js');
-        assertEqual(m[1], 'kipia-test-v742',
-            'SW поднят до kipia-test-v742 (index.html менялся — Task 529)');
-        assertTrue(m[1] !== 'kipia-test-v741',
-            'старая версия kipia-test-v741 не осталась');
+        assertEqual(m[1], 'kipia-test-v743',
+            'SW поднят до kipia-test-v743 (index.html менялся — Task 530)');
+        assertTrue(m[1] !== 'kipia-test-v742',
+            'старая версия kipia-test-v742 не осталась');
     });
 
 });
-

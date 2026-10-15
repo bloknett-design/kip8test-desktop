@@ -433,6 +433,12 @@ describe('Task 489 — VM: форма — префилл и submit', () => {
             'openEmployeeForm', 'closeEmployeeForm', 'openEmpEditForm',
             'submitEmployeeForm', 'onEmpTypeChange',
             '_fillPositionSelect', '_fillGroupSelect',
+            // Task 530: хелперы наполнения опций — вызываются из
+            // .then/.catch АСИНХРОННО; без них в моке первый же
+            // await в общем прогоне (async-тесты Task 530) запускал
+            // отложенный колбэк и валил процесс TypeError'ом —
+            // латентный баг мока, вскрытый async-тестами
+            '_fillPositionOptions', '_fillGroupOptions',
             '_esc', '_escAttr', '_isoDate', '_fmtDateRu',
             '_wsShortFio', '_wsNameInitial', '_wsFullFio',
         ];
@@ -939,9 +945,9 @@ describe('Task 489 — VM: сервер — карта + чтение', () => {
 // ============================================================
 describe('Task 489 — Service Worker', () => {
 
-    test('SW: кэш поднят до kipia-test-v742', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v742'") !== -1,
-            'CACHE_VERSION = kipia-test-v742 (Task 489)');
+    test('SW: кэш поднят до kipia-test-v743', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v743'") !== -1,
+            'CACHE_VERSION = kipia-test-v743 (Task 489)');
         assertFalse(SW_SRC.indexOf('kipia-test-v712') !== -1,
             'прошлая версия не осталась');
     });

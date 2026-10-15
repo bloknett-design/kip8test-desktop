@@ -849,6 +849,7 @@ require('./test-task528.js');
 // матрица 96×17, время/дата/день недели, календарь,
 // сообщения в две строки. SW v742.
 require('./test-task529.js');
+require('./test-task530.js');
 require('./test-deploy-url.js');
 
 // Запускаем
