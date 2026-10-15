@@ -10,15 +10,17 @@
 // ЧТО ПРОВЕРЯЕТСЯ (четырьмя слоями):
 //   Слой 1 — SRC HTML: на всех 6 страницах геометрии статичные
 //     .geo-svg-container заменены рамками .geo-fig-frame (id
-//     gcFigFrame…gcoFigFrame) с пустым SVG (рендер — JS-движком) и
-//     блоком живого расчёта #xxFigRes; старых классов/маркеров — 0;
-//     единый viewBox 240×190 (схема стала больше); oninput всех 11
-//     полей звает geoFigUpdate (живая перестройка при вводе).
+//     gcFigFrame…gcoFigFrame) с пустым SVG (рендер — JS-движком);
+//     старых классов/маркеров — 0; Task 527: viewBox 240×240
+//     (гориз. цилиндр — 240×257), HTML-блоки #xxFigRes убраны
+//     (данные — в картинке); oninput всех 11 полей звает
+//     geoFigUpdate (живая перестройка при вводе).
 //   Слой 2 — SRC CSS: .geo-fig-frame — НЕПРОЗРАЧНЫЙ фон: тёмная тема
 //     #17222E (графитово-синий лист, выбор агента), светлая —
 //     #F7F2E6 (бежево-бело-молочная бумага, по заявке); рамка
-//     320px max; keyframes gf-draw/gf-fade/gf-dim/gf-res/gf-rise/
-//     gf-sweep + гварды :not(.geo-static); prefers-reduced-motion.
+//     350px max (Task 527 — немного больше); keyframes gf-draw/
+//     gf-fade/gf-dim/gf-res/gf-rise/gf-sweep + гварды
+//     :not(.geo-static); prefers-reduced-motion.
 //   Слой 3 — SRC JS: движок [Task 526 geo-fig engine] — карта
 //     GEO_FIG_PAGES (6 страниц), gfArrow/gfDimH/gfDimV (точные
 //     стрелки-треугольники — БЕЗ SVG-маркеров, источник прежних
@@ -33,7 +35,7 @@
 //     + clip ghFigClip; при h=0 нет; при h=D полная), в разметке НЕТ
 //     ни marker, ни #ffffff (белые подписи старых картинок не
 //     читались в светлой теме).
-//   SW: kipia-test-v739.
+//   SW: kipia-test-v740.
 //
 // Запуск: через tests/run-all.js (require './test-task526.js').
 
@@ -85,14 +87,17 @@ function engineCtx() {
     return sandbox;
 }
 
-// Карта: ключ схемы → (pageId, id рамки, id SVG, id блока расчёта).
+// Карта: ключ схемы → (pageId, id рамки, id SVG, id блока расчёта,
+// viewBox). Task 527: блок расчёта #xxFigRes убран — данные в SVG
+// под фигурой; высота viewBox выросла (240 — 2 строки расчёта,
+// 257 — гориз. цилиндр с 3 строками).
 const FIGS = [
-    ['gc',  'geo-circle',   'gcFigFrame',  'gcFig',  'gcFigRes'],
-    ['gr',  'geo-ring',     'grFigFrame',  'grFig',  'grFigRes'],
-    ['gcy', 'geo-cylinder', 'gcyFigFrame', 'gcyFig', 'gcyFigRes'],
-    ['gh',  'geo-horiz',    'ghFigFrame',  'ghFig',  'ghFigRes'],
-    ['gs',  'geo-sphere',   'gsFigFrame',  'gsFig',  'gsFigRes'],
-    ['gco', 'geo-cone',     'gcoFigFrame', 'gcoFig', 'gcoFigRes'],
+    ['gc',  'geo-circle',   'gcFigFrame',  'gcFig',  'gcFigRes',  '0 0 240 240'],
+    ['gr',  'geo-ring',     'grFigFrame',  'grFig',  'grFigRes',  '0 0 240 240'],
+    ['gcy', 'geo-cylinder', 'gcyFigFrame', 'gcyFig', 'gcyFigRes', '0 0 240 240'],
+    ['gh',  'geo-horiz',    'ghFigFrame',  'ghFig',  'ghFigRes',  '0 0 240 257'],
+    ['gs',  'geo-sphere',   'gsFigFrame',  'gsFig',  'gsFigRes',  '0 0 240 240'],
+    ['gco', 'geo-cone',     'gcoFigFrame', 'gcoFig', 'gcoFigRes', '0 0 240 240'],
 ];
 
 // ============================================================
@@ -100,16 +105,16 @@ const FIGS = [
 // ============================================================
 describe('Task 526 A: HTML — рамки живых схем', () => {
 
-    FIGS.forEach(([key, pageId, frameId, svgId, resId]) => {
-        test(pageId + ': рамка .geo-fig-frame с SVG и блоком расчёта', () => {
+    FIGS.forEach(([key, pageId, frameId, svgId, resId, viewBox]) => {
+        test(pageId + ': рамка .geo-fig-frame с SVG (без HTML-блока расчёта)', () => {
             const b = pageBlock(pageId);
             assertTrue(b !== null, 'страница найдена');
             assertTrue(b.indexOf('class="geo-fig-frame" id="' + frameId + '"') !== -1,
                 'рамка #' + frameId);
-            assertTrue(b.indexOf('id="' + svgId + '" class="geo-fig-svg" viewBox="0 0 240 190"') !== -1,
-                'SVG #' + svgId + ' единый viewBox 240×190');
-            assertTrue(b.indexOf('class="geo-fig-res" id="' + resId + '"') !== -1,
-                'блок живого расчёта #' + resId);
+            assertTrue(b.indexOf('id="' + svgId + '" class="geo-fig-svg" viewBox="' + viewBox + '"') !== -1,
+                'SVG #' + svgId + ' viewBox ' + viewBox + ' (Task 527: выше — место расчёта)');
+            assertFalse(b.indexOf('id="' + resId + '"') !== -1,
+                'Task 527: HTML-блок #' + resId + ' убран — данные в картинке');
             assertTrue(b.indexOf('Task 526') !== -1, 'маркер Task 526 в комментарии блока');
             assertFalse(b.indexOf('geo-svg-container') !== -1, 'старый контейнер убран');
         });
@@ -158,8 +163,8 @@ describe('Task 526 B: CSS — рамки и анимация', () => {
         const seg = INDEX_SRC.slice(i, i + 1400);
         assertTrue(seg.indexOf('background: #17222E') !== -1,
             'фон #17222E — hex БЕЗ альфы (непрозрачный)');
-        assertTrue(seg.indexOf('width: min(100%, 320px)') !== -1,
-            'ширина до 320px — заметно больше прежних 220px/55%');
+        assertTrue(seg.indexOf('width: min(100%, 350px)') !== -1,
+            'ширина до 350px — Task 527: блок с фигурой немного больше');
         assertTrue(seg.indexOf('border-radius: 14px') !== -1, 'рамка скруглена');
     });
 
@@ -178,8 +183,8 @@ describe('Task 526 B: CSS — рамки и анимация', () => {
         });
         assertTrue(INDEX_SRC.indexOf('.geo-fig-frame:not(.geo-static) .gf-draw') !== -1,
             'гвард анимации контура');
-        assertTrue(INDEX_SRC.indexOf('.geo-fig-frame:not(.geo-static) .geo-fig-res') !== -1,
-            'гвард анимации блока расчёта');
+        assertTrue(INDEX_SRC.indexOf('.geo-fig-frame:not(.geo-static) .gf-resg') !== -1,
+            'гвард анимации зоны расчёта в картинке (Task 527)');
         assertTrue(INDEX_SRC.indexOf('frame.classList.toggle(\'geo-static\', !animate)') !== -1,
             'geo-static выключается/включается из geoFigRender');
     });
@@ -346,10 +351,10 @@ describe('Task 526 D: VM — живые схемы (движок + formatNumber)
 // ============================================================
 describe('Task 526 — SW: версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v739', () => {
+    test('sw.js: CACHE_VERSION = kipia-test-v740', () => {
         const m = SW_SRC.match(/const CACHE_VERSION = '([^']+)'/);
         assertTrue(m, 'CACHE_VERSION найден');
-        assertEqual(m[1], 'kipia-test-v739',
+        assertEqual(m[1], 'kipia-test-v740',
             'версия бампнута v738 → v739 (правка index.html)');
     });
 

@@ -381,7 +381,14 @@
        «погрешности отображения»). Анимация — CSS-классы gf-*:
        контур «прочерчивается» (штрих-маска), жидкость поднимается,
        размеры и результат проявляются; класс .geo-static на рамке
-       отключает анимацию (мгновенная перестройка при вводе в поля). */
+       отключает анимацию (мгновенная перестройка при вводе в поля).
+       Task 527 (заявка: «на некоторых геометрических фигурах линии и
+       цифры пересекаются… поправь, и расчётные данные должны
+       отображаться на картинке под геометрической фигурой, поэтому
+       блок с фигурой сделай немного больше»): подписи размеров
+       выведены из фигур; расчётные данные — ВНУТРИ картинки (группа
+       .gf-resg: разделитель .gf-sep + строки .gf-tx/.gf-val под
+       фигурой), HTML-блок .geo-fig-res* убран; рамка 320 → 350px. */
     .geo-fig-frame {
         --gf-ink: #8FBCE8;                     /* контур фигуры */
         --gf-dim: #E2A96E;                     /* размерные линии, стрелки, подписи размеров */
@@ -392,7 +399,7 @@
         --gf-face: rgba(143, 188, 232, 0.10);  /* лёгкая заливка граней */
         --gf-line: rgba(143, 163, 184, 0.35);  /* разделитель блока расчёта */
         display: flex; flex-direction: column; align-items: center;
-        width: min(100%, 320px); box-sizing: border-box;
+        width: min(100%, 350px); box-sizing: border-box;
         margin: 8px auto 10px; padding: 10px 12px 11px;
         background: #17222E;                   /* непрозрачный фон — тёмная тема */
         border: 1px solid rgba(127, 176, 222, 0.30);
@@ -420,13 +427,12 @@
     .geo-fig-svg .gf-liquid{ fill: var(--gf-liquid); stroke: none; }
     .geo-fig-svg .gf-inkfill { fill: var(--gf-face); stroke: none; }
     .geo-fig-svg .gf-dot   { fill: var(--gf-ink); stroke: none; }
-    .geo-fig-res { width: 100%; margin-top: 9px; padding-top: 8px;
-        border-top: 1px solid var(--gf-line);
-        display: flex; flex-direction: column; gap: 4px; }
-    .geo-fig-res-row { display: flex; justify-content: space-between;
-        align-items: baseline; gap: 10px; font-size: 12.5px; line-height: 1.35; }
-    .geo-fig-res-f { color: var(--gf-tx); font-weight: 500; }
-    .geo-fig-res-v { color: var(--gf-val); font-weight: 600; white-space: nowrap; }
+    .geo-fig-svg .gf-sep   { stroke: var(--gf-line); }   /* Task 527: разделитель зоны расчёта в картинке */
+    .geo-fig-svg .gf-val   { fill: var(--gf-val); }      /* Task 527: значения живого расчёта в картинке */
+    /* Task 527: HTML-блок живого расчёта .geo-fig-res* убран —
+       расчётные данные перенесены ВНУТРИ картинки (SVG-группа .gf-resg
+       под фигурой: разделитель .gf-sep + строки «формула — значение»
+       классами .gf-tx / .gf-val). */
     /* --- Анимация (Task 526) --- */
     @keyframes gf-draw { from { stroke-dashoffset: 460; } to { stroke-dashoffset: 0; } }
     @keyframes gf-fade { from { opacity: 0; } to { opacity: 1; } }
@@ -439,12 +445,12 @@
     .geo-fig-frame:not(.geo-static) .gf-dim  { opacity: 0; animation: gf-dim 0.4s ease-out forwards; }
     .geo-fig-frame:not(.geo-static) .gf-rise { opacity: 0; animation: gf-rise 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
     .geo-fig-frame:not(.geo-static) .gf-sweep { animation: gf-sweep 1.1s cubic-bezier(0.5, 0.05, 0.3, 1) forwards; }
-    .geo-fig-frame:not(.geo-static) .geo-fig-res { opacity: 0; animation: gf-res 0.45s ease-out forwards; }
+    .geo-fig-frame:not(.geo-static) .gf-resg { opacity: 0; animation: gf-res 0.45s ease-out forwards; }
     /* Доступность: при prefers-reduced-motion схема показывается
        сразу в конечном состоянии, без проигрывания анимаций. */
     @media (prefers-reduced-motion: reduce) {
         .geo-fig-frame .gf-draw, .geo-fig-frame .gf-fade, .geo-fig-frame .gf-dim,
-        .geo-fig-frame .gf-rise, .geo-fig-frame .gf-sweep, .geo-fig-frame .geo-fig-res {
+        .geo-fig-frame .gf-rise, .geo-fig-frame .gf-sweep, .geo-fig-frame .gf-resg {
             animation: none !important; opacity: 1 !important;
             stroke-dasharray: none !important; stroke-dashoffset: 0 !important;
             transform: none !important;
@@ -19005,8 +19011,11 @@
                  из полей ввода, под схемой — формула и результат живого
                  расчёта; рамка с непрозрачным фоном (светлая тема —
                  бежево-бело-молочная, тёмная — графитово-синяя). Рендер —
-                 geoFigPlay/geoFigUpdate. -->
-            <div class="geo-fig-frame" id="gcFigFrame"><svg id="gcFig" class="geo-fig-svg" viewBox="0 0 240 190" font-family="Inter, sans-serif" role="img" aria-label="Схема: круг"></svg><div class="geo-fig-res" id="gcFigRes"></div></div>
+                 geoFigPlay/geoFigUpdate. Task 527: подписи
+                 размеров выведены из фигур (не пересекаются с линиями),
+                 расчётные данные — в картинке ПОД фигурой (.gf-resg),
+                 рамка увеличена до 350px. -->
+            <div class="geo-fig-frame" id="gcFigFrame"><svg id="gcFig" class="geo-fig-svg" viewBox="0 0 240 240" font-family="Inter, sans-serif" role="img" aria-label="Схема: круг"></svg></div>
             <div class="scale-form ts-calc-panel ts-calc-inset" style="margin: 8px 0 12px;">
                 <div class="scale-form-label">Диаметр D</div>
                 <input type="text" inputmode="numeric" id="gc_diameter" class="scale-field" value="100" placeholder="мм" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this); geoFigUpdate('gc')">
@@ -19024,8 +19033,11 @@
                  полей ввода, подписи размеров — фактические значения, под
                  схемой — формула и результат живого расчёта; рамка с
                  непрозрачным фоном (светлая тема — бежево-бело-молочная,
-                 тёмная — графитово-синяя). Рендер — geoFigPlay/geoFigUpdate. -->
-            <div class="geo-fig-frame" id="grFigFrame"><svg id="grFig" class="geo-fig-svg" viewBox="0 0 240 190" font-family="Inter, sans-serif" role="img" aria-label="Схема: кольцо"></svg><div class="geo-fig-res" id="grFigRes"></div></div>
+                 тёмная — графитово-синяя). Рендер — geoFigPlay/geoFigUpdate. Task 527: подписи
+                 размеров выведены из фигур (не пересекаются с линиями),
+                 расчётные данные — в картинке ПОД фигурой (.gf-resg),
+                 рамка увеличена до 350px. -->
+            <div class="geo-fig-frame" id="grFigFrame"><svg id="grFig" class="geo-fig-svg" viewBox="0 0 240 240" font-family="Inter, sans-serif" role="img" aria-label="Схема: кольцо"></svg></div>
             <!-- Task 501 (заявка): блоки полей ввода объединены
              в ОДНУ панель (стиль Task 500, «колодец»);
              бывшие группы разделены линией-разделителем с отступом (стиль Task 500). -->
@@ -19054,8 +19066,11 @@
                  ввода, подписи размеров — фактические значения, под схемой —
                  формула и результат живого расчёта; рамка с непрозрачным
                  фоном (светлая тема — бежево-бело-молочная, тёмная —
-                 графитово-синяя). Рендер — geoFigPlay/geoFigUpdate. -->
-            <div class="geo-fig-frame" id="gcyFigFrame"><svg id="gcyFig" class="geo-fig-svg" viewBox="0 0 240 190" font-family="Inter, sans-serif" role="img" aria-label="Схема: цилиндр вертикальный"></svg><div class="geo-fig-res" id="gcyFigRes"></div></div>
+                 графитово-синяя). Рендер — geoFigPlay/geoFigUpdate. Task 527: подписи
+                 размеров выведены из фигур (не пересекаются с линиями),
+                 расчётные данные — в картинке ПОД фигурой (.gf-resg),
+                 рамка увеличена до 350px. -->
+            <div class="geo-fig-frame" id="gcyFigFrame"><svg id="gcyFig" class="geo-fig-svg" viewBox="0 0 240 240" font-family="Inter, sans-serif" role="img" aria-label="Схема: цилиндр вертикальный"></svg></div>
             <!-- Task 501 (заявка): блоки полей ввода объединены
              в ОДНУ панель (стиль Task 500, «колодец»);
              бывшие группы разделены линией-разделителем с отступом (стиль Task 500). -->
@@ -19085,8 +19100,11 @@
                  анимацией, подписи размеров — фактические значения, под
                  схемой — формула и результат живого расчёта; рамка с
                  непрозрачным фоном (светлая тема — бежево-бело-молочная,
-                 тёмная — графитово-синяя). Рендер — geoFigPlay/geoFigUpdate. -->
-            <div class="geo-fig-frame" id="ghFigFrame"><svg id="ghFig" class="geo-fig-svg" viewBox="0 0 240 190" font-family="Inter, sans-serif" role="img" aria-label="Схема: цилиндр горизонтальный с уровнем жидкости"></svg><div class="geo-fig-res" id="ghFigRes"></div></div>
+                 тёмная — графитово-синяя). Рендер — geoFigPlay/geoFigUpdate. Task 527: подписи
+                 размеров выведены из фигур (не пересекаются с линиями),
+                 расчётные данные — в картинке ПОД фигурой (.gf-resg),
+                 рамка увеличена до 350px. -->
+            <div class="geo-fig-frame" id="ghFigFrame"><svg id="ghFig" class="geo-fig-svg" viewBox="0 0 240 257" font-family="Inter, sans-serif" role="img" aria-label="Схема: цилиндр горизонтальный с уровнем жидкости"></svg></div>
             <!-- Task 501 (заявка): блоки полей ввода объединены
              в ОДНУ панель (стиль Task 500, «колодец»);
              бывшие группы разделены линией-разделителем с отступом (стиль Task 500). -->
@@ -19120,8 +19138,11 @@
                  фактические значения из поля ввода, под схемой — формула
                  и результат живого расчёта; рамка с непрозрачным фоном
                  (светлая тема — бежево-бело-молочная, тёмная —
-                 графитово-синяя). Рендер — geoFigPlay/geoFigUpdate. -->
-            <div class="geo-fig-frame" id="gsFigFrame"><svg id="gsFig" class="geo-fig-svg" viewBox="0 0 240 190" font-family="Inter, sans-serif" role="img" aria-label="Схема: сфера"></svg><div class="geo-fig-res" id="gsFigRes"></div></div>
+                 графитово-синяя). Рендер — geoFigPlay/geoFigUpdate. Task 527: подписи
+                 размеров выведены из фигур (не пересекаются с линиями),
+                 расчётные данные — в картинке ПОД фигурой (.gf-resg),
+                 рамка увеличена до 350px. -->
+            <div class="geo-fig-frame" id="gsFigFrame"><svg id="gsFig" class="geo-fig-svg" viewBox="0 0 240 240" font-family="Inter, sans-serif" role="img" aria-label="Схема: сфера"></svg></div>
             <div class="scale-form ts-calc-panel ts-calc-inset" style="margin: 8px 0 12px;">
                 <div class="scale-form-label">Диаметр D</div>
                 <input type="text" inputmode="numeric" id="gs_diameter" class="scale-field" value="2" placeholder="м" autocomplete="off" enterkeyhint="done" oninput="validateNumericField(this); geoFigUpdate('gs')">
@@ -19140,8 +19161,11 @@
                  значения, под схемой — формула и результат живого расчёта;
                  рамка с непрозрачным фоном (светлая тема —
                  бежево-бело-молочная, тёмная — графитово-синяя). Рендер —
-                 geoFigPlay/geoFigUpdate. -->
-            <div class="geo-fig-frame" id="gcoFigFrame"><svg id="gcoFig" class="geo-fig-svg" viewBox="0 0 240 190" font-family="Inter, sans-serif" role="img" aria-label="Схема: конус"></svg><div class="geo-fig-res" id="gcoFigRes"></div></div>
+                 geoFigPlay/geoFigUpdate. Task 527: подписи
+                 размеров выведены из фигур (не пересекаются с линиями),
+                 расчётные данные — в картинке ПОД фигурой (.gf-resg),
+                 рамка увеличена до 350px. -->
+            <div class="geo-fig-frame" id="gcoFigFrame"><svg id="gcoFig" class="geo-fig-svg" viewBox="0 0 240 240" font-family="Inter, sans-serif" role="img" aria-label="Схема: конус"></svg></div>
             <!-- Task 501 (заявка): блоки полей ввода объединены
              в ОДНУ панель (стиль Task 500, «колодец»);
              бывшие группы разделены линией-разделителем с отступом (стиль Task 500). -->
@@ -31045,6 +31069,24 @@
     //   • под схемой — «живой» расчёт: формула = результат (та же
     //     математика и то же форматирование formatNumber, что в
     //     calcGeo* — совпадает с панелью «Результат»).
+    //
+    // Task 527 (заявка): «…на некоторых геометрических фигурах линии и
+    // цифры пересекаются и накладываются друг на друга, поправь, и
+    // расчётные данные должны отображаться на картинке под
+    // геометрической фигурой, поэтому блок с фигурой сделай немного
+    // больше.» Что изменено: (1) подписи размеров выведены ИЗ фигур:
+    // круг/сфера — диаметр D размером ПОД фигурой (gfDimH labelPos
+    // 'below'), кольцо — D под фигурой, d сквозной с подписью НАД
+    // фигурой (подписи в отверстии пересекали линии при малом d),
+    // конус — подпись образующей L у ЛЕВОГО ребра (прежде пересекала
+    // размерную линию H), сфера — подпись D прежде пересекал штриховой
+    // меридиан; (2) gfDimV: при коротком размере повернутая подпись
+    // выносится за выносные линии (низ/верх) — подпись h/D больше не
+    // пересекает выносные; отступ подписи от линии 5→9; (3) расчётные
+    // данные — ВНУТРИ картинки: gfDataZone под фигурой (разделитель
+    // .gf-sep + строки .gf-tx/.gf-val, анимация .gf-resg), HTML-блок
+    // #xxFigRes и CSS .geo-fig-res* убраны; (4) рамка 320→350px,
+    // viewBox 240×240 (гориз. цилиндр — 240×257, три строки расчёта).
     // Анимация (CSS gf-*): открытие страницы и «Рассчитать» —
     // geoFigPlay (контур прочерчивается, жидкость поднимается,
     // размеры и результат проявляются); ввод в поля — geoFigUpdate
@@ -31082,8 +31124,10 @@
     // Горизонтальный размер: линия на y между x1..x2; выносные линии
     // exts = [[x, yFrom], …] — от точки фигуры (со сквозным зазором
     // 2.5) до размера и на 4 за него; стрелки внутрь (при коротком
-    // размере — наружу); подпись над серединой.
-    function gfDimH(x1, x2, y, label, exts) {
+    // размере — наружу); подпись над серединой. Task 527: labelPos
+    // 'below' — подпись ПОД линией (для размеров под фигурой: не
+    // пересекается ни с фигурой, ни с выносными линиями).
+    function gfDimH(x1, x2, y, label, exts, labelPos) {
         const mid = (x1 + x2) / 2;
         let s = '';
         (exts || []).forEach(function (e) {
@@ -31099,14 +31143,18 @@
         } else {
             s += '<path class="gf-dimar" d="' + gfArrow(x1, y, Math.PI) + gfArrow(x2, y, 0) + '"/>';
         }
+        const ty = (labelPos === 'below') ? y + 14 : y - 5;
         s += '<text class="gf-dimtx" font-size="11.5" font-weight="600" text-anchor="middle" x="' +
-             gfN(mid) + '" y="' + gfN(y - 5) + '">' + label + '</text>';
+             gfN(mid) + '" y="' + gfN(ty) + '">' + label + '</text>';
         return s;
     }
 
     // Вертикальный размер: линия на x между y1..y2; выносные exts =
-    // [[y, xFrom], …]; подпись повёрнута −90° у середины, со стороны
-    // labelSide ('left' | 'right').
+    // [[y, xFrom], …]; подпись повёрнута −90°, со стороны labelSide
+    // ('left' | 'right'). Task 527: отступ подписи от размерной линии
+    // 9 (было 5 — глифы касались линии); при коротком размере подпись
+    // выносится за выносные линии (вниз, иначе вверх) — не пересекает
+    // их (прежде подпись h/D перекрывала выносную линию).
     function gfDimV(y1, y2, x, label, exts, labelSide) {
         const mid = (y1 + y2) / 2;
         let s = '';
@@ -31122,16 +31170,46 @@
         } else {
             s += '<path class="gf-dimar" d="' + gfArrow(x, y1, -Math.PI / 2) + gfArrow(x, y2, Math.PI / 2) + '"/>';
         }
-        const lx = (labelSide === 'right') ? x + 5 : x - 5;
+        const lx = (labelSide === 'right') ? x + 9 : x - 9;
+        const llen = label.length * 6.3 + 4;   // оценка длины повернутой подписи
+        let ly = mid;
+        if (Math.abs(y2 - y1) < llen + 10) {
+            // Task 527: короткий размер — подпись НЕ помещается между
+            // выносными линиями (пересекала бы их). Выносим за пределы:
+            // вниз (под нижнюю выносную), иначе вверх (над верхней).
+            const bot = Math.max(y1, y2), top = Math.min(y1, y2);
+            if (bot + llen + 8 <= 186) ly = bot + llen / 2 + 8;
+            else if (top - llen - 8 >= 2) ly = top - llen / 2 - 8;
+        }
         s += '<text class="gf-dimtx" font-size="11.5" font-weight="600" text-anchor="middle" x="' +
-             gfN(lx) + '" y="' + gfN(mid) + '" transform="rotate(-90 ' + gfN(lx) + ' ' + gfN(mid) +
+             gfN(lx) + '" y="' + gfN(ly) + '" transform="rotate(-90 ' + gfN(lx) + ' ' + gfN(ly) +
              ')">' + label + '</text>';
         return s;
     }
 
+    // Task 527: зона живого расчёта — ВНУТРИ картинки, ПОД геометрической
+    // фигурой (заявка: «расчётные данные должны отображаться на картинке
+    // под геометрической фигурой»). Фигура занимает координаты 0…190;
+    // разделитель на y=194; строки «формула — значение» с y=212, шаг 17;
+    // значения — той же математикой/formatNumber, что calcGeo* (совпадает
+    // с панелью «Результат»). Анимация появления — класс .gf-resg.
+    function gfDataZone(rows) {
+        let s = '<g class="gf-resg" style="animation-delay:1.35s">' +
+                '<line class="gf-sep" stroke-width="1" x1="10" y1="194" x2="230" y2="194"/>';
+        rows.forEach(function (r, i) {
+            const y = 212 + i * 17;
+            s += '<text class="gf-tx" font-size="11.5" font-weight="500" x="12" y="' + y + '">' +
+                 r[0] + '</text>';
+            s += '<text class="gf-val" font-size="12" font-weight="600" text-anchor="end" x="228" y="' +
+                 y + '">' + r[1] + '</text>';
+        });
+        return s + '</g>';
+    }
+
     // КРУГ: окружность «прочерчивается» обегающим радиусом (останавливается
-    // под 45°), диаметр — сквозной размер через центр; живой расчёт S и P
-    // (формулы те же, что в calcGeoCircle).
+    // под 45°), диаметр — размер ПОД фигурой (Task 527: подпись выведена
+    // из круга — не пересекается с окружностью и радиусом); живой расчёт
+    // S и P (формулы те же, что в calcGeoCircle).
     function geoFigCircleSVG(Dmm) {
         const cx = 120, cy = 84, R = 56;
         const areaCm2 = Math.PI * (Dmm / 10) * (Dmm / 10) / 4;
@@ -31146,12 +31224,8 @@
              '" y1="' + gfN(cy) + '" x2="' + gfN(cx + R) + '" y2="' + gfN(cy) + '"/></g>';
         s += '<g class="gf-fade" style="animation-delay:.5s"><circle class="gf-dot" cx="' +
              gfN(cx) + '" cy="' + gfN(cy) + '" r="2.4"/></g>';
-        s += '<g class="gf-dim" style="animation-delay:.9s">' +
-             '<line class="gf-dimln" stroke-width="1" x1="' + gfN(cx - R) + '" y1="' + gfN(cy) +
-             '" x2="' + gfN(cx + R) + '" y2="' + gfN(cy) + '"/>' +
-             '<path class="gf-dimar" d="' + gfArrow(cx - R, cy, 0) + gfArrow(cx + R, cy, Math.PI) + '"/>' +
-             '<text class="gf-dimtx" font-size="11.5" font-weight="600" text-anchor="middle" x="' +
-             gfN(cx) + '" y="' + gfN(cy + 17) + '">D = ' + formatNumber(Dmm) + ' мм</text></g>';
+        s += '<g class="gf-dim" style="animation-delay:.9s">' + gfDimH(cx - R, cx + R, cy + R + 14,
+             'D = ' + formatNumber(Dmm) + ' мм', [[cx - R, cy], [cx + R, cy]], 'below') + '</g>';
         const ex = cx + R * Math.SQRT1_2, ey = cy - R * Math.SQRT1_2;
         s += '<g class="gf-dim" style="animation-delay:1.1s">' +
              '<text class="gf-dimtx" font-size="11.5" font-weight="600" x="' + gfN(ex + 5) +
@@ -31165,9 +31239,11 @@
         };
     }
 
-    // КОЛЬЦО: пропорция отверстия РЕАЛЬНАЯ (d/D); размеры D и d — на
-    // одной горизонтальной оси (стандарт чертежа соосных окружностей);
-    // живой расчёт S и Dэкв (формулы те же, что в calcGeoRing).
+    // КОЛЬЦО: пропорция отверстия РЕАЛЬНАЯ (d/D); размер D — ПОД
+    // фигурой, d — сквозной через отверстие с подписью НАД фигурой
+    // (Task 527: подписи выведены из отверстия — не пересекаются с
+    // линиями при любом d/D); живой расчёт S и Dэкв (формулы те же,
+    // что в calcGeoRing).
     function geoFigRingSVG(Dmm, dmm) {
         const cx = 120, cy = 86, Ro = 58;
         let Ri = Ro * (dmm / Dmm);
@@ -31187,16 +31263,16 @@
              gfN(cx) + '" cy="' + gfN(cy) + '" r="' + gfN(Ri) + '"/></g>';
         s += '<g class="gf-fade" style="animation-delay:.5s"><circle class="gf-dot" cx="' +
              gfN(cx) + '" cy="' + gfN(cy) + '" r="2.2"/></g>';
-        s += '<g class="gf-dim" style="animation-delay:.9s">' +
-             '<line class="gf-dimln" stroke-width="1" x1="' + gfN(cx - Ro) + '" y1="' + gfN(cy) +
-             '" x2="' + gfN(cx + Ro) + '" y2="' + gfN(cy) + '"/>' +
-             '<path class="gf-dimar" d="' + gfArrow(cx - Ro, cy, 0) + gfArrow(cx + Ro, cy, Math.PI) + '"/>' +
-             '<text class="gf-dimtx" font-size="11.5" font-weight="600" text-anchor="middle" x="' +
-             gfN(cx) + '" y="' + gfN(cy + 16) + '">D = ' + formatNumber(Dmm) + ' мм</text></g>';
+        s += '<g class="gf-dim" style="animation-delay:.9s">' + gfDimH(cx - Ro, cx + Ro, cy + Ro + 14,
+             'D = ' + formatNumber(Dmm) + ' мм', [[cx - Ro, cy], [cx + Ro, cy]], 'below') + '</g>';
         s += '<g class="gf-dim" style="animation-delay:1.05s">' +
-             '<path class="gf-dimar" d="' + gfArrow(cx - Ri, cy, 0) + gfArrow(cx + Ri, cy, Math.PI) + '"/>' +
-             '<text class="gf-dimtx" font-size="11.5" font-weight="600" text-anchor="middle" x="' +
-             gfN(cx) + '" y="' + gfN(cy - 11) + '">d = ' + formatNumber(dmm) + ' мм</text></g>';
+             '<line class="gf-dimln" stroke-width="1" x1="' + gfN(cx - Ri) + '" y1="' + gfN(cy) +
+             '" x2="' + gfN(cx + Ri) + '" y2="' + gfN(cy) + '"/>';
+        s += (2 * Ri >= 22)
+            ? '<path class="gf-dimar" d="' + gfArrow(cx - Ri, cy, 0) + gfArrow(cx + Ri, cy, Math.PI) + '"/>'
+            : '<path class="gf-dimar" d="' + gfArrow(cx - Ri, cy, Math.PI) + gfArrow(cx + Ri, cy, 0) + '"/>';
+        s += '<text class="gf-dimtx" font-size="11.5" font-weight="600" text-anchor="middle" x="' +
+             gfN(cx) + '" y="' + gfN(cy - Ro - 11) + '">d = ' + formatNumber(dmm) + ' мм</text></g>';
         return {
             svg: s,
             rows: [
@@ -31329,8 +31405,9 @@
         };
     }
 
-    // СФЕРА: окружность + штриховые экватор/меридиан; сквозной диаметр;
-    // живой расчёт V и S (как в calcGeoSphere).
+    // СФЕРА: окружность + штриховые экватор/меридиан; диаметр — размер
+    // ПОД фигурой (Task 527: подпись внутри сферы прежде пересекал
+    // штриховой меридиан); живой расчёт V и S (как в calcGeoSphere).
     function geoFigSphereSVG(D) {
         const cx = 120, cy = 86, R = 56;
         const volume = Math.PI * D * D * D / 6;
@@ -31347,12 +31424,8 @@
              '" cy="' + gfN(cy) + '" rx="' + gfN(R * 0.3) + '" ry="' + gfN(R) + '"/></g>';
         g += '<g class="gf-fade" style="animation-delay:.5s"><circle class="gf-dot" cx="' +
              gfN(cx) + '" cy="' + gfN(cy) + '" r="2.2"/></g>';
-        g += '<g class="gf-dim" style="animation-delay:.9s">' +
-             '<line class="gf-dimln" stroke-width="1" x1="' + gfN(cx - R) + '" y1="' + gfN(cy) +
-             '" x2="' + gfN(cx + R) + '" y2="' + gfN(cy) + '"/>' +
-             '<path class="gf-dimar" d="' + gfArrow(cx - R, cy, 0) + gfArrow(cx + R, cy, Math.PI) + '"/>' +
-             '<text class="gf-dimtx" font-size="11.5" font-weight="600" text-anchor="middle" x="' +
-             gfN(cx) + '" y="' + gfN(cy + 26) + '">D = ' + formatNumber(D) + ' м</text></g>';
+        g += '<g class="gf-dim" style="animation-delay:.9s">' + gfDimH(cx - R, cx + R, cy + R + 14,
+             'D = ' + formatNumber(D) + ' м', [[cx - R, cy], [cx + R, cy]], 'below') + '</g>';
         return {
             svg: g,
             rows: [
@@ -31363,8 +31436,9 @@
     }
 
     // КОНУС: пропорция H/D реальная; размеры D (снизу) и H (справа),
-    // образующая L — подпись у правого ребра; живой расчёт V и L
-    // (как в calcGeoCone).
+    // образующая L — подпись у ЛЕВОГО ребра (Task 527: прежде
+    // пересекала размерную линию H); живой расчёт V и L (как в
+    // calcGeoCone).
     function geoFigConeSVG(D, H) {
         const sc = Math.min(112 / D, 114 / H);
         const rx = D * sc / 2;
@@ -31394,13 +31468,13 @@
              '<line class="gf-hidden" stroke-width="1.2" stroke-dasharray="4,3" x1="' + gfN(cx) + '" y1="' +
              gfN(yA) + '" x2="' + gfN(cx) + '" y2="' + gfN(yB) + '"/></g>';
         g += '<g class="gf-dim" style="animation-delay:.9s">' + gfDimH(cx - rx, cx + rx, yB + ry + 12,
-             'D = ' + formatNumber(D) + ' м', [[cx - rx, yB], [cx + rx, yB]]) + '</g>';
+             'D = ' + formatNumber(D) + ' м', [[cx - rx, yB], [cx + rx, yB]], 'below') + '</g>';
         g += '<g class="gf-dim" style="animation-delay:1.05s">' + gfDimV(yA, yB, cx + rx + 15,
              'H = ' + formatNumber(H) + ' м', [[yA, cx], [yB, cx + rx]], 'right') + '</g>';
-        const mx = cx + rx / 2, my = (yA + yB) / 2;
+        const mx = cx - rx / 2, my = (yA + yB) / 2;
         g += '<g class="gf-dim" style="animation-delay:1.2s">' +
-             '<text class="gf-dimtx" font-size="11.5" font-weight="600" x="' + gfN(mx + 7) + '" y="' +
-             gfN(my - 4) + '">L = ' + formatNumber(slant) + ' м</text></g>';
+             '<text class="gf-dimtx" font-size="11.5" font-weight="600" text-anchor="end" x="' +
+             gfN(mx - 7) + '" y="' + gfN(my - 4) + '">L = ' + formatNumber(slant) + ' м</text></g>';
         return {
             svg: g,
             rows: [
@@ -31431,33 +31505,33 @@
     }
 
     // Сборка схемы по ключу и значениям (чистая функция — проверяется
-    // в test-task526.js без DOM).
+    // в test-task526.js / test-task527.js без DOM). Task 527: к фигуре
+    // добавляется зона живого расчёта ВНУТРИ картинки — под фигурой.
     function geoFigBuild(key, v) {
-        if (key === 'gc') return geoFigCircleSVG(v.D);
-        if (key === 'gr') return geoFigRingSVG(v.D, v.d);
-        if (key === 'gcy') return geoFigCylSVG(v.D, v.H);
-        if (key === 'gh') return geoFigHorizSVG(v.L, v.D, v.h);
-        if (key === 'gs') return geoFigSphereSVG(v.D);
-        if (key === 'gco') return geoFigConeSVG(v.D, v.H);
-        return { svg: '', rows: [] };
+        let b;
+        if (key === 'gc') b = geoFigCircleSVG(v.D);
+        else if (key === 'gr') b = geoFigRingSVG(v.D, v.d);
+        else if (key === 'gcy') b = geoFigCylSVG(v.D, v.H);
+        else if (key === 'gh') b = geoFigHorizSVG(v.L, v.D, v.h);
+        else if (key === 'gs') b = geoFigSphereSVG(v.D);
+        else if (key === 'gco') b = geoFigConeSVG(v.D, v.H);
+        else b = { svg: '', rows: [] };
+        b.svg += gfDataZone(b.rows);
+        return b;
     }
 
-    // Рендер: перерисовка SVG + блока живого расчёта. animate=true —
-    // проиграть анимацию (открытие страницы / «Рассчитать»), false —
-    // мгновенно (ввод в поля, класс .geo-static).
+    // Рендер: перерисовка SVG — фигура + зона живого расчёта ВНУТРИ
+    // картинки (Task 527: HTML-блок #xxFigRes убран — данные рисуются
+    // в SVG под фигурой). animate=true — проиграть анимацию (открытие
+    // страницы / «Рассчитать»), false — мгновенно (ввод в поля, класс
+    // .geo-static).
     function geoFigRender(key, animate) {
         const frame = document.getElementById(key + 'FigFrame');
         const svgEl = document.getElementById(key + 'Fig');
-        const resEl = document.getElementById(key + 'FigRes');
-        if (!frame || !svgEl || !resEl) return;
+        if (!frame || !svgEl) return;
         const v = geoFigVals(key);
         if (v === null) return;
-        const b = geoFigBuild(key, v);
-        svgEl.innerHTML = b.svg;
-        resEl.innerHTML = b.rows.map(function (r) {
-            return '<div class="geo-fig-res-row"><span class="geo-fig-res-f">' + r[0] +
-                   '</span><span class="geo-fig-res-v">' + r[1] + '</span></div>';
-        }).join('');
+        svgEl.innerHTML = geoFigBuild(key, v).svg;
         frame.classList.toggle('geo-static', !animate);
     }
 
