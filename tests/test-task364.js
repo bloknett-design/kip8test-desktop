@@ -13,7 +13,7 @@
 //     обёртки на всю ширину; каждая запись/код — отдельной
 //     строкой своего столбика (как в Task 360).
 //
-// SW: kipia-test-v743.
+// SW: kipia-test-v744.
 //
 // Запуск: через tests/run-all.js (require './test-task364.js').
 
@@ -251,8 +251,8 @@ describe('Task 364 — VM: ряд мероприятий|кодов в печа�
 // 4. SW — версия кеша
 // ============================================================
 describe('Task 364 — SW: версия кеша', () => {
-    test('SW: CACHE_VERSION = kipia-test-v743', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v743'") !== -1,
+    test('SW: CACHE_VERSION = kipia-test-v744', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v744'") !== -1,
             'SW поднят до v659 (рамка 2px + коды строкой под мероприятиями — Task 433)');
     });
 });

@@ -850,6 +850,11 @@ require('./test-task528.js');
 // сообщения в две строки. SW v742.
 require('./test-task529.js');
 require('./test-task530.js');
+
+// Task 531: LCD-информер — экран-утопленник, общая нижняя линия,
+// центрирование дня недели/двоеточия, настройки информера,
+// багфиксы календаря и z-index шторок. SW v744.
+require('./test-task531.js');
 require('./test-deploy-url.js');
 
 // Запускаем

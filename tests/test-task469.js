@@ -27,7 +27,7 @@
 //      в архив.»;
 //   3) пункт «Мобильная версия» УДАЛЕН (5 → 4 пункта);
 //   4) раскладка, стили и JS окна Task 468/463/464 НЕ тронуты.
-//   SW: kipia-test-v743.
+//   SW: kipia-test-v744.
 //
 // Запуск: через tests/run-all.js (require './test-task469.js').
 
@@ -254,8 +254,8 @@ describe('Task 469 — SRC: изоляция (раскладка 468 / моба�
 // ============================================================
 describe('Task 469 — SW: версия кэша', () => {
 
-    test('CACHE_VERSION = kipia-test-v743', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v743';") !== -1,
+    test('CACHE_VERSION = kipia-test-v744', () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v744';") !== -1,
             'инкремент Task 469: v692 → v693');
     });
 

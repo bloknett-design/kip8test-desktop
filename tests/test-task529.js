@@ -35,7 +35,7 @@
 //     словам ≤33 символов; _tick — возврат к часам после таймаута и
 //     листание страниц; draw — сетка ЦЕЛЫМ pitch (без призраков);
 //     _calPick — селекты месяца/года + WorkSchedule.onMonthChange.
-//   Слой 5 — SW: kipia-test-v743.
+//   Слой 5 — SW: kipia-test-v744.
 //
 // Запуск: через tests/run-all.js (require './test-task529.js').
 
@@ -574,11 +574,11 @@ describe('Task 529 D (адаптация 530): VM — экран 205×17, пей
 // ============================================================
 describe('Task 529 → 530 — SW: версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v743', () => {
+    test('sw.js: CACHE_VERSION = kipia-test-v744', () => {
         const m = SW_SRC.match(/const CACHE_VERSION = '(kipia-test-v\d+)'/);
         assertTrue(m !== null, 'CACHE_VERSION найден в sw.js');
-        assertEqual(m[1], 'kipia-test-v743',
-            'SW поднят до kipia-test-v743 (index.html менялся — Task 530)');
+        assertEqual(m[1], 'kipia-test-v744',
+            'SW поднят до kipia-test-v744 (index.html менялся — Task 530)');
         assertTrue(m[1] !== 'kipia-test-v742',
             'старая версия kipia-test-v742 не осталась');
     });
