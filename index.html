@@ -5234,6 +5234,191 @@
     [data-theme="light"] .ws-rt-date { color: #333; }
     [data-theme="light"] .ws-rt-desc { color: #777; }
 
+    /* === Task 529: LCD-часы-«пейджер» в баре крошек Табеля (десктоп) ===
+       Справа в баре хлебных крошек страницы «Табель учёта рабочего
+       времени» — окно с рамками и ЭФФЕКТОМ ВДАВЛИВАНИЯ: тёмный
+       пластиковый корпус с бортиком-бликом, утопленный в него экран
+       (двойная внутренняя тень — «колодец» индикатора). Экран —
+       точечная матрица из КВАДРАТНЫХ сегментов разрешением 96×17
+       (задел: две строки по 16 символов шрифтом 5×7 — сообщения
+       «как на пейджерах»), рисуется на canvas каждую секунду.
+       Стиль — с фото настольной метеостанции: светлая тема —
+       серо-зелёный ЖК с тёмными символами и чёрным корпусом;
+       тёмная — «подсвеченный» мягко-зелёный экран в графитовом
+       корпусе. Клик по окну — выпадающий календарь по месяцам. === */
+    .ws-lcd-wrap { display: none; }
+    @media (min-width: 1024px) {
+        /* окно видно ТОЛЬКО на десктопе (заявка: «в десктопной версии»);
+           на десктопе страница Табеля сама не скроллится (шахматка
+           скроллится внутри), поэтому бар крошек всегда 56px — окно
+           высотой ~50px помещается с запасом */
+        #page-work-schedule .page-inline-header .ws-lcd-wrap {
+            display: flex;
+            align-items: center;
+            margin-left: auto;          /* прижать к правому краю бара */
+            position: relative;         /* якорь выпадающего календаря */
+            flex-shrink: 0;
+            padding-left: 12px;
+        }
+    }
+    /* корпус: тёмный пластик, как чёрный бейзел на фото */
+    .ws-lcd {
+        display: block;
+        padding: 3px;
+        border-radius: 9px;
+        background: #141a22;
+        border: 1px solid rgba(0, 0, 0, 0.65);
+        cursor: pointer;
+        -webkit-user-select: none; user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        /* вдавливание окна: внутренняя тень сверху (край «залит» светом),
+           тёмный низ бортика + внешняя тень «утопленности» в баре */
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.14),
+            inset 0 -1px 2px rgba(0, 0, 0, 0.5),
+            0 1px 3px rgba(0, 0, 0, 0.45);
+        transition: box-shadow 0.15s ease, transform 0.1s ease;
+    }
+    .ws-lcd:hover {
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.2),
+            inset 0 -1px 2px rgba(0, 0, 0, 0.5),
+            0 1px 6px rgba(0, 0, 0, 0.6);
+    }
+    .ws-lcd:active { transform: translateY(1px); }
+    .ws-lcd:focus-visible { outline: 2px solid rgba(74, 143, 199, 0.8); outline-offset: 2px; }
+    /* экран глубоко утоплен в корпус (внутренние тени сверху/снизу) */
+    .ws-lcd-screen {
+        display: block;
+        width: calc(40px * 96 / 17);    /* пропорция матрицы 96×17 */
+        height: 40px;
+        background: var(--ws-lcd-bg, #0e1a13);
+        border: 1px solid rgba(0, 0, 0, 0.4);
+        border-radius: 4px;
+        box-shadow:
+            inset 0 2px 5px rgba(0, 0, 0, 0.42),
+            inset 0 -1px 1px rgba(255, 255, 255, 0.08);
+        image-rendering: pixelated;     /* чёткие квадраты при любом DPR */
+    }
+    /* тёмная тема (базовая): «подсвеченный» ЖК, мягкое свечение сегментов */
+    .ws-lcd {
+        --ws-lcd-bg: #0e1a13;
+        --ws-lcd-seg: #93e6a4;
+        --ws-lcd-ghost: rgba(147, 230, 164, 0.09);
+        --ws-lcd-glow: rgba(147, 230, 164, 0.45);
+    }
+    /* светлая тема: как на фото — серо-зелёный ЖК, тёмные символы,
+       чёрный пластиковый корпус */
+    [data-theme="light"] .ws-lcd {
+        background: #2a2f35;
+        border-color: rgba(0, 0, 0, 0.55);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.18),
+            inset 0 -1px 2px rgba(0, 0, 0, 0.45),
+            0 1px 3px rgba(0, 0, 0, 0.3);
+        --ws-lcd-bg: #ccd6c5;
+        --ws-lcd-seg: #232e38;
+        --ws-lcd-ghost: rgba(35, 46, 56, 0.13);
+        --ws-lcd-glow: none;
+    }
+    [data-theme="light"] .ws-lcd:hover {
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.24),
+            inset 0 -1px 2px rgba(0, 0, 0, 0.45),
+            0 1px 5px rgba(0, 0, 0, 0.4);
+    }
+    [data-theme="light"] .ws-lcd-screen {
+        box-shadow:
+            inset 0 2px 5px rgba(0, 0, 0, 0.4),
+            inset 0 -1px 1px rgba(255, 255, 255, 0.55);
+    }
+
+    /* --- Task 529: выпадающий календарь по месяцам --- */
+    .ws-lcd-cal {
+        position: absolute;
+        top: calc(100% + 10px);
+        right: 0;
+        z-index: 9460;                /* выше info-окон ws-* (9450) */
+        width: 322px;
+        box-sizing: border-box;
+        padding: 12px;
+        background: var(--bg-tertiary, #0e1621);
+        border: 1px solid var(--card-border, rgba(74, 143, 199, 0.25));
+        border-radius: 10px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+    }
+    .ws-lcd-cal[hidden] { display: none; }
+    .ws-lcd-cal-head {
+        display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+    }
+    .ws-lcd-cal-title {
+        flex: 1; text-align: center; font-size: 14px; font-weight: 700;
+        color: #e0e0e0; letter-spacing: -0.2px;
+    }
+    .ws-lcd-cal-nav, .ws-lcd-cal-today {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-height: 30px; cursor: pointer; border-radius: 7px;
+        background: var(--card-bg, rgba(30, 42, 56, 0.55));
+        border: 1px solid var(--card-border, rgba(74, 143, 199, 0.25));
+        color: rgba(200, 215, 230, 0.9); font-size: 13px; font-weight: 600;
+        transition: background 0.15s, border-color 0.15s;
+    }
+    .ws-lcd-cal-nav { width: 30px; font-size: 16px; padding: 0; }
+    .ws-lcd-cal-today { padding: 0 10px; }
+    .ws-lcd-cal-nav:hover, .ws-lcd-cal-today:hover {
+        background: var(--active-bg, rgba(74, 143, 199, 0.25));
+        border-color: rgba(74, 143, 199, 0.5);
+    }
+    .ws-lcd-cal-grid {
+        display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px;
+    }
+    .ws-lcd-cal-dow {
+        text-align: center; font-size: 11px; font-weight: 600;
+        color: rgba(255, 255, 255, 0.45); padding: 2px 0;
+    }
+    .ws-lcd-cal-dow.wknd { color: rgba(226, 169, 110, 0.75); }
+    .ws-lcd-cal-day {
+        height: 36px; display: flex; align-items: center; justify-content: center;
+        font-size: 13px; font-weight: 500; color: #d5dde5;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid transparent; border-radius: 7px;
+        cursor: pointer; padding: 0;
+        transition: background 0.12s, border-color 0.12s;
+    }
+    .ws-lcd-cal-day:hover {
+        background: rgba(74, 143, 199, 0.18);
+        border-color: rgba(74, 143, 199, 0.4);
+    }
+    .ws-lcd-cal-day.dim { color: rgba(255, 255, 255, 0.28); background: transparent; }
+    .ws-lcd-cal-day.wknd { color: #e2c08e; }
+    .ws-lcd-cal-day.dim.wknd { color: rgba(226, 169, 110, 0.35); }
+    .ws-lcd-cal-day.today {
+        border-color: #4ac771; color: #7be295; font-weight: 700;
+    }
+    .ws-lcd-cal-hint {
+        margin-top: 8px; font-size: 11px; text-align: center;
+        color: rgba(255, 255, 255, 0.4);
+    }
+    [data-theme="light"] .ws-lcd-cal {
+        background: #fbf8f0;
+        border-color: rgba(0, 0, 0, 0.15);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+    }
+    [data-theme="light"] .ws-lcd-cal-title { color: #141413; }
+    [data-theme="light"] .ws-lcd-cal-dow { color: rgba(20, 20, 19, 0.5); }
+    [data-theme="light"] .ws-lcd-cal-dow.wknd { color: #9E4E30; }
+    [data-theme="light"] .ws-lcd-cal-day { color: #333; background: rgba(20, 20, 19, 0.05); }
+    [data-theme="light"] .ws-lcd-cal-day:hover {
+        background: rgba(198, 97, 63, 0.12);
+        border-color: rgba(198, 97, 63, 0.45);
+    }
+    [data-theme="light"] .ws-lcd-cal-day.dim { color: rgba(20, 20, 19, 0.28); background: transparent; }
+    [data-theme="light"] .ws-lcd-cal-day.wknd { color: #9E4E30; }
+    [data-theme="light"] .ws-lcd-cal-day.dim.wknd { color: rgba(158, 78, 48, 0.4); }
+    [data-theme="light"] .ws-lcd-cal-day.today { border-color: #5a8a3a; color: #3f6f24; }
+    [data-theme="light"] .ws-lcd-cal-hint { color: rgba(20, 20, 19, 0.45); }
+
     /* Task 315: строка 1 бара — ТРИ РАВНЫЕ ЧАСТИ. Базовая (мобильная,
        <1024px) компоновка — КОЛОНКА: ряд кнопок сверху, оба окна под
        ним (как прежде с #wsCalPanel). На десктопе (media-запрос ниже)
@@ -17507,6 +17692,23 @@
             <div class="page-inline-header">
                 <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
                 <div class="page-inline-header-title">Табель учёта рабочего времени</div>
+                <!-- Task 529: LCD-окно «пейджер» — СПРАВА в баре хлебных крошек
+                     Табеля (только десктоп ≥1024px, CSS). Экран — матрица
+                     КВАДРАТНЫХ сегментов 96×17 (canvas): время крупно,
+                     дата и день недели; двоеточие мигает каждую секунду.
+                     Клик по окну — календарь по месяцам (#wsLcdCal).
+                     «Задел» по заявке: WsLcdClock.showMessage(...) и событие
+                     window 'ws-lcd-message' выводят сообщения в ДВЕ строки
+                     (как на старых пейджерах). -->
+                <div id="wsLcdWrap" class="ws-lcd-wrap">
+                    <button type="button" id="wsLcdClock" class="ws-lcd" onclick="WsLcdClock.onClockClick(event)"
+                            aria-haspopup="true" aria-expanded="false"
+                            aria-label="Часы и дата — нажмите, чтобы открыть календарь"
+                            title="Текущее время и дата — нажмите для календаря">
+                        <canvas id="wsLcdCanvas" class="ws-lcd-screen" width="96" height="17" aria-hidden="true"></canvas>
+                    </button>
+                    <div id="wsLcdCal" class="ws-lcd-cal" hidden></div>
+                </div>
             </div>
             <div class="ws-toolbar">
                 <!-- Task 315: СТРОКА 1 — бар из ТРЁХ РАВНЫХ частей.
@@ -29592,6 +29794,12 @@
         //  вместе со страницами — модуль одностраничный: только шахматка)
         if (page === 'work-schedule') {
             setTimeout(() => { if (typeof WorkSchedule !== 'undefined') WorkSchedule.init(); }, 30);
+            // Task 529: LCD-часы в баре крошек Табеля — тик запускается
+            // только на открытой странице; уход с Табеля (любой другой
+            // page) — стоп таймера (паттерн open/close как у ws-totals)
+            setTimeout(() => { if (typeof WsLcdClock !== 'undefined') WsLcdClock.start(); }, 30);
+        } else if (typeof WsLcdClock !== 'undefined' && WsLcdClock._timer) {
+            WsLcdClock.stop();
         }
         // Task 334: мобильная СТРАНИЦА «Итоги учёта» — рендер таблиц
         // (тело страницы) после активации; уход с неё (любой другой
@@ -47327,6 +47535,561 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 self._error = msg;
                 self._render();
             });
+        }
+    };
+
+    // ============================================================
+    // WsLcdClock — LCD-окно «пейджер» в баре крошек Табеля (Task 529)
+    // ============================================================
+    // Десктоп (≥1024px), справа в баре хлебных крошек страницы
+    // «Табель учёта рабочего времени». Экран — точечная матрица из
+    // КВАДРАТНЫХ сегментов разрешением 96×17 (canvas #wsLcdCanvas):
+    //   • крупное время ЧЧ:ММ (шрифт 6×9, двоеточие мигает каждую
+    //     секунду) + дата ДД.ММ.ГГГГ справа в верхней зоне (5×7);
+    //   • день недели (полное название) и секунды — нижняя строка;
+    //   • «задел» по заявке: сообщения в ДВЕ строки по 16 символов
+    //     (как на старых пейджерах) — WsLcdClock.showMessage(...) или
+    //     событие window 'ws-lcd-message' (detail: {line1, line2, ms});
+    //     длинный текст листается «страницами» по две строки.
+    // Клик по окну — выпадающий календарь по месяцам (#wsLcdCal);
+    // клик по дате открывает этот месяц в самом табеле (селекты
+    // месяца/года + перезагрузка). Таймер живёт только пока открыта
+    // страница Табеля (старт/стоп — хук navigateTo).
+    // Разрешение 96×17 выбрано вместо 10×60 из заявки: две строки
+    // шрифта 5×7 требуют 7+1+7=15 строк (+запас по краям), а 96
+    // колонок — это ровно 16 символов в строке (стандартная ёмкость
+    // строк пейджерных экранов). Стиль — с фото настольной
+    // метеостанции: светлая тема — серо-зелёный ЖК, тёмные символы,
+    // чёрный пластиковый корпус; тёмная — «подсвеченный» экран.
+    // ============================================================
+    var WsLcdClock = {
+        COLS: 96, ROWS: 17,
+        PAGE_MS: 3500,          // интервал листания «страниц» сообщения
+        MSG_MS: 8000,           // показ сообщения по умолчанию, мс
+        _timer: null,           // setInterval тика (только на странице)
+        _inited: false,
+        _calOpen: false,
+        _calY: 0, _calM: 0,     // месяц календаря (год, 1..12)
+        _msg: null,             // {pages:[[l1,l2],..], idx, until, nextFlip}
+        _lastSec: -1,
+        _grid: null,            // экранный буфер ROWS×COLS (0/1)
+
+        // --- шрифт 5×7: каждый глиф — 7 строк по 5 бит, старший бит СЛЕВА ---
+        FONT5: {
+            // Кириллица (прописные; «ё» нормализуется в «Е»)
+            'А': [0b01110, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001],
+            'Б': [0b11111, 0b10000, 0b10000, 0b11110, 0b10001, 0b10001, 0b11110],
+            'В': [0b11110, 0b10001, 0b10001, 0b11110, 0b10001, 0b10001, 0b11110],
+            'Г': [0b11111, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000],
+            'Д': [0b11111, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b11111],
+            'Е': [0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b11111],
+            'Ж': [0b10101, 0b10101, 0b10101, 0b11111, 0b10101, 0b10101, 0b10101],
+            'З': [0b01111, 0b10000, 0b10000, 0b01110, 0b00001, 0b00001, 0b11110],
+            'И': [0b10001, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b10001],
+            'Й': [0b00100, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b10001],
+            'К': [0b10001, 0b10010, 0b10100, 0b11000, 0b10100, 0b10010, 0b10001],
+            'Л': [0b00111, 0b01001, 0b01001, 0b01001, 0b01001, 0b01001, 0b01001],
+            'М': [0b10001, 0b11011, 0b10101, 0b10101, 0b10001, 0b10001, 0b10001],
+            'Н': [0b10001, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001],
+            'О': [0b01110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110],
+            'П': [0b11111, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001],
+            'Р': [0b11110, 0b10001, 0b10001, 0b11110, 0b10000, 0b10000, 0b10000],
+            'С': [0b01110, 0b10001, 0b10000, 0b10000, 0b10000, 0b10001, 0b01110],
+            'Т': [0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100],
+            'У': [0b10001, 0b10001, 0b01010, 0b00100, 0b00100, 0b01000, 0b10000],
+            'Ф': [0b00100, 0b01110, 0b10101, 0b10101, 0b10101, 0b01110, 0b00100],
+            'Х': [0b10001, 0b01010, 0b00100, 0b00100, 0b00100, 0b01010, 0b10001],
+            'Ц': [0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b11111, 0b00001],
+            'Ч': [0b10001, 0b10001, 0b10001, 0b01111, 0b00001, 0b00001, 0b00001],
+            'Ш': [0b10101, 0b10101, 0b10101, 0b10101, 0b10101, 0b10101, 0b11111],
+            'Щ': [0b10101, 0b10101, 0b10101, 0b10101, 0b10101, 0b11111, 0b00001],
+            'Ъ': [0b11000, 0b01000, 0b01000, 0b01111, 0b01001, 0b01001, 0b01111],
+            'Ы': [0b10111, 0b10100, 0b10100, 0b10111, 0b10100, 0b10100, 0b10111],
+            'Ь': [0b11110, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b11110],
+            'Э': [0b01110, 0b10001, 0b00001, 0b01111, 0b00001, 0b10001, 0b01110],
+            'Ю': [0b10011, 0b10101, 0b10101, 0b11111, 0b10101, 0b10101, 0b10011],
+            'Я': [0b01111, 0b10001, 0b10001, 0b01111, 0b00001, 0b00001, 0b01110],
+            // Латиница (прописные)
+            'A': [0b01110, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001],
+            'B': [0b11110, 0b10001, 0b10001, 0b11110, 0b10001, 0b10001, 0b11110],
+            'C': [0b01110, 0b10001, 0b10000, 0b10000, 0b10000, 0b10001, 0b01110],
+            'D': [0b11110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b11110],
+            'E': [0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b11111],
+            'F': [0b11110, 0b10001, 0b10000, 0b11110, 0b10000, 0b10000, 0b10000],
+            'G': [0b01110, 0b10001, 0b10000, 0b10111, 0b10001, 0b10001, 0b01111],
+            'H': [0b10001, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001],
+            'I': [0b01110, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110],
+            'J': [0b00111, 0b00010, 0b00010, 0b00010, 0b00010, 0b10010, 0b01100],
+            'K': [0b10001, 0b10010, 0b10100, 0b11000, 0b10100, 0b10010, 0b10001],
+            'L': [0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b11111],
+            'M': [0b10001, 0b11011, 0b10101, 0b10101, 0b10001, 0b10001, 0b10001],
+            'N': [0b10001, 0b11001, 0b10101, 0b10011, 0b10001, 0b10001, 0b10001],
+            'O': [0b01110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110],
+            'P': [0b11110, 0b10001, 0b10001, 0b11110, 0b10000, 0b10000, 0b10000],
+            'Q': [0b01110, 0b10001, 0b10001, 0b10001, 0b10101, 0b10010, 0b01101],
+            'R': [0b11110, 0b10001, 0b10001, 0b11110, 0b10100, 0b10010, 0b10001],
+            'S': [0b01111, 0b10000, 0b10000, 0b01110, 0b00001, 0b00001, 0b11110],
+            'T': [0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100],
+            'U': [0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110],
+            'V': [0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01010, 0b00100],
+            'W': [0b10001, 0b10001, 0b10001, 0b10101, 0b10101, 0b10101, 0b01010],
+            'X': [0b10001, 0b01010, 0b00100, 0b00100, 0b00100, 0b01010, 0b10001],
+            'Y': [0b10001, 0b10001, 0b01010, 0b00100, 0b00100, 0b00100, 0b00100],
+            'Z': [0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b10000, 0b11111],
+            // Цифры
+            '0': [0b01110, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b01110],
+            '1': [0b00100, 0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110],
+            '2': [0b01110, 0b10001, 0b00001, 0b00010, 0b00100, 0b01000, 0b11111],
+            '3': [0b11111, 0b00010, 0b00100, 0b00010, 0b00001, 0b10001, 0b01110],
+            '4': [0b00010, 0b00110, 0b01010, 0b10010, 0b11111, 0b00010, 0b00010],
+            '5': [0b11111, 0b10000, 0b11110, 0b00001, 0b00001, 0b10001, 0b01110],
+            '6': [0b00110, 0b01000, 0b10000, 0b11110, 0b10001, 0b10001, 0b01110],
+            '7': [0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b01000, 0b01000],
+            '8': [0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110],
+            '9': [0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00010, 0b01100],
+            // Знаки
+            ' ': [0, 0, 0, 0, 0, 0, 0],
+            '.': [0, 0, 0, 0, 0, 0b00110, 0b00110],
+            ',': [0, 0, 0, 0, 0, 0b00110, 0b00100],
+            ':': [0, 0b00110, 0b00110, 0, 0b00110, 0b00110, 0],
+            ';': [0, 0b00110, 0b00110, 0, 0b00110, 0b00100, 0b01000],
+            '-': [0, 0, 0, 0b01110, 0, 0, 0],
+            '+': [0, 0b00100, 0b00100, 0b01110, 0b00100, 0b00100, 0],
+            '/': [0b00001, 0b00001, 0b00010, 0b00100, 0b01000, 0b10000, 0b10000],
+            '!': [0, 0b00100, 0b00100, 0b00100, 0b00100, 0, 0b00100],
+            '?': [0b01110, 0b10001, 0b00001, 0b00010, 0b00100, 0, 0b00100],
+            '(': [0b00010, 0b00100, 0b01000, 0b01000, 0b01000, 0b00100, 0b00010],
+            ')': [0b01000, 0b00100, 0b00010, 0b00010, 0b00010, 0b00100, 0b01000],
+            '%': [0b11001, 0b11010, 0b00010, 0b00100, 0b01000, 0b01011, 0b10011],
+            '=': [0, 0, 0b11111, 0, 0b11111, 0, 0],
+            '_': [0, 0, 0, 0, 0, 0, 0b11111]
+        },
+
+        // --- крупный шрифт 6×9 для времени: 9 строк по 6 бит ---
+        FONTBIG: {
+            '0': [0b011110, 0b110011, 0b110011, 0b110011, 0b110011, 0b110011, 0b110011, 0b110011, 0b011110],
+            '1': [0b001100, 0b011100, 0b001100, 0b001100, 0b001100, 0b001100, 0b001100, 0b001100, 0b111110],
+            '2': [0b011110, 0b110011, 0b000011, 0b000110, 0b001100, 0b011000, 0b110000, 0b110000, 0b111111],
+            '3': [0b011110, 0b110011, 0b000011, 0b000110, 0b001110, 0b000110, 0b000011, 0b110011, 0b011110],
+            '4': [0b000011, 0b000111, 0b001011, 0b010011, 0b100011, 0b111111, 0b000011, 0b000011, 0b000011],
+            '5': [0b111111, 0b110000, 0b110000, 0b111110, 0b000011, 0b000011, 0b000011, 0b110011, 0b011110],
+            '6': [0b011110, 0b110011, 0b110000, 0b111110, 0b110011, 0b110011, 0b110011, 0b110011, 0b011110],
+            '7': [0b111111, 0b110011, 0b000011, 0b000110, 0b001100, 0b001100, 0b001100, 0b001100, 0b001100],
+            '8': [0b011110, 0b110011, 0b110011, 0b011110, 0b110011, 0b110011, 0b110011, 0b110011, 0b011110],
+            '9': [0b011110, 0b110011, 0b110011, 0b110011, 0b011111, 0b000011, 0b000011, 0b110011, 0b011110],
+            ':': [0, 0, 0b001100, 0b001100, 0, 0b001100, 0b001100, 0, 0]
+        },
+
+        // Полные названия дней недели; индекс = (getDay()+6)%7, Пн=0
+        _DAYS: ['ПОНЕДЕЛЬНИК', 'ВТОРНИК', 'СРЕДА', 'ЧЕТВЕРГ', 'ПЯТНИЦА', 'СУББОТА', 'ВОСКРЕСЕНЬЕ'],
+
+        // ==================== жизненный цикл ====================
+        init: function() {
+            if (this._inited) return true;
+            this._inited = true;
+            var self = this;
+            // Клик вне окна/календаря — закрыть календарь
+            document.addEventListener('click', function(ev) {
+                if (!self._calOpen) return;
+                var t = ev.target;
+                if (t && t.closest && t.closest('#wsLcdWrap')) return;
+                self.toggleCal(false);
+            });
+            // Esc закрывает календарь (не мешает Esc-логике Табеля —
+            // обработчики независимы)
+            document.addEventListener('keydown', function(ev) {
+                if (ev.key === 'Escape' && self._calOpen) self.toggleCal(false);
+            });
+            // Перерисовка при изменении размера окна (DPR/масштаб)
+            window.addEventListener('resize', function() {
+                if (self._timer) self.draw();
+            });
+            // Смена темы: цвета читаются из CSS при каждой отрисовке,
+            // поэтому достаточно просто перерисовать экран сразу
+            if (window.MutationObserver && document.documentElement) {
+                try {
+                    this._themeObs = new MutationObserver(function() {
+                        if (self._timer) self.draw();
+                    });
+                    this._themeObs.observe(document.documentElement,
+                        { attributes: true, attributeFilter: ['data-theme'] });
+                } catch (e) { /* без наблюдателя — цвета обновятся тиком */ }
+            }
+            // «Задел» по заявке: внешний API сообщений «пейджером» —
+            // window.dispatchEvent(new CustomEvent('ws-lcd-message',
+            //   { detail: { line1: '...', line2: '...', ms: 6000 } }))
+            window.addEventListener('ws-lcd-message', function(ev) {
+                var d = (ev && ev.detail) || {};
+                self.showMessage(d.line1 || d.text || '', d.line2, d.ms);
+            });
+            return true;
+        },
+
+        // Старт при заходе на страницу Табеля (хук navigateTo)
+        start: function() {
+            if (!this.init()) return;
+            if (this._timer) { this.draw(); return; }
+            this._lastSec = -1;
+            this._tick();
+            var self = this;
+            this._timer = setInterval(function() { self._tick(); }, 500);
+        },
+
+        // Стоп при уходе со страницы (хук navigateTo)
+        stop: function() {
+            if (this._timer) { clearInterval(this._timer); this._timer = null; }
+            this._msg = null;                    // сообщение не «переживает» уход
+            if (this._calOpen) this.toggleCal(false);
+        },
+
+        // ==================== буфер экрана ====================
+        _blankGrid: function() {
+            var g = [], r, c, row;
+            for (r = 0; r < this.ROWS; r++) {
+                row = [];
+                for (c = 0; c < this.COLS; c++) row.push(0);
+                g.push(row);
+            }
+            return g;
+        },
+
+        // Глиф → сетка: rows — битмаски шириной w, старший бит слева
+        _blitBits: function(g, rows, w, top, left) {
+            var r, c, x, y;
+            for (r = 0; r < rows.length; r++) {
+                y = top + r;
+                if (y < 0 || y >= this.ROWS) continue;
+                for (c = 0; c < w; c++) {
+                    if (rows[r] & (1 << (w - 1 - c))) {
+                        x = left + c;
+                        if (x >= 0 && x < this.COLS) g[y][x] = 1;
+                    }
+                }
+            }
+        },
+
+        // Текст 5×7 (последовательные глифы с шагом 6 колонок);
+        // неизвестные символы пропускаются. Возвращает ширину в сегментах.
+        _blit5: function(g, text, top, left) {
+            text = String(text == null ? '' : text).toUpperCase();
+            var x = left, i, ch, gl;
+            for (i = 0; i < text.length; i++) {
+                ch = text.charAt(i);
+                gl = this.FONT5[ch];
+                if (gl) {
+                    this._blitBits(g, gl, 5, top, x);
+                    x += 6;                       // 5 колонок + 1 промежуток
+                } else {
+                    x += 6;                       // нет глифа — пропуск клетки
+                }
+            }
+            return x - left;
+        },
+
+        _width5: function(text) {
+            return String(text || '').length * 6 - 1;
+        },
+
+        _pad2: function(n) { return ('0' + n).slice(-2); },
+
+        // ==================== компоновка экрана ====================
+        _compose: function(now) {
+            return this._msg ? this._composeMsg() : this._composeDefault(now);
+        },
+
+        // Обычный режим: крупные часы + дата (верх), день недели +
+        // секунды (низ) — компоновка как на фото метеостанции
+        _composeDefault: function(now) {
+            var g = this._blankGrid();
+            var time = this._pad2(now.getHours()) + ':' + this._pad2(now.getMinutes());
+            var x = 1, i, ch;
+            for (i = 0; i < time.length; i++) {
+                ch = time.charAt(i);
+                if (ch === ':') {
+                    // двоеточие мигает: чётная секунда — горит
+                    if (now.getSeconds() % 2 === 0) {
+                        this._blitBits(g, this.FONTBIG[':'], 6, 0, x);
+                    }
+                    x += 5;                       // 2 точки + промежутки
+                } else {
+                    this._blitBits(g, this.FONTBIG[ch], 6, 0, x);
+                    x += 7;                       // 6 колонок + 1 промежуток
+                }
+            }
+            // Дата ДД.ММ.ГГГГ — справа в верхней зоне (как число месяца
+            // у «PM» на фото), по вертикали по центру крупных цифр
+            var date = this._pad2(now.getDate()) + '.' +
+                       this._pad2(now.getMonth() + 1) + '.' + now.getFullYear();
+            this._blit5(g, date, 1, this.COLS - 2 - this._width5(date));
+            // Полное название дня недели — нижняя строка (как
+            // WEDNESDAY на фото); секунды — справа от него
+            var day = this._DAYS[(now.getDay() + 6) % 7];
+            this._blit5(g, day, 10, 1);
+            var ss = this._pad2(now.getSeconds());
+            this._blit5(g, ss, 10, this.COLS - 2 - this._width5(ss));
+            return g;
+        },
+
+        // Режим сообщения «пейджер»: до двух строк 5×7
+        _composeMsg: function() {
+            var g = this._blankGrid();
+            var page = (this._msg && this._msg.pages[this._msg.idx]) || ['', ''];
+            if (page[1]) {
+                this._blit5(g, page[0], 1, 1);    // строки 1..7
+                this._blit5(g, page[1], 9, 1);    // строки 9..15
+            } else {
+                this._blit5(g, page[0], 5, 1);    // одна строка — по центру
+            }
+            return g;
+        },
+
+        // ==================== тик ====================
+        _tick: function() {
+            var now = new Date();
+            var changed = (now.getSeconds() !== this._lastSec);
+            if (this._msg) {
+                var t = now.getTime();
+                if (this._msg.until && t >= this._msg.until) {
+                    this._msg = null;             // возврат к часам
+                    changed = true;
+                } else if (changed && this._msg.pages.length > 1 && t >= this._msg.nextFlip) {
+                    this._msg.idx = (this._msg.idx + 1) % this._msg.pages.length;
+                    this._msg.nextFlip = t + this.PAGE_MS;
+                    changed = true;
+                }
+            }
+            if (changed || !this._grid) {
+                this._lastSec = now.getSeconds();
+                this._grid = this._compose(now);
+                this.draw();
+            }
+        },
+
+        // ==================== отрисовка canvas ====================
+        draw: function() {
+            var cv = document.getElementById('wsLcdCanvas');
+            if (!cv || !this._grid) return;
+            var rect = cv.getBoundingClientRect();
+            if (rect.width < 5 || rect.height < 5) return;   // окно скрыто
+            var dpr = window.devicePixelRatio || 1;
+            var w = Math.max(2, Math.round(rect.width * dpr));
+            var h = Math.max(2, Math.round(rect.height * dpr));
+            if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+            var ctx = cv.getContext('2d');
+            if (!ctx) return;
+            // Цвета берём из CSS-переменных виджета (тема-зависимы)
+            var cs = window.getComputedStyle ? window.getComputedStyle(cv) : null;
+            var prop = function(name, def) {
+                var v = cs ? (cs.getPropertyValue(name) || '').trim() : '';
+                return v || def;
+            };
+            var bg    = prop('--ws-lcd-bg', '#0e1a13');
+            var seg   = prop('--ws-lcd-seg', '#93e6a4');
+            var ghost = prop('--ws-lcd-ghost', 'rgba(147, 230, 164, 0.09)');
+            var glow  = prop('--ws-lcd-glow', 'none');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, w, h);
+            var pitch = Math.min(w / this.COLS, h / this.ROWS);
+            var ox = Math.floor((w - pitch * this.COLS) / 2);
+            var oy = Math.floor((h - pitch * this.ROWS) / 2);
+            var gap = Math.max(0.6, pitch * 0.22);           // зазор между сегментами
+            var side = Math.max(1, pitch - gap);
+            var r, c, x, y;
+            // 1) «выключенные» сегменты-призраки — вся матрица едва видна,
+            //    как на настоящем ЖК-индикаторе
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = ghost;
+            for (r = 0; r < this.ROWS; r++) {
+                for (c = 0; c < this.COLS; c++) {
+                    if (this._grid[r][c]) continue;
+                    x = ox + c * pitch; y = oy + r * pitch;
+                    ctx.fillRect(Math.round(x), Math.round(y),
+                                 Math.max(1, Math.round(side)), Math.max(1, Math.round(side)));
+                }
+            }
+            // 2) «включённые» сегменты; в тёмной теме — мягкое свечение
+            ctx.fillStyle = seg;
+            if (glow && glow !== 'none') {
+                ctx.shadowColor = glow;
+                ctx.shadowBlur = Math.max(2, pitch * 1.6);
+            }
+            for (r = 0; r < this.ROWS; r++) {
+                for (c = 0; c < this.COLS; c++) {
+                    if (!this._grid[r][c]) continue;
+                    x = ox + c * pitch; y = oy + r * pitch;
+                    ctx.fillRect(Math.round(x), Math.round(y),
+                                 Math.max(1, Math.round(side)), Math.max(1, Math.round(side)));
+                }
+            }
+            ctx.shadowBlur = 0;
+        },
+
+        // ==================== сообщения «пейджер» (задел) ====================
+        // showMessage('текст')                    — разбивка по словам,
+        //                                          листание по 2 строки;
+        // showMessage('строка 1', 'строка 2', мс) — точные две строки.
+        showMessage: function(line1, line2, ms) {
+            var pages;
+            if (line2 !== undefined && line2 !== null && String(line2).length) {
+                pages = [[String(line1 == null ? '' : line1).toUpperCase(),
+                          String(line2).toUpperCase()]];
+            } else {
+                pages = this._splitPages(String(line1 == null ? '' : line1));
+            }
+            if (!pages.length) { this._msg = null; return; }
+            this._msg = {
+                pages: pages, idx: 0,
+                until: Date.now() + (ms || this.MSG_MS),
+                nextFlip: Date.now() + this.PAGE_MS
+            };
+            this._lastSec = -1;
+            this.start();                          // экран мог быть не запущен
+            this._grid = this._compose(new Date());
+            this.draw();
+        },
+
+        // Перенос текста по словам на строки ≤16 символов,
+        // группировка в «страницы» по две строки
+        _splitPages: function(text, cols) {
+            cols = cols || 16;
+            var words = String(text || '').toUpperCase().split(/\s+/)
+                .filter(function(w) { return w.length; });
+            if (!words.length) return [];
+            var lines = [], cur = '', i, w;
+            for (i = 0; i < words.length; i++) {
+                w = words[i];
+                while (w.length > cols) {          // сверхдлинное слово — кусками
+                    if (cur) { lines.push(cur); cur = ''; }
+                    lines.push(w.slice(0, cols));
+                    w = w.slice(cols);
+                }
+                if (!cur) cur = w;
+                else if ((cur + ' ' + w).length <= cols) cur += ' ' + w;
+                else { lines.push(cur); cur = w; }
+            }
+            if (cur) lines.push(cur);
+            var pages = [], j;
+            for (j = 0; j < lines.length; j += 2) {
+                pages.push([lines[j], lines[j + 1] || '']);
+            }
+            return pages;
+        },
+
+        // ==================== календарь по месяцам ====================
+        onClockClick: function(ev) {
+            if (ev && ev.stopPropagation) ev.stopPropagation();
+            this.toggleCal();
+        },
+
+        toggleCal: function(force) {
+            var cal = document.getElementById('wsLcdCal');
+            var btn = document.getElementById('wsLcdClock');
+            if (!cal) return;
+            var open = (typeof force === 'boolean') ? force : !this._calOpen;
+            if (open === this._calOpen) { if (open) this._renderCal(); return; }
+            this._calOpen = open;
+            if (open) {
+                var now = new Date();
+                if (!this._calY && !this._calM) {
+                    this._calY = now.getFullYear();
+                    this._calM = now.getMonth() + 1;
+                }
+                this._renderCal();
+                cal.hidden = false;
+            } else {
+                cal.hidden = true;
+            }
+            if (btn) btn.setAttribute('aria-expanded', String(open));
+        },
+
+        _calNav: function(delta) {
+            var m = this._calM + delta;
+            if (m < 1) { this._calM = 12; this._calY--; }
+            else if (m > 12) { this._calM = 1; this._calY++; }
+            else { this._calM = m; }
+            this._renderCal();
+        },
+
+        _calToday: function() {
+            var now = new Date();
+            this._calY = now.getFullYear();
+            this._calM = now.getMonth() + 1;
+            this._renderCal();
+        },
+
+        _renderCal: function() {
+            var el = document.getElementById('wsLcdCal');
+            if (!el) return;
+            var MN = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                      'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+            var DOW = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+            var y = this._calY, m = this._calM;
+            var lead = (new Date(y, m - 1, 1).getDay() + 6) % 7;   // дней прошлого месяца в 1-й строке
+            var prevDays = new Date(y, m - 1, 0).getDate();
+            var dim = new Date(y, m, 0).getDate();
+            var today = new Date();
+            var isThis = (today.getFullYear() === y && today.getMonth() + 1 === m);
+            var html = '';
+            html += '<div class="ws-lcd-cal-head">';
+            html += '<button type="button" class="ws-lcd-cal-nav" onclick="WsLcdClock._calNav(-1)" aria-label="Предыдущий месяц">&#8249;</button>';
+            html += '<div class="ws-lcd-cal-title">' + MN[m - 1] + ' ' + y + '</div>';
+            html += '<button type="button" class="ws-lcd-cal-nav" onclick="WsLcdClock._calNav(1)" aria-label="Следующий месяц">&#8250;</button>';
+            html += '<button type="button" class="ws-lcd-cal-today" onclick="WsLcdClock._calToday()">Сегодня</button>';
+            html += '</div>';
+            html += '<div class="ws-lcd-cal-grid">';
+            var d0;
+            for (d0 = 0; d0 < 7; d0++) {
+                html += '<div class="ws-lcd-cal-dow' + (d0 >= 5 ? ' wknd' : '') + '">' + DOW[d0] + '</div>';
+            }
+            var cell, i, cd, cm, cy, cls, dow;
+            for (cell = 1 - lead, i = 0; i < 42; i++, cell++) {
+                cd = cell; cm = m; cy = y; cls = 'ws-lcd-cal-day';
+                dow = i % 7;
+                if (dow >= 5) cls += ' wknd';
+                if (cell < 1) {
+                    cd = prevDays + cell; cm = m - 1;
+                    if (cm < 1) { cm = 12; cy--; }
+                    cls += ' dim';
+                } else if (cell > dim) {
+                    cd = cell - dim; cm = m + 1;
+                    if (cm > 12) { cm = 1; cy++; }
+                    cls += ' dim';
+                } else if (isThis && cd === today.getDate()) {
+                    cls += ' today';
+                }
+                html += '<button type="button" class="' + cls + '" ' +
+                        'onclick="WsLcdClock._calPick(' + cy + ',' + cm + ',' + cd + ')" ' +
+                        'aria-label="' + cd + ' ' + MN[cm - 1] + ' ' + cy + '">' + cd + '</button>';
+            }
+            html += '</div>';
+            html += '<div class="ws-lcd-cal-hint">Клик по дате — открыть этот месяц в табеле</div>';
+            el.innerHTML = html;
+        },
+
+        // Выбор дня в календаре: открыть ЭТОТ месяц в самом табеле
+        // (селекты месяца/года + штатная перезагрузка сетки)
+        _calPick: function(y, m, d) {
+            var ms = document.getElementById('wsMonthSel');
+            var ys = document.getElementById('wsYearSel');
+            if (ms) ms.value = String(m);
+            if (ys) {
+                if (!ys.querySelector('option[value="' + y + '"]')) {
+                    // года в селекте — текущий ±1; навигация календаря могла
+                    // уйти дальше — добавим недостающий год и отсортируем
+                    var o = document.createElement('option');
+                    o.value = String(y);
+                    o.textContent = String(y);
+                    ys.appendChild(o);
+                    var opts = Array.prototype.slice.call(ys.querySelectorAll('option'));
+                    opts.sort(function(a, b) { return (+a.value) - (+b.value); });
+                    opts.forEach(function(op) { ys.appendChild(op); });
+                }
+                ys.value = String(y);
+            }
+            if (typeof WorkSchedule !== 'undefined' && WorkSchedule.onMonthChange) {
+                try { WorkSchedule.onMonthChange(); } catch (e) { /* сетка не готова */ }
+            }
+            this.toggleCal(false);
         }
     };
 

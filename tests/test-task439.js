@@ -46,7 +46,7 @@
 //      канонический слот «» (нет дубля «Выходной, плановый
 //      выходной день»); справочник только с «.» рендерит
 //      «Выходного» из «.» (регресс Task 387);
-//   SW: kipia-test-v741 (главный), v664 — следующий не занят.
+//   SW: kipia-test-v742 (главный), v664 — следующий не занят.
 // ============================================================
 
 const fs = require('fs');
@@ -809,15 +809,15 @@ describe('Task 439 — VM: _renderCellPopup (дедуп «.»)', () => {
 // ============================================================
 describe('Task 439 — Service Worker', () => {
 
-    test('SW: кэш поднят до kipia-test-v741', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v741'") !== -1,
-            'CACHE_VERSION = kipia-test-v741 (Task 439 — печать/попап)');
-        assertFalse(SW_SRC.indexOf('kipia-test-v742') !== -1,
+    test('SW: кэш поднят до kipia-test-v742', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v742'") !== -1,
+            'CACHE_VERSION = kipia-test-v742 (Task 439 — печать/попап)');
+        assertFalse(SW_SRC.indexOf('kipia-test-v743') !== -1,
             'лишний инкремент (v664) не сделан');
     });
 
     test('SW: в index.html нет захардкоженной версии кэша', () => {
-        assertFalse(INDEX_SRC.indexOf('kipia-test-v741') !== -1,
+        assertFalse(INDEX_SRC.indexOf('kipia-test-v743') !== -1,
             'клиент не знает номер кэша (версией управляет sw.js)');
     });
 });
