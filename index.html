@@ -5246,33 +5246,38 @@
        ОДНУ строку: время ЧЧ:ММ крупно (шрифт 6×9, двоеточие НЕ
        мигает) + секунды МАЛЫМ шрифтом 3×5 справа от минут + полное
        название дня недели + дата ДД.ММ.ГГГГ + погода Кемерово
-       (иконка 8×8 + температура; источник meteoinfo.ru через
-       сервер). «Призрачная» сетка НЕ рисуется — выключенные
-       сегменты невидимы. Отрисовка — ЦЕЛЫМ pitch в device-пикселях:
+       (иконка 8×8 + температура; Task 533: источник open-meteo.com
+       НАПРЯМУЮ из браузера, резерв — сервер). «Призрачная» сетка НЕ
+       рисуется — выключенные сегменты невидимы. Отрисовка — ЦЕЛЫМ
+       pitch в device-пикселях:
        сетка идеально ровная, все сегменты ОДИНАКОВОГО размера при
        любом DPR (размер канваса кратен матрице, CSS-размер =
        device/dpr — 1:1 на физические пиксели). Длина окна
        ФИКСИРОВАНА: матрица постоянна, размер не зависит от данных.
        Сообщения «пейджер» в ДВЕ строки — РЕАЛЬНЫЕ данные
        (мероприятия/отпуска Табеля) + API. Task 532: клик по ОКНУ —
-       ТОЛЬКО выпадающий календарь (с выбором года); ШЕСТЕРЁНКА
-       в правом верхнем углу — ТОЛЬКО блок настроек. === */
+       ТОЛЬКО выпадающий календарь (с выбором года); ШЕСТЕРЁНКА —
+       ТОЛЬКО блок настроек. Task 533: шестерёнка — ВНУТРИ информера
+       (оверлей на стекле); в календаре ГОД СВЕРХУ, МЕСЯЦ ПОД ГОДОМ
+       (у обоих селект + стрелки). === */
     .ws-lcd-wrap { display: none; }
     @media (min-width: 1024px) {
         /* окно видно ТОЛЬКО на десктопе (заявка: «в десктопной
            версии»); Task 530: обёртка РАСТЯНУТА на полную высоту
            бара (align-self: stretch) — рамка внутри (height:100%)
            примыкает к краям бара ВПЛОТНУЮ сверху и снизу;
-           Task 532: в обёртке ДВА элемента — рамка + ШЕСТЕРЁНКА
-           (правый верхний угол информера), зазор 5px */
+           Task 533: шестерёнка — ПОВЕРХ ЭКРАНА информера
+           (position: absolute, правый верхний угол СТЕКЛА),
+           в потоке остаётся только рамка */
         #page-work-schedule .page-inline-header .ws-lcd-wrap {
             display: flex;
             align-self: stretch;        /* вплотную к верху/низу бара */
             margin-left: auto;          /* прижать к правому краю бара */
-            position: relative;         /* якорь выпадающего календаря */
+            position: relative;         /* якорь попапов и шестерёнки */
             flex-shrink: 0;
             padding-left: 12px;
-            gap: 5px;                   /* рамка ↔ шестерёнка (Task 532) */
+            /* Task 533: шестерёнка — ПОВЕРХ экрана (position: absolute),
+               в потоке остаётся ТОЛЬКО рамка — зазор не нужен */
         }
         /* Task 530: заголовок при нехватке места (узкое окно) —
            эллипсис, а не наезд текста на LCD-окно */
@@ -5363,72 +5368,60 @@
             inset 0 -1px 0 rgba(255, 255, 255, 0.6);
     }
 
-    /* --- Task 532: ШЕСТЕРЁНКА — правый верхний угол информера ---
-       Кнопка-«ручка» в стиле корпуса: тот же бордюрчик-выступ,
-       что и у рамки (прямые углы сохранены у корпуса; сама
-       кнопка чуть скруглена — читается как отдельная ручка).
+    /* --- Task 533: ШЕСТЕРЁНКА — ВНУТРИ информера (на стекле) ---
+       Заявка: «кнопку со значком шестерёнки расположи внутри
+       информера». Значок — ОВЕРЛЕЙ на ЭКРАНЕ (position: absolute
+       над .ws-lcd), правый верхний угол СТЕКЛА: рисуется цветом
+       СЕГМЕНТОВ матрицы (--ws-lcd-seg), полупрозрачный в покое —
+       как «напечатанная» на ЖК сенсорная кнопка; при наведении —
+       ярче, при открытых настройках — горит полностью + акцент.
        Клик — ТОЛЬКО настройки (#wsLcdSet), клик по окну —
-       ТОЛЬКО календарь: разделение по заявке Task 532.
-       Активная (открытые настройки) — «нажатая»: вдавливание
-       + акцентная рамка */
+       ТОЛЬКО календарь (разделение по заявке Task 532).
+       Значок 13×13 при зоне клика 20×20: не задевает строку данных
+       (иконка погоды/температура — ряды 5..12; значок — ряды 0..5)
+       и хвост «пейджера» (33 символа кончаются на колонке 197) */
     .ws-lcd-gear {
-        align-self: flex-start;        /* ВЕРХНИЙ правый угол */
-        flex: none;
-        width: 22px;
-        height: 22px;
-        margin-top: 1px;
+        position: absolute;            /* ПОВЕРХ экрана информера */
+        top: 2px;                      /* правый верхний угол стекла */
+        right: 4px;
+        z-index: 5;                    /* выше канваса, ниже попапов */
+        width: 20px;                   /* зона клика 20×20 */
+        height: 20px;
         box-sizing: border-box;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 0;
-        border-radius: 5px;
-        background: #1c232d;
-        border: 1px solid rgba(0, 0, 0, 0.6);
-        color: rgba(147, 230, 164, 0.75);
+        border-radius: 0;              /* прямые углы — стиль корпуса (Task 530) */
+        background: transparent;       /* корпус НЕ рисуем — «на стекле» */
+        border: none;
+        color: var(--ws-lcd-seg, #93e6a4);
+        opacity: 0.55;                 /* покой — приглушена */
         cursor: pointer;
         -webkit-user-select: none; user-select: none;
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
-        box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.16),
-            inset 0 -1px 0 rgba(0, 0, 0, 0.5),
-            0 1px 2px rgba(0, 0, 0, 0.4);
-        transition: box-shadow 0.15s ease, color 0.15s ease;
+        transition: opacity 0.15s ease, color 0.15s ease;
     }
     .ws-lcd-gear:hover {
-        color: #93e6a4;
-        box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.22),
-            inset 0 -1px 0 rgba(0, 0, 0, 0.5),
-            0 2px 5px rgba(0, 0, 0, 0.5);
+        opacity: 0.95;                 /* палец/курсор — «подсветка» */
     }
     .ws-lcd-gear:focus-visible {
-        outline: 2px solid rgba(74, 143, 199, 0.8); outline-offset: 2px;
+        outline: 2px solid rgba(74, 143, 199, 0.8); outline-offset: 1px;
+        opacity: 1;
     }
     .ws-lcd-gear[aria-expanded="true"] {
+        opacity: 1;                     /* настройки открыты — горит */
         color: #93e6a4;
-        box-shadow:
-            inset 0 2px 3px rgba(0, 0, 0, 0.55),
-            inset 0 -1px 0 rgba(255, 255, 255, 0.08);
-        border-color: rgba(74, 143, 199, 0.55);
+        filter: drop-shadow(0 0 3px rgba(147, 230, 164, 0.7));
     }
     [data-theme="light"] .ws-lcd-gear {
-        background: #e7e2d5;
-        border-color: rgba(120, 108, 88, 0.5);
-        color: #4a5548;
-        box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.9),
-            inset 0 -1px 0 rgba(74, 64, 48, 0.28),
-            0 1px 2px rgba(74, 64, 48, 0.25);
+        color: var(--ws-lcd-seg, #232e38);
     }
-    [data-theme="light"] .ws-lcd-gear:hover { color: #232e38; }
+    [data-theme="light"] .ws-lcd-gear:hover { opacity: 0.95; }
     [data-theme="light"] .ws-lcd-gear[aria-expanded="true"] {
         color: #232e38;
-        border-color: rgba(90, 138, 58, 0.8);
-        box-shadow:
-            inset 0 2px 3px rgba(60, 70, 60, 0.42),
-            inset 0 -1px 0 rgba(255, 255, 255, 0.6);
+        filter: none;
     }
 
     /* --- Task 529: выпадающий календарь по месяцам --- */
@@ -5446,32 +5439,37 @@
         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
     }
     .ws-lcd-cal[hidden] { display: none; }
-    .ws-lcd-cal-head {
-        display: flex; align-items: center; gap: 6px; margin-bottom: 4px;
-    }
-    /* Task 532: ВЫБОР ГОДА — вторая строка головы календаря:
-       «Год: ‹ [селект] ›». Селект охватывает текущий ±10; шаг ‹ ›
-       ходит по годам, навигация месяцев декабрь→январь тоже меняет
-       год и синхронизирует селект (_calSyncYear) */
+    /* Task 533 (заявка: «год сверху, месяц под годом; у месяца —
+       как у года селект + стрелки»): ПЕРВАЯ строка головы — ГОД
+       («‹ Год [селект] ›», центрирована); ВТОРАЯ — МЕСЯЦ
+       («‹ Месяц [селект] › [Сегодня]»). Селект года охватывает
+       текущий ±10; шаг ‹ › ходит по годам, навигация месяцев
+       декабрь→январь тоже меняет год и синхронизирует селект */
     .ws-lcd-cal-year {
+        display: flex; align-items: center; justify-content: center;
+        gap: 6px; margin-bottom: 4px;
+    }
+    /* Task 533: строка месяца — ПОД годом; селект + стрелки ‹ ›
+       (как у года) + кнопка «Сегодня» справа */
+    .ws-lcd-cal-month {
         display: flex; align-items: center; justify-content: center;
         gap: 6px; margin-bottom: 8px;
     }
-    .ws-lcd-cal-yearlbl { font-size: 11px; color: rgba(255, 255, 255, 0.45); }
-    .ws-lcd-cal-year select {
+    .ws-lcd-cal-yearlbl, .ws-lcd-cal-monthlbl {
+        font-size: 11px; color: rgba(255, 255, 255, 0.45);
+    }
+    .ws-lcd-cal-year select, .ws-lcd-cal-month select {
         background: var(--card-bg, rgba(30, 42, 56, 0.55));
         color: #e0e0e0;
         border: 1px solid var(--card-border, rgba(74, 143, 199, 0.25));
         border-radius: 6px; font-size: 13px; font-weight: 700;
         padding: 2px 8px; cursor: pointer; font-family: inherit;
     }
-    [data-theme="light"] .ws-lcd-cal-yearlbl { color: rgba(20, 20, 19, 0.5); }
-    [data-theme="light"] .ws-lcd-cal-year select {
+    [data-theme="light"] .ws-lcd-cal-yearlbl,
+    [data-theme="light"] .ws-lcd-cal-monthlbl { color: rgba(20, 20, 19, 0.5); }
+    [data-theme="light"] .ws-lcd-cal-year select,
+    [data-theme="light"] .ws-lcd-cal-month select {
         background: #fff; color: #141413; border-color: rgba(0, 0, 0, 0.18);
-    }
-    .ws-lcd-cal-title {
-        flex: 1; text-align: center; font-size: 14px; font-weight: 700;
-        color: #e0e0e0; letter-spacing: -0.2px;
     }
     .ws-lcd-cal-nav, .ws-lcd-cal-today {
         display: inline-flex; align-items: center; justify-content: center;
@@ -5522,7 +5520,6 @@
         border-color: rgba(0, 0, 0, 0.15);
         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
     }
-    [data-theme="light"] .ws-lcd-cal-title { color: #141413; }
     [data-theme="light"] .ws-lcd-cal-dow { color: rgba(20, 20, 19, 0.5); }
     [data-theme="light"] .ws-lcd-cal-dow.wknd { color: #9E4E30; }
     [data-theme="light"] .ws-lcd-cal-day { color: #333; background: rgba(20, 20, 19, 0.05); }
@@ -17931,8 +17928,8 @@
             <div class="page-inline-header">
                 <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
                 <div class="page-inline-header-title">Табель учёта рабочего времени</div>
-                <!-- Task 529 → 530 → 531 → 532: LCD-окно «пейджер» — СПРАВА в баре
-                     крошек Табеля (только десктоп ≥1024px, CSS). Рамка-
+                <!-- Task 529 → 530 → 531 → 532 → 533: LCD-окно «пейджер» — СПРАВА
+                     в баре крошек Табеля (только десктоп ≥1024px, CSS). Рамка-
                      «бордюрчик» с ЭФФЕКТОМ ВЫСТУПА, прямые углы, вплотную
                      к краям бара; ЭКРАН — УТОПЛЕН в рамку (Task 531).
                      Матрица КВАДРАТНЫХ сегментов 205×17 (canvas), данные
@@ -17940,17 +17937,18 @@
                      крупно (двоеточие — ЦЕНТР между часами и минутами),
                      секунды малым шрифтом справа от минут ВНИЗУ по нижней
                      линии, день недели — ЦЕНТР между циферблатом и датой,
-                     дата, погода Кемерово (meteoinfo.ru + резерв
-                     open-meteo.com) с иконкой. Сетка ровная (целый pitch
-                     в device-пикселях).
-                     Task 532: ЗНАЧОК-ШЕСТЕРЁНКА #wsLcdGear — В ПРАВОМ
-                     ВЕРХНЕМ УГЛУ информера (в обёртке, справа от рамки):
+                     дата, погода Кемерово (Task 533: open-meteo.com
+                     НАПРЯМУЮ из браузера; резерв — сервер meteoinfo.ru)
+                     с иконкой. Сетка ровная (целый pitch в device-пикселях).
+                     Task 533: ЗНАЧОК-ШЕСТЕРЁНКА #wsLcdGear — ВНУТРИ
+                     информера (оверлей на стекле, правый верхний угол):
                      клик по шестерёнке открывает ТОЛЬКО блок настроек
                      (#wsLcdSet: отображение, частота сообщений/погоды,
                      источники, диагностика погоды, тест и сброс;
                      localStorage). Клик по ОКНУ информера открывает
-                     ТОЛЬКО календарь (#wsLcdCal) — с ВЫБОРОМ ГОДА
-                     (селект + шаг ‹ ›). Сообщения в ДВЕ строки —
+                     ТОЛЬКО календарь (#wsLcdCal) — ГОД СВЕРХУ (селект +
+                     шаг ‹ ›), МЕСЯЦ ПОД ГОДОМ (тоже селект + шаг ‹ ›,
+                     Task 533) + «Сегодня». Сообщения в ДВЕ строки —
                      РЕАЛЬНЫЕ данные Табеля + WsLcdClock.showMessage
                      и событие window 'ws-lcd-message'. -->
                 <div id="wsLcdWrap" class="ws-lcd-wrap">
@@ -17960,12 +17958,14 @@
                             title="Время, дата и погода Кемерово — нажмите для календаря">
                         <canvas id="wsLcdCanvas" class="ws-lcd-screen" width="205" height="17" aria-hidden="true"></canvas>
                     </button>
-                    <!-- Task 532: шестерёнка — правый верхний угол информера;
-                         клик → ТОЛЬКО настройки (календарь не трогает) -->
+                    <!-- Task 533: шестерёнка — ВНУТРИ информера:
+                         ОВЕРЛЕЙ на экране (правый верхний угол стекла),
+                         абсолютное позиционирование над рамкой; клик →
+                         ТОЛЬКО настройки (календарь не трогает) -->
                     <button type="button" id="wsLcdGear" class="ws-lcd-gear" onclick="WsLcdClock.onGearClick(event)"
                             aria-haspopup="true" aria-expanded="false"
                             aria-label="Настройки информера" title="Настройки информера">
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true" focusable="false"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.73 8.87c-.12.21-.08.48.12.61l2.03 1.58c-.04.3-.07.63-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true" focusable="false"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.73 8.87c-.12.21-.08.48.12.61l2.03 1.58c-.04.3-.07.63-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
                     </button>
                     <div id="wsLcdCal" class="ws-lcd-cal" hidden></div>
                     <!-- Task 531 → 532: настройки информера — под шестерёнкой;
@@ -47823,10 +47823,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     //     часов и датой (ряды 6..12);
     //   • дата ДД.ММ.ГГГГ (ряды 6..12);
     //   • погода Кемерово: пиксельная иконка 8×8 (ряды 5..12) +
-    //     температура («+3°»/«-12°»). Источник — meteoinfo.ru (Гидрометцентр
-    //     России), подтягивается серверным эндпоинтом
-    //     workSchedule.getWeather (кэш 30 мин), клиент кэширует
-    //     в localStorage и обновляется каждые 30 мин.
+    //     температура («+3°»/«-12°»). Task 533: источник —
+    //     open-meteo.com, запрос НАПРЯМУЮ из браузера (JSON API,
+    //     CORS открыт, ключ не нужен — БЕЗ Apps Script и БЕЗ
+    //     авторизации); серверный эндпоинт workSchedule.getWeather
+    //     (meteoinfo.ru через UrlFetchApp) остаётся РЕЗЕРВОМ;
+    //     клиент кэширует в localStorage и обновляется по расписанию.
     // «Призрачная» сетка НЕ рисуется: выключенные сегменты невидимы.
     // Отрисовка — ЦЕЛЫМ pitch в device-пикселях (шаг и сторона
     // сегмента — целые числа, размер канваса кратен матрице,
@@ -47879,6 +47881,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         FEED_MS: 8000,          // длительность одного «пейджера» (умолч.)
         FEED_DELAY: 15000,      // первый «пейджер» после открытия
         WEATHER_MS: 1800000,    // опрос погоды: 30 мин (умолчание)
+        // Task 533: ОСНОВНОЙ канал погоды — open-meteo.com НАПРЯМУЮ
+        // из браузера (без Apps Script). Кемерово: 55.35 N, 86.08 E;
+        // те же параметры, что у серверного резерва (WorkSchedule.gs),
+        // чтобы парсер и иконки работали без изменений
+        OM_URL: 'https://api.open-meteo.com/v1/forecast' +
+                '?latitude=55.35&longitude=86.08' +
+                '&current=temperature_2m,relative_humidity_2m,surface_pressure,' +
+                'weather_code,wind_speed_10m,wind_direction_10m' +
+                '&wind_speed_unit=ms&timezone=Asia%2FNovokuznetsk',
         // Task 531: настройки информера — localStorage, живое применение
         _SET_KEY: 'kip8_ws_lcd_set_v1',
         _SET_DEF: {              // значения по умолчанию (см. _setGet)
@@ -48164,8 +48175,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._tick();
             var self = this;
             this._timer = setInterval(function() { self._tick(); }, 500);
-            // Task 530: погода Кемерово (meteoinfo.ru через сервер) —
-            // мгновенно из кэша localStorage, затем сеть по расписанию
+            // Task 533: погода Кемерово — open-meteo.com НАПРЯМУЮ из
+            // браузера (резерв — сервер); мгновенно из кэша
+            // localStorage, затем сеть по расписанию
             this._loadWeather(false);
         },
 
@@ -48507,13 +48519,18 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return pages;
         },
 
-        // ==================== погода Кемерово (Task 530) ====================
-        // Источник — meteoinfo.ru (Гидрометцентр России), серверный
-        // эндпоинт workSchedule.getWeather (UrlFetchApp + кэш 30 мин).
-        // Клиент: мгновенный показ из localStorage, затем сеть; сбой
-        // сети/старый сервер — тихо «--», повтор по расписанию.
-        // Task 531: период опроса настраивается (wthrMin), показ
-        // можно выключить (настройка «Погода» — сеть не дёргаем)
+        // ==================== погода Кемерово (Task 530 → 533) ====================
+        // Task 533 (заявка: «может рассмотреть способ получения данных
+        // погоды не через скрипт?»): ОСНОВНОЙ канал — open-meteo.com
+        // НАПРЯМУЮ из браузера: JSON API, CORS открыт, ключ не нужен,
+        // Apps Script и авторизация НЕ требуются — погода не зависит
+        // от развёртывания. РЕЗЕРВ — серверный эндпоинт
+        // workSchedule.getWeather (meteoinfo.ru через UrlFetchApp):
+        // включается, если прямой запрос не прошёл (сеть/фильтр/CORS)
+        // и пользователь авторизован. Клиент: мгновенный показ из
+        // localStorage, затем сеть; сбой — тихо «--», повтор по
+        // расписанию. Task 531: период опроса настраивается (wthrMin),
+        // показ можно выключить (настройка «Погода» — сеть не дёргаем)
 
         // применить данные погоды к экрану (перерисовка);
         // Task 532: заодно фиксируем ДИАГНОСТИКУ для панели настроек
@@ -48561,11 +48578,121 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return null;                             // данных мало — без иконки
         },
 
-        // загрузка: кэш localStorage (сутки) → сеть (раз в 30 мин;
-        // Task 531 — период из настроек информера; Task 532 — каждый
-        // результат фиксируется в _weatherDiag и виден в панели
-        // настроек: «Обновить сейчас» переспрашивает сервер
-        // немедленно — удобно сразу после обновления Apps Script)
+        // Task 533: разбор JSON open-meteo.com — КЛИЕНТСКИЙ двойник
+        // серверного _parseOpenMeteo (WorkSchedule.gs): тот же WMO-
+        // маппинг (код → балл облачности + текст явления — иконки
+        // клиента работают без изменений), румбы направления ветра,
+        // гПа → мм рт.ст., местное время наблюдения
+        _parseOpenMeteo: function(text) {
+            try {
+                var j = JSON.parse(String(text || ''));
+                var c = j && j.current;
+                if (!c || c.temperature_2m == null) return null;
+                var t = parseFloat(c.temperature_2m);
+                if (isNaN(t)) return null;
+                var code = (c.weather_code != null) ? c.weather_code : 3;
+                var cloud = 8, phen = 'Пасмурно';
+                if (code === 0)      { cloud = 0; phen = 'Ясно'; }
+                else if (code === 1) { cloud = 1; phen = 'Малооблачно'; }
+                else if (code === 2) { cloud = 3; phen = 'Переменная облачность'; }
+                else if (code === 3) { cloud = 8; phen = 'Пасмурно'; }
+                else if (code === 45 || code === 48) {
+                    cloud = 8; phen = 'Туман';
+                } else if (code >= 51 && code <= 57) {
+                    cloud = 8; phen = 'Морось';
+                } else if (code >= 61 && code <= 67) {
+                    cloud = 9; phen = 'Дождь';
+                } else if ((code >= 71 && code <= 77) || code === 85 || code === 86) {
+                    cloud = 9; phen = 'Снег';
+                } else if (code >= 80 && code <= 82) {
+                    cloud = 9; phen = 'Ливень';
+                } else if (code >= 95) {
+                    cloud = 9; phen = 'Гроза';
+                }
+                var DIRS = ['С', 'СВ', 'В', 'ЮВ', 'Ю', 'ЮЗ', 'З', 'СЗ'];
+                var windDir = null;
+                if (c.wind_direction_10m != null &&
+                    !isNaN(parseFloat(c.wind_direction_10m))) {
+                    var deg = ((parseFloat(c.wind_direction_10m) % 360) + 360) % 360;
+                    windDir = DIRS[Math.round(deg / 45) % 8];
+                }
+                var pr = (c.surface_pressure != null &&
+                          !isNaN(parseFloat(c.surface_pressure)))
+                    ? Math.round(parseFloat(c.surface_pressure) / 1.33322) : null;
+                var obsLocal = null;
+                if (c.time != null) {
+                    obsLocal = String(c.time).replace('T', ' ').slice(0, 16);
+                }
+                return {
+                    temp: t,
+                    phenomenon: phen,
+                    cloud: cloud,
+                    wind: (c.wind_speed_10m != null &&
+                           !isNaN(parseFloat(c.wind_speed_10m)))
+                        ? parseFloat(c.wind_speed_10m) : null,
+                    windDir: windDir,
+                    pressure: pr,
+                    humidity: (c.relative_humidity_2m != null &&
+                               !isNaN(parseFloat(c.relative_humidity_2m)))
+                        ? parseFloat(c.relative_humidity_2m) : null,
+                    obsLocal: obsLocal,
+                    source: 'open-meteo.com',
+                    fetched: new Date().toISOString()
+                };
+            } catch (e) { return null; }
+        },
+
+        // Task 533: ПРЯМОЙ запрос open-meteo.com из браузера —
+        // БЕЗ Apps Script и БЕЗ авторизации (CORS открыт, ключа нет).
+        // Отдаёт Promise с готовыми данными (форма ответа сервера)
+        _fetchWeatherDirect: function() {
+            var self = this;
+            if (typeof fetch !== 'function') {
+                return Promise.reject(new Error('no_fetch'));
+            }
+            return fetch(this.OM_URL, { method: 'GET', cache: 'no-store' })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('http_' + r.status);
+                    return r.text();
+                })
+                .then(function(txt) {
+                    var d = self._parseOpenMeteo(txt);
+                    if (!d) throw new Error('parse_empty');
+                    return d;
+                });
+        },
+
+        // общий хвост успешного опроса: кэш (сутки) + экран +
+        // диагностика с КАНАЛОМ (Task 533: напрямую / через сервер)
+        // + перерисовка открытой панели + расписание повтора
+        _weatherOk: function(data, via) {
+            try {
+                localStorage.setItem('kip8_ws_weather_v1',
+                    JSON.stringify({ data: data, ts: Date.now() }));
+            } catch (e) { /* кэш необязателен */ }
+            this._applyWeather(data);
+            if (this._weatherDiag && this._weatherDiag.ok) {
+                this._weatherDiag.via = via;
+                if (via === 'direct') {
+                    this._weatherDiag.source =
+                        (this._weatherDiag.source || 'open-meteo.com') +
+                        ' (напрямую из браузера)';
+                } else if (via === 'server') {
+                    this._weatherDiag.source =
+                        (this._weatherDiag.source || 'сервер') +
+                        ' (через Apps Script)';
+                }
+            }
+            if (this._setOpen) this._renderSettings();
+            this._weatherSchedule();
+        },
+
+        // загрузка: кэш localStorage (сутки) → сеть (раз в период
+        // настроек; Task 531). Task 533: сначала ПРЯМОЙ запрос
+        // open-meteo.com (не зависит от Apps Script), при неудаче —
+        // серверный резерв (если авторизован). Каждый результат
+        // фиксируется в _weatherDiag и виден в панели настроек;
+        // «Обновить сейчас» переспрашивает немедленно
         _loadWeather: function(force) {
             var self = this;
             var st = this._setGet();
@@ -48584,43 +48711,62 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     this._applyWeather(cached.data);
                 }
             }
-            if (typeof KipAuth === 'undefined' || !KipAuth.api ||
-                    typeof KipAuth.getToken !== 'function' || !KipAuth.getToken()) {
-                return;                              // не авторизован — без сети
-            }
             if (fresh && !force) { this._weatherSchedule(); return; }
-            KipAuth.api('workSchedule.getWeather', { token: KipAuth.getToken() })
+            // ОСНОВНОЙ канал (Task 533): open-meteo.com НАПРЯМУЮ —
+            // без Apps Script, без токена, без авторизации
+            this._fetchWeatherDirect()
                 .then(function(data) {
-                    if (data && data.temp != null) {
-                        try {
-                            localStorage.setItem('kip8_ws_weather_v1',
-                                JSON.stringify({ data: data, ts: Date.now() }));
-                        } catch (e) { /* кэш необязателен */ }
-                        self._applyWeather(data);
-                    } else {
-                        // сервер ответил, но погоды нет: какие источники
-                        // пробовались и почему не вышло — в data.diag
-                        // (getWeather v2, Task 532)
-                        self._weatherDiag = {
-                            ok: false, why: 'server',
-                            note: data ? data.note : '',
-                            diag: data ? data.diag : ''
-                        };
-                    }
-                    if (self._setOpen) self._renderSettings();
-                    self._weatherSchedule();
+                    self._weatherOk(data, 'direct');
                 })
-                .catch(function(err) {
-                    // старый сервер (нет эндпоинта)/сеть — тихо,
-                    // повтор через период настроек; ДИАГНОСТИКА —
-                    // в панель настроек: «Unknown action» означает,
-                    // что развёртывание Apps Script НЕ обновлено
-                    var msg = String((err && err.message) || '');
-                    self._weatherDiag = (/unknown action/i.test(msg))
-                        ? { ok: false, why: 'no-endpoint' }
-                        : { ok: false, why: 'network', note: msg.slice(0, 80) };
-                    if (self._setOpen) self._renderSettings();
-                    self._weatherSchedule();
+                .catch(function(errDirect) {
+                    var dmsg = String((errDirect && errDirect.message) || '')
+                        .slice(0, 60);
+                    // РЕЗЕРВ: серверный эндпоинт (meteoinfo.ru через
+                    // UrlFetchApp) — только если прямой запрос не прошёл
+                    // И пользователь авторизован (эндпоинт требует токен)
+                    var canServer = !(typeof KipAuth === 'undefined' ||
+                        !KipAuth.api || typeof KipAuth.getToken !== 'function' ||
+                        !KipAuth.getToken());
+                    if (!canServer) {
+                        // резерва нет — фиксируем причину прямого сбоя
+                        self._weatherDiag = { ok: false, why: 'network',
+                                             direct: dmsg };
+                        if (self._setOpen) self._renderSettings();
+                        self._weatherSchedule();
+                        return;
+                    }
+                    KipAuth.api('workSchedule.getWeather', { token: KipAuth.getToken() })
+                        .then(function(data) {
+                            if (data && data.temp != null) {
+                                self._weatherOk(data, 'server');
+                            } else {
+                                // сервер ответил, но погоды нет: какие
+                                // источники пробовались — в data.diag
+                                // (getWeather v2, Task 532); прямой сбой
+                                // тоже виден (Task 533)
+                                self._weatherDiag = {
+                                    ok: false, why: 'server',
+                                    direct: dmsg,
+                                    note: data ? data.note : '',
+                                    diag: data ? data.diag : ''
+                                };
+                            }
+                            if (self._setOpen) self._renderSettings();
+                            self._weatherSchedule();
+                        })
+                        .catch(function(err) {
+                            // старый сервер (нет эндпоинта)/сеть — тихо,
+                            // повтор через период настроек; ДИАГНОСТИКА —
+                            // в панель настроек: «Unknown action» означает,
+                            // что развёртывание Apps Script НЕ обновлено
+                            var msg = String((err && err.message) || '');
+                            self._weatherDiag = (/unknown action/i.test(msg))
+                                ? { ok: false, why: 'no-endpoint', direct: dmsg }
+                                : { ok: false, why: 'network',
+                                    direct: dmsg, note: msg.slice(0, 80) };
+                            if (self._setOpen) self._renderSettings();
+                            self._weatherSchedule();
+                        });
                 });
         },
 
@@ -48812,31 +48958,35 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             html += '<label class="ws-lcd-set-row"><input type="checkbox"' + ck(s.srcVac) +
                     ' onchange="WsLcdClock._setChange(\'srcVac\', this.checked)">Отпуска</label>';
             html += '<div class="ws-lcd-set-sec">Погода</div>';
-            // Task 532: ДИАГНОСТИКА последнего опроса + форс-обновление.
-            // Статусы: есть данные (источник/температура/наблюдение) /
-            // эндпоинта нет (обновите развёртывание Apps Script) /
-            // сервер ответил без данных (какие источники пробовал) /
+            // Task 532 → 533: ДИАГНОСТИКА последнего опроса + форс-
+            // обновление. Основной канал (Task 533) — open-meteo.com
+            // НАПРЯМУЮ из браузера (без Apps Script); statuses: есть
+            // данные (канал/источник/наблюдение) / прямой запрос упал
+            // и сервер не знает эндпоинт / источники не дали данных /
             // сеть недоступна / ещё не опрошено
             var wd = this._weatherDiag;
             var wstat, wcls;
+            var dnote = (wd && wd.direct)
+                ? ' (прямой запрос: ' + wd.direct + ')' : '';
             if (wd && wd.ok) {
                 wstat = 'Есть данные: ' + wd.txt +
                         (wd.source ? ' — ' + wd.source : '') +
                         (wd.obs ? ' (набл. ' + wd.obs + ')' : '');
                 wcls = '';
             } else if (wd && wd.why === 'no-endpoint') {
-                wstat = 'Сервер не знает эндпоинт getWeather — обновите ' +
-                        'развёртывание Apps Script (WorkSchedule.gs + Code.gs, ' +
+                wstat = 'Прямой запрос open-meteo не прошёл' + dnote +
+                        '. Резерв: сервер не знает эндпоинт getWeather — ' +
+                        'обновите развёртывание Apps Script (WorkSchedule.gs, ' +
                         'новая версия деплоя)';
                 wcls = ' warn';
             } else if (wd && wd.why === 'server') {
-                wstat = 'Источник не дал данных' +
-                        (wd.diag ? ': ' + wd.diag : '') +
+                wstat = 'Источники не дали данных' + dnote +
+                        (wd.diag ? '; сервер: ' + wd.diag : '') +
                         '. Повтор — по расписанию или кнопкой ниже';
                 wcls = ' warn';
             } else if (wd && wd.why === 'network') {
-                wstat = 'Сеть/сервер недоступны' +
-                        (wd.note ? ': ' + wd.note : '') +
+                wstat = 'Сеть недоступна' + dnote +
+                        (wd.note ? '; сервер: ' + wd.note : '') +
                         '. Повтор — по расписанию или кнопкой ниже';
                 wcls = ' warn';
             } else {
@@ -48902,12 +49052,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this.showMessage('ТЕСТ: СООБЩЕНИЕ ИНФОРМЕРА РАБОТАЕТ', undefined, 6000);
         },
 
-        // ==================== календарь и настройки (Task 532) ========
+        // ==================== календарь и настройки (Task 532 → 533) ========
         // Разделение по заявке: клик по ОКНУ информера — ТОЛЬКО
-        // календарь; клик по ШЕСТЕРЁНКЕ (правый верхний угол) —
-        // ТОЛЬКО настройки. Попапы независимы; клик вне / Esc / уход
-        // со страницы закрывают оба; при открытых ОБЕИХ панель
-        // настроек смещается СЛЕВА от календаря (CSS :has).
+        // календарь; клик по ШЕСТЕРЁНКЕ (Task 533 — ВНУТРИ информера,
+        // оверлей на стекле) — ТОЛЬКО настройки. Попапы независимы;
+        // клик вне / Esc / уход со страницы закрывают оба; при открытых
+        // ОБЕИХ панель настроек смещается СЛЕВА от календаря (CSS :has).
         onClockClick: function(ev) {
             if (ev && ev.stopPropagation) ev.stopPropagation();
             this.toggleCal();
@@ -48984,6 +49134,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._renderCal();
         },
 
+        // Task 533: выбор месяца из селекта (строка месяца — под
+        // годом; селект + стрелки, как у года)
+        _calSetMonth: function(m) {
+            m = +m;
+            if (m >= 1 && m <= 12) this._calM = m;
+            this._renderCal();
+        },
+
         _calToday: function() {
             var now = new Date();
             this._calY = now.getFullYear();
@@ -49004,16 +49162,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var today = new Date();
             var isThis = (today.getFullYear() === y && today.getMonth() + 1 === m);
             var html = '';
-            html += '<div class="ws-lcd-cal-head">';
-            html += '<button type="button" class="ws-lcd-cal-nav" onclick="WsLcdClock._calNav(-1)" aria-label="Предыдущий месяц">&#8249;</button>';
-            html += '<div class="ws-lcd-cal-title">' + MN[m - 1] + '</div>';
-            html += '<button type="button" class="ws-lcd-cal-nav" onclick="WsLcdClock._calNav(1)" aria-label="Следующий месяц">&#8250;</button>';
-            html += '<button type="button" class="ws-lcd-cal-today" onclick="WsLcdClock._calToday()">Сегодня</button>';
-            html += '</div>';
-            // Task 532: ВЫБОР ГОДА — вторая строка головы календаря:
-            // «Год: ‹ [селект] ›». Селект охватывает текущий ±10; годы,
-            // достигнутые навигацией (‹ › месяцев/года), добавляются
-            // в диапазон автоматически (min/max ниже)
+            // Task 533 (заявка: «поменяй местами… год сверху, месяц под
+            // годом»): ПЕРВАЯ строка головы — ГОД («‹ Год [селект] ›»).
+            // Селект охватывает текущий ±10; годы, достигнутые
+            // навигацией (‹ › месяцев/года), добавляются в диапазон
+            // автоматически (min/max ниже)
             html += '<div class="ws-lcd-cal-year">';
             html += '<button type="button" class="ws-lcd-cal-nav" onclick="WsLcdClock._calYearNav(-1)" aria-label="Предыдущий год">&#8249;</button>';
             html += '<span class="ws-lcd-cal-yearlbl">Год</span>';
@@ -49026,6 +49179,22 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             html += '</select>';
             html += '<button type="button" class="ws-lcd-cal-nav" onclick="WsLcdClock._calYearNav(1)" aria-label="Следующий год">&#8250;</button>';
+            html += '</div>';
+            // Task 533: ВТОРАЯ строка головы — МЕСЯЦ ПОД ГОДОМ, и у
+            // месяца, КАК У ГОДА, — селект + стрелки ‹ › («Сегодня»
+            // осталась в строке месяца, справа)
+            html += '<div class="ws-lcd-cal-month">';
+            html += '<button type="button" class="ws-lcd-cal-nav" onclick="WsLcdClock._calNav(-1)" aria-label="Предыдущий месяц">&#8249;</button>';
+            html += '<span class="ws-lcd-cal-monthlbl">Месяц</span>';
+            html += '<select onchange="WsLcdClock._calSetMonth(+this.value)" aria-label="Месяц">';
+            var mi;
+            for (mi = 1; mi <= 12; mi++) {
+                html += '<option value="' + mi + '"' +
+                        (mi === m ? ' selected' : '') + '>' + MN[mi - 1] + '</option>';
+            }
+            html += '</select>';
+            html += '<button type="button" class="ws-lcd-cal-nav" onclick="WsLcdClock._calNav(1)" aria-label="Следующий месяц">&#8250;</button>';
+            html += '<button type="button" class="ws-lcd-cal-today" onclick="WsLcdClock._calToday()">Сегодня</button>';
             html += '</div>';
             html += '<div class="ws-lcd-cal-grid">';
             var d0;

@@ -42,8 +42,8 @@ const SW_SRC = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 // 1. SW: версия и шапка
 // ==========================================================================
 describe('Task 477 — SW: версия и шапка', () => {
-    test('CACHE_VERSION = kipia-test-v745', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v745';") !== -1,
+    test('CACHE_VERSION = kipia-test-v746', () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v746';") !== -1,
             'SW поднят до v701');
     });
     test('прежняя версия v700 отсутствует', () => {
@@ -51,8 +51,8 @@ describe('Task 477 — SW: версия и шапка', () => {
             'в sw.js не осталось kipia-test-v700');
     });
     test('несуществующая v702 отсутствует (guard)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v746') === -1,
-            'kipia-test-v745 не должен существовать');
+        assertTrue(SW_SRC.indexOf('kipia-test-v747') === -1,
+            'kipia-test-v746 не должен существовать');
     });
     test('комментарий Task 477 в шапке версий', () => {
         assertTrue(SW_SRC.indexOf('Task 477 (этап 3 оптимизации): KipPreload') !== -1,
@@ -348,7 +348,7 @@ describe('Task 477 — границы и окна', () => {
 
     test('окна истории sw.js — компактный комментарий 477 НЕ расширял их (расширены Task 478/481/483)',
         () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v745';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v746';");
         const i474 = SW_SRC.lastIndexOf('Task 474', i);
         const i472 = SW_SRC.lastIndexOf('Task 472', i);
         const i471 = SW_SRC.lastIndexOf('Task 471', i);

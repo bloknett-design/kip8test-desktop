@@ -27,7 +27,7 @@
 //   диспетчеризация, node --check обоих .gs.
 //   VM-функционально (клиент и сервер): happy-path правок, валидации,
 //   самопересечение/дубль части, лимит 42, не найдено.
-//   SW: kipia-test-v745 (guard v613).
+//   SW: kipia-test-v746 (guard v613).
 //
 // Запуск: через tests/run-all.js (require './test-task384.js').
 
@@ -947,10 +947,10 @@ describe('Task 384 — VM сервер: updateVacation', () => {
 // 8. SW
 // ============================================================
 describe('Task 384 — Service Worker', () => {
-    test('SW: кэш поднят до kipia-test-v745', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v745'") !== -1,
-            'CACHE_VERSION = kipia-test-v745 (Task 384 — фронтенд менялся)');
-        assertFalse(SW_SRC.indexOf('kipia-test-v746') !== -1,
+    test('SW: кэш поднят до kipia-test-v746', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v746'") !== -1,
+            'CACHE_VERSION = kipia-test-v746 (Task 384 — фронтенд менялся)');
+        assertFalse(SW_SRC.indexOf('kipia-test-v747') !== -1,
             'лишний инкремент (v613) не сделан');
     });
 });

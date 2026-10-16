@@ -24,7 +24,7 @@
 //   D. СЕРВЕР — getWeather v2: UA-заголовки, резерв open-meteo,
 //      _parseOpenMeteo (WMO-коды, румбы, давление), diag-цепочка
 //      попыток, кэш 1800.
-//   E. SW — kipia-test-v745.
+//   E. SW — kipia-test-v746.
 //
 // Запуск: через tests/run-all.js (require './test-task532.js').
 
@@ -163,24 +163,30 @@ describe('Task 532 A: SRC — шестерёнка, календарь с год
         assertTrue(/aria-label="Настройки информера"/.test(html), 'aria-label');
     });
 
-    test('CSS: .ws-lcd-gear — верхний правый угол, выпуклая, нажатая при открытых настройках', () => {
+    test('CSS: .ws-lcd-gear — ВНУТРИ информера (оверлей на стекле, Task 533)', () => {
         const css = cssBlock();
         const i = css.indexOf('.ws-lcd-gear {');
         assertTrue(i !== -1, 'блок .ws-lcd-gear объявлен');
         const chunk = css.slice(i, css.indexOf('}', i) + 1);
-        assertTrue(chunk.indexOf('align-self: flex-start') !== -1, 'прижата к ВЕРХУ обёртки');
-        assertTrue(chunk.indexOf('width: 22px') !== -1 && chunk.indexOf('height: 22px') !== -1,
-            'квадратная ручка 22×22');
+        assertTrue(chunk.indexOf('position: absolute') !== -1,
+            'оверлей ПОВЕРХ экрана (absolute, не в потоке)');
+        assertTrue(chunk.indexOf('top: 2px') !== -1 && chunk.indexOf('right: 4px') !== -1,
+            'правый верхний угол стекла');
+        assertTrue(chunk.indexOf('background: transparent') !== -1,
+            'фона-корпуса НЕТ — значок «на стекле»');
+        assertTrue(chunk.indexOf('var(--ws-lcd-seg') !== -1,
+            'цвет сегментов матрицы');
         assertTrue(css.indexOf('.ws-lcd-gear[aria-expanded="true"]') !== -1,
             'состояние «нажата» при открытых настройках');
         assertTrue(css.indexOf('[data-theme="light"] .ws-lcd-gear') !== -1, 'светлая тема');
     });
 
-    test('CSS: обёртка — зазор между рамкой и шестерёнкой (gap: 5px)', () => {
+    test('CSS: обёртка — БЕЗ зазора (Task 533: шестерёнка абсолютная, в потоке только рамка)', () => {
         const css = cssBlock();
         const i = css.indexOf('#page-work-schedule .page-inline-header .ws-lcd-wrap {');
         const chunk = css.slice(i, css.indexOf('}', i) + 1);
-        assertTrue(chunk.indexOf('gap: 5px') !== -1, 'gap между окном и шестерёнкой');
+        assertTrue(chunk.indexOf('gap: 5px') === -1,
+            'зазор рамка↔шестерёнка удалён (шестерёнка на стекле)');
     });
 
     test('CSS: настройки — right: 0 (под шестерёнкой), при открытом календаре right: 330px', () => {
@@ -368,7 +374,7 @@ describe('Task 532 C-1: VM — календарь: ВЫБОР ГОДА', () => {
             'селект показывает ' + (y + 1));
     });
 
-    test('заголовок — только месяц (год — в своей строке, Task 532)', () => {
+    test('месяц — СЕЛЕКТ в строке ПОД годом (Task 533), год — ПЕРВОЙ строкой', () => {
         const pm = popupMocks();
         const sb = lcdSandbox({ getElementById: pm.getElementById });
         openCal(sb);
@@ -377,11 +383,21 @@ describe('Task 532 C-1: VM — календарь: ВЫБОР ГОДА', () => {
         const MN = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
                     'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
         const m = MN[new Date().getMonth()];
-        const title = html.match(/ws-lcd-cal-title">([^<]*)</);
-        assertTrue(!!title, 'заголовок найден');
-        assertEqual(title[1], m, 'в заголовке — только «' + m + '»');
-        // год — в СВОЕЙ строке (селект), а не в заголовке месяца
-        assertTrue(html.indexOf('ws-lcd-cal-year') !== -1, 'строка года есть');
+        // Task 533: ГОД — сверху, МЕСЯЦ — под годом (заявка)
+        const iYear = html.indexOf('ws-lcd-cal-year');
+        const iMonth = html.indexOf('ws-lcd-cal-month');
+        assertTrue(iYear !== -1 && iMonth !== -1, 'обе строки есть');
+        assertTrue(iYear < iMonth, 'год — ПЕРВОЙ строкой, месяц — ПОД ним');
+        // месяц — СЕЛЕКТ (как у года), а не заголовок
+        assertTrue(html.indexOf('_calSetMonth(+this.value)') !== -1,
+            'селект месяца — _calSetMonth');
+        const sel = html.match(/<option value="(\d+)" selected>[А-Яа-яё]+<\/option>/);
+        assertTrue(!!sel, 'выбранный месяц есть в селекте');
+        assertEqual(sel[1], String(new Date().getMonth() + 1),
+            'текущий месяц ' + m + ' выбран');
+        // старого заголовка-«титула» больше нет
+        assertTrue(html.indexOf('ws-lcd-cal-title') === -1,
+            'заголовок-титул удалён (месяц — селект)');
     });
 
     test('декабрь→январь: навигация месяцев меняет год и селект', () => {
@@ -457,7 +473,7 @@ describe('Task 532 C-2: VM — диагностика погоды в настр
         assertEqual(sb.WsLcdClock._weatherDiag.obs, '16 октября, 04:00', 'наблюдение');
     });
 
-    test('_loadWeather: успех — diag ok + запись кэша', () => {
+    test('_loadWeather: успех (резерв через сервер) — diag ok + запись кэша', () => {
         const sb = lcdSandbox({
             kipAuth: {
                 getToken: function () { return 'tok'; },
@@ -471,7 +487,9 @@ describe('Task 532 C-2: VM — диагностика погоды в настр
         return new Promise(function (resolve) {
             setTimeout(function () {
                 assertEqual(sb.WsLcdClock._weatherDiag.ok, true, 'diag ok');
-                assertEqual(sb.WsLcdClock._weatherDiag.source, 'open-meteo.com', 'источник');
+                assertEqual(sb.WsLcdClock._weatherDiag.source,
+                    'open-meteo.com (через Apps Script)',
+                    'источник помечен каналом (Task 533: прямой канал недоступен в VM)');
                 const c = JSON.parse(sb.localStorage._s['kip8_ws_weather_v1']);
                 assertEqual(c.data.temp, 9, 'кэш записан');
                 resolve();
@@ -754,15 +772,15 @@ describe('Task 532 D: Сервер — getWeather v2 (open-meteo резерв, d
 // ============================================================
 describe('Task 532 — SW: версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v745', () => {
+    test('sw.js: CACHE_VERSION = kipia-test-v746', () => {
         const m = SW_SRC.match(/const CACHE_VERSION = '(kipia-test-v\d+)'/);
         assertTrue(m !== null, 'CACHE_VERSION найден');
-        assertEqual(m[1], 'kipia-test-v745', 'SW поднят до v745 (Task 532)');
+        assertEqual(m[1], 'kipia-test-v746', 'SW поднят до v745 (Task 532)');
         assertTrue(m[1] !== 'kipia-test-v744', 'старая версия v744 не осталась');
     });
 
     test('sw.js: нет забегания вперёд (v746 не должно быть)', () => {
-        assertFalse(SW_SRC.indexOf('kipia-test-v746') !== -1,
+        assertFalse(SW_SRC.indexOf('kipia-test-v747') !== -1,
             'двойной бамп не сделан');
     });
 

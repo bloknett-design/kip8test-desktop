@@ -120,13 +120,13 @@ describe('Task 398 — SRC: JS-гейты кнопки «Работники» б
 // ============================================================
 describe('Task 398 — SRC: сервис-воркер', () => {
 
-    test('sw.js: CACHE_VERSION kipia-test-v745', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v745'") !== -1,
+    test('sw.js: CACHE_VERSION kipia-test-v746', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v746'") !== -1,
             'бамп v625 -> v626 (клиентский фикс раздаётся из кэша SW)');
     });
 
     test('sw.js: v627 НЕ существует (guard от двойного бампа)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v746') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v747') === -1,
             'v627 отсутствует — следующая задача');
     });
 });
