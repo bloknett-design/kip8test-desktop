@@ -268,9 +268,10 @@ function doPost(e) {
       case 'workSchedule.getStatusCodes':
         return _json(WorkSchedule.getStatusCodes(payload));
 
-      // Task 530: погода Кемерово с meteoinfo.ru (кэш скрипта 30 мин)
-      case 'workSchedule.getWeather':
-        return _json(WorkSchedule.getWeather(payload));
+      // Task 536: роутинг workSchedule.getWeather УДАЛЁН — серверная
+      // погода (UrlFetchApp) не работала (нет области
+      // script.external_request); погода идёт напрямую из браузера
+      // (open-meteo.com → wttr.in, клиент WsLcdClock в index.html).
 
       case 'workSchedule.getPatterns':
         return _json(WorkSchedule.getPatterns(payload));

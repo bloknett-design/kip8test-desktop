@@ -24,7 +24,7 @@
 //   D. СЕРВЕР — getWeather v2: UA-заголовки, резерв open-meteo,
 //      _parseOpenMeteo (WMO-коды, румбы, давление), diag-цепочка
 //      попыток, кэш 1800.
-//   E. SW — kipia-test-v748.
+//   E. SW — kipia-test-v749.
 //
 // Запуск: через tests/run-all.js (require './test-task532.js').
 
@@ -98,6 +98,7 @@ function lcdSandbox(opts) {
         _docListeners: docListeners
     };
     if (opts.kipAuth) sb.KipAuth = opts.kipAuth;
+    if (opts.fetch) sb.fetch = opts.fetch;   // Task 536: прямые каналы — без сервера
     vm.createContext(sb);
     vm.runInContext(lcdModule(), sb);
     return sb;
@@ -117,18 +118,9 @@ function popupMocks() {
     };
 }
 
-// VM-песочница СЕРВЕРА (WorkSchedule.gs)
-function wsSandbox(mocks) {
-    mocks = mocks || {};
-    const sb = {
-        CacheService: mocks.CacheService,
-        UrlFetchApp: mocks.UrlFetchApp
-    };
-    vm.createContext(sb);
-    vm.runInContext(WS_GS_SRC, sb);
-    sb.WorkSchedule._requireRead = function () { return { user: {} }; };
-    return sb;
-}
+// Task 536: серверная песочница wsSandbox и noCache удалены вместе
+// с серверной погодой (getWeather/_parseOpenMeteo — в WorkSchedule.gs
+// их больше нет); OM_JSON остаётся — фикстура ПРЯМОГО канала.
 
 const OM_JSON = JSON.stringify({
     latitude: 55.36, longitude: 86.02, timezone: 'Asia/Novokuznetsk',
@@ -141,10 +133,21 @@ const OM_JSON = JSON.stringify({
     }
 });
 
-const noCache = function () {
-    return { getScriptCache: function () { return { get: function () { return null; },
-                                                    put: function () {} }; } };
-};
+// мок fetch для ПРЯМЫХ каналов: om/wttr — 'ok'|'fail'|'http_код'
+function routeFetch(modes) {
+    modes = modes || {};
+    return function (url) {
+        const isOm = String(url).indexOf('open-meteo.com') !== -1;
+        const mode = isOm ? (modes.om || 'fail') : (modes.wttr || 'fail');
+        if (mode === 'fail') return Promise.reject(new Error('Failed to fetch'));
+        if (typeof mode === 'number') {
+            return Promise.resolve({ ok: false, status: mode,
+                text: function () { return Promise.resolve(''); } });
+        }
+        return Promise.resolve({ ok: true,
+            text: function () { return Promise.resolve(isOm ? OM_JSON : (modes.wttrBody || '{}')); } });
+    };
+}
 
 // ============================================================
 // A. SRC HTML/CSS — шестерёнка, позиции, выбор года, диагностика
@@ -476,66 +479,57 @@ describe('Task 532 C-2: VM — диагностика погоды в настр
         assertEqual(sb.WsLcdClock._weatherDiag.obs, '16 октября, 04:00', 'наблюдение');
     });
 
-    test('_loadWeather: успех (резерв через сервер) — diag ok + запись кэша', () => {
+    test('_loadWeather: успех через ПРЯМОЙ канал (fetch) — diag ok + запись кэша', () => {
         const sb = lcdSandbox({
-            kipAuth: {
-                getToken: function () { return 'tok'; },
-                api: function () {
-                    return Promise.resolve({ temp: 9, cloud: 1,
-                                             source: 'open-meteo.com', obsLocal: '2026-10-16 07:00' });
-                }
-            }
+            fetch: routeFetch({ om: 'ok' })
         });
         sb.WsLcdClock._loadWeather(true);
         return new Promise(function (resolve) {
             setTimeout(function () {
                 assertEqual(sb.WsLcdClock._weatherDiag.ok, true, 'diag ok');
                 assertEqual(sb.WsLcdClock._weatherDiag.source,
-                    'open-meteo.com (через Apps Script)',
-                    'источник помечен каналом (Task 533: прямой канал недоступен в VM)');
+                    'open-meteo.com (напрямую из браузера)',
+                    'источник помечен каналом (Task 536: сервера нет — только прямые каналы)');
                 const c = JSON.parse(sb.localStorage._s['kip8_ws_weather_v1']);
-                assertEqual(c.data.temp, 9, 'кэш записан');
+                assertEqual(c.data.temp, -1.6, 'кэш записан');
                 resolve();
             }, 20);
         });
     });
 
-    test('_loadWeather: сервер ответил БЕЗ данных — diag server + строка попыток', () => {
+    test('_loadWeather: HTTP-сбои обоих каналов — diag network с причинами', () => {
         const sb = lcdSandbox({
-            kipAuth: {
-                getToken: function () { return 'tok'; },
-                api: function () {
-                    return Promise.resolve({ temp: null, note: 'weather_unavailable',
-                                             diag: 'meteoinfo:http_403; open-meteo:http_503' });
-                }
-            }
+            fetch: routeFetch({ om: 503, wttr: 502 })
         });
         sb.WsLcdClock._loadWeather(true);
         return new Promise(function (resolve) {
             setTimeout(function () {
                 assertEqual(sb.WsLcdClock._weatherDiag.ok, false, 'не ok');
-                assertEqual(sb.WsLcdClock._weatherDiag.why, 'server', 'причина — сервер/источники');
-                assertEqual(sb.WsLcdClock._weatherDiag.diag,
-                    'meteoinfo:http_403; open-meteo:http_503', 'строка попыток сохранена');
+                assertEqual(sb.WsLcdClock._weatherDiag.why, 'network',
+                    'Task 536: серверного резерва нет — любая неудача = сеть/каналы');
+                assertEqual(sb.WsLcdClock._weatherDiag.direct, 'http_503',
+                    'open-meteo: http_503');
+                assertEqual(sb.WsLcdClock._weatherDiag.wttr, 'http_502',
+                    'wttr.in: http_502 (разные коды — каналы различимы)');
                 resolve();
             }, 20);
         });
     });
 
-    test('_loadWeather: Unknown action — подсказка про развёртывание Apps Script', () => {
+    test('_loadWeather: сервер НЕ зовётся вовсе (KipAuth.api не вызывается — Task 536)', () => {
+        let apiCalls = 0;
         const sb = lcdSandbox({
+            fetch: routeFetch({ om: 'fail', wttr: 'fail' }),
             kipAuth: {
                 getToken: function () { return 'tok'; },
-                api: function () {
-                    return Promise.reject(new Error('Unknown action: workSchedule.getWeather'));
-                }
+                api: function () { apiCalls++; return Promise.resolve({ temp: -12 }); }
             }
         });
         sb.WsLcdClock._loadWeather(true);
         return new Promise(function (resolve) {
             setTimeout(function () {
-                assertEqual(sb.WsLcdClock._weatherDiag.why, 'no-endpoint',
-                    'эндпоинта нет — обновите развёртывание');
+                assertEqual(apiCalls, 0,
+                    'эндпоинта больше нет — серверный канал удалён (Task 536)');
                 resolve();
             }, 20);
         });
@@ -543,10 +537,7 @@ describe('Task 532 C-2: VM — диагностика погоды в настр
 
     test('_loadWeather: сетевой сбой — diag network', () => {
         const sb = lcdSandbox({
-            kipAuth: {
-                getToken: function () { return 'tok'; },
-                api: function () { return Promise.reject(new Error('NETWORK_ERROR: Failed to fetch')); }
-            }
+            fetch: routeFetch({ om: 'fail', wttr: 'fail' })
         });
         sb.WsLcdClock._loadWeather(true);
         return new Promise(function (resolve) {
@@ -573,19 +564,24 @@ describe('Task 532 C-2: VM — диагностика погоды в настр
         html = pm.els.wsLcdSet.innerHTML;
         assertTrue(html.indexOf('Есть данные: -1° — meteoinfo.ru') !== -1, 'успешный статус');
 
-        sb.WsLcdClock._weatherDiag = { ok: false, why: 'no-endpoint' };
+        sb.WsLcdClock._weatherDiag = { ok: false, why: 'network',
+                                       direct: 'Failed to fetch', wttr: 'Failed to fetch' };
         sb.WsLcdClock._renderSettings();
         html = pm.els.wsLcdSet.innerHTML;
         assertTrue(html.indexOf('ws-lcd-set-wstat warn') !== -1, 'варнинг-стиль');
-        assertTrue(html.indexOf('обновите') !== -1, 'подсказка про Apps Script');
+        assertTrue(html.indexOf('Прямые запросы open-meteo/wttr.in не прошли') !== -1,
+            'Task 536: статус объясняет сбой прямых каналов (без сервера)');
+        assertTrue(html.indexOf('обновите') === -1,
+            'подсказки «обновите развёртывание» больше нет (эндпоинта нет)');
     });
 
     test('_weatherNow: форс-опрос (сеть дёргается даже при свежем кэше)', () => {
         let calls = 0;
         const sb = lcdSandbox({
-            kipAuth: {
-                getToken: function () { return 'tok'; },
-                api: function () { calls++; return Promise.resolve({ temp: 5 }); }
+            fetch: function () {
+                calls++;
+                return Promise.resolve({ ok: true,
+                    text: function () { return Promise.resolve(OM_JSON); } });
             }
         });
         sb.localStorage._s['kip8_ws_weather_v1'] =
@@ -603,9 +599,13 @@ describe('Task 532 C-2: VM — диагностика погоды в настр
         const pm = popupMocks();
         const sb = lcdSandbox({
             getElementById: pm.getElementById,
-            kipAuth: {
-                getToken: function () { return 'tok'; },
-                api: function () { return Promise.resolve({ temp: 12, source: 'meteoinfo.ru' }); }
+            fetch: function () {
+                return Promise.resolve({ ok: true,
+                    text: function () {
+                        return Promise.resolve(JSON.stringify({ current: {
+                            temperature_2m: 12, weather_code: 0,
+                            time: '2026-10-16T07:00' } }));
+                    } });
             }
         });
         sb.WsLcdClock._setOpen = true;
@@ -622,150 +622,39 @@ describe('Task 532 C-2: VM — диагностика погоды в настр
 });
 
 // ============================================================
-// D. СЕРВЕР — getWeather v2 (заголовки + резерв + диагностика)
+// D. СЕРВЕР — Task 536: серверная погода УДАЛЕНА
 // ============================================================
-describe('Task 532 D: Сервер — getWeather v2 (open-meteo резерв, diag)', () => {
+describe('Task 532 D: Сервер — Task 536: серверная погода УДАЛЕНА', () => {
 
-    test('SRC: браузерные заголовки + URL обоих источников', () => {
-        assertTrue(WS_GS_SRC.indexOf("'User-Agent': 'Mozilla/5.0") !== -1,
-            'User-Agent как у браузера');
-        assertTrue(WS_GS_SRC.indexOf("'Accept-Language': 'ru-RU") !== -1, 'Accept-Language');
-        assertTrue(WS_GS_SRC.indexOf('meteoinfo.ru/pogoda/russia/kemerovo-area/kemerovo') !== -1,
-            'основной источник meteoinfo.ru');
-        assertTrue(WS_GS_SRC.indexOf('api.open-meteo.com/v1/forecast') !== -1,
-            'резервный open-meteo.com');
-        assertTrue(WS_GS_SRC.indexOf('timezone=Asia%2FNovokuznetsk') !== -1,
-            'местное время наблюдения (Кемерово UTC+7)');
-        assertTrue(WS_GS_SRC.indexOf('wind_speed_unit=ms') !== -1, 'ветер в м/с');
-        assertTrue(WS_GS_SRC.indexOf('_parseOpenMeteo: function') !== -1, 'парсер open-meteo');
+    test('WorkSchedule.gs: браузерные заголовки/URL источников УДАЛЕНЫ', () => {
+        assertTrue(WS_GS_SRC.indexOf("'User-Agent': 'Mozilla/5.0") === -1,
+            'браузерный User-Agent больше не нужен (сервер не ходит за погодой)');
+        assertTrue(WS_GS_SRC.indexOf("'Accept-Language': 'ru-RU") === -1,
+            'Accept-Language удалён');
+        assertTrue(WS_GS_SRC.indexOf('meteoinfo.ru/pogoda/russia/kemerovo-area/kemerovo') === -1,
+            'meteoinfo.ru больше НЕ запрашивается');
+        assertTrue(WS_GS_SRC.indexOf('api.open-meteo.com/v1/forecast') === -1,
+            'open-meteo.com больше НЕ запрашивается');
+        assertTrue(WS_GS_SRC.indexOf('ws_weather_kemerovo_v1') === -1,
+            'кэш погоды скрипта удалён');
     });
 
-    test('_parseOpenMeteo: полный JSON — все поля', () => {
-        const sb = wsSandbox({});
-        const d = sb.WorkSchedule._parseOpenMeteo(OM_JSON);
-        assertEqual(d.temp, -1.6, 'температура');
-        assertEqual(d.cloud, 8, 'балл облачности (код 3 → 8)');
-        assertEqual(d.phenomenon, 'Пасмурно', 'явление');
-        assertEqual(d.wind, 2.55, 'ветер м/с');
-        assertEqual(d.windDir, 'З', 'румб 271° → З');
-        assertEqual(d.pressure, 764, '1018.1 гПа → 764 мм рт.ст.');
-        assertEqual(d.humidity, 73, 'влажность');
-        assertEqual(d.obsLocal, '2026-10-16 07:00', 'местное время');
-        assertEqual(d.source, 'open-meteo.com', 'источник');
+    test('WorkSchedule.gs: _parseOpenMeteo/_parseMeteoinfo/getWeather УДАЛЕНЫ', () => {
+        assertTrue(WS_GS_SRC.indexOf('_parseOpenMeteo: function') === -1,
+            'серверный парсер open-meteo удалён (клиентский — в index.html)');
+        assertTrue(WS_GS_SRC.indexOf('_parseMeteoinfo: function') === -1,
+            'серверный парсер meteoinfo удалён');
+        assertTrue(WS_GS_SRC.indexOf('getWeather: function') === -1,
+            'эндпоинт getWeather удалён');
+        assertTrue(WS_GS_SRC.indexOf('weather_unavailable') === -1,
+            'тихий фолбэк погоды удалён вместе с эндпоинтом');
     });
 
-    test('_parseOpenMeteo: WMO-коды → явление/облачность для иконок клиента', () => {
-        const sb = wsSandbox({});
-        const mk = function (code) {
-            return JSON.stringify({ current: { temperature_2m: 1, weather_code: code,
-                                               time: '2026-10-16T07:00' } });
-        };
-        assertEqual(sb.WorkSchedule._parseOpenMeteo(mk(0)).cloud, 0, 'ясно → 0');
-        assertEqual(sb.WorkSchedule._parseOpenMeteo(mk(61)).phenomenon, 'Дождь', 'ливень-код');
-        assertEqual(sb.WorkSchedule._parseOpenMeteo(mk(71)).phenomenon, 'Снег', 'снег-код');
-        assertEqual(sb.WorkSchedule._parseOpenMeteo(mk(95)).phenomenon, 'Гроза', 'гроза-код');
-        assertEqual(sb.WorkSchedule._parseOpenMeteo(mk(45)).phenomenon, 'Туман', 'туман-код');
-        assertEqual(sb.WorkSchedule._parseOpenMeteo(mk(51)).phenomenon, 'Морось', 'морось-код');
-    });
-
-    test('_parseOpenMeteo: мусор/нет температуры → null', () => {
-        const sb = wsSandbox({});
-        assertEqual(sb.WorkSchedule._parseOpenMeteo('не json'), null, 'не JSON');
-        assertEqual(sb.WorkSchedule._parseOpenMeteo('{}'), null, 'нет current');
-        assertEqual(sb.WorkSchedule._parseOpenMeteo(
-            JSON.stringify({ current: {} })), null, 'пустой current');
-    });
-
-    test('getWeather: meteoinfo 403 → РЕЗЕРВ open-meteo (обе попытки в diag)', () => {
-        const urls = [];
-        const sb = wsSandbox({
-            CacheService: noCache(),
-            UrlFetchApp: { fetch: function (u) {
-                urls.push(u.split('?')[0]);
-                if (u.indexOf('meteoinfo') !== -1) {
-                    return { getResponseCode: function () { return 403; },
-                             getContentText: function () { return 'x'; } };
-                }
-                return { getResponseCode: function () { return 200; },
-                         getContentText: function () { return OM_JSON; } };
-            } }
-        });
-        const r = sb.WorkSchedule.getWeather({ token: 't' });
-        assertEqual(r.ok, true, 'ok');
-        assertEqual(r.data.temp, -1.6, 'температура из open-meteo');
-        assertEqual(r.data.source, 'open-meteo.com', 'источник — резерв');
-        assertTrue(r.data.diag.indexOf('meteoinfo:http_403') !== -1, 'diag: 403 основного');
-        assertTrue(r.data.diag.indexOf('open-meteo:http_200') !== -1, 'diag: 200 резерва');
-        assertEqual(urls.length, 2, 'звали ОБА источника');
-    });
-
-    test('getWeather: meteoinfo 200-мусор → parse_empty + резерв', () => {
-        const sb = wsSandbox({
-            CacheService: noCache(),
-            UrlFetchApp: { fetch: function (u) {
-                if (u.indexOf('meteoinfo') !== -1) {
-                    return { getResponseCode: function () { return 200; },
-                             getContentText: function () { return '<html>перевёрстка</html>'; } };
-                }
-                return { getResponseCode: function () { return 200; },
-                         getContentText: function () { return OM_JSON; } };
-            } }
-        });
-        const r = sb.WorkSchedule.getWeather({ token: 't' });
-        assertEqual(r.data.source, 'open-meteo.com', 'резерв сработал');
-        assertTrue(r.data.diag.indexOf('meteoinfo:parse_empty') !== -1,
-            'diag: parse_empty у основного');
-    });
-
-    test('getWeather: ОБА источника упали — тихо + diag с причинами', () => {
-        const sb = wsSandbox({
-            CacheService: noCache(),
-            UrlFetchApp: { fetch: function (u) {
-                if (u.indexOf('meteoinfo') !== -1) throw new Error('время вышло');
-                return { getResponseCode: function () { return 503; },
-                         getContentText: function () { return '{"error":true}'; } };
-            } }
-        });
-        const r = sb.WorkSchedule.getWeather({ token: 't' });
-        assertEqual(r.ok, true, 'ok даже при полном сбое');
-        assertEqual(r.data.temp, null, 'temp null');
-        assertEqual(r.data.note, 'weather_unavailable', 'пометка недоступности');
-        assertTrue(r.data.diag.indexOf('meteoinfo:exception') !== -1, 'исключение основного');
-        assertTrue(r.data.diag.indexOf('open-meteo:http_503') !== -1, '503 резерва');
-    });
-
-    test('getWeather: успех — кэш put(1800) и diag в данных', () => {
-        const puts = [];
-        const sb = wsSandbox({
-            CacheService: { getScriptCache: function () {
-                return { get: function () { return null; },
-                         put: function (k, v, ttl) { puts.push([k, ttl, v]); } };
-            } },
-            UrlFetchApp: { fetch: function (u) {
-                return { getResponseCode: function () { return 200; },
-                         getContentText: function () { return OM_JSON; } };
-            } }
-        });
-        const r = sb.WorkSchedule.getWeather({ token: 't' });
-        assertEqual(puts.length, 1, 'результат положен в кэш');
-        assertEqual(puts[0][0], 'ws_weather_kemerovo_v1', 'ключ кэша');
-        assertEqual(puts[0][1], 1800, 'TTL 30 минут');
-        assertTrue(r.data.diag.indexOf('open-meteo:http_200') !== -1, 'diag в успешном ответе');
-        assertEqual(JSON.parse(puts[0][2]).temp, -1.6, 'в кэше — распарсенные данные');
-    });
-
-    test('getWeather: кэш-hit — сеть НЕ зовётся (регрессия)', () => {
-        let fetches = 0;
-        const sb = wsSandbox({
-            CacheService: { getScriptCache: function () {
-                return { get: function () { return JSON.stringify({ temp: 5, source: 'meteoinfo.ru' }); },
-                         put: function () {} };
-            } },
-            UrlFetchApp: { fetch: function () { fetches++; throw new Error('не должен зваться'); } }
-        });
-        const r = sb.WorkSchedule.getWeather({ token: 't' });
-        assertEqual(r.data.temp, 5, 'из кэша');
-        assertEqual(fetches, 0, 'сеть не тронута');
+    test('WorkSchedule.gs: запасной legalic-календарь НЕ тронут (UrlFetchApp законен)', () => {
+        // _getProdCal — НЕ погода: производственный календарь с фолбэком
+        assertTrue(WS_GS_SRC.indexOf('_getProdCal: function') !== -1, '_getProdCal на месте');
+        assertTrue(WS_GS_SRC.indexOf('_LEGALIC_URL') !== -1, 'legalic URL на месте');
+        assertTrue(WS_GS_SRC.indexOf('ws_prodcal_') !== -1, 'кэш prodcal на месте');
     });
 
 });
@@ -775,15 +664,15 @@ describe('Task 532 D: Сервер — getWeather v2 (open-meteo резерв, d
 // ============================================================
 describe('Task 532 — SW: версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v748', () => {
+    test('sw.js: CACHE_VERSION = kipia-test-v749', () => {
         const m = SW_SRC.match(/const CACHE_VERSION = '(kipia-test-v\d+)'/);
         assertTrue(m !== null, 'CACHE_VERSION найден');
-        assertEqual(m[1], 'kipia-test-v748', 'SW поднят до v745 (Task 532)');
+        assertEqual(m[1], 'kipia-test-v749', 'SW поднят до v745 (Task 532)');
         assertTrue(m[1] !== 'kipia-test-v744', 'старая версия v744 не осталась');
     });
 
     test('sw.js: нет забегания вперёд (v746 не должно быть)', () => {
-        assertFalse(SW_SRC.indexOf('kipia-test-v749') !== -1,
+        assertFalse(SW_SRC.indexOf('kipia-test-v750') !== -1,
             'двойной бамп не сделан');
     });
 

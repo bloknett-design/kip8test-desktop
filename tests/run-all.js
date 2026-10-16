@@ -876,6 +876,13 @@ require('./test-task534.js');
 // стрелки/«Сегодня»; сервер authorizeWeather — полный URL
 // разрешения + подсказка appsscript.json.
 require('./test-task535.js');
+
+// Task 536 — серверная погода УДАЛЕНА (заявка: «через сервер погода
+// не загружается, работает только через wttr.in (напрямую из
+// браузера)»): WorkSchedule.gs без getWeather/_parseMeteoinfo/
+// _parseOpenMeteo/authorizeWeather, Code.gs без роутинга; клиент —
+// двухканальная цепочка open-meteo → wttr.in без серверного резерва.
+require('./test-task536.js');
 require('./test-deploy-url.js');
 
 // Запускаем

@@ -28,7 +28,7 @@
 //       _silentBusy — пропускает свой ws-элемент (дубль сети не
 //       нужен; тихий сбой silentRefresh — метка не ставилась —
 //       _preloadWs остаётся ретраем-фолбэком, Task 477).
-//   SW: kipia-test-v748 (логика SW НЕ менялась; кэши не тронуты).
+//   SW: kipia-test-v749 (логика SW НЕ менялась; кэши не тронуты).
 //
 // АДАПТАЦИИ под Task 486 (модуль WorkSchedule вырос на ~8.7КБ):
 //   test-task337/338/341/342/343/360/361/362 — WS_CLIENT срез
@@ -70,8 +70,8 @@ function methodText(src, name) {
 // 1. SW: версия v710 + комментарий Task 486
 // ==========================================================================
 describe('Task 486: SW — версия и кэши', () => {
-    test('CACHE_VERSION = kipia-test-v748', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v748';") !== -1,
+    test('CACHE_VERSION = kipia-test-v749', () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v749';") !== -1,
             'версия поднята');
     });
 
@@ -80,11 +80,11 @@ describe('Task 486: SW — версия и кэши', () => {
     });
 
     test('v711 в sw.js отсутствует (лишний инкремент не сделан)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v749') === -1);
+        assertTrue(SW_SRC.indexOf('kipia-test-v750') === -1);
     });
 
     test('комментарий Task 486 в шапке версий (окно 1500)', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v748';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v749';");
         // Task 502: окно 6900 → 7300 (якорь 7061); синхро 481/482/484 — каскад.
         const ctx = SW_SRC.slice(Math.max(0, i - 8600), i);
         assertTrue(ctx.indexOf('Task 486') !== -1, 'маркер задачи');

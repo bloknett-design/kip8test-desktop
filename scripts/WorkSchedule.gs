@@ -6,11 +6,6 @@
 //
 // Эндпоинты (вызываются через doPost в Code.gs):
 //   workSchedule.getStatusCodes  — легенда кодов (16 шт., Task 298)
-//   workSchedule.getWeather      — погода Кемерово: meteoinfo.ru +
-//                                   резерв open-meteo.com (Task 532);
-//                                   Task 534: топ-уровневая функция
-//                                   authorizeWeather() — разовая
-//                                   авторизация внешних запросов
 //   workSchedule.getPatterns     — шаблоны ротации + дни цикла
 //   workSchedule.listEmployees   — справочник сотрудников
 //   workSchedule.listEntries     — записи графика за месяц
@@ -949,238 +944,15 @@ var WorkSchedule = {
     return { ok: true, data: { codes: codes } };
   },
 
-  // workSchedule.getWeather (Task 530 → 532 → 534)
-  // payload: { token }
-  // returns: { ok:true, data: { temp, phenomenon, cloud, wind, windDir,
-  //            pressure, humidity, obsLocal, source, fetched, diag } }
-  // Погода в Кемерово. Task 532 (почему «--» при обновлённых файлах):
-  //  (1) ЯВНАЯ диагностика — data.diag перечисляет попытки источников
-  //      («meteoinfo:http_403», «open-meteo:exception:…»), клиент
-  //      показывает их в настройках информера — причина сбоя видна;
-  //  (2) браузерный User-Agent + Accept-Language (часть сайтов режет
-  //      «голые» запросы UrlFetchApp);
-  //  (3) РЕЗЕРВНЫЙ источник open-meteo.com — JSON API без разбора
-  //      HTML (не зависит от вёрстки meteoinfo.ru и дружелюбен к
-  //      серверным IP Google). Основной — по-прежнему meteoinfo.ru
-  //      (Гидрометцентр России, как в заявке Task 530).
-  // Task 534 (заявка: «У вас нет разрешения на вызов функции
-  // "UrlFetchApp.fetch"»): если развёртывание авторизовано БЕЗ области
-  // script.external_request — ОБА источника падают с этим исключением.
-  // Лечится РАЗОВО: в редакторе Apps Script выполнить функцию
-  // authorizeWeather() (топ-уровневая, ниже по файлу), подтвердить
-  // доступ, затем создать НОВУЮ ВЕРСИЮ развёртывания. Сообщение об
-  // исключении в diag увеличено до 90 символов — видно название
-  // функции и подсказка клиента по нему раскрывается.
-  // Кэш скрипта 30 минут: наблюдения на станции обновляются ~раз в
-  // 3 часа. Сеть/парсинг/формат — тихий ответ temp:null (клиент
-  // показывает «--» и повторяет позже), это НЕ ошибка запроса.
-  getWeather: function(payload) {
-    var auth = this._requireRead(payload.token);
-    if (auth.error) return auth.error;
-
-    var CACHE_KEY = 'ws_weather_kemerovo_v1';
-    var cached = null;
-    try {
-      if (typeof CacheService !== 'undefined') {
-        var raw = CacheService.getScriptCache().get(CACHE_KEY);
-        if (raw) cached = JSON.parse(raw);
-      }
-    } catch (e2) { /* кэш недоступен — идём в сеть */ }
-    if (cached && cached.temp != null) return { ok: true, data: cached };
-
-    // UA/Accept как у браузера: «голый» UrlFetchApp часть сайтов
-    // отклоняет (Task 532)
-    var HDRS = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
-                    'AppleWebKit/537.36 (KHTML, like Gecko) ' +
-                    'Chrome/124.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'ru-RU,ru;q=0.9'
-    };
-
-    // попытка 1: meteoinfo.ru (Гидрометцентр — основной источник)
-    var tries = [];
-    var data = null;
-    try {
-      if (typeof UrlFetchApp !== 'undefined') {
-        var resp = UrlFetchApp.fetch(
-          'https://meteoinfo.ru/pogoda/russia/kemerovo-area/kemerovo',
-          { muteHttpExceptions: true, followRedirects: true, headers: HDRS });
-        tries.push('meteoinfo:http_' + resp.getResponseCode());
-        if (resp.getResponseCode() === 200) {
-          data = this._parseMeteoinfo(resp.getContentText('UTF-8'));
-          if (!data || data.temp == null) {
-            tries.push('meteoinfo:parse_empty');
-          }
-        }
-      } else {
-        tries.push('meteoinfo:no_urlfetchapp');
-      }
-    } catch (e) {
-      tries.push('meteoinfo:exception:' +
-                 String((e && e.message) || e).slice(0, 90));
-    }
-
-    // попытка 2 (резерв): open-meteo.com — JSON API, без разбора HTML
-    if (!data || data.temp == null) {
-      try {
-        if (typeof UrlFetchApp !== 'undefined') {
-          var r2 = UrlFetchApp.fetch(
-            'https://api.open-meteo.com/v1/forecast' +
-            '?latitude=55.35&longitude=86.08' +
-            '&current=temperature_2m,relative_humidity_2m,surface_pressure,' +
-            'weather_code,wind_speed_10m,wind_direction_10m' +
-            '&wind_speed_unit=ms&timezone=Asia%2FNovokuznetsk',
-            { muteHttpExceptions: true, followRedirects: true, headers: HDRS });
-          tries.push('open-meteo:http_' + r2.getResponseCode());
-          if (r2.getResponseCode() === 200) {
-            data = this._parseOpenMeteo(r2.getContentText('UTF-8'));
-            if (!data || data.temp == null) {
-              tries.push('open-meteo:parse_empty');
-            }
-          }
-        }
-      } catch (e4) {
-        tries.push('open-meteo:exception:' +
-                   String((e4 && e4.message) || e4).slice(0, 90));
-      }
-    }
-
-    if (!data || data.temp == null) {
-      // тихий ответ + ДИАГНОСТИКА попыток (Task 532)
-      return { ok: true, data: {
-        temp: null, phenomenon: null, cloud: null, wind: null,
-        windDir: null, pressure: null, humidity: null, obsLocal: null,
-        source: null, note: 'weather_unavailable',
-        diag: tries.join('; ') || 'no_attempts',
-        fetched: new Date().toISOString()
-      } };
-    }
-    data.diag = tries.join('; ');                  // видно в настройках
-    try {
-      if (typeof CacheService !== 'undefined') {
-        CacheService.getScriptCache().put(
-          CACHE_KEY, JSON.stringify(data), 1800);      // 30 минут
-      }
-    } catch (e3) { /* кэш не критичен */ }
-    return { ok: true, data: data };
-  },
-
-  // Разбор страницы наблюдений meteoinfo.ru (Кемерово): таблица
-  // «Погода сейчас» — температура, облачность (балл 0..10), ветер,
-  // явление (строка таблицы без подписи). HTML разбирается
-  // регэкспами в границах таблицы (от «Температура воздуха» назад
-  // до «<table» и вперёд до «</table>») — структура страницы
-  // простая и стабильная годами
-  _parseMeteoinfo: function(html) {
-    html = String(html || '');
-    var idx = html.indexOf('Температура воздуха');
-    if (idx === -1) return null;
-    var start = html.lastIndexOf('<table', idx);
-    var end = html.indexOf('</table>', idx);
-    var tbl = (start !== -1 && end !== -1) ? html.slice(start, end) : html;
-    var m;
-    var num = function(re) {
-      m = tbl.match(re);
-      return m ? m[1] : null;
-    };
-    var temp = num('Температура воздуха,\\s*(?:&deg;|\\u00b0)\\s*C<\\/td>\\s*<td[^>]*>\\s*([+\\-\\u2212]?\\d+(?:[.,]\\d+)?)');
-    var cloud = num('Балл общей облачности<\\/td>\\s*<td[^>]*>\\s*(\\d{1,2})');
-    var wind = num('Средняя скорость ветра, м\\/с<\\/td>\\s*<td[^>]*>\\s*(\\d+(?:[.,]\\d+)?)');
-    var windDir = null;
-    m = tbl.match('Направление ветра<\\/td>\\s*<td[^>]*>\\s*([^<]{2,40})');
-    if (m) windDir = m[1].replace(/&nbsp;/g, ' ').trim();
-    // явление погоды — строка таблицы БЕЗ подписи («Слабый снег»,
-    // «Количество облаков не изменилось» и т.п.)
-    var phen = null;
-    m = tbl.match('<tr>\\s*<td[^>]*>\\s*<\\/td>\\s*<td[^>]*>\\s*([^<]{3,80})\\s*<\\/td>\\s*<\\/tr>');
-    if (m) phen = m[1].replace(/&nbsp;/g, ' ').trim();
-    // время наблюдения (местное, Кемерово): «15 октября, 13:00»
-    var obsLocal = null;
-    m = tbl.match('(\\d{1,2})\\s+([а-яё]+)\\s*,\\s*(\\d{1,2}):(\\d{2})');
-    if (m) obsLocal = m[0];
-    var pressure = num('Атмосферное давление на уровне станции,\\s*<nobr>мм рт\\.ст\\.<\\/td>\\s*<td[^>]*>\\s*(\\d{2,4})');
-    var humidity = num('Относительная влажность, %<\\/td>\\s*<td[^>]*>\\s*(\\d+(?:[.,]\\d+)?)');
-    var t = (temp != null) ? parseFloat(String(temp).replace(',', '.')) : null;
-    return {
-      temp: (t != null && !isNaN(t)) ? t : null,
-      phenomenon: phen,
-      cloud: (cloud != null) ? parseInt(cloud, 10) : null,
-      wind: (wind != null) ? parseFloat(String(wind).replace(',', '.')) : null,
-      windDir: windDir,
-      pressure: (pressure != null) ? parseInt(pressure, 10) : null,
-      humidity: (humidity != null) ? parseFloat(String(humidity).replace(',', '.')) : null,
-      obsLocal: obsLocal,
-      source: 'meteoinfo.ru',
-      fetched: new Date().toISOString()
-    };
-  },
-
-  // Разбор JSON open-meteo.com (РЕЗЕРВНЫЙ источник, Task 532):
-  // current={temperature_2m, relative_humidity_2m, surface_pressure,
-  // weather_code (WMO), wind_speed_10m (м/с), wind_direction_10m (°)}.
-  // WMO-код → балл облачности 0..10 + ТЕКСТ явления — маппинг
-  // иконок клиента (по phenomenon/cloud) работает без изменений.
-  // surface_pressure (гПа) → мм рт.ст. (÷1.33322). Направление
-  // ветра (°) → румб («С», «ЮЗ», …). Кемерово: 55.35 N, 86.08 E.
-  _parseOpenMeteo: function(text) {
-    try {
-      var j = JSON.parse(String(text || ''));
-      var c = j && j.current;
-      if (!c || c.temperature_2m == null) return null;
-      var t = parseFloat(c.temperature_2m);
-      if (isNaN(t)) return null;
-      var code = (c.weather_code != null) ? c.weather_code : 3;
-      var cloud = 8, phen = 'Пасмурно';
-      if (code === 0)      { cloud = 0; phen = 'Ясно'; }
-      else if (code === 1) { cloud = 1; phen = 'Малооблачно'; }
-      else if (code === 2) { cloud = 3; phen = 'Переменная облачность'; }
-      else if (code === 3) { cloud = 8; phen = 'Пасмурно'; }
-      else if (code === 45 || code === 48) {
-        cloud = 8; phen = 'Туман';
-      } else if (code >= 51 && code <= 57) {
-        cloud = 8; phen = 'Морось';
-      } else if (code >= 61 && code <= 67) {
-        cloud = 9; phen = 'Дождь';
-      } else if ((code >= 71 && code <= 77) || code === 85 || code === 86) {
-        cloud = 9; phen = 'Снег';
-      } else if (code >= 80 && code <= 82) {
-        cloud = 9; phen = 'Ливень';
-      } else if (code >= 95) {
-        cloud = 9; phen = 'Гроза';
-      }
-      var DIRS = ['С', 'СВ', 'В', 'ЮВ', 'Ю', 'ЮЗ', 'З', 'СЗ'];
-      var windDir = null;
-      if (c.wind_direction_10m != null &&
-          !isNaN(parseFloat(c.wind_direction_10m))) {
-        var deg = ((parseFloat(c.wind_direction_10m) % 360) + 360) % 360;
-        windDir = DIRS[Math.round(deg / 45) % 8];
-      }
-      var pr = (c.surface_pressure != null &&
-                !isNaN(parseFloat(c.surface_pressure)))
-        ? Math.round(parseFloat(c.surface_pressure) / 1.33322) : null;
-      var obsLocal = null;
-      if (c.time != null) {
-        obsLocal = String(c.time).replace('T', ' ').slice(0, 16);
-      }
-      return {
-        temp: t,
-        phenomenon: phen,
-        cloud: cloud,
-        wind: (c.wind_speed_10m != null &&
-               !isNaN(parseFloat(c.wind_speed_10m)))
-          ? parseFloat(c.wind_speed_10m) : null,
-        windDir: windDir,
-        pressure: pr,
-        humidity: (c.relative_humidity_2m != null &&
-                   !isNaN(parseFloat(c.relative_humidity_2m)))
-          ? parseFloat(c.relative_humidity_2m) : null,
-        obsLocal: obsLocal,
-        source: 'open-meteo.com',
-        fetched: new Date().toISOString()
-      };
-    } catch (e) { return null; }
-  },
+  // Task 536 — СЕРВЕРНАЯ ПОГОДА УДАЛЕНА (getWeather,
+  // _parseMeteoinfo, _parseOpenMeteo). Причина (заявка):
+  // серверные запросы UrlFetchApp (meteoinfo.ru,
+  // open-meteo.com) падали — развёртыванию не хватало области
+  // script.external_request, авторизацию пользователь так и не
+  // выдал. Погода идёт НАПРЯМУЮ из браузера: open-meteo.com →
+  // wttr.in (Task 533/534 — клиентский код WsLcdClock в
+  // index.html), от сервера больше НЕ зависит. Роутинг в
+  // Code.gs тоже убран.
 
   // workSchedule.getPatterns
   // payload: { token }
@@ -4469,79 +4241,17 @@ function employeesSplitInit() {
 }
 
 // ============================================================
-// Task 534 — РАЗОВАЯ АВТОРИЗАЦИЯ ВНЕШНИХ ЗАПРОСОВ (погода)
-// Task 535 — дополнено: полный текст ошибки (URL разрешения
-// больше не обрезается на «https://w…») + подсказка про манифест
-// appsscript.json, если диалог доступа не появляется.
+// Task 536 — СЕРВЕРНАЯ ПОГОДА УДАЛЕНА (authorizeWeather,
+// getWeather, _parseMeteoinfo, _parseOpenMeteo)
 // ============================================================
-// Если в настройках информера (Табель → шестерёнка) диагностика
-// погоды показывает «У вас нет разрешения на вызов функции
-// "UrlFetchApp.fetch"» — развёртывание Apps Script было
-// авторизовано ДО появления getWeather (Task 530) и в его токене
-// НЕТ области script.external_request. Серверные источники погоды
-// (meteoinfo.ru + open-meteo.com) из-за этого падают, хотя клиент
-// (kip8test/kip8) уже не зависит от них: погода идёт напрямую из
-// браузера (Task 533 open-meteo.com, Task 534 + wttr.in).
-//
-// ЧТО СДЕЛАТЬ (ОДИН РАЗ, ~1 минута):
-//   1. Открыть этот проект в редакторе: script.google.com → проект
-//      (тот же, где Code.gs/WorkSchedule.gs) → файл WorkSchedule.gs;
-//   2. В выпадающем списке функций выбрать authorizeWeather →
-//      «Выполнить» (Run);
-//   3. Подтвердить доступ в диалоге авторизации (Google спросит
-//      разрешение «Подключение к внешнему сервису» — это и есть
-//      область script.external_request);
-//   4. Deploy → Manage deployments → карандаш (Edit) → Version:
-//      «New version» → Deploy (новая версия развёртывания);
-//   5. Проверить: Табель → шестерёнка → «Обновить сейчас» —
-//      статус должен показать источник (серверный резерв —
-//      «meteoinfo.ru (через Apps Script)», если прямые каналы
-//      в сети пользователя недоступны).
-//
-// ЕСЛИ ШАГ 3 НЕ ПОЯВИЛСЯ, А ОШИБКА ПОВТОРЯЕТСЯ (как в заявке
-// Task 535: FAIL и после запуска): в манифесте appsscript.json
-// ЯВНО перечислены oauthScopes БЕЗ script.external_request —
-// тогда диалог не запрашивается вовсе. Лечится так:
-//   • Настройки проекта (Settings ⚙) → галка «Show "appsscript.json"
-//     manifest file in editor» → открыть appsscript.json;
-//   • в массив "oauthScopes" добавить строку
-//     "https://www.googleapis.com/auth/script.external_request"
-//     (или удалить массив oauthScopes целиком — области определятся
-//     автоматически по коду);
-//   • сохранить → снова «Выполнить» authorizeWeather → подтвердить
-//     доступ → Deploy → New version.
-//
-// Функция безопасна: два пробных запроса к источникам погоды,
-// результат — в журнале выполнения (Logger.log). Повторный запуск
-// ничего не меняет.
-function authorizeWeather() {
-  var SCOPE = 'https://www.googleapis.com/auth/script.external_request';
-  var probes = [
-    'https://api.open-meteo.com/v1/forecast' +
-      '?latitude=55.35&longitude=86.08&current=temperature_2m',
-    'https://meteoinfo.ru/pogoda/russia/kemerovo-area/kemerovo'
-  ];
-  var out = [];
-  for (var i = 0; i < probes.length; i++) {
-    try {
-      var r = UrlFetchApp.fetch(
-          probes[i], { muteHttpExceptions: true, followRedirects: true });
-      out.push('HTTP ' + r.getResponseCode() + ' — ' + probes[i]);
-    } catch (e) {
-      // Task 535: НЕ обрезаем сообщение на 90 символах — URL требуемой
-      // области («…https://w» в заявке) теперь виден целиком
-      var em = String((e && e.message) || e).slice(0, 220);
-      var line = 'FAIL ' + em + ' — ' + probes[i];
-      if (/разрешени|permission/i.test(em)) {
-        line += ' | ЛЕЧЕНИЕ: область ' + SCOPE + '. Если диалог ' +
-                'доступа не появился — добавьте её в массив oauthScopes ' +
-                'манифеста appsscript.json (или уберите oauthScopes вовсе), ' +
-                'затем Выполнить ещё раз и Deploy → New version';
-      }
-      out.push(line);
-    }
-  }
-  var msg = 'authorizeWeather: ' + JSON.stringify(out);
-  Logger.log(msg);
-  return out;
-}
+// Заявка: «Через сервер погода не загружается, работает только
+// через wttr.in (напрямую из браузера), поэтому убери из кода
+// WorkSchedule.gs не рабочие строки кода связанные с погодой».
+// Серверные запросы UrlFetchApp (meteoinfo.ru, open-meteo.com)
+// падали из-за отсутствия области script.external_request в
+// токене развёртывания. Погода в клиенте идёт напрямую из
+// браузера (open-meteo.com → wttr.in, Task 533/534) и от
+// сервера больше НЕ зависит. Функция authorizeWeather()
+// (Task 534/535 — разовая авторизация внешних запросов) больше
+// не нужна и удалена вместе с эндпоинтом workSchedule.getWeather
+// (роутинг в Code.gs убран).

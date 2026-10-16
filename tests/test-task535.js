@@ -4,7 +4,7 @@
 //   короткой температуре 2→7 колонок); календарь — селекты года/
 //   месяца ВЫРОВНЕНЫ ПО ВЫСОТЕ с кнопками (30px); светлая тема —
 //   ЯРКИЕ стрелки и «Сегодня»; сервер authorizeWeather — полный URL
-//   разрешения + подсказка про манифест appsscript.json.
+//   разрешения + подсказка про манифест appsscript.json (до Task 536).
 // Заявка: «В окне информера смести немного правее день недели и
 //   дату, чтобы погода не примыкала слишком близко к дате, и буква
 //   "Я" в дне недели написана без левой ножки, исправь. Выравни по
@@ -12,21 +12,24 @@
 //   стрелки в кнопках и надпись Сегодня сделай поярче (сейчас бледные
 //   и плохо видно).» + «authorizeWeather результат FAIL … Требуемые
 //   разрешения: https://w — …» (обрезка на 90 символах).
+// Адаптация Task 536 (заявка: «через сервер погода не загружается»):
+//   серверная погода УДАЛЕНА — подсказки манифеста/authorizeWeather
+//   больше НЕ проверяются (их нет в коде), геометрия — как была.
 //
 // ЧТО ПРОВЕРЯЕТСЯ:
 //   A. SRC — глиф «Я» (ножка), X_DAY=52/зона+9/dxMax, динамическая
 //      иконка погоды (tStart−2−8 + кламп X_ICON), CSS высоты и
-//      светлой темы, клиентская подсказка (манифест), WorkSchedule.gs
-//      (slice 220, SCOPE, oauthScopes), SW kipia-test-v748.
+//      светлой темы, WorkSchedule.gs — серверная погода УДАЛЕНА
+//      (Task 536), SW kipia-test-v749.
 //   B. VM ГЛИФ — FONT5['Я'] бит-в-бит, ножка диагональю, зеркало R.
 //   C. VM ГЕОМЕТРИЯ — ПЯТНИЦА dx=60 (было 56), СРЕДА dx=66 (было 62),
 //      ПОНЕДЕЛЬНИК прежний слот 44 (dxMax), без секунд 43; дата
 //      X_DATE=111 нетронута; погода «-1°»: иконка 177 (НЕ 172),
 //      зазор 170..176 ЧИСТ (не примыкает), температура 187..203;
 //      «-12°»: иконка 172 (регресс нет), «--» прежний прочерк.
-//   D. VM ПАНЕЛЬ — подсказка с appsscript.json/oauthScopes при
-//      «нет разрешения», authorizeWeather() сохранён.
-//   E. SW — kipia-test-v748, нет забегания вперёд (v749).
+//   D. VM ПАНЕЛЬ — подсказок сервера НЕТ (Task 536): без
+//      appsscript.json/oauthScopes/authorizeWeather.
+//   E. SW — kipia-test-v749, нет забегания вперёд (v749).
 //
 // Запуск: через tests/run-all.js (require './test-task535.js').
 
@@ -195,53 +198,45 @@ describe('Task 535 A: SRC — «Я», смещение правее, высот�
         assertTrue(chunk.indexOf('color: #0d1822') !== -1, 'hover — ещё темнее');
     });
 
-    test('SRC: клиентская подсказка — манифест appsscript.json', () => {
+    test('SRC: клиентские подсказки сервера УДАЛЕНЫ (Task 536)', () => {
         const m = lcdModule();
         const i = m.indexOf('var wd = this._weatherDiag;');
         const chunk = m.slice(i, m.indexOf("'<div class=\"ws-lcd-set-wstat\"", i));
-        assertTrue(chunk.indexOf('appsscript.json') !== -1,
-            'подсказка называет манифест (сценарий заявки: FAIL после запуска)');
-        assertTrue(chunk.indexOf('script.external_request') !== -1,
-            'подсказка называет область');
-        assertTrue(chunk.indexOf('oauthScopes') !== -1, 'массив oauthScopes');
-        assertTrue(chunk.indexOf('DEPLOY-Task535') !== -1, 'ссылка на новый DEPLOY');
-        assertTrue(chunk.indexOf('authorizeWeather()') !== -1,
-            'authorizeWeather() сохранён (регресс Task 534)');
+        assertTrue(chunk.indexOf('appsscript.json') === -1,
+            'подсказки про манифест больше НЕТ (серверной погоды нет — Task 536)');
+        assertTrue(chunk.indexOf('oauthScopes') === -1,
+            'подсказки про массив oauthScopes больше НЕТ');
+        assertTrue(chunk.indexOf('authorizeWeather') === -1,
+            'упоминаний authorizeWeather больше НЕТ во всём клиенте');
+        assertTrue(chunk.indexOf('Task 536') !== -1,
+            'новый комментарий объясняет: только прямые каналы');
     });
 
-    test('SRC: WorkSchedule.gs — authorizeWeather БЕЗ обрезки (220, не 90)', () => {
-        const i = WS_GS_SRC.indexOf('function authorizeWeather()');
-        const chunk = WS_GS_SRC.slice(i, WS_GS_SRC.indexOf('\n}', i));
-        assertTrue(chunk.indexOf('slice(0, 220)') !== -1,
-            'сообщение об ошибке не обрезается на 90 символах');
-        assertTrue(chunk.indexOf('slice(0, 90)') === -1,
-            'старая обрезка в authorizeWeather убрана');
-        assertTrue(chunk.indexOf(
-            "var SCOPE = 'https://www.googleapis.com/auth/script.external_request'") !== -1,
-            'полный URL области в сообщении (в заявке был виден лишь «https://w»)');
-    });
-
-    test('SRC: WorkSchedule.gs — подсказка oauthScopes при «нет разрешения»', () => {
-        const i = WS_GS_SRC.indexOf('function authorizeWeather()');
-        const chunk = WS_GS_SRC.slice(i, WS_GS_SRC.indexOf('\n}', i));
-        assertTrue(chunk.indexOf('oauthScopes') !== -1,
-            'упоминает массив oauthScopes манифеста');
-        assertTrue(chunk.indexOf('/разрешени|permission/i') !== -1,
-            'распознавание ошибки разрешения');
-        assertTrue(chunk.indexOf('ЛЕЧЕНИЕ') !== -1, 'маркер подсказки');
-    });
-
-    test('SRC: WorkSchedule.gs — комментарий про манифест (диалог не появился)', () => {
+    test('SRC: WorkSchedule.gs — authorizeWeather УДАЛЕНА (Task 536)', () => {
+        assertTrue(WS_GS_SRC.indexOf('function authorizeWeather()') === -1,
+            'функция удалена — серверных запросов погоды больше нет');
+        assertTrue(WS_GS_SRC.indexOf('slice(0, 220)') === -1,
+            'хвост 220 удалён вместе с функцией');
         assertTrue(WS_GS_SRC.indexOf(
-            'ЕСЛИ ШАГ 3 НЕ ПОЯВИЛСЯ, А ОШИБКА ПОВТОРЯЕТСЯ') !== -1,
-            'инструкция про сценарий заявки (FAIL и после запуска)');
-        assertTrue(WS_GS_SRC.indexOf('oauthScopes БЕЗ script.external_request') !== -1,
-            'диагноз: явные области в манифесте без external_request');
+            "var SCOPE = 'https://www.googleapis.com/auth/script.external_request'") === -1,
+            'SCOPE-константа удалена');
     });
 
-    test('SRC: diag getWeather — срез 90 СОХРАНЁН (регресс Task 534)', () => {
-        assertTrue(WS_GS_SRC.indexOf('e).slice(0, 90)') !== -1, 'meteoinfo diag 90');
-        assertTrue(WS_GS_SRC.indexOf('e4).slice(0, 90)') !== -1, 'open-meteo diag 90');
+    test('SRC: WorkSchedule.gs — инструкция/ЛЕЧЕНИЕ/манифест УДАЛЕНЫ (Task 536)', () => {
+        assertTrue(WS_GS_SRC.indexOf(
+            'ЕСЛИ ШАГ 3 НЕ ПОЯВИЛСЯ, А ОШИБКА ПОВТОРЯЕТСЯ') === -1,
+            'инструкция авторизации удалена (авторизовать больше нечего)');
+        assertTrue(WS_GS_SRC.indexOf('ЛЕЧЕНИЕ') === -1,
+            'маркер подсказки удалён');
+        assertTrue(WS_GS_SRC.indexOf('oauthScopes БЕЗ script.external_request') === -1,
+            'диагноз из заявки Task 535 больше не нужен');
+    });
+
+    test('SRC: diag getWeather — срезы 90 УДАЛЕНЫ (вместе с эндпоинтом)', () => {
+        assertTrue(WS_GS_SRC.indexOf('e).slice(0, 90)') === -1,
+            'meteoinfo diag 90 удалён (Task 536)');
+        assertTrue(WS_GS_SRC.indexOf('e4).slice(0, 90)') === -1,
+            'open-meteo diag 90 удалён (Task 536)');
     });
 
 });
@@ -425,35 +420,31 @@ describe('Task 535 C: VM — компоновка (день/погода пра�
 // ============================================================
 // D. VM — панель настроек: подсказка про манифест
 // ============================================================
-describe('Task 535 D: VM — панель (подсказка appsscript.json)', () => {
+describe('Task 535 D: VM — панель (подсказок сервера НЕТ — Task 536)', () => {
 
-    test('diag «нет разрешения» — подсказка с манифестом и областью', () => {
+    test('diag сбоя — БЕЗ манифеста/области/authorizeWeather', () => {
         const pm = popupMocks();
         const sb = lcdSandbox({ getElementById: pm.getElementById });
         sb.WsLcdClock._weatherDiag = {
-            ok: false, why: 'server',
-            direct: 'Failed to fetch', wttr: 'Failed to fetch',
-            diag: 'meteoinfo:exception:У вас нет разрешения на вызов функции ' +
-                  '"UrlFetchApp.fetch". Требуемые разрешения: https://w; ' +
-                  'open-meteo:exception:У вас нет разрешения'
+            ok: false, why: 'network',
+            direct: 'Failed to fetch', wttr: 'Failed to fetch'
         };
         sb.WsLcdClock._renderSettings();
         const html = pm.els.wsLcdSet.innerHTML;
-        assertTrue(html.indexOf('appsscript.json') !== -1,
-            'подсказка называет манифест (сценарий заявки: FAIL после запуска)');
-        assertTrue(html.indexOf('script.external_request') !== -1,
-            'подсказка называет область');
-        assertTrue(html.indexOf('oauthScopes') !== -1,
-            'подсказка про массив oauthScopes');
-        assertTrue(html.indexOf('authorizeWeather()') !== -1,
-            'authorizeWeather() сохранён');
-        assertTrue(html.indexOf('новую') !== -1 &&
-                   html.indexOf('версию развёртывания') !== -1,
-            'новая версия развёртывания — сохранена (Task 534)');
+        assertTrue(html.indexOf('appsscript.json') === -1,
+            'манифест НЕ упоминается (сервер удалён — Task 536)');
+        assertTrue(html.indexOf('script.external_request') === -1,
+            'область НЕ упоминается');
+        assertTrue(html.indexOf('oauthScopes') === -1,
+            'массив oauthScopes НЕ упоминается');
+        assertTrue(html.indexOf('authorizeWeather') === -1,
+            'authorizeWeather НЕ упоминается');
+        assertTrue(html.indexOf('Прямые запросы open-meteo/wttr.in не прошли') !== -1,
+            'статус объясняет сбой прямых каналов');
         assertTrue(html.indexOf('ws-lcd-set-wstat warn') !== -1, 'варнинг-стиль');
     });
 
-    test('diag БЕЗ ошибки разрешения — манифест НЕ упоминается', () => {
+    test('diag БЕЗ причин — тоже без подсказок сервера', () => {
         const pm = popupMocks();
         const sb = lcdSandbox({ getElementById: pm.getElementById });
         sb.WsLcdClock._weatherDiag = {
@@ -465,6 +456,9 @@ describe('Task 535 D: VM — панель (подсказка appsscript.json)',
         const html = pm.els.wsLcdSet.innerHTML;
         assertTrue(html.indexOf('appsscript.json') === -1,
             'лишняя подсказка про манифест не показывается');
+        assertTrue(html.indexOf('(прямой запрос: open-meteo: http_503; ' +
+                               'wttr.in: http_502)') !== -1,
+            'причины обоих каналов различимы (legacy diag тоже рендерится)');
     });
 
 });
@@ -474,10 +468,10 @@ describe('Task 535 D: VM — панель (подсказка appsscript.json)',
 // ============================================================
 describe('Task 535 E: SW — версия кеша', () => {
 
-    test('SW: kipia-test-v748, забегания вперёд нет (v749)', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v748'") !== -1,
-            'CACHE_VERSION = kipia-test-v748');
-        assertTrue(SW_SRC.indexOf('kipia-test-v749') === -1, 'v749 не появилась');
+    test('SW: kipia-test-v749, забегания вперёд нет (v749)', () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v749'") !== -1,
+            'CACHE_VERSION = kipia-test-v749');
+        assertTrue(SW_SRC.indexOf('kipia-test-v750') === -1, 'v749 не появилась');
         assertTrue(SW_SRC.indexOf('kipia-test-v747') === -1, 'v747 убрана');
     });
 

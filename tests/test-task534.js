@@ -9,21 +9,24 @@
 //   exception:У вас нет разрешения…". В календаре, кнопки с годом
 //   выравняй по левому краю, надписи "Год" и "Месяц" убери, шрифт в
 //   кнопках месяца сделай немного меньше чем в годе.»
+// Адаптация Task 536 (заявка: «через сервер погода не загружается»):
+//   серверный резерв и подсказки authorizeWeather УДАЛЕНЫ — остались
+//   только прямые каналы open-meteo → wttr.in.
 //
 // ЧТО ПРОВЕРЯЕТСЯ:
 //   A. SRC — второй прямой канал wttr.in (WT_URL, _parseWttr,
 //      _fetchWttr), порядок каналов в _loadWeather (open-meteo →
-//      wttr → сервер), подсказка authorizeWeather в статусе панели,
-//      календарь без подписей + левое выравнивание + шрифт,
-//      WorkSchedule.gs: authorizeWeather + diag 90, SW kipia-test-v748.
+//      wttr; сервер УДАЛЁН — Task 536), календарь без подписей +
+//      левое выравнивание + шрифт, WorkSchedule.gs: серверная погода
+//      УДАЛЕНА, SW kipia-test-v749.
 //   B. VM ПОГОДА — _parseWttr (поля/lang_ru/EN-слова/cloudcover/
 //      AM-PM → +7/мусор); цепочка: успех open-meteo → wttr НЕ звётся;
-//      сбой open-meteo → wttr успех (сервер НЕ звётся); оба сбой →
-//      сервер (успех/empty/без авторизации); панель: успех wttr,
-//      dnote с обоими каналами, подсказка при «нет разрешения».
+//      сбой open-meteo → wttr успех; оба сбой → why=network, сервер
+//      НЕ звётся (Task 536); панель: успех wttr, dnote с обоими
+//      каналами, БЕЗ подсказок сервера.
 //   C. VM КАЛЕНДАРЬ — подписей нет, порядок год → месяц → сетка,
 //      4 стрелки, «Сегодня» в строке месяца, 12 опций, _calSetMonth.
-//   D. SW — kipia-test-v748, нет забегания вперёд (v748).
+//   D. SW — kipia-test-v749, нет забегания вперёд (v748).
 //
 // Запуск: через tests/run-all.js (require './test-task534.js').
 
@@ -206,16 +209,17 @@ describe('Task 534 A: SRC — wttr.in, подсказка authorizeWeather, ка
         assertTrue(chunk.indexOf('_parseWttr') !== -1, 'разбор ответа');
     });
 
-    test('SRC: порядок каналов _loadWeather — open-meteo → wttr.in → сервер', () => {
+    test('SRC: порядок каналов _loadWeather — open-meteo → wttr.in (сервер удалён — Task 536)', () => {
         const m = lcdModule();
         const lw = m.indexOf('_loadWeather: function');
         const lwChunk = m.slice(lw, m.indexOf('_weatherNow: function', lw));
         const iOm = lwChunk.indexOf('_fetchWeatherDirect()');
         const iWttr = lwChunk.indexOf('_fetchWttr()');
-        const iServer = lwChunk.indexOf("KipAuth.api('workSchedule.getWeather'");
-        assertTrue(iOm !== -1 && iWttr !== -1 && iServer !== -1, 'все три канала есть');
-        assertTrue(iOm < iWttr && iWttr < iServer,
-            'open-meteo ПЕРВЫМ → wttr.in ВТОРЫМ → сервер — резерв');
+        assertTrue(iOm !== -1 && iWttr !== -1, 'оба прямых канала есть');
+        assertTrue(iOm < iWttr,
+            'open-meteo ПЕРВЫМ → wttr.in ВТОРЫМ (резерв)');
+        assertTrue(lwChunk.indexOf("KipAuth.api('workSchedule.getWeather'") === -1,
+            'серверного канала НЕТ (Task 536: «через сервер не загружается»)');
     });
 
     test('SRC: _weatherOk помечает wttr «напрямую из браузера»', () => {
@@ -225,7 +229,8 @@ describe('Task 534 A: SRC — wttr.in, подсказка authorizeWeather, ка
         assertTrue(okChunk.indexOf("via === 'direct' || via === 'wttr'") !== -1,
             'wttr — прямой канал (как direct)');
         assertTrue(okChunk.indexOf('напрямую из браузера') !== -1, 'пометка канала');
-        assertTrue(okChunk.indexOf('через Apps Script') !== -1, 'резерв помечен');
+        assertTrue(okChunk.indexOf('через Apps Script') === -1,
+            'серверной пометки больше НЕТ (Task 536)');
     });
 
     test('SRC: dnote в статусе собирает ОБА прямых канала', () => {
@@ -238,17 +243,16 @@ describe('Task 534 A: SRC — wttr.in, подсказка authorizeWeather, ка
             'причина wttr.in выводится');
     });
 
-    test('SRC: подсказка authorizeWeather при «нет разрешения UrlFetchApp»', () => {
+    test('SRC: подсказки authorizeWeather УДАЛЕНЫ из панели (Task 536)', () => {
         const m = lcdModule();
         const i = m.indexOf('var wd = this._weatherDiag;');
         const chunk = m.slice(i, m.indexOf("'<div class=\"ws-lcd-set-wstat'", i));
-        assertTrue(chunk.indexOf('нет разрешения|UrlFetchApp') !== -1,
-            'распознавание ошибки авторизации сервера');
-        assertTrue(chunk.indexOf('authorizeWeather()') !== -1,
-            'подсказка называет функцию');
-        assertTrue(chunk.indexOf('новую') !== -1 &&
-                   chunk.indexOf('версию развёртывания') !== -1,
-            'подсказка про новую версию развёртывания');
+        assertTrue(chunk.indexOf('нет разрешения|UrlFetchApp') === -1,
+            'распознавание ошибки авторизации сервера удалено (сервера нет)');
+        assertTrue(chunk.indexOf('authorizeWeather()') === -1,
+            'подсказки про authorizeWeather больше НЕТ');
+        assertTrue(chunk.indexOf('oauthScopes') === -1,
+            'подсказки про манифест appsscript.json больше НЕТ');
     });
 
     test('SRC: календарь — подписей «Год»/«Месяц» НЕТ (рендер и CSS)', () => {
@@ -291,24 +295,23 @@ describe('Task 534 A: SRC — wttr.in, подсказка authorizeWeather, ка
             '«Сегодня» в строке месяца — 12px');
     });
 
-    test('SRC: WorkSchedule.gs — топ-уровневая authorizeWeather (разовая авторизация)', () => {
-        assertTrue(/^function authorizeWeather\(\) \{/m.test(WS_GS_SRC),
-            'топ-уровневая функция (видна в выпадающем списке редактора)');
-        const i = WS_GS_SRC.indexOf('function authorizeWeather()');
-        const chunk = WS_GS_SRC.slice(i, WS_GS_SRC.indexOf('\n}', i) + 2);
-        assertTrue(chunk.indexOf('UrlFetchApp.fetch') !== -1,
-            'вызывает UrlFetchApp — провоцирует запрос области external_request');
-        assertTrue(chunk.indexOf('muteHttpExceptions') !== -1, 'тихие HTTP-ошибки');
-        assertTrue(/meteoinfo\.ru\/pogoda\/russia\/kemerovo-area\/kemerovo/.test(chunk),
-            'пробует основной источник meteoinfo.ru');
-        assertTrue(chunk.indexOf('open-meteo.com') !== -1, 'и резерв open-meteo.com');
+    test('SRC: WorkSchedule.gs — authorizeWeather УДАЛЕНА (Task 536)', () => {
+        assertTrue(/^function authorizeWeather\(\) \{/m.test(WS_GS_SRC) === false,
+            'топ-уровневая функция удалена (серверных запросов погоды больше нет)');
+        assertTrue(WS_GS_SRC.indexOf('meteoinfo.ru/pogoda/russia/kemerovo-area/kemerovo') === -1,
+            'meteoinfo.ru больше НЕ пробуется с сервера');
+        assertTrue(WS_GS_SRC.indexOf('api.open-meteo.com/v1/forecast') === -1,
+            'open-meteo.com больше НЕ пробуется с сервера');
+        assertTrue(WS_GS_SRC.indexOf('Task 536') !== -1,
+            'заметка Task 536 объясняет удаление');
     });
 
-    test('SRC: WorkSchedule.gs — diag-исключения до 90 символов', () => {
-        // было 60 — название функции и суть ошибки обрезались
-        assertTrue(WS_GS_SRC.indexOf('e).slice(0, 90)') !== -1, 'срез 90 (meteoinfo)');
-        assertTrue(WS_GS_SRC.indexOf('e4).slice(0, 90)') !== -1, 'срез 90 (open-meteo)');
-        assertTrue(WS_GS_SRC.indexOf(').slice(0, 60)') === -1, 'старый срез 60 убран');
+    test('SRC: WorkSchedule.gs — diag-исключения погоды УДАЛЕНЫ (Task 536)', () => {
+        // было slice(0, 90) у meteoinfo/open-meteo попыток — вместе с getWeather
+        assertTrue(WS_GS_SRC.indexOf('e).slice(0, 90)') === -1, 'срез 90 (meteoinfo) удалён');
+        assertTrue(WS_GS_SRC.indexOf('e4).slice(0, 90)') === -1, 'срез 90 (open-meteo) удалён');
+        assertTrue(WS_GS_SRC.indexOf('var tries') === -1,
+            'накопитель diag-попыток удалён вместе с getWeather');
     });
 
 });
@@ -487,7 +490,7 @@ describe('Task 534 B-2: VM — цепочка open-meteo → wttr.in → сер�
         });
     });
 
-    test('оба канала пали → сервер успех: канал server (резерв работает)', () => {
+    test('оба канала пали → why=network, сервер НЕ звался (Task 536)', () => {
         const calls = { om: 0, wttr: 0 };
         let apiCalls = 0;
         const sb = lcdSandbox({
@@ -505,42 +508,16 @@ describe('Task 534 B-2: VM — цепочка open-meteo → wttr.in → сер�
         sb.WsLcdClock._loadWeather(true);
         return new Promise(function (resolve) {
             setTimeout(function () {
-                assertEqual(apiCalls, 1, 'резерв (сервер) вызван третьим');
-                assertEqual(sb.WsLcdClock._weatherDiag.via, 'server', 'канал — server');
-                assertEqual(sb.WsLcdClock._weatherDiag.source,
-                    'meteoinfo.ru (через Apps Script)', 'источник + канал резерва');
-                assertEqual(sb.WsLcdClock._weather.tempTxt, '-12°', 'экран: −12°');
-                resolve();
-            }, 20);
-        });
-    });
-
-    test('оба канала пали → сервер empty: why=server, видны ВСЕ попытки', () => {
-        const sb = lcdSandbox({
-            fetch: routeFetch({ om: 'fail', wttr: 'fail' }),
-            kipAuth: {
-                getToken: function () { return 'tok'; },
-                api: function () {
-                    return Promise.resolve({
-                        temp: null, note: 'weather_unavailable',
-                        diag: 'meteoinfo:exception:У вас нет разрешения на вызов ' +
-                              'функции "UrlFetchApp.fetch". Т; open-meteo:exception:' +
-                              'У вас нет разрешения на вызов функции "UrlFetchApp.fetch". Т.'
-                    });
-                }
-            }
-        });
-        sb.WsLcdClock._loadWeather(true);
-        return new Promise(function (resolve) {
-            setTimeout(function () {
-                assertEqual(sb.WsLcdClock._weatherDiag.why, 'server',
-                    'сервер ответил, источников нет');
+                assertEqual(apiCalls, 0,
+                    'серверный резерв УДАЛЁН — KipAuth.api не зовётся (Task 536)');
+                assertEqual(sb.WsLcdClock._weatherDiag.ok, false, 'не ok');
+                assertEqual(sb.WsLcdClock._weatherDiag.why, 'network',
+                    'любая неудача = network (сервера нет)');
                 assertEqual(sb.WsLcdClock._weatherDiag.direct, 'Failed to fetch',
                     'сбой open-meteo сохранён');
                 assertEqual(sb.WsLcdClock._weatherDiag.wttr, 'Failed to fetch',
                     'сбой wttr.in сохранён');
-                assertTrue(String(sb.WsLcdClock._weatherDiag.diag).indexOf('нет разрешения') !== -1,
-                    'строка попыток сервера (с ошибкой авторизации)');
+                assertEqual(sb.WsLcdClock._weather, null, 'экран: тихий «--»');
                 resolve();
             }, 20);
         });
@@ -564,41 +541,40 @@ describe('Task 534 B-3: VM — статусы панели (два канала 
             'статус успеха с каналом wttr');
     });
 
-    test('diag с «нет разрешения» — подсказка authorizeWeather + dnote оба канала', () => {
+    test('diag сбоя — НЕТ подсказок authorizeWeather/манифеста, dnote оба канала (Task 536)', () => {
         const pm = popupMocks();
         const sb = lcdSandbox({ getElementById: pm.getElementById });
         sb.WsLcdClock._weatherDiag = {
-            ok: false, why: 'server',
-            direct: 'Failed to fetch', wttr: 'Failed to fetch',
-            note: 'weather_unavailable',
-            diag: 'meteoinfo:exception:У вас нет разрешения на вызов функции ' +
-                  '"UrlFetchApp.fetch". Т; open-meteo:exception:У вас нет ' +
-                  'разрешения на вызов функции "UrlFetchApp.fetch". Т.'
+            ok: false, why: 'network',
+            direct: 'Failed to fetch', wttr: 'Failed to fetch'
         };
         sb.WsLcdClock._renderSettings();
         const html = pm.els.wsLcdSet.innerHTML;
         assertTrue(html.indexOf('(прямой запрос: open-meteo: Failed to fetch; ' +
                                'wttr.in: Failed to fetch)') !== -1,
             'dnote с причинами ОБЕИХ прямых каналов');
-        assertTrue(html.indexOf('authorizeWeather()') !== -1,
-            'подсказка называет функцию (сценарий из заявки)');
-        assertTrue(html.indexOf('новую') !== -1 &&
-                   html.indexOf('версию развёртывания') !== -1,
-            'подсказка про новую версию развёртывания');
+        assertTrue(html.indexOf('Прямые запросы open-meteo/wttr.in не прошли') !== -1,
+            'формулировка сбоя прямых каналов');
+        assertTrue(html.indexOf('authorizeWeather()') === -1,
+            'подсказки authorizeWeather НЕТ (сервер удалён — Task 536)');
+        assertTrue(html.indexOf('appsscript.json') === -1,
+            'подсказки про манифест НЕТ');
+        assertTrue(html.indexOf('Повтор — по расписанию или кнопкой ниже') !== -1,
+            'обещание повтора');
         assertTrue(html.indexOf('ws-lcd-set-wstat warn') !== -1, 'варнинг-стиль');
     });
 
-    test('diag БЕЗ ошибки авторизации — подсказки authorizeWeather нет', () => {
+    test('diag БЕЗ причин — обычный статус сбоя, без сервера', () => {
         const pm = popupMocks();
         const sb = lcdSandbox({ getElementById: pm.getElementById });
         sb.WsLcdClock._weatherDiag = {
             ok: false, why: 'server',
-            direct: 'http_503', wttr: 'http_502',
-            diag: 'meteoinfo:http_403; open-meteo:http_503'
+            direct: 'http_503', wttr: 'http_502'
         };
         sb.WsLcdClock._renderSettings();
         const html = pm.els.wsLcdSet.innerHTML;
-        assertTrue(html.indexOf('Источники не дали данных') !== -1, 'обычный статус');
+        assertTrue(html.indexOf('Прямые запросы open-meteo/wttr.in не прошли') !== -1,
+            'любой сбойный diag — формулировка прямых каналов (legacy why тоже)');
         assertTrue(html.indexOf('authorizeWeather()') === -1,
             'лишняя подсказка не показывается');
         assertTrue(html.indexOf('(прямой запрос: open-meteo: http_503; ' +
@@ -677,19 +653,19 @@ describe('Task 534 C: VM — календарь (подписи убраны, н
 // ============================================================
 describe('Task 534 D: SW — версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v748', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v748'");
+    test('sw.js: CACHE_VERSION = kipia-test-v749', () => {
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v749'");
         assertTrue(i !== -1, 'версия v747 (Task 534: wttr.in + календарь)');
     });
 
     test('sw.js: нет забегания вперёд (v748 не должно быть)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v749') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v750') === -1,
             'v748 в sw.js отсутствует (гварды живут только в тестах)');
     });
 
     test('index.html: версия согласована (v747 в этом тесте)', () => {
         const t534 = fs.readFileSync(path.join(__dirname, 'test-task534.js'), 'utf8');
-        assertTrue(t534.indexOf('kipia-test-v748') !== -1, 'этот тест знает v747');
+        assertTrue(t534.indexOf('kipia-test-v749') !== -1, 'этот тест знает v747');
         const dir = fs.readdirSync(path.join(__dirname));
         assertTrue(dir.indexOf('test-task534.js') !== -1, 'файл на месте');
     });

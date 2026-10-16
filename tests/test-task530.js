@@ -20,16 +20,17 @@
 //   B. SRC JS — заявочные пункты: нет мигания (нет %2-логики),
 //      нет призраков (нет ghost), секунды малым шрифтом справа,
 //      одна строка (X_TIME < X_SEC < X_DAY < X_DATE < X_ICON),
-//      погода (meteoinfo.ru → getWeather), реальные сообщения
+//      погода (Task 536: open-meteo → wttr.in НАПРЯМУЮ из браузера;
+//      серверная — УДАЛЕНА), реальные сообщения
 //      (_feedBuild из данных Табеля), фиксированная длина (размер
 //      канваса = COLS×pitch, не зависит от данных).
 //   C. VM — компоновка одной строки, иконки погоды, температура
 //      (+3°/-12°/0°/--), очередь реальных сообщений и её цикл,
 //      загрузка погоды (кэш/сеть/сбой), ровная сетка при разных DPR.
-//   D. СЕРВЕР — WorkSchedule.gs getWeather (кэш 30 мин, тихий
-//      фолбэк), _parseMeteoinfo на РЕАЛЬНОМ HTML meteoinfo.ru
-//      (фикстура страницы Кемерово), роутинг в Code.gs.
-//   E. SW — kipia-test-v748 (Task 531).
+//   D. СЕРВЕР — Task 536: серверная погода УДАЛЕНА (getWeather/
+//      _parseMeteoinfo/_parseOpenMeteo/authorizeWeather + роутинг
+//      Code.gs); производственный календарь legalic НЕ тронут
+//   E. SW — kipia-test-v749 (Task 531).
 //
 // АДАПТАЦИЯ Task 531: компоновка приведена к ОБЩЕЙ НИЖНЕЙ ЛИНИИ ряда
 //   12 (секунды 8..12, текст 6..12, иконка 5..12), день недели
@@ -49,13 +50,14 @@ const SW_SRC = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
 const WS_GS_SRC = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'WorkSchedule.gs'), 'utf8');
 const CODE_GS_SRC = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'Code.gs'), 'utf8');
 
-// Реальная таблица наблюдений meteoinfo.ru, Кемерово (15.10.2026
-// 13:00 местного): снята со страницы https://meteoinfo.ru/pogoda/
-// russia/kemerovo-area/kemerovo — фикстура парсера «как есть»
-const FIXTURE_KEMEROVO = '<table border="0" style="width:100%"><tr><td colspan="2" align="right"  style="border-bottom: 1px solid #D3D3D3;" >15 октября, 13:00&nbsp;(время местное)</td></tr><tr><td  align="right" width="60%"  style="border-bottom: 1px solid #D3D3D3;" >Атмосферное давление на уровне станции, <nobr>мм рт.ст.</td><td width="40%"  style="border-bottom: 1px solid #D3D3D3;"  align="center">759</td></tr><tr><td width="60%"  style="border-bottom: 1px solid #D3D3D3;"  align="right">Температура воздуха, &deg;C</td><td width="40%"  style="border-bottom: 1px solid #D3D3D3;"  align="center">3</td></tr><tr><td width="60%"  style="border-bottom: 1px solid #D3D3D3;"  align="right">Относительная влажность, %</td><td width="40%"  style="border-bottom: 1px solid #D3D3D3;"  align="center">68.1</td></tr><tr><td width="60%"  style="border-bottom: 1px solid #D3D3D3;"  align="right"></td><td width="40%"  style="border-bottom: 1px solid #D3D3D3;"  align="center">Количество облаков не изменилось</td></tr><tr><td width="60%"  style="border-bottom: 1px solid #D3D3D3;"  align="right">Направление ветра</td><td width="40%"  style="border-bottom: 1px solid #D3D3D3;"  align="center">северо-западный</td></tr><tr><td width="60%"  style="border-bottom: 1px solid #D3D3D3;"  align="right">Средняя скорость ветра, м/с</td><td width="40%"  style="border-bottom: 1px solid #D3D3D3;"  align="center">4</td></tr><tr><td width="60%"  style="border-bottom: 1px solid #D3D3D3;"  align="right">Балл общей облачности</td><td width="40%"  style="border-bottom: 1px solid #D3D3D3;"  align="center">7</td></tr><tr><td width="60%"  style="border-bottom: 1px solid #D3D3D3;"  align="right">Горизонтальная видимость, км</td><td width="40%"  style="border-bottom: 1px solid #D3D3D3;"  align="center">10</td></tr></table>';
+// Task 536: фикстура meteoinfo.ru (FIXTURE_KEMEROVO) и серверная
+// песочница wsSandbox удалены вместе с серверной погодой — клиент
+// берёт погоду напрямую (open-meteo → wttr.in), серверные парсеры
+// удалены из WorkSchedule.gs.
 
 // ============================================================
-// Утилиты (как в test-task529.js, плюс серверная песочница)
+// Утилиты (как в test-task529.js; серверная песочница wsSandbox
+// удалена в Task 536 вместе с серверной погодой)
 // ============================================================
 function lcdModule() {
     const i = INDEX_SRC.indexOf('var WsLcdClock = {');
@@ -104,6 +106,7 @@ function lcdSandbox(opts) {
         }
     };
     if (opts.kipAuth) sb.KipAuth = opts.kipAuth;
+    if (opts.fetch) sb.fetch = opts.fetch;   // Task 536: прямые каналы — без сервера
     vm.createContext(sb);
     vm.runInContext(lcdModule(), sb);
     return sb;
@@ -131,20 +134,6 @@ function canvasMock(hostRect, paddings) {
         };
     };
     return { cv: cv, host: host, ctx: ctx, rects: rects, gcs: gcs };
-}
-
-// VM-песочница СЕРВЕРА (WorkSchedule.gs) с моками Apps Script
-function wsSandbox(mocks) {
-    mocks = mocks || {};
-    const sb = {
-        CacheService: mocks.CacheService,
-        UrlFetchApp: mocks.UrlFetchApp,
-        rmRequirePerm: undefined
-    };
-    vm.createContext(sb);
-    vm.runInContext(WS_GS_SRC, sb);
-    // авторизация отключается тестом напрямую (_requireRead подменён)
-    return sb;
 }
 
 // ============================================================
@@ -265,11 +254,11 @@ describe('Task 530 B: SRC JS — одна строка, секунды, пого
         });
     });
 
-    test('погода из meteoinfo.ru: клиент зовёт workSchedule.getWeather', () => {
+    test('погода: клиент НЕ зовёт workSchedule.getWeather (Task 536 — серверная погода удалена)', () => {
         const m = lcdModule();
-        assertTrue(m.indexOf("KipAuth.api('workSchedule.getWeather'") !== -1,
-            'запрос эндпоинта workSchedule.getWeather');
-        assertTrue(m.indexOf('meteoinfo.ru') !== -1, 'источник задокументирован');
+        assertTrue(m.indexOf("KipAuth.api('workSchedule.getWeather'") === -1,
+            'серверный канал погоды удалён (заявка Task 536: «через сервер не загружается»)');
+        assertTrue(m.indexOf('wttr.in') !== -1, 'источник wttr.in задокументирован');
         assertTrue(m.indexOf('_applyWeather: function') !== -1, '_applyWeather');
         assertTrue(m.indexOf('_mapWeatherIcon: function') !== -1, '_mapWeatherIcon');
         assertTrue(m.indexOf('_weatherSchedule: function') !== -1, '_weatherSchedule');
@@ -435,11 +424,25 @@ describe('Task 530 C-2: VM — погода: форматы и иконки', ()
         assertEqual(apiCalls, 0, 'свежий кэш — сеть не дёргается');
     });
 
-    test('_loadWeather: несвежий кэш → сеть, результат сохранён в localStorage', () => {
+    test('_loadWeather: несвежий кэш → сеть (ПРЯМОЙ канал), результат сохранён в localStorage', () => {
+        let fetchCalls = 0, apiCalls = 0;
         const sb = lcdSandbox({
+            fetch: function (url) {
+                fetchCalls++;
+                if (String(url).indexOf('open-meteo.com') !== -1) {
+                    return Promise.resolve({ ok: true, text: function () {
+                        return Promise.resolve(JSON.stringify({ current: {
+                            temperature_2m: -8, weather_code: 3,
+                            wind_speed_10m: 2, wind_direction_10m: 271,
+                            surface_pressure: 1018, relative_humidity_2m: 70,
+                            time: '2026-10-16T07:00' } }));
+                    } });
+                }
+                return Promise.reject(new Error('wttr не должен зваться'));
+            },
             kipAuth: {
                 getToken: function () { return 'tok'; },
-                api: function () { return Promise.resolve({ temp: -8, cloud: 10 }); }
+                api: function () { apiCalls++; return Promise.resolve({ temp: 99 }); }
             }
         });
         sb.localStorage._s['kip8_ws_weather_v1'] =
@@ -447,6 +450,8 @@ describe('Task 530 C-2: VM — погода: форматы и иконки', ()
         sb.WsLcdClock._loadWeather(false);
         return new Promise(function (resolve) {
             setTimeout(function () {
+                assertEqual(fetchCalls, 1, 'звался ТОЛЬКО прямой канал open-meteo');
+                assertEqual(apiCalls, 0, 'сервер НЕ звался (Task 536)');
                 assertEqual(sb.WsLcdClock._weather.tempTxt, '-8°', 'свежие данные с сети');
                 const c = JSON.parse(sb.localStorage._s['kip8_ws_weather_v1']);
                 assertEqual(c.data.temp, -8, 'результат записан в localStorage');
@@ -455,17 +460,21 @@ describe('Task 530 C-2: VM — погода: форматы и иконки', ()
         });
     });
 
-    test('_loadWeather: сбой сети/старый сервер — тихо, без ошибок', () => {
+    test('_loadWeather: сбой сети — тихо, без ошибок; сервер НЕ зовётся (Task 536)', () => {
+        let apiCalls = 0;
         const sb = lcdSandbox({
+            fetch: function () { return Promise.reject(new Error('Failed to fetch')); },
             kipAuth: {
                 getToken: function () { return 'tok'; },
-                api: function () { return Promise.reject(new Error('unknown_action')); }
+                api: function () { apiCalls++; return Promise.resolve({ temp: -12 }); }
             }
         });
         sb.WsLcdClock._loadWeather(true);
         return new Promise(function (resolve) {
             setTimeout(function () {
                 assertEqual(sb.WsLcdClock._weather, null, 'погода не установлена (тихий сбой)');
+                assertEqual(apiCalls, 0, 'серверного резерва больше НЕТ (Task 536)');
+                assertEqual(sb.WsLcdClock._weatherDiag.why, 'network', 'диагностика сети');
                 resolve();
             }, 20);
         });
@@ -686,18 +695,22 @@ describe('Task 530 C-4: VM — РОВНАЯ СЕТКА (главное заяв�
         });
     });
 
-    test('start/stop: погода грузится на старте, таймер погоды чистится на стопе', () => {
+    test('start/stop: погода грузится на старте (ПРЯМОЙ канал), таймер погоды чистится на стопе', () => {
         let loaded = 0;
         const sb = lcdSandbox({
-            kipAuth: {
-                getToken: function () { return 'tok'; },
-                api: function () { loaded++; return Promise.resolve({ temp: 5, cloud: 1 }); }
+            fetch: function (url) {
+                loaded++;
+                return Promise.resolve({ ok: true, text: function () {
+                    return Promise.resolve(JSON.stringify({ current: {
+                        temperature_2m: 5, weather_code: 1,
+                        time: '2026-10-16T07:00' } }));
+                } });
             }
         });
         sb.WsLcdClock._timer = null;
         sb.WsLcdClock.start();
-        // Task 533: прямой канал (fetch) в VM недоступен → резерв
-        // сервера вызывается АСИНХРОННО (из catch прямого промиса)
+        // Task 536: прямой канал (fetch) доступен в VM — сервер
+        // не зовётся вовсе
         return new Promise(function (resolve) {
             setTimeout(function () {
                 assertEqual(loaded, 1, '_loadWeather вызвал сеть из start()');
@@ -713,148 +726,43 @@ describe('Task 530 C-4: VM — РОВНАЯ СЕТКА (главное заяв�
 });
 
 // ============================================================
-// D. СЕРВЕР — getWeather + _parseMeteoinfo (реальный HTML)
+// D. СЕРВЕР — Task 536: серверная погода УДАЛЕНА
 // ============================================================
-describe('Task 530 D: Сервер — getWeather (meteoinfo.ru, кэш 30 мин)', () => {
+describe('Task 530 D: Сервер — Task 536: серверная погода УДАЛЕНА', () => {
 
-    test('WorkSchedule.gs: getWeather и _parseMeteoinfo определены', () => {
-        assertTrue(WS_GS_SRC.indexOf('getWeather: function') !== -1, 'getWeather');
-        assertTrue(WS_GS_SRC.indexOf('_parseMeteoinfo: function') !== -1, '_parseMeteoinfo');
-        assertTrue(WS_GS_SRC.indexOf('meteoinfo.ru/pogoda/russia/kemerovo-area/kemerovo') !== -1,
-            'URL страницы погоды Кемерово');
-        assertTrue(WS_GS_SRC.indexOf('ws_weather_kemerovo_v1') !== -1, 'ключ кэша');
-        assertTrue(WS_GS_SRC.indexOf('1800') !== -1, 'кэш скрипта 1800 с (30 мин)');
+    test('WorkSchedule.gs: getWeather/_parseMeteoinfo/_parseOpenMeteo УДАЛЕНЫ', () => {
+        assertTrue(WS_GS_SRC.indexOf('getWeather: function') === -1,
+            'getWeather удалён (заявка Task 536: серверу не хватало области external_request)');
+        assertTrue(WS_GS_SRC.indexOf('_parseMeteoinfo: function') === -1, '_parseMeteoinfo удалён');
+        assertTrue(WS_GS_SRC.indexOf('_parseOpenMeteo: function') === -1, '_parseOpenMeteo удалён');
+        assertTrue(WS_GS_SRC.indexOf('ws_weather_kemerovo_v1') === -1, 'кэш погоды скрипта удалён');
+        assertTrue(WS_GS_SRC.indexOf('meteoinfo.ru/pogoda/russia/kemerovo-area/kemerovo') === -1,
+            'URL meteoinfo.ru больше НЕ запрашивается с сервера');
+        assertTrue(WS_GS_SRC.indexOf('api.open-meteo.com/v1/forecast') === -1,
+            'URL open-meteo больше НЕ запрашивается с сервера');
     });
 
-    test('Code.gs: роутинг workSchedule.getWeather', () => {
-        assertTrue(CODE_GS_SRC.indexOf("case 'workSchedule.getWeather':") !== -1,
-            'кейс маршрута');
-        assertTrue(CODE_GS_SRC.indexOf('WorkSchedule.getWeather(payload)') !== -1,
-            'вызов в doPost');
+    test('WorkSchedule.gs: authorizeWeather УДАЛЕНА (авторизация не нужна)', () => {
+        assertTrue(WS_GS_SRC.indexOf('function authorizeWeather()') === -1,
+            'топ-уровневая authorizeWeather удалена (серверных запросов погоды больше нет)');
+        assertTrue(WS_GS_SRC.indexOf('Task 536') !== -1,
+            'заметка Task 536 объясняет удаление');
     });
 
-    test('_parseMeteoinfo: РЕАЛЬНАЯ таблица Кемерово — все поля', () => {
-        const sb = wsSandbox();
-        const d = sb.WorkSchedule._parseMeteoinfo(FIXTURE_KEMEROVO);
-        assertEqual(d.temp, 3, 'температура 3°C');
-        assertEqual(d.cloud, 7, 'балл облачности 7');
-        assertEqual(d.wind, 4, 'ветер 4 м/с');
-        assertEqual(d.windDir, 'северо-западный', 'направление ветра');
-        assertEqual(d.humidity, 68.1, 'влажность 68.1%');
-        assertEqual(d.pressure, 759, 'давление 759 мм рт.ст.');
-        assertEqual(d.obsLocal, '15 октября, 13:00', 'время наблюдения');
-        assertEqual(d.phenomenon, 'Количество облаков не изменилось', 'строка явления');
-        assertEqual(d.source, 'meteoinfo.ru', 'источник');
+    test('Code.gs: роутинг workSchedule.getWeather УДАЛЁН', () => {
+        assertTrue(CODE_GS_SRC.indexOf("case 'workSchedule.getWeather':") === -1,
+            'кейс маршрута удалён');
+        assertTrue(CODE_GS_SRC.indexOf('WorkSchedule.getWeather(payload)') === -1,
+            'вызов в doPost удалён');
+        assertTrue(CODE_GS_SRC.indexOf('Task 536') !== -1, 'заметка Task 536 в роутинге');
     });
 
-    test('_parseMeteoinfo: дробная/отрицательная температура и мусор', () => {
-        const sb = wsSandbox();
-        const html = FIXTURE_KEMEROVO
-            .replace('>3</td>', '>-11.5</td>');
-        const d = sb.WorkSchedule._parseMeteoinfo(html);
-        assertEqual(d.temp, -11.5, 'отрицательная дробная температура');
-        assertEqual(sb.WorkSchedule._parseMeteoinfo('<html>мусор</html>'), null,
-            'чужой HTML → null');
-        assertEqual(sb.WorkSchedule._parseMeteoinfo(''), null, 'пусто → null');
-    });
-
-    test('getWeather: кэш скриптаhit — сеть НЕ зовётся', () => {
-        let fetches = 0;
-        const cached = { temp: 5, cloud: 3, source: 'meteoinfo.ru' };
-        const sb = wsSandbox({
-            CacheService: {
-                getScriptCache: function () {
-                    return {
-                        get: function (k) { return k === 'ws_weather_kemerovo_v1' ? JSON.stringify(cached) : null; },
-                        put: function () {}
-                    };
-                }
-            },
-            UrlFetchApp: {
-                fetch: function () { fetches++; throw new Error('не должен зваться'); }
-            }
-        });
-        sb.WorkSchedule._requireRead = function () { return { user: {} }; };
-        const r = sb.WorkSchedule.getWeather({ token: 't' });
-        assertEqual(r.ok, true, 'ok');
-        assertEqual(r.data.temp, 5, 'данные из кэша');
-        assertEqual(fetches, 0, 'сеть не тронута');
-    });
-
-    test('getWeather: сеть → парсинг → кэш put(1800)', () => {
-        const puts = [];
-        const sb = wsSandbox({
-            CacheService: {
-                getScriptCache: function () {
-                    return {
-                        get: function () { return null; },
-                        put: function (k, v, ttl) { puts.push([k, ttl]); }
-                    };
-                }
-            },
-            UrlFetchApp: {
-                fetch: function (url, opts) {
-                    assertEqual(url, 'https://meteoinfo.ru/pogoda/russia/kemerovo-area/kemerovo',
-                        'URL meteoinfo.ru Кемерово');
-                    assertTrue(opts.muteHttpExceptions, 'muteHttpExceptions');
-                    return { getResponseCode: function () { return 200; },
-                             getContentText: function () { return FIXTURE_KEMEROVO; } };
-                }
-            }
-        });
-        sb.WorkSchedule._requireRead = function () { return { user: {} }; };
-        const r = sb.WorkSchedule.getWeather({ token: 't' });
-        assertEqual(r.ok, true, 'ok');
-        assertEqual(r.data.temp, 3, 'температура распарсена с meteoinfo.ru');
-        assertEqual(r.data.cloud, 7, 'облачность распарсена');
-        assertEqual(puts.length, 1, 'результат положен в кэш');
-        assertEqual(puts[0][0], 'ws_weather_kemerovo_v1', 'ключ кэша');
-        assertEqual(puts[0][1], 1800, 'TTL 30 минут');
-    });
-
-    test('getWeather: сбой сети — тихий weather_unavailable (НЕ ошибка)', () => {
-        const sb = wsSandbox({
-            CacheService: {
-                getScriptCache: function () {
-                    return { get: function () { return null; }, put: function () {} };
-                }
-            },
-            UrlFetchApp: {
-                fetch: function () { throw new Error('network down'); }
-            }
-        });
-        sb.WorkSchedule._requireRead = function () { return { user: {} }; };
-        const r = sb.WorkSchedule.getWeather({ token: 't' });
-        assertEqual(r.ok, true, 'ok даже при сбое (тихий ответ)');
-        assertEqual(r.data.temp, null, 'temp null');
-        assertEqual(r.data.note, 'weather_unavailable', 'пометка недоступности');
-    });
-
-    test('getWeather: HTTP 500 — тоже тихий фолбэк', () => {
-        const sb = wsSandbox({
-            CacheService: {
-                getScriptCache: function () {
-                    return { get: function () { return null; }, put: function () {} };
-                }
-            },
-            UrlFetchApp: {
-                fetch: function () { return { getResponseCode: function () { return 500; },
-                                             getContentText: function () { return 'err'; } }; }
-            }
-        });
-        sb.WorkSchedule._requireRead = function () { return { user: {} }; };
-        const r = sb.WorkSchedule.getWeather({ token: 't' });
-        assertEqual(r.data.temp, null, 'temp null при HTTP 500');
-    });
-
-    test('getWeather: нет авторизации — ошибка сессии', () => {
-        const sb = wsSandbox();
-        sb.WorkSchedule._requireRead = function () {
-            return { error: { ok: false, error: 'no_session' } };
-        };
-        const r = sb.WorkSchedule.getWeather({ token: 'bad' });
-        assertEqual(r.ok, false, 'не ok');
-        assertEqual(r.error, 'no_session', 'ошибка авторизации пробрасывается');
+    test('WorkSchedule.gs: производственный календарь legalic НЕ тронут', () => {
+        // _getProdCal — ЕДИНСТВЕННОЕ законное место UrlFetchApp в файле
+        // (заявка была про погоду, НЕ про весь UrlFetchApp)
+        assertTrue(WS_GS_SRC.indexOf('_getProdCal: function') !== -1,
+            '_getProdCal на месте (это НЕ погода)');
+        assertTrue(WS_GS_SRC.indexOf('_LEGALIC_URL') !== -1, 'URL legalic на месте');
     });
 
 });
@@ -864,10 +772,10 @@ describe('Task 530 D: Сервер — getWeather (meteoinfo.ru, кэш 30 ми�
 // ============================================================
 describe('Task 530 — SW: версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v748', () => {
+    test('sw.js: CACHE_VERSION = kipia-test-v749', () => {
         const m = SW_SRC.match(/const CACHE_VERSION = '(kipia-test-v\d+)'/);
         assertTrue(m !== null, 'CACHE_VERSION найден');
-        assertEqual(m[1], 'kipia-test-v748', 'SW поднят до v744 (Task 531)');
+        assertEqual(m[1], 'kipia-test-v749', 'SW поднят до v744 (Task 531)');
         assertTrue(m[1] !== 'kipia-test-v743', 'старая версия v743 не осталась');
     });
 

@@ -53,7 +53,7 @@
 //   день+мероприятие — секция И событие); старые VM-хосты — гварды
 //   (_renderEventsPopup без _renderDnDayInfo, onCellHover без
 //   _dnDayInfoAt — не падают).
-//   SW: kipia-test-v748.
+//   SW: kipia-test-v749.
 //
 // Запуск: через tests/run-all.js (require './test-task522.js').
 
@@ -749,10 +749,10 @@ describe('Task 522 — VM: гварды typeof для старых хостов'
 // 9. SW: версия кэша
 // ============================================================
 describe('Task 522 — SW: версия кэша', () => {
-    test('SW: кэш поднят до kipia-test-v748 (Task 522)', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v748'") !== -1,
-            'CACHE_VERSION = kipia-test-v748');
-        assertFalse(SW_SRC.indexOf('kipia-test-v749') !== -1,
+    test('SW: кэш поднят до kipia-test-v749 (Task 522)', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v749'") !== -1,
+            'CACHE_VERSION = kipia-test-v749');
+        assertFalse(SW_SRC.indexOf('kipia-test-v750') !== -1,
             'v736 не существует (один инкремент на Task 522)');
     });
 });

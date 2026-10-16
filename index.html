@@ -5247,7 +5247,8 @@
        мигает) + секунды МАЛЫМ шрифтом 3×5 справа от минут + полное
        название дня недели + дата ДД.ММ.ГГГГ + погода Кемерово
        (иконка 8×8 + температура; Task 533: источник open-meteo.com
-       НАПРЯМУЮ из браузера, резерв — сервер). «Призрачная» сетка НЕ
+       НАПРЯМУЮ из браузера; Task 534: резерв — wttr.in; Task 536:
+       серверного резерва НЕТ — только прямые каналы). «Призрачная» сетка НЕ
        рисуется — выключенные сегменты невидимы. Отрисовка — ЦЕЛЫМ
        pitch в device-пикселях:
        сетка идеально ровная, все сегменты ОДИНАКОВОГО размера при
@@ -17964,8 +17965,9 @@
                      крупно (двоеточие — ЦЕНТР между часами и минутами),
                      секунды малым шрифтом справа от минут ВНИЗУ по нижней
                      линии, день недели — ЦЕНТР между циферблатом и датой,
-                     дата, погода Кемерово (Task 533: open-meteo.com
-                     НАПРЯМУЮ из браузера; резерв — сервер meteoinfo.ru)
+                     дата, погода Кемерово (Task 533: open-meteo.com →
+                     Task 534: wttr.in — НАПРЯМУЮ из браузера; Task 536:
+                     серверного резерва больше НЕТ)
                      с иконкой. Сетка ровная (целый pitch в device-пикселях).
                      Task 533: ЗНАЧОК-ШЕСТЕРЁНКА #wsLcdGear — ВНУТРИ
                      информера (оверлей на стекле, правый верхний угол):
@@ -47854,11 +47856,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     //     open-meteo.com, запрос НАПРЯМУЮ из браузера (JSON API,
     //     CORS открыт, ключ не нужен — БЕЗ Apps Script и БЕЗ
     //     авторизации). Task 534: при сбое open-meteo — ВТОРОЙ
-    //     прямой канал wttr.in (другой хост, format=j1+lang=ru);
-    //     серверный эндпоинт workSchedule.getWeather (meteoinfo.ru
-    //     через UrlFetchApp) остаётся РЕЗЕРВОМ (ему нужна разовая
-    //     авторизация authorizeWeather — см. WorkSchedule.gs);
-    //     клиент кэширует в localStorage и обновляется по расписанию.
+    //     прямой канал wttr.in (другой хост, format=j1+lang=ru).
+    //     Task 536: серверный резерв (workSchedule.getWeather,
+    //     UrlFetchApp) УДАЛЁН — серверным запросам не хватало
+    //     области script.external_request, погода идёт ТОЛЬКО
+    //     напрямую из браузера. Клиент кэширует в localStorage
+    //     и обновляется по расписанию.
     // «Призрачная» сетка НЕ рисуется: выключенные сегменты невидимы.
     // Отрисовка — ЦЕЛЫМ pitch в device-пикселях (шаг и сторона
     // сегмента — целые числа, размер канваса кратен матрице,
@@ -47920,8 +47923,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         WEATHER_MS: 1800000,    // опрос погоды: 30 мин (умолчание)
         // Task 533: ОСНОВНОЙ канал погоды — open-meteo.com НАПРЯМУЮ
         // из браузера (без Apps Script). Кемерово: 55.35 N, 86.08 E;
-        // те же параметры, что у серверного резерва (WorkSchedule.gs),
-        // чтобы парсер и иконки работали без изменений
+        // параметры — как у прежнего серверного резерва (Task 530..535,
+        // удалён в Task 536), парсер и иконки работают без изменений
         OM_URL: 'https://api.open-meteo.com/v1/forecast' +
                 '?latitude=55.35&longitude=86.08' +
                 '&current=temperature_2m,relative_humidity_2m,surface_pressure,' +
@@ -48224,8 +48227,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var self = this;
             this._timer = setInterval(function() { self._tick(); }, 500);
             // Task 533: погода Кемерово — open-meteo.com НАПРЯМУЮ из
-            // браузера (резерв — сервер); мгновенно из кэша
-            // localStorage, затем сеть по расписанию
+            // браузера (Task 534: + wttr.in; Task 536: серверного
+            // резерва нет); мгновенно из кэша localStorage, затем
+            // сеть по расписанию
             this._loadWeather(false);
         },
 
@@ -48585,18 +48589,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return pages;
         },
 
-        // ==================== погода Кемерово (Task 530 → 533) ====================
+        // ==================== погода Кемерово (Task 530 → 536) ====================
         // Task 533 (заявка: «может рассмотреть способ получения данных
         // погоды не через скрипт?»): ОСНОВНОЙ канал — open-meteo.com
         // НАПРЯМУЮ из браузера: JSON API, CORS открыт, ключ не нужен,
         // Apps Script и авторизация НЕ требуются — погода не зависит
-        // от развёртывания. РЕЗЕРВ — серверный эндпоинт
-        // workSchedule.getWeather (meteoinfo.ru через UrlFetchApp):
-        // включается, если прямой запрос не прошёл (сеть/фильтр/CORS)
-        // и пользователь авторизован. Клиент: мгновенный показ из
-        // localStorage, затем сеть; сбой — тихо «--», повтор по
-        // расписанию. Task 531: период опроса настраивается (wthrMin),
-        // показ можно выключить (настройка «Погода» — сеть не дёргаем)
+        // от развёртывания. Task 534: при сбое — ВТОРОЙ прямой канал
+        // wttr.in (другой хост). Task 536 (заявка: «через сервер
+        // погода не загружается»): серверный резерв
+        // workSchedule.getWeather УДАЛЁН (UrlFetchApp без области
+        // script.external_request) — остались ТОЛЬКО прямые каналы.
+        // Клиент: мгновенный показ из localStorage, затем сеть; сбой —
+        // тихо «--», повтор по расписанию. Task 531: период опроса
+        // настраивается (wthrMin), показ можно выключить (настройка
+        // «Погода» — сеть не дёргаем)
 
         // применить данные погоды к экрану (перерисовка);
         // Task 532: заодно фиксируем ДИАГНОСТИКУ для панели настроек
@@ -48834,9 +48840,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // общий хвост успешного опроса: кэш (сутки) + экран +
-        // диагностика с КАНАЛОМ (Task 533: напрямую / через сервер;
-        // Task 534: wttr — тоже «напрямую из браузера») +
-        // перерисовка открытой панели + расписание повтора
+        // диагностика с КАНАЛОМ (Task 533/534: напрямую из браузера;
+        // Task 536: серверного канала больше НЕТ) + перерисовка
+        // открытой панели + расписание повтора
         _weatherOk: function(data, via) {
             try {
                 localStorage.setItem('kip8_ws_weather_v1',
@@ -48849,10 +48855,6 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     this._weatherDiag.source =
                         (this._weatherDiag.source || 'open-meteo.com') +
                         ' (напрямую из браузера)';
-                } else if (via === 'server') {
-                    this._weatherDiag.source =
-                        (this._weatherDiag.source || 'сервер') +
-                        ' (через Apps Script)';
                 }
             }
             if (this._setOpen) this._renderSettings();
@@ -48862,10 +48864,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // загрузка: кэш localStorage (сутки) → сеть (раз в период
         // настроек; Task 531). Task 533: сначала ПРЯМОЙ запрос
         // open-meteo.com (не зависит от Apps Script). Task 534: при
-        // сбое — ВТОРОЙ прямой канал wttr.in (другой хост), и только
-        // затем — серверный резерв (если авторизован). Каждый
-        // результат фиксируется в _weatherDiag и виден в панели
-        // настроек; «Обновить сейчас» переспрашивает немедленно
+        // сбое — ВТОРОЙ прямой канал wttr.in (другой хост). Task 536:
+        // серверного резерва НЕТ (заявка: «через сервер погода не
+        // загружается» — UrlFetchApp без области
+        // script.external_request). Каждый результат фиксируется в
+        // _weatherDiag и виден в панели настроек; «Обновить сейчас»
+        // переспрашивает немедленно
         _loadWeather: function(force) {
             var self = this;
             var st = this._setGet();
@@ -48903,60 +48907,17 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         .catch(function(errWttr) {
                             var wmsg = String((errWttr && errWttr.message) || '')
                                 .slice(0, 60);
-                            // РЕЗЕРВ: серверный эндпоинт (meteoinfo.ru
-                            // через UrlFetchApp) — только если ОБА прямых
-                            // канала не прошли И пользователь авторизован
-                            // (эндпоинт требует токен)
-                            var canServer = !(typeof KipAuth === 'undefined' ||
-                                !KipAuth.api ||
-                                typeof KipAuth.getToken !== 'function' ||
-                                !KipAuth.getToken());
-                            if (!canServer) {
-                                // резерва нет — фиксируем причины сбоев
-                                // обоих прямых каналов
-                                self._weatherDiag = { ok: false, why: 'network',
-                                                     direct: dmsg,
-                                                     wttr: wmsg };
-                                if (self._setOpen) self._renderSettings();
-                                self._weatherSchedule();
-                                return;
-                            }
-                            KipAuth.api('workSchedule.getWeather',
-                                        { token: KipAuth.getToken() })
-                                .then(function(data) {
-                                    if (data && data.temp != null) {
-                                        self._weatherOk(data, 'server');
-                                    } else {
-                                        // сервер ответил, но погоды нет: какие
-                                        // источники пробовались — в data.diag
-                                        // (getWeather v2, Task 532); сбои прямых
-                                        // каналов тоже видны (Task 533/534)
-                                        self._weatherDiag = {
-                                            ok: false, why: 'server',
-                                            direct: dmsg, wttr: wmsg,
-                                            note: data ? data.note : '',
-                                            diag: data ? data.diag : ''
-                                        };
-                                    }
-                                    if (self._setOpen) self._renderSettings();
-                                    self._weatherSchedule();
-                                })
-                                .catch(function(err) {
-                                    // старый сервер (нет эндпоинта)/сеть — тихо,
-                                    // повтор через период настроек; ДИАГНОСТИКА —
-                                    // в панель настроек: «Unknown action» означает,
-                                    // что развёртывание Apps Script НЕ обновлено
-                                    var msg = String((err && err.message) || '');
-                                    self._weatherDiag =
-                                        (/unknown action/i.test(msg))
-                                        ? { ok: false, why: 'no-endpoint',
-                                            direct: dmsg, wttr: wmsg }
-                                        : { ok: false, why: 'network',
-                                            direct: dmsg, wttr: wmsg,
-                                            note: msg.slice(0, 80) };
-                                    if (self._setOpen) self._renderSettings();
-                                    self._weatherSchedule();
-                                });
+                            // Task 536: серверного резерва БОЛЬШЕ НЕТ
+                            // (заявка: «через сервер погода не
+                            // загружается» — эндпоинт удалён из
+                            // WorkSchedule.gs). Фиксируем причины сбоев
+                            // ОБОИХ прямых каналов; повтор — по
+                            // расписанию (или кнопкой «Обновить сейчас»)
+                            self._weatherDiag = { ok: false, why: 'network',
+                                                 direct: dmsg,
+                                                 wttr: wmsg };
+                            if (self._setOpen) self._renderSettings();
+                            self._weatherSchedule();
                         });
                 });
         },
@@ -49149,13 +49110,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             html += '<label class="ws-lcd-set-row"><input type="checkbox"' + ck(s.srcVac) +
                     ' onchange="WsLcdClock._setChange(\'srcVac\', this.checked)">Отпуска</label>';
             html += '<div class="ws-lcd-set-sec">Погода</div>';
-            // Task 532 → 533 → 534: ДИАГНОСТИКА последнего опроса +
-            // форс-обновление. Прямые каналы (Task 533: open-meteo.com;
-            // Task 534: + wttr.in) — НАПРЯМУЮ из браузера (без Apps
-            // Script); statuses: есть данные (канал/источник/
-            // наблюдение) / прямые запросы упали и сервер не знает
-            // эндпоинт / источники не дали данных (в т.ч. — серверу
-            // не хватает авторизации UrlFetchApp) / сеть недоступна /
+            // Task 532 → 533 → 534 → 536: ДИАГНОСТИКА последнего
+            // опроса + форс-обновление. Прямые каналы (Task 533:
+            // open-meteo.com; Task 534: + wttr.in) — НАПРЯМУЮ из
+            // браузера (без Apps Script); Task 536: серверного
+            // резерва НЕТ (эндпоинт удалён из WorkSchedule.gs —
+            // заявка: «через сервер погода не загружается»).
+            // Статусы: есть данные (канал/источник/наблюдение) /
+            // прямые запросы не прошли (причины обоих каналов) /
             // ещё не опрошено
             var wd = this._weatherDiag;
             var wstat, wcls;
@@ -49166,41 +49128,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (wd && wd.wttr) dparts.push('wttr.in: ' + wd.wttr);
             var dnote = dparts.length
                 ? ' (прямой запрос: ' + dparts.join('; ') + ')' : '';
-            // Task 534: сервер без авторизации внешних запросов —
-            // точная подсказка (заявка: «У вас нет разрешения на
-            // вызов функции UrlFetchApp.fetch»): разовая авторизация
-            // authorizeWeather() + новая версия развёртывания
-            var perm = !!(wd && wd.diag &&
-                /нет разрешения|UrlFetchApp/i.test(String(wd.diag)));
             if (wd && wd.ok) {
                 wstat = 'Есть данные: ' + wd.txt +
                         (wd.source ? ' — ' + wd.source : '') +
                         (wd.obs ? ' (набл. ' + wd.obs + ')' : '');
                 wcls = '';
-            } else if (wd && wd.why === 'no-endpoint') {
+            } else if (wd) {
+                // сбой опроса (Task 536: серверного резерва больше
+                // нет) — статус объясняет сбой прямых каналов и
+                // обещает повтор; dnote может быть пустым
                 wstat = 'Прямые запросы open-meteo/wttr.in не прошли' + dnote +
-                        '. Резерв: сервер не знает эндпоинт getWeather — ' +
-                        'обновите развёртывание Apps Script (WorkSchedule.gs, ' +
-                        'новая версия деплоя)';
-                wcls = ' warn';
-            } else if (wd && wd.why === 'server') {
-                wstat = 'Источники не дали данных' + dnote +
-                        (wd.diag ? '; сервер: ' + wd.diag : '') +
-                        (perm ? '. Серверу не хватает авторизации внешних ' +
-                                'запросов: один раз запустите authorizeWeather() ' +
-                                'в редакторе Apps Script и создайте новую ' +
-                                'версию развёртывания (DEPLOY-Task535); если ' +
-                                'диалог доступа НЕ появился, а ошибка ' +
-                                'повторяется — в манифесте appsscript.json ' +
-                                '(Настройки проекта → «Показать манифест») ' +
-                                'добавьте область ' +
-                                'script.external_request в массив oauthScopes ' +
-                                'или уберите oauthScopes вовсе, затем повторите' : '') +
-                        '. Повтор — по расписанию или кнопкой ниже';
-                wcls = ' warn';
-            } else if (wd && wd.why === 'network') {
-                wstat = 'Сеть недоступна' + dnote +
-                        (wd.note ? '; сервер: ' + wd.note : '') +
                         '. Повтор — по расписанию или кнопкой ниже';
                 wcls = ' warn';
             } else {

@@ -21,7 +21,7 @@
 //      «Работы на месяц» (внизу таблицы);
 //   4) JS/CSS/раскладка НЕ тронуты — ячейки новых строк такие же
 //      пустые td.pe-m, отметки работают по наименованию из DOM.
-//   SW: kipia-test-v748.
+//   SW: kipia-test-v749.
 //
 // Запуск: через tests/run-all.js (require './test-task470.js').
 
@@ -276,8 +276,8 @@ describe('Task 470 — SRC: JS отметок Task 463/464 не тронут', (
 // ============================================================
 describe('Task 470 — SW: версия кэша', () => {
 
-    test('CACHE_VERSION = kipia-test-v748', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v748';") !== -1,
+    test('CACHE_VERSION = kipia-test-v749', () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v749';") !== -1,
             'инкремент Task 470: v693 → v694');
     });
 

@@ -20,7 +20,7 @@
 //     экранная сетка (бейджи мероприятий на экране остаются —
 //     классы ws-ev-badge/ws-ev-wrap, Task 314).
 //
-// SW: kipia-test-v748.
+// SW: kipia-test-v749.
 //
 // Запуск: через tests/run-all.js (require './test-task343.js').
 
@@ -304,10 +304,10 @@ describe('Task 343 — _buildPrintHtml (VM)', () => {
 // ============================================================
 describe('Task 343 — Service Worker', () => {
 
-    test('SW: кэш поднят до kipia-test-v748', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v748'") !== -1,
-            'CACHE_VERSION = kipia-test-v748 (Task 343 — фронтенд)');
-        assertFalse(SW_SRC.indexOf('kipia-test-v749') !== -1,
+    test('SW: кэш поднят до kipia-test-v749', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v749'") !== -1,
+            'CACHE_VERSION = kipia-test-v749 (Task 343 — фронтенд)');
+        assertFalse(SW_SRC.indexOf('kipia-test-v750') !== -1,
             'лишний инкремент (v582) не сделан');
     });
 

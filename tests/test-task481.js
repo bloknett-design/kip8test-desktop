@@ -470,8 +470,8 @@ describe('Task 481 — данные devices.json: инварианты «ТО = 
 // ==========================================================================
 describe('Task 481 — SW: версия и шапка', () => {
 
-    test('CACHE_VERSION = kipia-test-v748', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v748';") !== -1,
+    test('CACHE_VERSION = kipia-test-v749', () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v749';") !== -1,
             'SW поднят до v705 (Task 481)');
     });
 
@@ -481,12 +481,12 @@ describe('Task 481 — SW: версия и шапка', () => {
     });
 
     test('несуществующая v706 отсутствует (guard)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v749') === -1,
-            'kipia-test-v748 не должен существовать');
+        assertTrue(SW_SRC.indexOf('kipia-test-v750') === -1,
+            'kipia-test-v749 не должен существовать');
     });
 
     test('комментарий Task 481 в шапке версий (окно 700)', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v748';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v749';");
         // Task 490: +480 симв. комментария — окно 5000 → 6000 (якорь 5196)
         // Task 493: комментарий переименования кнопки Табель (~173 симв.)
         // — якорь 481@6153 — окно 6000 → 6800 (запас 647)
@@ -502,7 +502,7 @@ describe('Task 481 — SW: версия и шапка', () => {
     });
 
     test('комментарии Task 480/479/478 не вытеснены (окна 700/1400/1400)', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v748';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v749';");
         // Task 490: окно w700 5000 → 6000 (якорь 480@5440); w1400 6500
         // хватает (478@6034, Период ремонта@5987)
         // Task 492: комментарий (~290 симв.) — якорь 480@6221;
@@ -521,7 +521,7 @@ describe('Task 481 — SW: версия и шапка', () => {
         // Task 481 (~258 симв.) отодвинул якоря: 474 ~2638 → окно 3100;
         // 472 ~3011 → 3600; 471 ~3560 → 4200; 461 ~6122 → 6800
         // (scripts/task481-windows.py; прецедент Task 478/475/476)
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v748';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v749';");
         const i474 = SW_SRC.lastIndexOf('Task 474', i);
         const i472 = SW_SRC.lastIndexOf('Task 472', i);
         const i471 = SW_SRC.lastIndexOf('Task 471', i);
