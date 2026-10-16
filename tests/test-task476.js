@@ -97,8 +97,8 @@ function mkKipDbMock() {
 // 1. SW: версия и шапка
 // ==========================================================================
 describe('Task 476 — SW: версия и шапка', () => {
-    test('CACHE_VERSION = kipia-test-v746', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v746';") !== -1,
+    test('CACHE_VERSION = kipia-test-v747', () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v747';") !== -1,
             'SW поднят до v700');
     });
     test('прежняя версия v699 отсутствует', () => {
@@ -106,8 +106,8 @@ describe('Task 476 — SW: версия и шапка', () => {
             'в sw.js не осталось kipia-test-v699');
     });
     test('несуществующая v701 отсутствует (guard)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v747') === -1,
-            'kipia-test-v746 не должен существовать');
+        assertTrue(SW_SRC.indexOf('kipia-test-v748') === -1,
+            'kipia-test-v747 не должен существовать');
     });
     test('комментарий Task 476 в шапке версий', () => {
         assertTrue(SW_SRC.indexOf('Task 476') !== -1, 'маркер задачи');
@@ -596,7 +596,7 @@ describe('Task 476 — окна истории версий sw.js', () => {
     // Task 502: комментарий палитры (~385 симв.) отодвинул якоря:
     // 474 → 12000 (11493), 472 → 12200 (11866), 471 → 13000 (12415),
     // 461 → 15400 (14977).
-    const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v746';");
+    const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v747';");
 
     test('Task 474 в пределах окна 1700', () => {
         const i474 = SW_SRC.lastIndexOf('Task 474', i);

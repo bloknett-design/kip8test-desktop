@@ -6,8 +6,11 @@
 //
 // Эндпоинты (вызываются через doPost в Code.gs):
 //   workSchedule.getStatusCodes  — легенда кодов (16 шт., Task 298)
-//   workSchedule.getWeather      — погода Кемерово с meteoinfo.ru
-//                                   (Task 530: UrlFetchApp + кэш 30 мин)
+//   workSchedule.getWeather      — погода Кемерово: meteoinfo.ru +
+//                                   резерв open-meteo.com (Task 532);
+//                                   Task 534: топ-уровневая функция
+//                                   authorizeWeather() — разовая
+//                                   авторизация внешних запросов
 //   workSchedule.getPatterns     — шаблоны ротации + дни цикла
 //   workSchedule.listEmployees   — справочник сотрудников
 //   workSchedule.listEntries     — записи графика за месяц
@@ -946,7 +949,7 @@ var WorkSchedule = {
     return { ok: true, data: { codes: codes } };
   },
 
-  // workSchedule.getWeather (Task 530 → 532)
+  // workSchedule.getWeather (Task 530 → 532 → 534)
   // payload: { token }
   // returns: { ok:true, data: { temp, phenomenon, cloud, wind, windDir,
   //            pressure, humidity, obsLocal, source, fetched, diag } }
@@ -960,6 +963,14 @@ var WorkSchedule = {
   //      HTML (не зависит от вёрстки meteoinfo.ru и дружелюбен к
   //      серверным IP Google). Основной — по-прежнему meteoinfo.ru
   //      (Гидрометцентр России, как в заявке Task 530).
+  // Task 534 (заявка: «У вас нет разрешения на вызов функции
+  // "UrlFetchApp.fetch"»): если развёртывание авторизовано БЕЗ области
+  // script.external_request — ОБА источника падают с этим исключением.
+  // Лечится РАЗОВО: в редакторе Apps Script выполнить функцию
+  // authorizeWeather() (топ-уровневая, ниже по файлу), подтвердить
+  // доступ, затем создать НОВУЮ ВЕРСИЮ развёртывания. Сообщение об
+  // исключении в diag увеличено до 90 символов — видно название
+  // функции и подсказка клиента по нему раскрывается.
   // Кэш скрипта 30 минут: наблюдения на станции обновляются ~раз в
   // 3 часа. Сеть/парсинг/формат — тихий ответ temp:null (клиент
   // показывает «--» и повторяет позже), это НЕ ошибка запроса.
@@ -1007,7 +1018,7 @@ var WorkSchedule = {
       }
     } catch (e) {
       tries.push('meteoinfo:exception:' +
-                 String((e && e.message) || e).slice(0, 60));
+                 String((e && e.message) || e).slice(0, 90));
     }
 
     // попытка 2 (резерв): open-meteo.com — JSON API, без разбора HTML
@@ -1031,7 +1042,7 @@ var WorkSchedule = {
         }
       } catch (e4) {
         tries.push('open-meteo:exception:' +
-                   String((e4 && e4.message) || e4).slice(0, 60));
+                   String((e4 && e4.message) || e4).slice(0, 90));
       }
     }
 
@@ -4455,4 +4466,56 @@ function eventsInit() {
 function employeesSplitInit() {
   var r = WorkSchedule.employeesSplitInit();
   Logger.log('employeesSplitInit: ' + JSON.stringify(r));
+}
+
+// ============================================================
+// Task 534 — РАЗОВАЯ АВТОРИЗАЦИЯ ВНЕШНИХ ЗАПРОСОВ (погода)
+// ============================================================
+// Если в настройках информера (Табель → шестерёнка) диагностика
+// погоды показывает «У вас нет разрешения на вызов функции
+// "UrlFetchApp.fetch"» — развёртывание Apps Script было
+// авторизовано ДО появления getWeather (Task 530) и в его токене
+// НЕТ области script.external_request. Серверные источники погоды
+// (meteoinfo.ru + open-meteo.com) из-за этого падают, хотя клиент
+// (kip8test/kip8) уже не зависит от них: погода идёт напрямую из
+// браузера (Task 533 open-meteo.com, Task 534 + wttr.in).
+//
+// ЧТО СДЕЛАТЬ (ОДИН РАЗ, ~1 минута):
+//   1. Открыть этот проект в редакторе: script.google.com → проект
+//      (тот же, где Code.gs/WorkSchedule.gs) → файл WorkSchedule.gs;
+//   2. В выпадающем списке функций выбрать authorizeWeather →
+//      «Выполнить» (Run);
+//   3. Подтвердить доступ в диалоге авторизации (Google спросит
+//      разрешение «Подключение к внешнему сервису» — это и есть
+//      область script.external_request);
+//   4. Deploy → Manage deployments → карандаш (Edit) → Version:
+//      «New version» → Deploy (новая версия развёртывания);
+//   5. Проверить: Табель → шестерёнка → «Обновить сейчас» —
+//      статус должен показать источник (серверный резерв —
+//      «meteoinfo.ru (через Apps Script)», если прямые каналы
+//      в сети пользователя недоступны).
+//
+// Функция безопасна: два пробных запроса к источникам погоды,
+// результат — в журнале выполнения (Logger.log). Повторный запуск
+// ничего не меняет.
+function authorizeWeather() {
+  var probes = [
+    'https://api.open-meteo.com/v1/forecast' +
+      '?latitude=55.35&longitude=86.08&current=temperature_2m',
+    'https://meteoinfo.ru/pogoda/russia/kemerovo-area/kemerovo'
+  ];
+  var out = [];
+  for (var i = 0; i < probes.length; i++) {
+    try {
+      var r = UrlFetchApp.fetch(
+          probes[i], { muteHttpExceptions: true, followRedirects: true });
+      out.push('HTTP ' + r.getResponseCode() + ' — ' + probes[i]);
+    } catch (e) {
+      out.push('FAIL ' + String((e && e.message) || e).slice(0, 90) +
+               ' — ' + probes[i]);
+    }
+  }
+  var msg = 'authorizeWeather: ' + JSON.stringify(out);
+  Logger.log(msg);
+  return out;
 }

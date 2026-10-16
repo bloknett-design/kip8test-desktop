@@ -21,7 +21,7 @@
 //   в ней ещё нет (скрипт не запущен) → прежнее поведение Task 460
 //   (за КИП ИОС / расходомерами), чтобы никто не потерял доступ;
 //   found=false → fail-closed (как у всех матричных групп).
-//   SW: kipia-test-v746.
+//   SW: kipia-test-v747.
 //
 // Запуск: через tests/run-all.js (require './test-task462.js').
 
@@ -328,8 +328,8 @@ describe('Task 462 — SRC: RoleMatrixTask462Init.gs (матрица)', () => {
 // ============================================================
 describe('Task 462 — SW', () => {
 
-    test("CACHE_VERSION = 'kipia-test-v746' + комментарий Task 462", () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v746';") !== -1,
+    test("CACHE_VERSION = 'kipia-test-v747' + комментарий Task 462", () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v747';") !== -1,
             'версия поднята до v686');
         assertTrue(SW_SRC.indexOf('kipia-test-v685') === -1,
             'старой версии v685 нет');

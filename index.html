@@ -5440,23 +5440,24 @@
     }
     .ws-lcd-cal[hidden] { display: none; }
     /* Task 533 (заявка: «год сверху, месяц под годом; у месяца —
-       как у года селект + стрелки»): ПЕРВАЯ строка головы — ГОД
-       («‹ Год [селект] ›», центрирована); ВТОРАЯ — МЕСЯЦ
-       («‹ Месяц [селект] › [Сегодня]»). Селект года охватывает
-       текущий ±10; шаг ‹ › ходит по годам, навигация месяцев
-       декабрь→январь тоже меняет год и синхронизирует селект */
+       как у года селект + стрелки»): ПЕРВАЯ строка головы — ГОД,
+       ВТОРАЯ — МЕСЯЦ (селект + стрелки + «Сегодня»). Task 534
+       (заявка: «кнопки с годом выравняй по левому краю, надписи
+       "Год" и "Месяц" убери, шрифт в кнопках месяца сделай
+       немного меньше чем в годе»): ОБЕ строки головы — ПО ЛЕВОМУ
+       КРАЮ (были центрированы), подписи «Год»/«Месяц» УДАЛЕНЫ,
+       селект и кнопки строки месяца — шрифтом мельче года
+       (12px/15px против 13px/16px) */
     .ws-lcd-cal-year {
-        display: flex; align-items: center; justify-content: center;
+        display: flex; align-items: center; justify-content: flex-start;
         gap: 6px; margin-bottom: 4px;
     }
     /* Task 533: строка месяца — ПОД годом; селект + стрелки ‹ ›
-       (как у года) + кнопка «Сегодня» справа */
+       (как у года) + кнопка «Сегодня»; Task 534 — по левому краю,
+       как год, шрифт немного мельче */
     .ws-lcd-cal-month {
-        display: flex; align-items: center; justify-content: center;
+        display: flex; align-items: center; justify-content: flex-start;
         gap: 6px; margin-bottom: 8px;
-    }
-    .ws-lcd-cal-yearlbl, .ws-lcd-cal-monthlbl {
-        font-size: 11px; color: rgba(255, 255, 255, 0.45);
     }
     .ws-lcd-cal-year select, .ws-lcd-cal-month select {
         background: var(--card-bg, rgba(30, 42, 56, 0.55));
@@ -5465,8 +5466,8 @@
         border-radius: 6px; font-size: 13px; font-weight: 700;
         padding: 2px 8px; cursor: pointer; font-family: inherit;
     }
-    [data-theme="light"] .ws-lcd-cal-yearlbl,
-    [data-theme="light"] .ws-lcd-cal-monthlbl { color: rgba(20, 20, 19, 0.5); }
+    /* Task 534: селект месяца — немного мельче года (12px < 13px) */
+    .ws-lcd-cal-month select { font-size: 12px; }
     [data-theme="light"] .ws-lcd-cal-year select,
     [data-theme="light"] .ws-lcd-cal-month select {
         background: #fff; color: #141413; border-color: rgba(0, 0, 0, 0.18);
@@ -5481,6 +5482,10 @@
     }
     .ws-lcd-cal-nav { width: 30px; font-size: 16px; padding: 0; }
     .ws-lcd-cal-today { padding: 0 10px; }
+    /* Task 534: кнопки строки месяца — шрифт немного мельче года
+       (стрелки 15px < 16px; «Сегодня» 12px < 13px) */
+    .ws-lcd-cal-month .ws-lcd-cal-nav { font-size: 15px; }
+    .ws-lcd-cal-month .ws-lcd-cal-today { font-size: 12px; }
     .ws-lcd-cal-nav:hover, .ws-lcd-cal-today:hover {
         background: var(--active-bg, rgba(74, 143, 199, 0.25));
         border-color: rgba(74, 143, 199, 0.5);
@@ -47826,8 +47831,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
     //     температура («+3°»/«-12°»). Task 533: источник —
     //     open-meteo.com, запрос НАПРЯМУЮ из браузера (JSON API,
     //     CORS открыт, ключ не нужен — БЕЗ Apps Script и БЕЗ
-    //     авторизации); серверный эндпоинт workSchedule.getWeather
-    //     (meteoinfo.ru через UrlFetchApp) остаётся РЕЗЕРВОМ;
+    //     авторизации). Task 534: при сбое open-meteo — ВТОРОЙ
+    //     прямой канал wttr.in (другой хост, format=j1+lang=ru);
+    //     серверный эндпоинт workSchedule.getWeather (meteoinfo.ru
+    //     через UrlFetchApp) остаётся РЕЗЕРВОМ (ему нужна разовая
+    //     авторизация authorizeWeather — см. WorkSchedule.gs);
     //     клиент кэширует в localStorage и обновляется по расписанию.
     // «Призрачная» сетка НЕ рисуется: выключенные сегменты невидимы.
     // Отрисовка — ЦЕЛЫМ pitch в device-пикселях (шаг и сторона
@@ -47890,6 +47898,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 '&current=temperature_2m,relative_humidity_2m,surface_pressure,' +
                 'weather_code,wind_speed_10m,wind_direction_10m' +
                 '&wind_speed_unit=ms&timezone=Asia%2FNovokuznetsk',
+        // Task 534: ВТОРОЙ прямой канал — wttr.in (ДРУГОЙ хост: если
+        // сеть/фильтр режет api.open-meteo.com — как у пользователя
+        // в заявке: «прямой запрос: Failed to fetch» — wttr.in может
+        // пройти; оба без ключа и без Apps Script). format=j1 — JSON,
+        // lang=ru — явление уже по-русски (поле lang_ru)
+        WT_URL: 'https://wttr.in/Kemerovo?format=j1&lang=ru',
         // Task 531: настройки информера — localStorage, живое применение
         _SET_KEY: 'kip8_ws_lcd_set_v1',
         _SET_DEF: {              // значения по умолчанию (см. _setGet)
@@ -48642,6 +48656,90 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             } catch (e) { return null; }
         },
 
+        // Task 534: разбор JSON wttr.in (format=j1, ВТОРОЙ прямой
+        // канал — другой хост). Явление — уже по-русски из lang_ru
+        // (запрос с lang=ru); если локализации нет — английские
+        // ключевые слова (weatherDesc). cloudcover % → балл 0..10;
+        // км/ч → м/с; гПа → мм рт.ст. (÷1.33322); observation_time
+        // («hh:mm AM/PM», UTC) → местное время Кемерово (+7).
+        // Форма ответа — как у open-meteo (иконки работают без
+        // изменений)
+        _parseWttr: function(text) {
+            try {
+                var j = JSON.parse(String(text || ''));
+                var c = j && j.current_condition && j.current_condition[0];
+                if (!c || c.temp_C == null) return null;
+                var t = parseFloat(c.temp_C);
+                if (isNaN(t)) return null;
+                // явление: русская локализация wttr (lang_ru) либо EN
+                var desc = '';
+                if (c.lang_ru && c.lang_ru[0] && c.lang_ru[0].value) {
+                    desc = String(c.lang_ru[0].value);
+                } else if (c.weatherDesc && c.weatherDesc[0] &&
+                           c.weatherDesc[0].value) {
+                    desc = String(c.weatherDesc[0].value);
+                }
+                var phen = 'Пасмурно', cloud = 8;
+                if (/[а-яА-ЯёЁ]/.test(desc)) {
+                    phen = desc;                   // уже по-русски
+                } else {
+                    var dl = desc.toLowerCase();
+                    if (/thunder/.test(dl)) { phen = 'Гроза'; cloud = 9; }
+                    else if (/snow|sleet|ice pellet|freez/.test(dl)) {
+                        phen = 'Снег'; cloud = 9;
+                    } else if (/drizzle/.test(dl)) { phen = 'Морось'; cloud = 9; }
+                    else if (/rain|shower/.test(dl)) { phen = 'Дождь'; cloud = 9; }
+                    else if (/mist|fog/.test(dl)) { phen = 'Туман'; cloud = 8; }
+                    else if (/partly/.test(dl)) {
+                        phen = 'Переменная облачность'; cloud = 4;
+                    } else if (/cloudy/.test(dl)) { phen = 'Облачно'; cloud = 7; }
+                    else if (/sunny|clear/.test(dl)) { phen = 'Ясно'; cloud = 0; }
+                }
+                // балл облачности точнее — из cloudcover (%)
+                if (c.cloudcover != null && !isNaN(parseFloat(c.cloudcover))) {
+                    var pct = parseFloat(c.cloudcover);
+                    cloud = Math.max(0, Math.min(10, Math.round(pct / 10)));
+                }
+                var DIRS = ['С', 'СВ', 'В', 'ЮВ', 'Ю', 'ЮЗ', 'З', 'СЗ'];
+                var windDir = null;
+                if (c.winddirDegree != null &&
+                    !isNaN(parseFloat(c.winddirDegree))) {
+                    var deg = ((parseFloat(c.winddirDegree) % 360) + 360) % 360;
+                    windDir = DIRS[Math.round(deg / 45) % 8];
+                }
+                var wind = null;
+                if (c.windspeedKmph != null &&
+                    !isNaN(parseFloat(c.windspeedKmph))) {
+                    wind = Math.round(parseFloat(c.windspeedKmph) / 3.6 * 10) / 10;
+                }
+                var pr = (c.pressure != null &&
+                          !isNaN(parseFloat(c.pressure)))
+                    ? Math.round(parseFloat(c.pressure) / 1.33322) : null;
+                var obsLocal = null;
+                var om = String(c.observation_time || '')
+                    .match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+                if (om) {
+                    var hh = parseInt(om[1], 10) % 12 + (/pm/i.test(om[3]) ? 12 : 0);
+                    var loc = (hh + 7) % 24;       // Кемерово: UTC+7
+                    obsLocal = (loc < 10 ? '0' : '') + loc + ':' + om[2];
+                }
+                return {
+                    temp: t,
+                    phenomenon: phen,
+                    cloud: cloud,
+                    wind: wind,
+                    windDir: windDir,
+                    pressure: pr,
+                    humidity: (c.humidity != null &&
+                               !isNaN(parseFloat(c.humidity)))
+                        ? parseFloat(c.humidity) : null,
+                    obsLocal: obsLocal,
+                    source: 'wttr.in',
+                    fetched: new Date().toISOString()
+                };
+            } catch (e) { return null; }
+        },
+
         // Task 533: ПРЯМОЙ запрос open-meteo.com из браузера —
         // БЕЗ Apps Script и БЕЗ авторизации (CORS открыт, ключа нет).
         // Отдаёт Promise с готовыми данными (форма ответа сервера)
@@ -48662,9 +48760,31 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 });
         },
 
+        // Task 534: ВТОРОЙ прямой канал — wttr.in (другой хост, без
+        // ключа и без Apps Script). Вызывается, когда open-meteo не
+        // прошёл: сеть/фильтр может резать хосты выборочно (заявка:
+        // «прямой запрос: Failed to fetch» при живом open-meteo)
+        _fetchWttr: function() {
+            var self = this;
+            if (typeof fetch !== 'function') {
+                return Promise.reject(new Error('no_fetch'));
+            }
+            return fetch(this.WT_URL, { method: 'GET', cache: 'no-store' })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('http_' + r.status);
+                    return r.text();
+                })
+                .then(function(txt) {
+                    var d = self._parseWttr(txt);
+                    if (!d) throw new Error('parse_empty');
+                    return d;
+                });
+        },
+
         // общий хвост успешного опроса: кэш (сутки) + экран +
-        // диагностика с КАНАЛОМ (Task 533: напрямую / через сервер)
-        // + перерисовка открытой панели + расписание повтора
+        // диагностика с КАНАЛОМ (Task 533: напрямую / через сервер;
+        // Task 534: wttr — тоже «напрямую из браузера») +
+        // перерисовка открытой панели + расписание повтора
         _weatherOk: function(data, via) {
             try {
                 localStorage.setItem('kip8_ws_weather_v1',
@@ -48673,7 +48793,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._applyWeather(data);
             if (this._weatherDiag && this._weatherDiag.ok) {
                 this._weatherDiag.via = via;
-                if (via === 'direct') {
+                if (via === 'direct' || via === 'wttr') {
                     this._weatherDiag.source =
                         (this._weatherDiag.source || 'open-meteo.com') +
                         ' (напрямую из браузера)';
@@ -48689,10 +48809,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // загрузка: кэш localStorage (сутки) → сеть (раз в период
         // настроек; Task 531). Task 533: сначала ПРЯМОЙ запрос
-        // open-meteo.com (не зависит от Apps Script), при неудаче —
-        // серверный резерв (если авторизован). Каждый результат
-        // фиксируется в _weatherDiag и виден в панели настроек;
-        // «Обновить сейчас» переспрашивает немедленно
+        // open-meteo.com (не зависит от Apps Script). Task 534: при
+        // сбое — ВТОРОЙ прямой канал wttr.in (другой хост), и только
+        // затем — серверный резерв (если авторизован). Каждый
+        // результат фиксируется в _weatherDiag и виден в панели
+        // настроек; «Обновить сейчас» переспрашивает немедленно
         _loadWeather: function(force) {
             var self = this;
             var st = this._setGet();
@@ -48712,7 +48833,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
             }
             if (fresh && !force) { this._weatherSchedule(); return; }
-            // ОСНОВНОЙ канал (Task 533): open-meteo.com НАПРЯМУЮ —
+            // канал 1 (Task 533): open-meteo.com НАПРЯМУЮ —
             // без Apps Script, без токена, без авторизации
             this._fetchWeatherDirect()
                 .then(function(data) {
@@ -48721,51 +48842,69 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 .catch(function(errDirect) {
                     var dmsg = String((errDirect && errDirect.message) || '')
                         .slice(0, 60);
-                    // РЕЗЕРВ: серверный эндпоинт (meteoinfo.ru через
-                    // UrlFetchApp) — только если прямой запрос не прошёл
-                    // И пользователь авторизован (эндпоинт требует токен)
-                    var canServer = !(typeof KipAuth === 'undefined' ||
-                        !KipAuth.api || typeof KipAuth.getToken !== 'function' ||
-                        !KipAuth.getToken());
-                    if (!canServer) {
-                        // резерва нет — фиксируем причину прямого сбоя
-                        self._weatherDiag = { ok: false, why: 'network',
-                                             direct: dmsg };
-                        if (self._setOpen) self._renderSettings();
-                        self._weatherSchedule();
-                        return;
-                    }
-                    KipAuth.api('workSchedule.getWeather', { token: KipAuth.getToken() })
-                        .then(function(data) {
-                            if (data && data.temp != null) {
-                                self._weatherOk(data, 'server');
-                            } else {
-                                // сервер ответил, но погоды нет: какие
-                                // источники пробовались — в data.diag
-                                // (getWeather v2, Task 532); прямой сбой
-                                // тоже виден (Task 533)
-                                self._weatherDiag = {
-                                    ok: false, why: 'server',
-                                    direct: dmsg,
-                                    note: data ? data.note : '',
-                                    diag: data ? data.diag : ''
-                                };
-                            }
-                            if (self._setOpen) self._renderSettings();
-                            self._weatherSchedule();
+                    // канал 2 (Task 534): wttr.in — ДРУГОЙ хост (сеть
+                    // может резать выборочно); тоже без Apps Script
+                    self._fetchWttr()
+                        .then(function(data2) {
+                            self._weatherOk(data2, 'wttr');
                         })
-                        .catch(function(err) {
-                            // старый сервер (нет эндпоинта)/сеть — тихо,
-                            // повтор через период настроек; ДИАГНОСТИКА —
-                            // в панель настроек: «Unknown action» означает,
-                            // что развёртывание Apps Script НЕ обновлено
-                            var msg = String((err && err.message) || '');
-                            self._weatherDiag = (/unknown action/i.test(msg))
-                                ? { ok: false, why: 'no-endpoint', direct: dmsg }
-                                : { ok: false, why: 'network',
-                                    direct: dmsg, note: msg.slice(0, 80) };
-                            if (self._setOpen) self._renderSettings();
-                            self._weatherSchedule();
+                        .catch(function(errWttr) {
+                            var wmsg = String((errWttr && errWttr.message) || '')
+                                .slice(0, 60);
+                            // РЕЗЕРВ: серверный эндпоинт (meteoinfo.ru
+                            // через UrlFetchApp) — только если ОБА прямых
+                            // канала не прошли И пользователь авторизован
+                            // (эндпоинт требует токен)
+                            var canServer = !(typeof KipAuth === 'undefined' ||
+                                !KipAuth.api ||
+                                typeof KipAuth.getToken !== 'function' ||
+                                !KipAuth.getToken());
+                            if (!canServer) {
+                                // резерва нет — фиксируем причины сбоев
+                                // обоих прямых каналов
+                                self._weatherDiag = { ok: false, why: 'network',
+                                                     direct: dmsg,
+                                                     wttr: wmsg };
+                                if (self._setOpen) self._renderSettings();
+                                self._weatherSchedule();
+                                return;
+                            }
+                            KipAuth.api('workSchedule.getWeather',
+                                        { token: KipAuth.getToken() })
+                                .then(function(data) {
+                                    if (data && data.temp != null) {
+                                        self._weatherOk(data, 'server');
+                                    } else {
+                                        // сервер ответил, но погоды нет: какие
+                                        // источники пробовались — в data.diag
+                                        // (getWeather v2, Task 532); сбои прямых
+                                        // каналов тоже видны (Task 533/534)
+                                        self._weatherDiag = {
+                                            ok: false, why: 'server',
+                                            direct: dmsg, wttr: wmsg,
+                                            note: data ? data.note : '',
+                                            diag: data ? data.diag : ''
+                                        };
+                                    }
+                                    if (self._setOpen) self._renderSettings();
+                                    self._weatherSchedule();
+                                })
+                                .catch(function(err) {
+                                    // старый сервер (нет эндпоинта)/сеть — тихо,
+                                    // повтор через период настроек; ДИАГНОСТИКА —
+                                    // в панель настроек: «Unknown action» означает,
+                                    // что развёртывание Apps Script НЕ обновлено
+                                    var msg = String((err && err.message) || '');
+                                    self._weatherDiag =
+                                        (/unknown action/i.test(msg))
+                                        ? { ok: false, why: 'no-endpoint',
+                                            direct: dmsg, wttr: wmsg }
+                                        : { ok: false, why: 'network',
+                                            direct: dmsg, wttr: wmsg,
+                                            note: msg.slice(0, 80) };
+                                    if (self._setOpen) self._renderSettings();
+                                    self._weatherSchedule();
+                                });
                         });
                 });
         },
@@ -48958,23 +49097,36 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             html += '<label class="ws-lcd-set-row"><input type="checkbox"' + ck(s.srcVac) +
                     ' onchange="WsLcdClock._setChange(\'srcVac\', this.checked)">Отпуска</label>';
             html += '<div class="ws-lcd-set-sec">Погода</div>';
-            // Task 532 → 533: ДИАГНОСТИКА последнего опроса + форс-
-            // обновление. Основной канал (Task 533) — open-meteo.com
-            // НАПРЯМУЮ из браузера (без Apps Script); statuses: есть
-            // данные (канал/источник/наблюдение) / прямой запрос упал
-            // и сервер не знает эндпоинт / источники не дали данных /
-            // сеть недоступна / ещё не опрошено
+            // Task 532 → 533 → 534: ДИАГНОСТИКА последнего опроса +
+            // форс-обновление. Прямые каналы (Task 533: open-meteo.com;
+            // Task 534: + wttr.in) — НАПРЯМУЮ из браузера (без Apps
+            // Script); statuses: есть данные (канал/источник/
+            // наблюдение) / прямые запросы упали и сервер не знает
+            // эндпоинт / источники не дали данных (в т.ч. — серверу
+            // не хватает авторизации UrlFetchApp) / сеть недоступна /
+            // ещё не опрошено
             var wd = this._weatherDiag;
             var wstat, wcls;
-            var dnote = (wd && wd.direct)
-                ? ' (прямой запрос: ' + wd.direct + ')' : '';
+            // Task 534: причины сбоев ОБЕИХ прямых каналов
+            // (open-meteo и wttr.in) — видно, что именно не прошло
+            var dparts = [];
+            if (wd && wd.direct) dparts.push('open-meteo: ' + wd.direct);
+            if (wd && wd.wttr) dparts.push('wttr.in: ' + wd.wttr);
+            var dnote = dparts.length
+                ? ' (прямой запрос: ' + dparts.join('; ') + ')' : '';
+            // Task 534: сервер без авторизации внешних запросов —
+            // точная подсказка (заявка: «У вас нет разрешения на
+            // вызов функции UrlFetchApp.fetch»): разовая авторизация
+            // authorizeWeather() + новая версия развёртывания
+            var perm = !!(wd && wd.diag &&
+                /нет разрешения|UrlFetchApp/i.test(String(wd.diag)));
             if (wd && wd.ok) {
                 wstat = 'Есть данные: ' + wd.txt +
                         (wd.source ? ' — ' + wd.source : '') +
                         (wd.obs ? ' (набл. ' + wd.obs + ')' : '');
                 wcls = '';
             } else if (wd && wd.why === 'no-endpoint') {
-                wstat = 'Прямой запрос open-meteo не прошёл' + dnote +
+                wstat = 'Прямые запросы open-meteo/wttr.in не прошли' + dnote +
                         '. Резерв: сервер не знает эндпоинт getWeather — ' +
                         'обновите развёртывание Apps Script (WorkSchedule.gs, ' +
                         'новая версия деплоя)';
@@ -48982,6 +49134,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             } else if (wd && wd.why === 'server') {
                 wstat = 'Источники не дали данных' + dnote +
                         (wd.diag ? '; сервер: ' + wd.diag : '') +
+                        (perm ? '. Серверу не хватает авторизации внешних ' +
+                                'запросов: один раз запустите authorizeWeather() ' +
+                                'в редакторе Apps Script и создайте новую ' +
+                                'версию развёртывания (DEPLOY-Task534)' : '') +
                         '. Повтор — по расписанию или кнопкой ниже';
                 wcls = ' warn';
             } else if (wd && wd.why === 'network') {
@@ -49163,13 +49319,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var isThis = (today.getFullYear() === y && today.getMonth() + 1 === m);
             var html = '';
             // Task 533 (заявка: «поменяй местами… год сверху, месяц под
-            // годом»): ПЕРВАЯ строка головы — ГОД («‹ Год [селект] ›»).
+            // годом»): ПЕРВАЯ строка головы — ГОД (селект ±10; Task
+            // 534: подпись «Год» УБРАНА — селект и так понятен).
             // Селект охватывает текущий ±10; годы, достигнутые
             // навигацией (‹ › месяцев/года), добавляются в диапазон
             // автоматически (min/max ниже)
             html += '<div class="ws-lcd-cal-year">';
             html += '<button type="button" class="ws-lcd-cal-nav" onclick="WsLcdClock._calYearNav(-1)" aria-label="Предыдущий год">&#8249;</button>';
-            html += '<span class="ws-lcd-cal-yearlbl">Год</span>';
             html += '<select onchange="WsLcdClock._calSetYear(+this.value)" aria-label="Год">';
             var yNow = today.getFullYear(), yo;
             var yLo = Math.min(yNow - 10, y), yHi = Math.max(yNow + 10, y);
@@ -49182,10 +49338,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             html += '</div>';
             // Task 533: ВТОРАЯ строка головы — МЕСЯЦ ПОД ГОДОМ, и у
             // месяца, КАК У ГОДА, — селект + стрелки ‹ › («Сегодня»
-            // осталась в строке месяца, справа)
+            // осталась в строке месяца, справа; Task 534: подпись
+            // «Месяц» УБРАНА, шрифт строки — немного мельче года)
             html += '<div class="ws-lcd-cal-month">';
             html += '<button type="button" class="ws-lcd-cal-nav" onclick="WsLcdClock._calNav(-1)" aria-label="Предыдущий месяц">&#8249;</button>';
-            html += '<span class="ws-lcd-cal-monthlbl">Месяц</span>';
             html += '<select onchange="WsLcdClock._calSetMonth(+this.value)" aria-label="Месяц">';
             var mi;
             for (mi = 1; mi <= 12; mi++) {

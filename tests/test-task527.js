@@ -24,7 +24,7 @@
 //   Слой 4 — VM: данные расчёта — в SVG под фигурой (совпадают с
 //     calcGeo*); подпись h/D больше не пересекает выносные линии
 //     (вынесена за пределы размера); юнит-тесты gfDimH/gfDimV.
-//   Слой 5 — SW: kipia-test-v746 (Task 528).
+//   Слой 5 — SW: kipia-test-v747 (Task 528).
 //
 // Запуск: через tests/run-all.js (require './test-task527.js').
 
@@ -399,10 +399,10 @@ describe('Task 527 D: VM — живой расчёт в картинке', () =>
 // ============================================================
 describe('Task 527 — SW: версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v746', () => {
+    test('sw.js: CACHE_VERSION = kipia-test-v747', () => {
         const m = SW_SRC.match(/const CACHE_VERSION = '([^']+)'/);
         assertTrue(m, 'CACHE_VERSION найден');
-        assertEqual(m[1], 'kipia-test-v746',
+        assertEqual(m[1], 'kipia-test-v747',
             'версия бампнута v740 → v741 (правка index.html, Task 528)');
     });
 

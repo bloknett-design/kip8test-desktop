@@ -9,12 +9,15 @@
 //   местами отображения и селекторы года и месяца (год сверху,
 //   месяц под годом), и у месяца сделай как у года селект +
 //   стрелки.»
+// Адаптация Task 534 (двухканальная погода open-meteo → wttr.in →
+//   сервер; подписи «Год»/«Месяц» убраны; строки головы — по левому
+//   краю; формулировки статусов с обоими каналами).
 //
 // ЧТО ПРОВЕРЯЕТСЯ:
 //   A. SRC — прямой канал погоды в клиенте (OM_URL, fetch,
 //      _parseOpenMeteo/_fetchWeatherDirect, резерв сервера),
 //      шестерёнка-оверлей (SVG 13×13 в зоне 20×20), календарь
-//      год→месяц, SW kipia-test-v746.
+//      год→месяц, SW kipia-test-v747.
 //   B. VM ПОГОДА — _parseOpenMeteo (поля/WMO/мусор); _loadWeather:
 //      прямой успех (сервер НЕ звётся, канал в diag), успех БЕЗ
 //      авторизации, прямой сбой → резерв сервера (успех/без данных/
@@ -25,7 +28,7 @@
 //      при ‹ › и переносе декабрь→январь, «Сегодня» в строке
 //      месяца); _calSetMonth: применение + мусор.
 //   D. VM ШЕСТЕРЁНКА — клик-семантика (настройки отдельно).
-//   E. SW — kipia-test-v746, нет забегания вперёд (v747).
+//   E. SW — kipia-test-v747, нет забегания вперёд (v747).
 //
 // Запуск: через tests/run-all.js (require './test-task533.js').
 
@@ -213,7 +216,10 @@ describe('Task 533 A: SRC — погода напрямую, шестерёнк�
             'у месяца — селект (как у года)');
         assertTrue(chunk.indexOf('_calNav(-1)') !== -1 && chunk.indexOf('_calNav(1)') !== -1,
             'стрелки ‹ › у месяца');
-        assertTrue(chunk.indexOf('>Месяц</span>') !== -1, 'подпись «Месяц»');
+        // Task 534: подписи «Год»/«Месяц» УБРАНЫ (заявка)
+        assertTrue(chunk.indexOf('ws-lcd-cal-yearlbl') === -1 &&
+                   chunk.indexOf('ws-lcd-cal-monthlbl') === -1,
+            'подписи «Год»/«Месяц» убраны (Task 534)');
         assertTrue(chunk.indexOf('ws-lcd-cal-today') !== -1, '«Сегодня» в строке месяца');
     });
 
@@ -221,7 +227,10 @@ describe('Task 533 A: SRC — погода напрямую, шестерёнк�
         const css = cssBlock();
         assertTrue(css.indexOf('.ws-lcd-cal-month {') !== -1, 'блок строки месяца');
         assertTrue(css.indexOf('.ws-lcd-cal-month select') !== -1, 'селект месяца');
-        assertTrue(css.indexOf('.ws-lcd-cal-monthlbl') !== -1, 'подпись «Месяц»');
+        // Task 534: CSS подписей «Год»/«Месяц» УДАЛЁН (заявка)
+        assertTrue(css.indexOf('.ws-lcd-cal-monthlbl') === -1 &&
+                   css.indexOf('.ws-lcd-cal-yearlbl') === -1,
+            'CSS подписей «Год»/«Месяц» удалён (Task 534)');
         assertTrue(css.indexOf('[data-theme="light"] .ws-lcd-cal-month select') !== -1,
             'светлая тема селекта месяца');
         // старые классы головы удалены
@@ -241,10 +250,10 @@ describe('Task 533 A: SRC — погода напрямую, шестерёнк�
         // формулировка прямого сбоя — в статусе панели (_renderSettings)
         const i = m.indexOf('var wd = this._weatherDiag;');
         const chunk = m.slice(i, m.indexOf("'<div class=\"ws-lcd-set-wstat'", i));
-        assertTrue(chunk.indexOf('Прямой запрос open-meteo не прошёл') !== -1,
-            'no-endpoint объясняет прямой сбой');
+        assertTrue(chunk.indexOf('Прямые запросы open-meteo/wttr.in не прошли') !== -1,
+            'no-endpoint объясняет сбой прямых каналов (Task 534)');
         assertTrue(chunk.indexOf('прямой запрос: ') !== -1,
-            'причина прямого сбоя выводится в статус');
+            'причины сбоев прямых каналов выводятся в статус');
     });
 
 });
@@ -364,7 +373,9 @@ describe('Task 533 B-2: VM — _loadWeather: ПРЯМОЙ канал из бра
                 assertEqual(sb.WsLcdClock._weatherDiag.ok, false, 'не ok');
                 assertEqual(sb.WsLcdClock._weatherDiag.why, 'network', 'сетевая причина');
                 assertEqual(sb.WsLcdClock._weatherDiag.direct, 'http_503',
-                    'причина прямого сбоя сохранена');
+                    'причина сбоя open-meteo сохранена');
+                assertEqual(sb.WsLcdClock._weatherDiag.wttr, 'http_503',
+                    'причина сбоя wttr.in сохранена (Task 534: оба канала)');
                 assertEqual(sb.WsLcdClock._weather, null, 'экран не тронут (тихо)');
                 resolve();
             }, 20);
@@ -535,9 +546,9 @@ describe('Task 533 B-3: VM — резерв сервера при сбое пр�
                                        direct: 'Failed to fetch' };
         sb.WsLcdClock._renderSettings();
         const html = pm.els.wsLcdSet.innerHTML;
-        assertTrue(html.indexOf('Прямой запрос open-meteo не прошёл') !== -1,
-            'формулировка прямого сбоя');
-        assertTrue(html.indexOf('(прямой запрос: Failed to fetch)') !== -1,
+        assertTrue(html.indexOf('Прямые запросы open-meteo/wttr.in не прошли') !== -1,
+            'формулировка сбоя прямых каналов (Task 534)');
+        assertTrue(html.indexOf('(прямой запрос: open-meteo: Failed to fetch)') !== -1,
             'причина прямого сбоя в статусе');
         assertTrue(html.indexOf('ws-lcd-set-wstat warn') !== -1, 'варнинг-стиль');
     });
@@ -679,13 +690,13 @@ describe('Task 533 D: VM — шестерёнка внутри: клик-сем�
 // ============================================================
 describe('Task 533 E: SW — версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v746', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v746'");
+    test('sw.js: CACHE_VERSION = kipia-test-v747', () => {
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v747'");
         assertTrue(i !== -1, 'версия v746 (Task 533: погода/шестерёнка/календарь)');
     });
 
     test('sw.js: нет забегания вперёд (v747 не должно быть)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v747') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v748') === -1,
             'v747 в sw.js отсутствует (гварды живут только в тестах)');
     });
 
@@ -693,7 +704,7 @@ describe('Task 533 E: SW — версия кэша', () => {
         // ассерты текущей версии расставлены бампом по всем тестам
         const dir = fs.readdirSync(path.join(__dirname));
         const t533 = fs.readFileSync(path.join(__dirname, 'test-task533.js'), 'utf8');
-        assertTrue(t533.indexOf('kipia-test-v746') !== -1, 'этот тест знает v746');
+        assertTrue(t533.indexOf('kipia-test-v747') !== -1, 'этот тест знает v746');
         assertTrue(dir.indexOf('test-task533.js') !== -1, 'файл на месте');
     });
 
