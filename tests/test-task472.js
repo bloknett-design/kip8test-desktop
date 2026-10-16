@@ -25,7 +25,7 @@
 //   3) .pe-card/.pe-desc-card — сплошные фоны #17212e (тёмная),
 //      светлая: карточка #faf9f6, окно — БЕЖЕВОЕ #f0eee6 (цвет
 //      фона бара) с толстой 3px двухтонной рамкой-выступом.
-//   SW: kipia-test-v747.
+//   SW: kipia-test-v748.
 //
 // Запуск: через tests/run-all.js (require './test-task472.js').
 
@@ -287,9 +287,9 @@ describe('Task 472 — SRC: непрозрачные фоны и бежевое 
 // ============================================================
 describe('Task 472 — SW: версия кэша', () => {
 
-    test("CACHE_VERSION = kipia-test-v747", () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v747';") !== -1,
-            'SW поднят до kipia-test-v747 (Task 472)');
+    test("CACHE_VERSION = kipia-test-v748", () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v748';") !== -1,
+            'SW поднят до kipia-test-v748 (Task 472)');
     });
 
     test('версия до партии (v695) отсутствует', () => {
@@ -298,7 +298,7 @@ describe('Task 472 — SW: версия кэша', () => {
     });
 
     test('комментарий Task 472 в шапке версий sw.js', () => {
-        const i = SW_SRC.indexOf('kipia-test-v747');
+        const i = SW_SRC.indexOf('kipia-test-v748');
         // Task 492: комментарий (~290 симв.) отодвинул якорь Task 472
         // до ~8730 — окно 8500 → 9300.
         // Task 497: комментарий избранного расходомеров (~200 симв.)
@@ -320,7 +320,7 @@ describe('Task 472 — SW: версия кэша', () => {
     });
 
     test('контекст Task 471 не вытеснен (окно 1300 символов)', () => {
-        const i = SW_SRC.indexOf('kipia-test-v747');
+        const i = SW_SRC.indexOf('kipia-test-v748');
         // Task 473: окно 900 → 1020; Task 474: 1020 → 1300 — комментарий
         // Task 475: окно 1300 → 2100 — комментарий этапа 1 оптимизации
         // Task 476: окна 1500 → 2100 (Task 472 ~1621) и

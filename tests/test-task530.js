@@ -29,7 +29,7 @@
 //   D. СЕРВЕР — WorkSchedule.gs getWeather (кэш 30 мин, тихий
 //      фолбэк), _parseMeteoinfo на РЕАЛЬНОМ HTML meteoinfo.ru
 //      (фикстура страницы Кемерово), роутинг в Code.gs.
-//   E. SW — kipia-test-v747 (Task 531).
+//   E. SW — kipia-test-v748 (Task 531).
 //
 // АДАПТАЦИЯ Task 531: компоновка приведена к ОБЩЕЙ НИЖНЕЙ ЛИНИИ ряда
 //   12 (секунды 8..12, текст 6..12, иконка 5..12), день недели
@@ -864,10 +864,10 @@ describe('Task 530 D: Сервер — getWeather (meteoinfo.ru, кэш 30 ми�
 // ============================================================
 describe('Task 530 — SW: версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v747', () => {
+    test('sw.js: CACHE_VERSION = kipia-test-v748', () => {
         const m = SW_SRC.match(/const CACHE_VERSION = '(kipia-test-v\d+)'/);
         assertTrue(m !== null, 'CACHE_VERSION найден');
-        assertEqual(m[1], 'kipia-test-v747', 'SW поднят до v744 (Task 531)');
+        assertEqual(m[1], 'kipia-test-v748', 'SW поднят до v744 (Task 531)');
         assertTrue(m[1] !== 'kipia-test-v743', 'старая версия v743 не осталась');
     });
 

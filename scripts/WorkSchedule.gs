@@ -4470,6 +4470,9 @@ function employeesSplitInit() {
 
 // ============================================================
 // Task 534 — РАЗОВАЯ АВТОРИЗАЦИЯ ВНЕШНИХ ЗАПРОСОВ (погода)
+// Task 535 — дополнено: полный текст ошибки (URL разрешения
+// больше не обрезается на «https://w…») + подсказка про манифест
+// appsscript.json, если диалог доступа не появляется.
 // ============================================================
 // Если в настройках информера (Табель → шестерёнка) диагностика
 // погоды показывает «У вас нет разрешения на вызов функции
@@ -4495,10 +4498,24 @@ function employeesSplitInit() {
 //      «meteoinfo.ru (через Apps Script)», если прямые каналы
 //      в сети пользователя недоступны).
 //
+// ЕСЛИ ШАГ 3 НЕ ПОЯВИЛСЯ, А ОШИБКА ПОВТОРЯЕТСЯ (как в заявке
+// Task 535: FAIL и после запуска): в манифесте appsscript.json
+// ЯВНО перечислены oauthScopes БЕЗ script.external_request —
+// тогда диалог не запрашивается вовсе. Лечится так:
+//   • Настройки проекта (Settings ⚙) → галка «Show "appsscript.json"
+//     manifest file in editor» → открыть appsscript.json;
+//   • в массив "oauthScopes" добавить строку
+//     "https://www.googleapis.com/auth/script.external_request"
+//     (или удалить массив oauthScopes целиком — области определятся
+//     автоматически по коду);
+//   • сохранить → снова «Выполнить» authorizeWeather → подтвердить
+//     доступ → Deploy → New version.
+//
 // Функция безопасна: два пробных запроса к источникам погоды,
 // результат — в журнале выполнения (Logger.log). Повторный запуск
 // ничего не меняет.
 function authorizeWeather() {
+  var SCOPE = 'https://www.googleapis.com/auth/script.external_request';
   var probes = [
     'https://api.open-meteo.com/v1/forecast' +
       '?latitude=55.35&longitude=86.08&current=temperature_2m',
@@ -4511,8 +4528,17 @@ function authorizeWeather() {
           probes[i], { muteHttpExceptions: true, followRedirects: true });
       out.push('HTTP ' + r.getResponseCode() + ' — ' + probes[i]);
     } catch (e) {
-      out.push('FAIL ' + String((e && e.message) || e).slice(0, 90) +
-               ' — ' + probes[i]);
+      // Task 535: НЕ обрезаем сообщение на 90 символах — URL требуемой
+      // области («…https://w» в заявке) теперь виден целиком
+      var em = String((e && e.message) || e).slice(0, 220);
+      var line = 'FAIL ' + em + ' — ' + probes[i];
+      if (/разрешени|permission/i.test(em)) {
+        line += ' | ЛЕЧЕНИЕ: область ' + SCOPE + '. Если диалог ' +
+                'доступа не появился — добавьте её в массив oauthScopes ' +
+                'манифеста appsscript.json (или уберите oauthScopes вовсе), ' +
+                'затем Выполнить ещё раз и Deploy → New version';
+      }
+      out.push(line);
     }
   }
   var msg = 'authorizeWeather: ' + JSON.stringify(out);
