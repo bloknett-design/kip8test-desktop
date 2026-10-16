@@ -946,15 +946,23 @@ var WorkSchedule = {
     return { ok: true, data: { codes: codes } };
   },
 
-  // workSchedule.getWeather (Task 530)
+  // workSchedule.getWeather (Task 530 → 532)
   // payload: { token }
   // returns: { ok:true, data: { temp, phenomenon, cloud, wind, windDir,
-  //            pressure, humidity, obsLocal, source, fetched } }
-  // Погода в Кемерово — источник https://meteoinfo.ru/ (Гидрометцентр
-  // России), страница текущих наблюдений. Кэш скрипта 30 минут:
-  // наблюдения на станции обновляются ~раз в 3 часа. Сеть/парсинг/
-  // формат — тихий ответ temp:null (клиент показывает «--» и
-  // повторяет позже), это НЕ ошибка запроса.
+  //            pressure, humidity, obsLocal, source, fetched, diag } }
+  // Погода в Кемерово. Task 532 (почему «--» при обновлённых файлах):
+  //  (1) ЯВНАЯ диагностика — data.diag перечисляет попытки источников
+  //      («meteoinfo:http_403», «open-meteo:exception:…»), клиент
+  //      показывает их в настройках информера — причина сбоя видна;
+  //  (2) браузерный User-Agent + Accept-Language (часть сайтов режет
+  //      «голые» запросы UrlFetchApp);
+  //  (3) РЕЗЕРВНЫЙ источник open-meteo.com — JSON API без разбора
+  //      HTML (не зависит от вёрстки meteoinfo.ru и дружелюбен к
+  //      серверным IP Google). Основной — по-прежнему meteoinfo.ru
+  //      (Гидрометцентр России, как в заявке Task 530).
+  // Кэш скрипта 30 минут: наблюдения на станции обновляются ~раз в
+  // 3 часа. Сеть/парсинг/формат — тихий ответ temp:null (клиент
+  // показывает «--» и повторяет позже), это НЕ ошибка запроса.
   getWeather: function(payload) {
     var auth = this._requireRead(payload.token);
     if (auth.error) return auth.error;
@@ -969,24 +977,75 @@ var WorkSchedule = {
     } catch (e2) { /* кэш недоступен — идём в сеть */ }
     if (cached && cached.temp != null) return { ok: true, data: cached };
 
+    // UA/Accept как у браузера: «голый» UrlFetchApp часть сайтов
+    // отклоняет (Task 532)
+    var HDRS = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
+                    'AppleWebKit/537.36 (KHTML, like Gecko) ' +
+                    'Chrome/124.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'ru-RU,ru;q=0.9'
+    };
+
+    // попытка 1: meteoinfo.ru (Гидрометцентр — основной источник)
+    var tries = [];
     var data = null;
     try {
       if (typeof UrlFetchApp !== 'undefined') {
         var resp = UrlFetchApp.fetch(
           'https://meteoinfo.ru/pogoda/russia/kemerovo-area/kemerovo',
-          { muteHttpExceptions: true, followRedirects: true });
+          { muteHttpExceptions: true, followRedirects: true, headers: HDRS });
+        tries.push('meteoinfo:http_' + resp.getResponseCode());
         if (resp.getResponseCode() === 200) {
           data = this._parseMeteoinfo(resp.getContentText('UTF-8'));
+          if (!data || data.temp == null) {
+            tries.push('meteoinfo:parse_empty');
+          }
         }
+      } else {
+        tries.push('meteoinfo:no_urlfetchapp');
       }
-    } catch (e) { /* сеть недоступна — тихий ответ ниже */ }
+    } catch (e) {
+      tries.push('meteoinfo:exception:' +
+                 String((e && e.message) || e).slice(0, 60));
+    }
+
+    // попытка 2 (резерв): open-meteo.com — JSON API, без разбора HTML
     if (!data || data.temp == null) {
+      try {
+        if (typeof UrlFetchApp !== 'undefined') {
+          var r2 = UrlFetchApp.fetch(
+            'https://api.open-meteo.com/v1/forecast' +
+            '?latitude=55.35&longitude=86.08' +
+            '&current=temperature_2m,relative_humidity_2m,surface_pressure,' +
+            'weather_code,wind_speed_10m,wind_direction_10m' +
+            '&wind_speed_unit=ms&timezone=Asia%2FNovokuznetsk',
+            { muteHttpExceptions: true, followRedirects: true, headers: HDRS });
+          tries.push('open-meteo:http_' + r2.getResponseCode());
+          if (r2.getResponseCode() === 200) {
+            data = this._parseOpenMeteo(r2.getContentText('UTF-8'));
+            if (!data || data.temp == null) {
+              tries.push('open-meteo:parse_empty');
+            }
+          }
+        }
+      } catch (e4) {
+        tries.push('open-meteo:exception:' +
+                   String((e4 && e4.message) || e4).slice(0, 60));
+      }
+    }
+
+    if (!data || data.temp == null) {
+      // тихий ответ + ДИАГНОСТИКА попыток (Task 532)
       return { ok: true, data: {
         temp: null, phenomenon: null, cloud: null, wind: null,
         windDir: null, pressure: null, humidity: null, obsLocal: null,
-        source: 'meteoinfo.ru', note: 'weather_unavailable'
+        source: null, note: 'weather_unavailable',
+        diag: tries.join('; ') || 'no_attempts',
+        fetched: new Date().toISOString()
       } };
     }
+    data.diag = tries.join('; ');                  // видно в настройках
     try {
       if (typeof CacheService !== 'undefined') {
         CacheService.getScriptCache().put(
@@ -1044,6 +1103,72 @@ var WorkSchedule = {
       source: 'meteoinfo.ru',
       fetched: new Date().toISOString()
     };
+  },
+
+  // Разбор JSON open-meteo.com (РЕЗЕРВНЫЙ источник, Task 532):
+  // current={temperature_2m, relative_humidity_2m, surface_pressure,
+  // weather_code (WMO), wind_speed_10m (м/с), wind_direction_10m (°)}.
+  // WMO-код → балл облачности 0..10 + ТЕКСТ явления — маппинг
+  // иконок клиента (по phenomenon/cloud) работает без изменений.
+  // surface_pressure (гПа) → мм рт.ст. (÷1.33322). Направление
+  // ветра (°) → румб («С», «ЮЗ», …). Кемерово: 55.35 N, 86.08 E.
+  _parseOpenMeteo: function(text) {
+    try {
+      var j = JSON.parse(String(text || ''));
+      var c = j && j.current;
+      if (!c || c.temperature_2m == null) return null;
+      var t = parseFloat(c.temperature_2m);
+      if (isNaN(t)) return null;
+      var code = (c.weather_code != null) ? c.weather_code : 3;
+      var cloud = 8, phen = 'Пасмурно';
+      if (code === 0)      { cloud = 0; phen = 'Ясно'; }
+      else if (code === 1) { cloud = 1; phen = 'Малооблачно'; }
+      else if (code === 2) { cloud = 3; phen = 'Переменная облачность'; }
+      else if (code === 3) { cloud = 8; phen = 'Пасмурно'; }
+      else if (code === 45 || code === 48) {
+        cloud = 8; phen = 'Туман';
+      } else if (code >= 51 && code <= 57) {
+        cloud = 8; phen = 'Морось';
+      } else if (code >= 61 && code <= 67) {
+        cloud = 9; phen = 'Дождь';
+      } else if ((code >= 71 && code <= 77) || code === 85 || code === 86) {
+        cloud = 9; phen = 'Снег';
+      } else if (code >= 80 && code <= 82) {
+        cloud = 9; phen = 'Ливень';
+      } else if (code >= 95) {
+        cloud = 9; phen = 'Гроза';
+      }
+      var DIRS = ['С', 'СВ', 'В', 'ЮВ', 'Ю', 'ЮЗ', 'З', 'СЗ'];
+      var windDir = null;
+      if (c.wind_direction_10m != null &&
+          !isNaN(parseFloat(c.wind_direction_10m))) {
+        var deg = ((parseFloat(c.wind_direction_10m) % 360) + 360) % 360;
+        windDir = DIRS[Math.round(deg / 45) % 8];
+      }
+      var pr = (c.surface_pressure != null &&
+                !isNaN(parseFloat(c.surface_pressure)))
+        ? Math.round(parseFloat(c.surface_pressure) / 1.33322) : null;
+      var obsLocal = null;
+      if (c.time != null) {
+        obsLocal = String(c.time).replace('T', ' ').slice(0, 16);
+      }
+      return {
+        temp: t,
+        phenomenon: phen,
+        cloud: cloud,
+        wind: (c.wind_speed_10m != null &&
+               !isNaN(parseFloat(c.wind_speed_10m)))
+          ? parseFloat(c.wind_speed_10m) : null,
+        windDir: windDir,
+        pressure: pr,
+        humidity: (c.relative_humidity_2m != null &&
+                   !isNaN(parseFloat(c.relative_humidity_2m)))
+          ? parseFloat(c.relative_humidity_2m) : null,
+        obsLocal: obsLocal,
+        source: 'open-meteo.com',
+        fetched: new Date().toISOString()
+      };
+    } catch (e) { return null; }
   },
 
   // workSchedule.getPatterns

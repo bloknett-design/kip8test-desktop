@@ -24,7 +24,7 @@
 //     нормализованном справочнике показывает НОВОЕ название «д»/«н»
 //     и НЕ содержит «в комментарии» (полная цепочка лист → нормали-
 //     зация → попап).
-//   SW: kipia-test-v744.
+//   SW: kipia-test-v745.
 //
 // Запуск: через tests/run-all.js (require './test-task524.js').
 
@@ -342,9 +342,9 @@ describe('Task 524 — VM: секция «Статус дня»', () => {
 // 5. SW: версия кэша
 // ============================================================
 describe('Task 524 — SW: версия кэша', () => {
-    test('SW: кэш поднят до kipia-test-v744 (Task 524)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v744') !== -1,
-            'SW несёт версию kipia-test-v744');
+    test('SW: кэш поднят до kipia-test-v745 (Task 524)', () => {
+        assertTrue(SW_SRC.indexOf('kipia-test-v745') !== -1,
+            'SW несёт версию kipia-test-v745');
         assertTrue(SW_SRC.indexOf('kipia-test-v736') === -1,
             'прежней версии kipia-test-v736 нет');
     });

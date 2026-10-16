@@ -5254,14 +5254,17 @@
        device/dpr — 1:1 на физические пиксели). Длина окна
        ФИКСИРОВАНА: матрица постоянна, размер не зависит от данных.
        Сообщения «пейджер» в ДВЕ строки — РЕАЛЬНЫЕ данные
-       (мероприятия/отпуска Табеля) + API. Клик по окну —
-       выпадающий календарь по месяцам. === */
+       (мероприятия/отпуска Табеля) + API. Task 532: клик по ОКНУ —
+       ТОЛЬКО выпадающий календарь (с выбором года); ШЕСТЕРЁНКА
+       в правом верхнем углу — ТОЛЬКО блок настроек. === */
     .ws-lcd-wrap { display: none; }
     @media (min-width: 1024px) {
         /* окно видно ТОЛЬКО на десктопе (заявка: «в десктопной
            версии»); Task 530: обёртка РАСТЯНУТА на полную высоту
            бара (align-self: stretch) — рамка внутри (height:100%)
-           примыкает к краям бара ВПЛОТНУЮ сверху и снизу */
+           примыкает к краям бара ВПЛОТНУЮ сверху и снизу;
+           Task 532: в обёртке ДВА элемента — рамка + ШЕСТЕРЁНКА
+           (правый верхний угол информера), зазор 5px */
         #page-work-schedule .page-inline-header .ws-lcd-wrap {
             display: flex;
             align-self: stretch;        /* вплотную к верху/низу бара */
@@ -5269,6 +5272,7 @@
             position: relative;         /* якорь выпадающего календаря */
             flex-shrink: 0;
             padding-left: 12px;
+            gap: 5px;                   /* рамка ↔ шестерёнка (Task 532) */
         }
         /* Task 530: заголовок при нехватке места (узкое окно) —
            эллипсис, а не наезд текста на LCD-окно */
@@ -5359,6 +5363,74 @@
             inset 0 -1px 0 rgba(255, 255, 255, 0.6);
     }
 
+    /* --- Task 532: ШЕСТЕРЁНКА — правый верхний угол информера ---
+       Кнопка-«ручка» в стиле корпуса: тот же бордюрчик-выступ,
+       что и у рамки (прямые углы сохранены у корпуса; сама
+       кнопка чуть скруглена — читается как отдельная ручка).
+       Клик — ТОЛЬКО настройки (#wsLcdSet), клик по окну —
+       ТОЛЬКО календарь: разделение по заявке Task 532.
+       Активная (открытые настройки) — «нажатая»: вдавливание
+       + акцентная рамка */
+    .ws-lcd-gear {
+        align-self: flex-start;        /* ВЕРХНИЙ правый угол */
+        flex: none;
+        width: 22px;
+        height: 22px;
+        margin-top: 1px;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border-radius: 5px;
+        background: #1c232d;
+        border: 1px solid rgba(0, 0, 0, 0.6);
+        color: rgba(147, 230, 164, 0.75);
+        cursor: pointer;
+        -webkit-user-select: none; user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.16),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+            0 1px 2px rgba(0, 0, 0, 0.4);
+        transition: box-shadow 0.15s ease, color 0.15s ease;
+    }
+    .ws-lcd-gear:hover {
+        color: #93e6a4;
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.22),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+            0 2px 5px rgba(0, 0, 0, 0.5);
+    }
+    .ws-lcd-gear:focus-visible {
+        outline: 2px solid rgba(74, 143, 199, 0.8); outline-offset: 2px;
+    }
+    .ws-lcd-gear[aria-expanded="true"] {
+        color: #93e6a4;
+        box-shadow:
+            inset 0 2px 3px rgba(0, 0, 0, 0.55),
+            inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+        border-color: rgba(74, 143, 199, 0.55);
+    }
+    [data-theme="light"] .ws-lcd-gear {
+        background: #e7e2d5;
+        border-color: rgba(120, 108, 88, 0.5);
+        color: #4a5548;
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.9),
+            inset 0 -1px 0 rgba(74, 64, 48, 0.28),
+            0 1px 2px rgba(74, 64, 48, 0.25);
+    }
+    [data-theme="light"] .ws-lcd-gear:hover { color: #232e38; }
+    [data-theme="light"] .ws-lcd-gear[aria-expanded="true"] {
+        color: #232e38;
+        border-color: rgba(90, 138, 58, 0.8);
+        box-shadow:
+            inset 0 2px 3px rgba(60, 70, 60, 0.42),
+            inset 0 -1px 0 rgba(255, 255, 255, 0.6);
+    }
+
     /* --- Task 529: выпадающий календарь по месяцам --- */
     .ws-lcd-cal {
         position: absolute;
@@ -5375,7 +5447,27 @@
     }
     .ws-lcd-cal[hidden] { display: none; }
     .ws-lcd-cal-head {
-        display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+        display: flex; align-items: center; gap: 6px; margin-bottom: 4px;
+    }
+    /* Task 532: ВЫБОР ГОДА — вторая строка головы календаря:
+       «Год: ‹ [селект] ›». Селект охватывает текущий ±10; шаг ‹ ›
+       ходит по годам, навигация месяцев декабрь→январь тоже меняет
+       год и синхронизирует селект (_calSyncYear) */
+    .ws-lcd-cal-year {
+        display: flex; align-items: center; justify-content: center;
+        gap: 6px; margin-bottom: 8px;
+    }
+    .ws-lcd-cal-yearlbl { font-size: 11px; color: rgba(255, 255, 255, 0.45); }
+    .ws-lcd-cal-year select {
+        background: var(--card-bg, rgba(30, 42, 56, 0.55));
+        color: #e0e0e0;
+        border: 1px solid var(--card-border, rgba(74, 143, 199, 0.25));
+        border-radius: 6px; font-size: 13px; font-weight: 700;
+        padding: 2px 8px; cursor: pointer; font-family: inherit;
+    }
+    [data-theme="light"] .ws-lcd-cal-yearlbl { color: rgba(20, 20, 19, 0.5); }
+    [data-theme="light"] .ws-lcd-cal-year select {
+        background: #fff; color: #141413; border-color: rgba(0, 0, 0, 0.18);
     }
     .ws-lcd-cal-title {
         flex: 1; text-align: center; font-size: 14px; font-weight: 700;
@@ -5444,14 +5536,16 @@
     [data-theme="light"] .ws-lcd-cal-day.today { border-color: #5a8a3a; color: #3f6f24; }
     [data-theme="light"] .ws-lcd-cal-hint { color: rgba(20, 20, 19, 0.45); }
 
-    /* --- Task 531: блок НАСТРОЕК информера — СЛЕВА от календаря ---
-       Открывается/закрывается ВМЕСТЕ с календарём (toggleCal);
-       положение: та же линия под баром, правый край — на 330px
-       левее правого края обёртки (календарь 322px + зазор 8px) */
+    /* --- Task 531 → 532: блок НАСТРОЕК информера ---
+       Открывается ШЕСТЕРЁНКОЙ (onGearClick, отдельно от календаря —
+       заявка Task 532); по умолчанию — под шестерёнкой у ПРАВОГО края
+       обёртки (right: 0); если открыт и КАЛЕНДАРЬ — смещается СЛЕВА
+       от него (:has ниже, right: 330px = 322 ширина + 8 зазор),
+       чтобы окна не перекрывались */
     .ws-lcd-set {
         position: absolute;
         top: calc(100% + 10px);
-        right: 330px;               /* левее календаря (322 + 8) */
+        right: 0;                    /* под шестерёнкой, правый край */
         z-index: 9461;
         width: 252px;
         box-sizing: border-box;
@@ -5461,6 +5555,9 @@
         border-radius: 10px;
         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
     }
+    /* календарь открыт → настройки уходят СЛЕВА от него (Task 531
+       сохранила взаимное расположение, Task 532 делает его условным) */
+    .ws-lcd-wrap:has(#wsLcdCal:not([hidden])) .ws-lcd-set { right: 330px; }
     .ws-lcd-set[hidden] { display: none; }
     .ws-lcd-set-title {
         font-size: 13px; font-weight: 700; color: #e0e0e0;
@@ -5503,6 +5600,25 @@
         margin-top: 8px; font-size: 10px; text-align: center;
         color: rgba(255, 255, 255, 0.35);
     }
+    /* Task 532: ДИАГНОСТИКА ПОГОДЫ в настройках — статус последнего
+       опроса (источник/температура/время наблюдения либо причина
+       сбоя) + кнопка «Обновить сейчас» (форс-опрос сети без
+       ожидания 30-минутного цикла — удобно сразу после обновления
+       Apps Script). warn — проблемы (жёлтый), ok — данные есть
+       (зелёный приглушённый) */
+    .ws-lcd-set-wstat {
+        font-size: 11px; line-height: 1.45; margin: 2px 0 6px;
+        color: rgba(147, 200, 147, 0.9);
+        word-break: break-word;
+    }
+    .ws-lcd-set-wstat.warn { color: #d9b96a; }
+    .ws-lcd-set-wstat.muted { color: rgba(255, 255, 255, 0.4); }
+    .ws-lcd-set-wbtn {
+        width: 100%; margin-bottom: 2px;
+    }
+    [data-theme="light"] .ws-lcd-set-wstat { color: #3f6f24; }
+    [data-theme="light"] .ws-lcd-set-wstat.warn { color: #8a6d1f; }
+    [data-theme="light"] .ws-lcd-set-wstat.muted { color: rgba(20, 20, 19, 0.45); }
     [data-theme="light"] .ws-lcd-set {
         background: #fbf8f0;
         border-color: rgba(0, 0, 0, 0.15);
@@ -5532,10 +5648,12 @@
        .page-inline-header ниже по файлу), а календарь НЕ может
        выйти из контекста шапки своим z-index 9460; ничья 5=5 с
        бортиком решается порядком DOM в пользу шторки. Пока
-       открыт попап LCD — поднимаем шапку НАД шторками (z 20),
+       открыт ЛЮБОЙ попап LCD (Task 532: календарь ИЛИ настройки) —
+       поднимаем шапку НАД шторками (z 20),
        НЕ трогая окон тулбара (z 55) и нижней навигации (z 100) */
     @media (min-width: 1024px) {
-        #contentArea > #page-work-schedule:has(#wsLcdCal:not([hidden])) > .page-inline-header {
+        #contentArea > #page-work-schedule:has(#wsLcdCal:not([hidden])) > .page-inline-header,
+        #contentArea > #page-work-schedule:has(#wsLcdSet:not([hidden])) > .page-inline-header {
             z-index: 20;
         }
     }
@@ -17813,7 +17931,7 @@
             <div class="page-inline-header">
                 <div class="page-inline-header-chevron" onclick="chevronTap()" aria-label="Назад / Главная"></div>
                 <div class="page-inline-header-title">Табель учёта рабочего времени</div>
-                <!-- Task 529 → 530 → 531: LCD-окно «пейджер» — СПРАВА в баре
+                <!-- Task 529 → 530 → 531 → 532: LCD-окно «пейджер» — СПРАВА в баре
                      крошек Табеля (только десктоп ≥1024px, CSS). Рамка-
                      «бордюрчик» с ЭФФЕКТОМ ВЫСТУПА, прямые углы, вплотную
                      к краям бара; ЭКРАН — УТОПЛЕН в рамку (Task 531).
@@ -17822,26 +17940,39 @@
                      крупно (двоеточие — ЦЕНТР между часами и минутами),
                      секунды малым шрифтом справа от минут ВНИЗУ по нижней
                      линии, день недели — ЦЕНТР между циферблатом и датой,
-                     дата, погода Кемерово (meteoinfo.ru) с иконкой.
-                     Сетка ровная (целый pitch в device-пикселях).
-                     Клик по окну — календарь по месяцам (#wsLcdCal) +
-                     СЛЕВА от него блок НАСТРОЕК информера (#wsLcdSet:
-                     отображение, частота сообщений/погоды, источники,
-                     тест и сброс; localStorage). Сообщения в ДВЕ строки
-                     — РЕАЛЬНЫЕ данные Табеля + WsLcdClock.showMessage
+                     дата, погода Кемерово (meteoinfo.ru + резерв
+                     open-meteo.com) с иконкой. Сетка ровная (целый pitch
+                     в device-пикселях).
+                     Task 532: ЗНАЧОК-ШЕСТЕРЁНКА #wsLcdGear — В ПРАВОМ
+                     ВЕРХНЕМ УГЛУ информера (в обёртке, справа от рамки):
+                     клик по шестерёнке открывает ТОЛЬКО блок настроек
+                     (#wsLcdSet: отображение, частота сообщений/погоды,
+                     источники, диагностика погоды, тест и сброс;
+                     localStorage). Клик по ОКНУ информера открывает
+                     ТОЛЬКО календарь (#wsLcdCal) — с ВЫБОРОМ ГОДА
+                     (селект + шаг ‹ ›). Сообщения в ДВЕ строки —
+                     РЕАЛЬНЫЕ данные Табеля + WsLcdClock.showMessage
                      и событие window 'ws-lcd-message'. -->
                 <div id="wsLcdWrap" class="ws-lcd-wrap">
                     <button type="button" id="wsLcdClock" class="ws-lcd" onclick="WsLcdClock.onClockClick(event)"
                             aria-haspopup="true" aria-expanded="false"
-                            aria-label="Часы, дата и погода — нажмите, чтобы открыть календарь и настройки"
-                            title="Время, дата и погода Кемерово — нажмите для календаря и настроек">
+                            aria-label="Часы, дата и погода — нажмите, чтобы открыть календарь"
+                            title="Время, дата и погода Кемерово — нажмите для календаря">
                         <canvas id="wsLcdCanvas" class="ws-lcd-screen" width="205" height="17" aria-hidden="true"></canvas>
                     </button>
+                    <!-- Task 532: шестерёнка — правый верхний угол информера;
+                         клик → ТОЛЬКО настройки (календарь не трогает) -->
+                    <button type="button" id="wsLcdGear" class="ws-lcd-gear" onclick="WsLcdClock.onGearClick(event)"
+                            aria-haspopup="true" aria-expanded="false"
+                            aria-label="Настройки информера" title="Настройки информера">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true" focusable="false"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.73 8.87c-.12.21-.08.48.12.61l2.03 1.58c-.04.3-.07.63-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                    </button>
                     <div id="wsLcdCal" class="ws-lcd-cal" hidden></div>
-                    <!-- Task 531: настройки информера — СЛЕВА от блока
-                         календаря (отображение блоков, частота вывода
-                         сообщений и обновления погоды, источники
-                         «пейджера», тест сообщения и сброс) -->
+                    <!-- Task 531 → 532: настройки информера — под шестерёнкой;
+                         при открытом календаре смещаются СЛЕВА от него
+                         (отображение блоков, частота вывода сообщений
+                         и обновления погоды, источники «пейджера»,
+                         диагностика погоды, тест сообщения и сброс) -->
                     <div id="wsLcdSet" class="ws-lcd-set" hidden aria-label="Настройки информера"></div>
                 </div>
             </div>
@@ -47763,13 +47894,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
         _timer: null,           // setInterval тика (только на странице)
         _inited: false,
-        _calOpen: false,
+        _calOpen: false,        // календарь открыт (клик по ОКНУ — Task 532)
+        _setOpen: false,        // настройки открыты (клик по ШЕСТЕРЁНКЕ)
         _calY: 0, _calM: 0,     // месяц календаря (год, 1..12)
         _msg: null,             // {pages:[[l1,l2],..], idx, until, nextFlip}
         _lastSec: -1,
         _grid: null,            // экранный буфер ROWS×COLS (0/1)
         _pitch: 0,              // последний pitch (device-пикс./сегмент)
         _weather: null,         // {tempTxt, icon, raw, ts}
+        _weatherDiag: null,     // Task 532: диагностика последнего опроса погоды
         _weatherTimer: null,    // setTimeout повторного опроса погоды
         _feed: [],              // очередь РЕАЛЬНЫХ сообщений «пейджер»
         _feedIdx: 0,
@@ -47779,19 +47912,42 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // --- шрифт 5×7: каждый глиф — 7 строк по 5 бит, старший бит СЛЕВА ---
         FONT5: {
-            // Кириллица (прописные; «ё» нормализуется в «Е»)
+            // Кириллица (прописные). Task 532 — АУДИТ КИРИЛЛИЦЫ:
+            // перерисованы глифы, которые читались как ДРУГИЕ буквы
+            // или как латиница (заявка: «некоторые буквы не
+            // соответствуют кириллице»):
+            //   • Ь — был стем+3 перекладины = НЕОТЛИЧИМ от «Е»;
+            //     теперь стем + высокая чаша (от 2-й строки, как в
+            //     классических 5×7 кириллических шрифтах);
+            //   • Ы — правая часть приведена к новой форме «Ь»;
+            //   • Ч — перекладина доведена до левого стема (была
+            //     разомкнута — читалось как «4»);
+            //   • З — гладкая «3» (левый стем сверху делал замкнутый
+            //     угол — читалось как «9»);
+            //   • Э — убраны угловые точки слева (читалось как Е),
+            //     средняя черта — от левого края до конца чаши;
+            //   • Д — арка сверху + стемы + «ножки» внизу (замкнутая
+            //     коробка читалась как □/О); вариант выбран A/B/C/D-
+            //     верификацией VLM по чтению слова «ЛЬДИНЫ»;
+            //   • Л — симметричный пик (2 колонки) + ноги (вариант с
+            //     дрейфом левой ноги читался как «П» — тест чтения);
+            //   • ДОБАВЛЕН «Ё» (был ПРОПУСК — буква исчезала: «ё»
+            //     верхнем регистре не имела глифа, комментарий
+            //     «нормализуется в Е» не соответствовал коду);
+            //   • ДОБАВЛЕНЫ « » – — … — раньше исчезали из сообщений.
             'А': [0b01110, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001],
             'Б': [0b11111, 0b10000, 0b10000, 0b11110, 0b10001, 0b10001, 0b11110],
             'В': [0b11110, 0b10001, 0b10001, 0b11110, 0b10001, 0b10001, 0b11110],
             'Г': [0b11111, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000],
-            'Д': [0b11111, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b11111],
+            'Д': [0b01110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b11011],
             'Е': [0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b11111],
+            'Ё': [0b01010, 0b11111, 0b10000, 0b11110, 0b10000, 0b10000, 0b11111],
             'Ж': [0b10101, 0b10101, 0b10101, 0b11111, 0b10101, 0b10101, 0b10101],
-            'З': [0b01111, 0b10000, 0b10000, 0b01110, 0b00001, 0b00001, 0b11110],
+            'З': [0b01111, 0b00001, 0b00001, 0b01110, 0b00001, 0b00001, 0b01111],
             'И': [0b10001, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b10001],
             'Й': [0b00100, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b10001],
             'К': [0b10001, 0b10010, 0b10100, 0b11000, 0b10100, 0b10010, 0b10001],
-            'Л': [0b00111, 0b01001, 0b01001, 0b01001, 0b01001, 0b01001, 0b01001],
+            'Л': [0b00110, 0b01001, 0b01001, 0b01001, 0b01001, 0b01001, 0b01001],
             'М': [0b10001, 0b11011, 0b10101, 0b10101, 0b10001, 0b10001, 0b10001],
             'Н': [0b10001, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001],
             'О': [0b01110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110],
@@ -47803,15 +47959,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             'Ф': [0b00100, 0b01110, 0b10101, 0b10101, 0b10101, 0b01110, 0b00100],
             'Х': [0b10001, 0b01010, 0b00100, 0b00100, 0b00100, 0b01010, 0b10001],
             'Ц': [0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b11111, 0b00001],
-            'Ч': [0b10001, 0b10001, 0b10001, 0b01111, 0b00001, 0b00001, 0b00001],
+            'Ч': [0b10001, 0b10001, 0b10001, 0b11111, 0b00001, 0b00001, 0b00001],
             'Ш': [0b10101, 0b10101, 0b10101, 0b10101, 0b10101, 0b10101, 0b11111],
             'Щ': [0b10101, 0b10101, 0b10101, 0b10101, 0b10101, 0b11111, 0b00001],
             'Ъ': [0b11000, 0b01000, 0b01000, 0b01111, 0b01001, 0b01001, 0b01111],
-            'Ы': [0b10111, 0b10100, 0b10100, 0b10111, 0b10100, 0b10100, 0b10111],
-            'Ь': [0b11110, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b11110],
-            'Э': [0b01110, 0b10001, 0b00001, 0b01111, 0b00001, 0b10001, 0b01110],
-            'Ю': [0b10011, 0b10101, 0b10101, 0b11111, 0b10101, 0b10101, 0b10011],
-            'Я': [0b01111, 0b10001, 0b10001, 0b01111, 0b00001, 0b00001, 0b01110],
+            'Ы': [0b10100, 0b10111, 0b10101, 0b10101, 0b10101, 0b10101, 0b10111],
+            'Ь': [0b10000, 0b11110, 0b10001, 0b10001, 0b10001, 0b10001, 0b11110],
+            'Э': [0b01110, 0b00001, 0b00001, 0b11111, 0b00001, 0b00001, 0b01110],
+            'Ю': [0b10110, 0b10101, 0b10101, 0b11111, 0b10101, 0b10101, 0b10110],
+            'Я': [0b01111, 0b10001, 0b10001, 0b01111, 0b00001, 0b00001, 0b00001],
             // Латиница (прописные)
             'A': [0b01110, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001],
             'B': [0b11110, 0b10001, 0b10001, 0b11110, 0b10001, 0b10001, 0b11110],
@@ -47866,7 +48022,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             '%': [0b11001, 0b11010, 0b00010, 0b00100, 0b01000, 0b01011, 0b10011],
             '=': [0, 0, 0b11111, 0, 0b11111, 0, 0],
             '_': [0, 0, 0, 0, 0, 0, 0b11111],
-            '°': [0b00110, 0b01001, 0b00110, 0, 0, 0, 0]   // Task 530: температура
+            '°': [0b00110, 0b01001, 0b00110, 0, 0, 0, 0],   // Task 530: температура
+            // Task 532: кавычки-«ёлочки», тире и многоточие — раньше
+            // исчезали из сообщений «пейджера» (нет глифа — пропуск)
+            '«': [0, 0b00110, 0b01001, 0b10010, 0b01001, 0b00110, 0],
+            '»': [0, 0b01100, 0b10010, 0b01001, 0b10010, 0b01100, 0],
+            '–': [0, 0, 0, 0b01110, 0, 0, 0],              // короткое тире
+            '—': [0, 0, 0, 0b11111, 0, 0, 0],              // длинное тире
+            '…': [0, 0, 0, 0, 0, 0b10101, 0b10101]         // многоточие
         },
 
         // --- малый шрифт 3×5 для СЕКУНД (Task 530): справа от минут,
@@ -47934,18 +48097,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (this._inited) return true;
             this._inited = true;
             var self = this;
-            // Клик вне окна/календаря — закрыть календарь и настройки.
-            // Task 531 (БАГ): _calNav/_calToday перерисовывают календарь
-            // (innerHTML) ПРЯМО В onclick-обработчике кнопки — ДО того,
-            // как клик всплывёт до document. К моменту всплытия target
-            // (кнопка ‹/›/«Сегодня») уже ОТДЕЛЁН от DOM: closest()
-            // поднимается по живой цепочке родителей и НЕ находит
-            // #wsLcdWrap — календарь ЗАКРЫВАЛСЯ при каждом переключении
-            // месяца. Лечение: composedPath() — путь события СНЯТ на
-            // момент диспатча (до перерисовки) и содержит #wsLcdWrap;
-            // для старых браузеров — fallback на ev.path, затем closest
+            // Клик вне окна/календаря/настроек — закрыть ОБА попапа
+            // (Task 532: попапы теперь независимы — календарь открывает
+            // клик по окну, настройки — шестерёнка; закрываются оба
+            // вместе по клику вне). Task 531 (БАГ): _calNav/_calToday
+            // перерисовывают календарь (innerHTML) ПРЯМО В onclick-
+            // обработчике кнопки — ДО того, как клик всплывёт до
+            // document. К моменту всплытия target (кнопка ‹/›/«Сегодня»)
+            // уже ОТДЕЛЁН от DOM: closest() поднимается по живой цепочке
+            // родителей и НЕ находит #wsLcdWrap — календарь ЗАКРЫВАЛСЯ
+            // при каждом переключении месяца. Лечение: composedPath() —
+            // путь события СНЯТ на момент диспатча (до перерисовки) и
+            // содержит #wsLcdWrap; для старых браузеров — fallback на
+            // ev.path, затем closest
             document.addEventListener('click', function(ev) {
-                if (!self._calOpen) return;
+                if (!self._calOpen && !self._setOpen) return;
                 var path = (typeof ev.composedPath === 'function') ?
                            ev.composedPath() : (ev.path || []);
                 var i;
@@ -47955,11 +48121,15 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 var t = ev.target;
                 if (t && t.closest && t.closest('#wsLcdWrap')) return;
                 self.toggleCal(false);
+                self.toggleSet(false);
             });
-            // Esc закрывает календарь (не мешает Esc-логике Табеля —
+            // Esc закрывает оба попапа (не мешает Esc-логике Табеля —
             // обработчики независимы)
             document.addEventListener('keydown', function(ev) {
-                if (ev.key === 'Escape' && self._calOpen) self.toggleCal(false);
+                if (ev.key === 'Escape' && (self._calOpen || self._setOpen)) {
+                    self.toggleCal(false);
+                    self.toggleSet(false);
+                }
             });
             // Перерисовка при изменении размера окна (DPR/масштаб)
             window.addEventListener('resize', function() {
@@ -48009,6 +48179,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this._msg = null;                    // сообщение не «переживает» уход
             this._feedAt = 0;                    // первый «пейджер» — через паузу снова
             if (this._calOpen) this.toggleCal(false);
+            if (this._setOpen) this.toggleSet(false);   // Task 532
         },
 
         // ==================== буфер экрана ====================
@@ -48039,8 +48210,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
         // Текст 5×7 (последовательные глифы с шагом 6 колонок);
         // неизвестные символы пропускаются. Возвращает ширину в сегментах.
+        // Task 532: «№» → «N» (глифа номера в 5×7 нет, а пропуск
+        // клетки выглядел бы как исчезнувшая буква)
         _blit5: function(g, text, top, left) {
-            text = String(text == null ? '' : text).toUpperCase();
+            text = String(text == null ? '' : text)
+                .replace(/№/g, 'N').toUpperCase();
             var x = left, i, ch, gl;
             for (i = 0; i < text.length; i++) {
                 ch = text.charAt(i);
@@ -48341,7 +48515,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Task 531: период опроса настраивается (wthrMin), показ
         // можно выключить (настройка «Погода» — сеть не дёргаем)
 
-        // применить данные погоды к экрану (перерисовка)
+        // применить данные погоды к экрану (перерисовка);
+        // Task 532: заодно фиксируем ДИАГНОСТИКУ для панели настроек
+        // (источник/температура/время наблюдения)
         _applyWeather: function(data) {
             var t = (data && data.temp != null &&
                      !isNaN(parseFloat(data.temp))) ?
@@ -48355,6 +48531,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 icon: this._mapWeatherIcon(data),
                 raw: data,
                 ts: Date.now()
+            };
+            this._weatherDiag = {
+                ok: true,
+                txt: txt || '--',
+                source: (data && data.source) || '',
+                obs: (data && data.obsLocal) || ''
             };
             this._lastSec = -1;                     // форсировать перерисовку
             if (this._timer) this._tick();
@@ -48380,7 +48562,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         },
 
         // загрузка: кэш localStorage (сутки) → сеть (раз в 30 мин;
-        // Task 531 — период из настроек информера)
+        // Task 531 — период из настроек информера; Task 532 — каждый
+        // результат фиксируется в _weatherDiag и виден в панели
+        // настроек: «Обновить сейчас» переспрашивает сервер
+        // немедленно — удобно сразу после обновления Apps Script)
         _loadWeather: function(force) {
             var self = this;
             var st = this._setGet();
@@ -48412,14 +48597,38 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                 JSON.stringify({ data: data, ts: Date.now() }));
                         } catch (e) { /* кэш необязателен */ }
                         self._applyWeather(data);
+                    } else {
+                        // сервер ответил, но погоды нет: какие источники
+                        // пробовались и почему не вышло — в data.diag
+                        // (getWeather v2, Task 532)
+                        self._weatherDiag = {
+                            ok: false, why: 'server',
+                            note: data ? data.note : '',
+                            diag: data ? data.diag : ''
+                        };
                     }
+                    if (self._setOpen) self._renderSettings();
                     self._weatherSchedule();
                 })
-                .catch(function() {
+                .catch(function(err) {
                     // старый сервер (нет эндпоинта)/сеть — тихо,
-                    // повтор через WEATHER_MS
+                    // повтор через период настроек; ДИАГНОСТИКА —
+                    // в панель настроек: «Unknown action» означает,
+                    // что развёртывание Apps Script НЕ обновлено
+                    var msg = String((err && err.message) || '');
+                    self._weatherDiag = (/unknown action/i.test(msg))
+                        ? { ok: false, why: 'no-endpoint' }
+                        : { ok: false, why: 'network', note: msg.slice(0, 80) };
+                    if (self._setOpen) self._renderSettings();
                     self._weatherSchedule();
                 });
+        },
+
+        // «Обновить сейчас» (Task 532): форс-опрос сети; статус в
+        // панели обновится сам — по факту ответа (then/catch
+        // перерисовывают панель, если она открыта)
+        _weatherNow: function() {
+            this._loadWeather(true);
         },
 
         // расписание повторного опроса погоды (одиночный таймер;
@@ -48603,6 +48812,40 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             html += '<label class="ws-lcd-set-row"><input type="checkbox"' + ck(s.srcVac) +
                     ' onchange="WsLcdClock._setChange(\'srcVac\', this.checked)">Отпуска</label>';
             html += '<div class="ws-lcd-set-sec">Погода</div>';
+            // Task 532: ДИАГНОСТИКА последнего опроса + форс-обновление.
+            // Статусы: есть данные (источник/температура/наблюдение) /
+            // эндпоинта нет (обновите развёртывание Apps Script) /
+            // сервер ответил без данных (какие источники пробовал) /
+            // сеть недоступна / ещё не опрошено
+            var wd = this._weatherDiag;
+            var wstat, wcls;
+            if (wd && wd.ok) {
+                wstat = 'Есть данные: ' + wd.txt +
+                        (wd.source ? ' — ' + wd.source : '') +
+                        (wd.obs ? ' (набл. ' + wd.obs + ')' : '');
+                wcls = '';
+            } else if (wd && wd.why === 'no-endpoint') {
+                wstat = 'Сервер не знает эндпоинт getWeather — обновите ' +
+                        'развёртывание Apps Script (WorkSchedule.gs + Code.gs, ' +
+                        'новая версия деплоя)';
+                wcls = ' warn';
+            } else if (wd && wd.why === 'server') {
+                wstat = 'Источник не дал данных' +
+                        (wd.diag ? ': ' + wd.diag : '') +
+                        '. Повтор — по расписанию или кнопкой ниже';
+                wcls = ' warn';
+            } else if (wd && wd.why === 'network') {
+                wstat = 'Сеть/сервер недоступны' +
+                        (wd.note ? ': ' + wd.note : '') +
+                        '. Повтор — по расписанию или кнопкой ниже';
+                wcls = ' warn';
+            } else {
+                wstat = 'Ещё не опрошено (автоопрос по расписанию)';
+                wcls = ' muted';
+            }
+            html += '<div class="ws-lcd-set-wstat' + wcls + '">' + wstat + '</div>';
+            html += '<button type="button" class="ws-lcd-set-btn ws-lcd-set-wbtn"' +
+                    ' onclick="WsLcdClock._weatherNow()">Обновить сейчас</button>';
             html += '<label class="ws-lcd-set-row ws-lcd-set-sel">Обновление' +
                     '<select onchange="WsLcdClock._setChange(\'wthrMin\', +this.value)">' +
                     '<option value="15"' + sel(s.wthrMin, 15) + '>15 мин</option>' +
@@ -48659,20 +48902,29 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             this.showMessage('ТЕСТ: СООБЩЕНИЕ ИНФОРМЕРА РАБОТАЕТ', undefined, 6000);
         },
 
-        // ==================== календарь по месяцам ====================
+        // ==================== календарь и настройки (Task 532) ========
+        // Разделение по заявке: клик по ОКНУ информера — ТОЛЬКО
+        // календарь; клик по ШЕСТЕРЁНКЕ (правый верхний угол) —
+        // ТОЛЬКО настройки. Попапы независимы; клик вне / Esc / уход
+        // со страницы закрывают оба; при открытых ОБЕИХ панель
+        // настроек смещается СЛЕВА от календаря (CSS :has).
         onClockClick: function(ev) {
             if (ev && ev.stopPropagation) ev.stopPropagation();
             this.toggleCal();
         },
 
+        onGearClick: function(ev) {
+            if (ev && ev.stopPropagation) ev.stopPropagation();
+            this.toggleSet();
+        },
+
         toggleCal: function(force) {
             var cal = document.getElementById('wsLcdCal');
-            var set = document.getElementById('wsLcdSet');
             var btn = document.getElementById('wsLcdClock');
             if (!cal) return;
             var open = (typeof force === 'boolean') ? force : !this._calOpen;
             if (open === this._calOpen) {
-                if (open) { this._renderCal(); if (set) this._renderSettings(); }
+                if (open) this._renderCal();
                 return;
             }
             this._calOpen = open;
@@ -48684,14 +48936,31 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
                 this._renderCal();
                 cal.hidden = false;
-                // Task 531: панель настроек — СЛЕВА от календаря,
-                // открывается/закрывается ВМЕСТЕ с ним
-                if (set) { this._renderSettings(); set.hidden = false; }
             } else {
                 cal.hidden = true;
-                if (set) set.hidden = true;
             }
             if (btn) btn.setAttribute('aria-expanded', String(open));
+        },
+
+        // Настройки — отдельный попап (Task 532: раньше открывались
+        // вместе с календарём по клику по окну)
+        toggleSet: function(force) {
+            var set = document.getElementById('wsLcdSet');
+            var gear = document.getElementById('wsLcdGear');
+            if (!set) return;
+            var open = (typeof force === 'boolean') ? force : !this._setOpen;
+            if (open === this._setOpen) {
+                if (open) this._renderSettings();
+                return;
+            }
+            this._setOpen = open;
+            if (open) {
+                this._renderSettings();
+                set.hidden = false;
+            } else {
+                set.hidden = true;
+            }
+            if (gear) gear.setAttribute('aria-expanded', String(open));
         },
 
         _calNav: function(delta) {
@@ -48699,6 +48968,19 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             if (m < 1) { this._calM = 12; this._calY--; }
             else if (m > 12) { this._calM = 1; this._calY++; }
             else { this._calM = m; }
+            this._renderCal();
+        },
+
+        // Task 532: шаг по годам ‹ › (селект года синхронизируется
+        // перерисовкой _renderCal)
+        _calYearNav: function(delta) {
+            this._calY += delta;
+            this._renderCal();
+        },
+
+        // Task 532: выбор года из селекта
+        _calSetYear: function(y) {
+            if (!isNaN(y) && y > 0 && y < 3000) this._calY = y;
             this._renderCal();
         },
 
@@ -48724,9 +49006,26 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var html = '';
             html += '<div class="ws-lcd-cal-head">';
             html += '<button type="button" class="ws-lcd-cal-nav" onclick="WsLcdClock._calNav(-1)" aria-label="Предыдущий месяц">&#8249;</button>';
-            html += '<div class="ws-lcd-cal-title">' + MN[m - 1] + ' ' + y + '</div>';
+            html += '<div class="ws-lcd-cal-title">' + MN[m - 1] + '</div>';
             html += '<button type="button" class="ws-lcd-cal-nav" onclick="WsLcdClock._calNav(1)" aria-label="Следующий месяц">&#8250;</button>';
             html += '<button type="button" class="ws-lcd-cal-today" onclick="WsLcdClock._calToday()">Сегодня</button>';
+            html += '</div>';
+            // Task 532: ВЫБОР ГОДА — вторая строка головы календаря:
+            // «Год: ‹ [селект] ›». Селект охватывает текущий ±10; годы,
+            // достигнутые навигацией (‹ › месяцев/года), добавляются
+            // в диапазон автоматически (min/max ниже)
+            html += '<div class="ws-lcd-cal-year">';
+            html += '<button type="button" class="ws-lcd-cal-nav" onclick="WsLcdClock._calYearNav(-1)" aria-label="Предыдущий год">&#8249;</button>';
+            html += '<span class="ws-lcd-cal-yearlbl">Год</span>';
+            html += '<select onchange="WsLcdClock._calSetYear(+this.value)" aria-label="Год">';
+            var yNow = today.getFullYear(), yo;
+            var yLo = Math.min(yNow - 10, y), yHi = Math.max(yNow + 10, y);
+            for (yo = yLo; yo <= yHi; yo++) {
+                html += '<option value="' + yo + '"' +
+                        (yo === y ? ' selected' : '') + '>' + yo + '</option>';
+            }
+            html += '</select>';
+            html += '<button type="button" class="ws-lcd-cal-nav" onclick="WsLcdClock._calYearNav(1)" aria-label="Следующий год">&#8250;</button>';
             html += '</div>';
             html += '<div class="ws-lcd-cal-grid">';
             var d0;

@@ -35,7 +35,7 @@
 //     словам ≤33 символов; _tick — возврат к часам после таймаута и
 //     листание страниц; draw — сетка ЦЕЛЫМ pitch (без призраков);
 //     _calPick — селекты месяца/года + WorkSchedule.onMonthChange.
-//   Слой 5 — SW: kipia-test-v744.
+//   Слой 5 — SW: kipia-test-v745.
 //
 // Запуск: через tests/run-all.js (require './test-task529.js').
 
@@ -280,20 +280,20 @@ describe('Task 529 C (адаптация 530): JS — модуль WsLcdClock и
         assertTrue(sb.WsLcdClock.PAGE_MS > 0, 'PAGE_MS задан');
     });
 
-    test('FONT5: полная кириллица А..Я (без Ё, 32 глифа)', () => {
+    test('FONT5: полная кириллица А..Я + Ё (33 глифа; Task 532 добавил Ё)', () => {
         const sb = lcdSandbox();
-        const letters = 'АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ';
+        const letters = 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ';
         let missing = [];
         for (const ch of letters) {
             if (!sb.WsLcdClock.FONT5[ch]) missing.push(ch);
         }
-        assertEqual(missing.length, 0, 'все 32 буквы на месте: ' + missing.join(','));
+        assertEqual(missing.length, 0, 'все 33 буквы на месте: ' + missing.join(','));
     });
 
-    test('FONT5: латиница A..Z, цифры 0..9, знаки . : - / % ° пробел', () => {
+    test('FONT5: латиница A..Z, цифры 0..9, знаки . : - / % ° « » – — … пробел', () => {
         const sb = lcdSandbox();
-        for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.:-/ %°') {
-            assertTrue(!!sb.WsLcdClock.FONT5[ch], 'глиф «' + ch + '» есть (° — Task 530 погода)');
+        for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.:-/ %°«»–—…') {
+            assertTrue(!!sb.WsLcdClock.FONT5[ch], 'глиф «' + ch + '» есть (° — Task 530; « » – — … — Task 532)');
         }
     });
 
@@ -404,8 +404,8 @@ describe('Task 529 D (адаптация 530): VM — экран 205×17, пей
         const sb = lcdSandbox();
         sb.WsLcdClock._msg = { pages: [['ДАННЫЕ', 'ОБНОВЛЕНЫ']], idx: 0 };
         const g = sb.WsLcdClock._composeMsg();
-        // «Д» ряд 1 → 11111 → колонки 1..5
-        assertEqual(g[1][1], 1, 'первая строка начинается с ряда 1');
+        // «Д» (Task 532: арка 01110) ряд 1 → колонки 2..4
+        assertEqual(g[1][2], 1, 'первая строка начинается с ряда 1');
         assertEqual(g[9][2], 1, 'вторая строка — с ряда 9 («О»: верх 01110 → колонка 2)');
         // между строками (ряд 8) пусто
         let row8 = 0;
@@ -417,8 +417,8 @@ describe('Task 529 D (адаптация 530): VM — экран 205×17, пей
         const sb = lcdSandbox();
         sb.WsLcdClock._msg = { pages: [['ДАННЫЕ ОБНОВЛЕНЫ', '']], idx: 0 };
         const g = sb.WsLcdClock._composeMsg();
-        assertEqual(g[5][1], 1, 'строка начинается с ряда 5');
-        assertEqual(g[1][1], 0, 'ряд 1 пуст');
+        assertEqual(g[5][2], 1, 'строка начинается с ряда 5 («Д» арка — колонка 2, Task 532)');
+        assertEqual(g[1][2], 0, 'ряд 1 пуст');
     });
 
     test('_splitPages: перенос по словам ≤33 символов (ширина 205), страницы по 2 строки', () => {
@@ -574,11 +574,11 @@ describe('Task 529 D (адаптация 530): VM — экран 205×17, пей
 // ============================================================
 describe('Task 529 → 530 — SW: версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v744', () => {
+    test('sw.js: CACHE_VERSION = kipia-test-v745', () => {
         const m = SW_SRC.match(/const CACHE_VERSION = '(kipia-test-v\d+)'/);
         assertTrue(m !== null, 'CACHE_VERSION найден в sw.js');
-        assertEqual(m[1], 'kipia-test-v744',
-            'SW поднят до kipia-test-v744 (index.html менялся — Task 530)');
+        assertEqual(m[1], 'kipia-test-v745',
+            'SW поднят до kipia-test-v745 (index.html менялся — Task 530)');
         assertTrue(m[1] !== 'kipia-test-v742',
             'старая версия kipia-test-v742 не осталась');
     });

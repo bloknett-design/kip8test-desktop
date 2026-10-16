@@ -645,12 +645,12 @@ describe('Task 358 — VM: _flushOutbox (дедуп + доставка)', () => 
 // SW-версия
 // ============================================================
 describe('Task 358 — SW: бамп кэша', () => {
-    test('CACHE_VERSION = kipia-test-v744', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v744'") !== -1,
+    test('CACHE_VERSION = kipia-test-v745', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v745'") !== -1,
             'версия кэша поднята до v587');
     });
     test('нет v586 (старая) и нет v588 (двойной бамп)', () => {
         assertTrue(SW_SRC.indexOf('kipia-test-v586') === -1, 'старая версия не осталась');
-        assertTrue(SW_SRC.indexOf('kipia-test-v745') === -1, 'двойного бампа не было');
+        assertTrue(SW_SRC.indexOf('kipia-test-v746') === -1, 'двойного бампа не было');
     });
 });

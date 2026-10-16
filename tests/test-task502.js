@@ -22,7 +22,7 @@
 //   D. VM — scaleQueryEnterBlur: Enter (key и keyCode 13) гасит
 //      клавиатуру (preventDefault + stopPropagation + blur), прочие
 //      клавиши — без действий; глобальный Enter/Next жив (границы).
-//   E. SW kipia-test-v744 + комментарий Task 502 (guard v727).
+//   E. SW kipia-test-v745 + комментарий Task 502 (guard v727).
 
 const fs = require('fs');
 const path = require('path');
@@ -358,11 +358,11 @@ describe('Task 502 D: VM — Enter в полях ППР гасит клавиа�
 // E. SW — версия и комментарий
 // ==========================================================================
 describe('Task 502 E: Service Worker', () => {
-    test("sw.js: CACHE_VERSION = 'kipia-test-v744'", () => {
+    test("sw.js: CACHE_VERSION = 'kipia-test-v745'", () => {
         assertTrue(
-            SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v744';") !== -1,
+            SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v745';") !== -1,
             'версия v726');
-        assertFalse(SW_SRC.indexOf('kipia-test-v745') !== -1,
+        assertFalse(SW_SRC.indexOf('kipia-test-v746') !== -1,
             'следующей версии нет');
     });
 

@@ -46,7 +46,7 @@
 //      дата_начала; записи других работников не мешают;
 //   8) _renderEventsPopup: подстрока окна — «05.09.2026»,
 //      ISO-даты «2026-09-05» в окне НЕТ.
-//   SW: kipia-test-v744 (главный), v660 — прежней нет.
+//   SW: kipia-test-v745 (главный), v660 — прежней нет.
 // ============================================================
 
 const fs = require('fs');
@@ -420,9 +420,9 @@ describe('Task 434 — VM: окно «Мероприятия в этот ден�
 // ============================================================
 describe('Task 434 — SW: версия кеша', () => {
     test('v659 (главный), v660 — прежней нет', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v744'") !== -1,
-            'SW кэш kipia-test-v744');
-        assertFalse(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v745'") !== -1,
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v745'") !== -1,
+            'SW кэш kipia-test-v745');
+        assertFalse(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v746'") !== -1,
             'v660 ещё не существует (guard следующего бампа)');
     });
 });
