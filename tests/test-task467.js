@@ -18,7 +18,7 @@
 //   frame.className = 'wspprev-frame wsev-prev-frame' (комментарий
 //   Task 467). Диалог/кнопки/генераторы PDF-Excel не тронуты;
 //   график (1063px) и талоны (wst-prev-frame) — не тронуты.
-//   SW: kipia-test-v749.
+//   SW: kipia-test-v750.
 //
 // Запуск: через tests/run-all.js (require './test-task467.js').
 
@@ -160,8 +160,8 @@ describe('Task 467 — SRC: соседние предпросмотры не т�
 // ============================================================
 describe('Task 467 — SW: версия кэша', () => {
 
-    test('CACHE_VERSION = kipia-test-v749', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v749';") !== -1,
+    test('CACHE_VERSION = kipia-test-v750', () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v750';") !== -1,
             'инкремент Task 467: v690 → v691');
     });
 

@@ -22,7 +22,7 @@
 //      463/464); @media < 1200px раскладка складывается в колонку
 //      (описание ПОД таблицей), мобильный вид Task 464 (@1023px)
 //      не тронут.
-//   SW: kipia-test-v749.
+//   SW: kipia-test-v750.
 //
 // Запуск: через tests/run-all.js (require './test-task468.js').
 
@@ -247,8 +247,8 @@ describe('Task 468 — SRC: мобильный вид Task 464 не тронут
 // ============================================================
 describe('Task 468 — SW: версия кэша', () => {
 
-    test('CACHE_VERSION = kipia-test-v749', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v749';") !== -1,
+    test('CACHE_VERSION = kipia-test-v750', () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v750';") !== -1,
             'инкремент Task 468: v691 → v692');
     });
 

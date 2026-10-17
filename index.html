@@ -13186,6 +13186,71 @@
     }
     .pb-filter-btn:active { transform: scale(0.96); }
     .pb-toolbar-spacer { flex: 1; }
+    /* Task 538: бейдж статуса синхронизации справочника (ок/ожидание/
+       обмен/локально/нет связи). Тап — детали (email, время, очередь). */
+    .pb-sync-badge {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 7px 12px;
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 18px;
+        background: rgba(255,255,255,0.03);
+        color: rgba(255,255,255,0.45);
+        font-size: 12px; font-weight: 500;
+        font-family: 'Inter', sans-serif;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: all 0.15s;
+        max-width: 100%;
+    }
+    .pb-sync-badge svg { width: 12px; height: 12px; flex: none; }
+    .pb-sync-badge:active { transform: scale(0.96); }
+    .pb-sync-badge.sync-ok {
+        color: rgba(76,175,80,0.9);
+        border-color: rgba(76,175,80,0.25);
+        background: rgba(76,175,80,0.05);
+    }
+    .pb-sync-badge.sync-busy {
+        color: rgba(106,166,224,0.9);
+        border-color: rgba(106,166,224,0.25);
+        background: rgba(106,166,224,0.05);
+    }
+    .pb-sync-badge.sync-busy svg { animation: pbSyncPulse 1.2s ease-in-out infinite; }
+    @keyframes pbSyncPulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+    .pb-sync-badge.sync-pending {
+        color: rgba(240,181,60,0.9);
+        border-color: rgba(240,181,60,0.3);
+        background: rgba(240,181,60,0.05);
+    }
+    .pb-sync-badge.sync-error {
+        color: rgba(220,70,70,0.85);
+        border-color: rgba(220,70,70,0.3);
+        background: rgba(220,70,70,0.05);
+    }
+    [data-theme="light"] .pb-sync-badge {
+        border-color: rgba(20,20,19,0.12);
+        background: rgba(20,20,19,0.03);
+        color: rgba(20,20,19,0.5);
+    }
+    [data-theme="light"] .pb-sync-badge.sync-ok {
+        color: rgba(56,142,72,0.95);
+        border-color: rgba(56,142,72,0.3);
+        background: rgba(56,142,72,0.06);
+    }
+    [data-theme="light"] .pb-sync-badge.sync-busy {
+        color: rgba(42,93,143,0.95);
+        border-color: rgba(42,93,143,0.3);
+        background: rgba(42,93,143,0.06);
+    }
+    [data-theme="light"] .pb-sync-badge.sync-pending {
+        color: rgba(184,130,26,0.95);
+        border-color: rgba(184,130,26,0.35);
+        background: rgba(184,130,26,0.07);
+    }
+    [data-theme="light"] .pb-sync-badge.sync-error {
+        color: rgba(198,75,75,0.9);
+        border-color: rgba(198,75,75,0.3);
+        background: rgba(198,75,75,0.06);
+    }
     .pb-clear-note {
         font-size: 11px; color: rgba(224,90,90,0.7);
         background: transparent; border: none; cursor: pointer;
@@ -18992,6 +19057,10 @@
                         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                         <span id="pbFilterFavLabel">Только избранные</span>
                     </button>
+                    <button type="button" id="pbSyncBadge" class="pb-sync-badge sync-off" onclick="pbSyncInfo()" aria-label="Синхронизация избранного и примечаний" title="Синхронизация">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                        <span id="pbSyncBadgeLabel">Локально</span>
+                    </button>
                 </div>
             </div>
             <div class="pb-info" id="pbInfo">Загрузка…</div>
@@ -22862,16 +22931,18 @@
     // и сохраняет очищенные данные обратно в localStorage.
     // Возвращает количество удалённых записей.
     function pbCleanupStaleFavorites() {
-        if (!pbFlat || pbFlat.length === 0) return { fav: 0, notes: 0 };
+        if (!pbFlat || pbFlat.length === 0) return { fav: 0, notes: 0, favIds: [], noteIds: [] };
         // Построить множество валидных ID
         const validIds = new Set(pbFlat.map(item => pbMakeId(item)));
         let favRemoved = 0;
         let notesRemoved = 0;
+        const favIds = [], noteIds = [];
         // Очистить pbFavorites
         for (const key of Object.keys(pbFavorites)) {
             if (!validIds.has(key)) {
                 delete pbFavorites[key];
                 favRemoved++;
+                favIds.push(key);
             }
         }
         // Очистить pbNotes
@@ -22879,15 +22950,19 @@
             if (!validIds.has(key)) {
                 delete pbNotes[key];
                 notesRemoved++;
+                noteIds.push(key);
             }
         }
         // Сохранить обратно, если что-то изменилось
         if (favRemoved > 0) pbSaveFavorites();
         if (notesRemoved > 0) pbSaveNotes();
+        // Task 538: устаревшие записи, успевшие раньше синхронизироваться,
+        // удалить и на сервере — иначе pull снова поднимет их из архива
+        try { pbSyncDropStale(favIds, noteIds); } catch (e) { /* sync недоступен — не критично */ }
         if (favRemoved > 0 || notesRemoved > 0) {
             console.log('[phonebook] Очистка устаревших записей: избранное −' + favRemoved + ', примечания −' + notesRemoved);
         }
-        return { fav: favRemoved, notes: notesRemoved };
+        return { fav: favRemoved, notes: notesRemoved, favIds: favIds, noteIds: noteIds };
     }
 
     // Нормализация строки для сравнения (lowercase, без лишних пробелов)
@@ -23251,6 +23326,8 @@
             if (navigator.vibrate) navigator.vibrate([20, 30, 40]);
         }
         pbSaveFavorites();
+        // Task 538: очередь на сервер (новое состояние звёздочки)
+        pbSyncEnqueueFav(id, pbFavorites[id] === true);
         // Если включён фильтр избранных — пере-рендер (карточка может исчезнуть)
         if (pbFilterFavOnly) {
             pbRender();
@@ -23280,6 +23357,8 @@
                 delete pbNotes[id];
             }
             pbSaveNotes();
+            // Task 538: очередь на сервер (пустой текст = удаление)
+            pbSyncEnqueueNote(id, trimmed);
             if (navigator.vibrate) navigator.vibrate(25);
             // Пере-рендер карточки (или всего списка — проще)
             pbRender();
@@ -23427,8 +23506,506 @@
             // от предыдущих версий pbMakeId, которые больше не валидны)
             pbCleanupStaleFavorites();
             pbRender();
+            // Task 538: синхронизация с архивом — подтянуть свои данные с
+            // других устройств, вытолкнуть накопленные локальные правки
+            pbSyncStart();
         });
     }
+
+    // ============================================================
+    // ===== Phonebook Sync (Task 538) ===========================
+    // ============================================================
+    // СИНХРОНИЗАЦИЯ избранного и примечаний телефонного справочника
+    // с серверным архивом (Task 537: PhonebookArchive.gs, Google
+    // Таблица «Телефонный справочник — Архив пользователей»).
+    // Данные архива привязаны к email вошедшего пользователя →
+    // избранное и примечания ПЕРЕНОСЯТСЯ между устройствами.
+    //
+    // КЛИЕНТ НЕ ЗАВИСИТ от сервера: нет сети / нет входа / старый
+    // Apps Script (без PhonebookArchive.gs) / сервер недоступен —
+    // всё работает как раньше через localStorage; локальные правки
+    // копятся в очереди и уезжают при появлении связи.
+    //
+    // СХЕМА (3-way merge по base-снимку последнего согласия):
+    //   pbFavorites / pbNotes  — текущее локальное состояние (UI);
+    //   PB_SYNC_BASE_KEY       — срез состояния, согласованного с
+    //                             сервером ({favorites:{id:true},
+    //                             notes:{id:текст}}) — база слияния;
+    //   PB_SYNC_QUEUE_KEY      — очередь исходящих операций
+    //                             [{kind:'fav'|'note', id, on|text,
+    //                             entry{...}}], коалесценция по
+    //                             (kind+id): поздняя правка затирает
+    //                             раннюю, дублей на сервер не уходит;
+    //   pbSyncStart() — pbInit → phonebook.getMyData → слияние →
+    //                   pbSyncFlush() (выталкивание очереди);
+    //   pbSyncEnqueueFav/Note — хуки правок (звёздочка, примечание);
+    //   pbSyncFlush() — phonebook.setFavorite/setNote; успех →
+    //                   убрать из очереди + обновить base; сетевой
+    //                   сбой → очередь остаётся, ретрай по 'online',
+    //                   следующей правке или открытию раздела.
+    //
+    // ПРАВИЛА СЛИЯНИЯ (на каждое id; L=локально, S=сервер, B=base):
+    //   избранное: держим = (L && (S || !B)) || (S && !L && !B) —
+    //     добавление на любой стороне подхватывается, удаление на
+    //     стороне выигрывает у «бездействия» другой стороны;
+    //   примечания: changedL=(L!=B), changedS=(S!=B), итог =
+    //     changedL ? L : S — локальная правка новее по намерению;
+    //     одновременная правка на двух устройствах — остаётся
+    //     локальный вариант (конфликт — в console.warn и счётчик).
+    //
+    // СТАТУС — бейдж в тулбаре (pbSyncBadge): ok/pending/busy/
+    // off/error; тап — детали (email, время, очередь). Серверные
+    // id, которых нет в текущем phonebook.json (сменилась структура
+    // справочника), не поднимаются локально — в архив уходит мягкое
+    // удаление (снимки контакт_json остаются для истории).
+    // ============================================================
+    const PB_SYNC_BASE_KEY = 'kip8test_phonebook_sync_base';
+    const PB_SYNC_QUEUE_KEY = 'kip8test_phonebook_sync_queue';
+    // Мягкий лимит очереди: защита от распухания при вечном офлайне
+    // (обычная жизнь — единицы операций)
+    const PB_SYNC_QUEUE_MAX = 500;
+
+    const pbSyncState = {
+        mode: 'idle',      // idle | busy | ok | pending | off | error
+        reason: '',        // человекочитаемая причина (тап по бейджу)
+        pending: 0,        // операций в очереди (для бейджа)
+        lastSync: null,    // ISO последней успешней синхронизации
+        oldServer: false,  // Apps Script без phonebook.* (на сессию)
+        conflicts: 0       // конфликтов примечаний решено локально
+    };
+    let pbSyncQueue = [];          // очередь исходящих операций
+    let pbSyncQueueLoaded = false; // очередь прочитана из localStorage
+    let pbSyncBase = null;         // {favorites:{id:true}, notes:{id:текст}}
+    let pbSyncFlushTimer = null;
+    let pbSyncFlushing = false;
+    let pbSyncPulling = false;
+
+    // Доступ к состоянию (для отладки/тестов; const-объект по ссылке)
+    function pbSyncGetState() { return pbSyncState; }
+
+    // ---------- ХРАНИЛИЩЕ (base / queue) ----------
+    function pbSyncLoadBase() {
+        if (pbSyncBase) return;
+        pbSyncBase = { favorites: {}, notes: {} };
+        try {
+            const raw = localStorage.getItem(PB_SYNC_BASE_KEY);
+            if (raw) {
+                const p = JSON.parse(raw);
+                if (p && typeof p === 'object') {
+                    if (p.favorites && typeof p.favorites === 'object') pbSyncBase.favorites = p.favorites;
+                    if (p.notes && typeof p.notes === 'object') pbSyncBase.notes = p.notes;
+                }
+            }
+        } catch (e) { /* битый base — пустая база безопасна: всё локальное уедет на сервер */ }
+    }
+    function pbSyncSaveBase() {
+        pbSyncLoadBase();
+        try { localStorage.setItem(PB_SYNC_BASE_KEY, JSON.stringify(pbSyncBase)); } catch (e) {}
+    }
+    function pbSyncLoadQueue() {
+        if (pbSyncQueueLoaded) return;
+        pbSyncQueueLoaded = true;
+        pbSyncQueue = [];
+        try {
+            const raw = localStorage.getItem(PB_SYNC_QUEUE_KEY);
+            if (raw) {
+                const q = JSON.parse(raw);
+                if (Array.isArray(q)) pbSyncQueue = q.filter(op => op && op.kind && op.id);
+            }
+        } catch (e) { pbSyncQueue = []; }
+    }
+    function pbSyncSaveQueue() {
+        try { localStorage.setItem(PB_SYNC_QUEUE_KEY, JSON.stringify(pbSyncQueue)); } catch (e) {}
+    }
+
+    // ---------- ДОСТУПНОСТЬ ----------
+    function pbSyncAvailable() {
+        if (pbSyncState.oldServer) {
+            pbSyncState.reason = 'Сервер не поддерживает архив справочника (нет PhonebookArchive.gs — Task 537)';
+            return false;
+        }
+        if (typeof KipAuth === 'undefined' || !KipAuth.getToken()) {
+            pbSyncState.reason = 'Войдите в аккаунт — избранное и примечания будут переноситься между устройствами';
+            return false;
+        }
+        try {
+            if (typeof KipAuth.canAccess === 'function' && !KipAuth.canAccess('phonebook')) {
+                pbSyncState.reason = 'Нет права доступа к разделу — данные хранятся локально';
+                return false;
+            }
+        } catch (e) {
+            pbSyncState.reason = 'Нет права доступа к разделу — данные хранятся локально';
+            return false;
+        }
+        return true;
+    }
+
+    // Снимок записи справочника для архива (фио/должность/телефон и
+    // пр. — колонки читаемости + контакт_json на сервере)
+    function pbSyncFindEntry(id) {
+        if (!pbFlat || !pbFlat.length) return null;
+        for (let i = 0; i < pbFlat.length; i++) {
+            if (pbMakeId(pbFlat[i]) === id) {
+                const it = pbFlat[i];
+                return { header: it.header || '', group: it.group || '',
+                         subgroup: it.subgroup || '', position: it.position || '',
+                         name: it.name || '', phone: it.phone || '' };
+            }
+        }
+        return null;
+    }
+
+    // ---------- ОЧЕРЕДЬ ИСХОДЯЩИХ ----------
+    function pbSyncEnqueue(op) {
+        // oldServer — очередь не копим: сервер её не примет
+        if (pbSyncState.oldServer) return;
+        pbSyncLoadQueue();
+        for (let i = 0; i < pbSyncQueue.length; i++) {
+            if (pbSyncQueue[i].kind === op.kind && pbSyncQueue[i].id === op.id) {
+                pbSyncQueue[i] = op;   // коалесценция: поздняя правка затирает раннюю
+                pbSyncSaveQueue();
+                pbSyncScheduleFlush();
+                pbSyncUpdateBadge();
+                return;
+            }
+        }
+        pbSyncQueue.push(op);
+        if (pbSyncQueue.length > PB_SYNC_QUEUE_MAX) {
+            console.warn('[pbSync] Очередь достигла лимита — старейшие операции отброшены');
+            pbSyncQueue.splice(0, pbSyncQueue.length - PB_SYNC_QUEUE_MAX);
+        }
+        pbSyncSaveQueue();
+        pbSyncScheduleFlush();
+        pbSyncUpdateBadge();
+    }
+
+    // Хук: переключение звёздочки (on = НОВОЕ состояние)
+    function pbSyncEnqueueFav(id, on) {
+        pbSyncEnqueue({ kind: 'fav', id: id, on: on === true, entry: pbSyncFindEntry(id) });
+    }
+    // Хук: сохранение примечания (пустой текст = удаление)
+    function pbSyncEnqueueNote(id, text) {
+        pbSyncEnqueue({ kind: 'note', id: id, text: String(text || ''), entry: pbSyncFindEntry(id) });
+    }
+    // Хук очистки: устаревшие записи, успевшие раньше синхронизироваться,
+    // удаляем и на сервере — иначе pull снова поднимет их из архива
+    function pbSyncDropStale(favIds, noteIds) {
+        if (!favIds.length && !noteIds.length) return;
+        pbSyncLoadBase();
+        (favIds || []).forEach(function(id) {
+            if (pbSyncBase.favorites[id]) {
+                pbSyncEnqueue({ kind: 'fav', id: id, on: false, entry: pbSyncFindEntry(id) });
+            }
+        });
+        (noteIds || []).forEach(function(id) {
+            if (Object.prototype.hasOwnProperty.call(pbSyncBase.notes, id)) {
+                pbSyncEnqueue({ kind: 'note', id: id, text: '', entry: pbSyncFindEntry(id) });
+            }
+        });
+    }
+
+    // ---------- ВЫТАЛКИВАНИЕ ОЧЕРЕДИ ----------
+    function pbSyncScheduleFlush() {
+        if (pbSyncFlushTimer) return;
+        pbSyncFlushTimer = setTimeout(function() {
+            pbSyncFlushTimer = null;
+            pbSyncFlush();
+        }, 1500);
+    }
+
+    function pbSyncFlush() {
+        pbSyncLoadQueue();
+        if (pbSyncFlushing) return;
+        if (!pbSyncQueue.length) { pbSyncUpdateBadge(); return; }
+        if (!pbSyncAvailable()) { pbSyncUpdateBadge(); return; }
+        pbSyncFlushing = true;
+        pbSyncSetMode('busy');
+        const token = KipAuth.getToken();
+        (function step() {
+            if (!pbSyncQueue.length) {
+                pbSyncFlushing = false;
+                pbSyncState.lastSync = new Date().toISOString();
+                pbSyncSetMode('ok');
+                return;
+            }
+            const op = pbSyncQueue[0];
+            const action = op.kind === 'fav' ? 'phonebook.setFavorite' : 'phonebook.setNote';
+            const payload = {
+                token: token,
+                id: op.id,
+                entry: op.entry || pbSyncFindEntry(op.id) || {}
+            };
+            if (op.kind === 'fav') payload.on = op.on === true;
+            else payload.text = String(op.text || '');
+            KipAuth.api(action, payload).then(function() {
+                pbSyncQueue.shift();
+                pbSyncApplyPushed(op);
+                pbSyncSaveQueue();
+                pbSyncUpdateBadge();
+                step();
+            }).catch(function(err) {
+                pbSyncFlushError(op, err);
+            });
+        })();
+    }
+
+    // Успешно отправленная операция — зафиксировать согласие в base
+    function pbSyncApplyPushed(op) {
+        pbSyncLoadBase();
+        if (op.kind === 'fav') {
+            if (op.on === true) pbSyncBase.favorites[op.id] = true;
+            else delete pbSyncBase.favorites[op.id];
+        } else {
+            const t = String(op.text || '');
+            if (t) pbSyncBase.notes[op.id] = t;
+            else delete pbSyncBase.notes[op.id];
+        }
+        pbSyncSaveBase();
+        pbSyncState.lastSync = new Date().toISOString();
+    }
+
+    function pbSyncFlushError(op, err) {
+        pbSyncFlushing = false;
+        const msg = String((err && err.message) || err || '');
+        // Старый Apps Script без phonebook.* — тихо уходим в локальный режим
+        if (/unknown action/i.test(msg)) {
+            pbSyncState.oldServer = true;
+            pbSyncSetMode('off', 'Сервер не поддерживает архив справочника (нет PhonebookArchive.gs — Task 537)');
+            return;
+        }
+        // Сессия истекла / нет права — локальный режим до повторного входа
+        if (/no_session|session_expired|access_denied/i.test(msg)) {
+            pbSyncSetMode('off', 'Сессия истекла — войдите заново, накопленные изменения уйдут на сервер');
+            return;
+        }
+        // Недопустимые данные (примечание >500 и т.п.) — операция не
+        // пройдёт никогда: выкидываем из очереди, локальная копия остаётся
+        if (/invalid_/i.test(msg)) {
+            console.warn('[pbSync] Операция отклонена сервером, удалена из очереди:', msg, op);
+            pbSyncQueue.shift();
+            pbSyncSaveQueue();
+            try {
+                showToast('Справочник: часть данных не синхронизирована — ' +
+                          ((err && err.serverMessage) || 'запись отклонена сервером'));
+            } catch (e) { /* toast недоступен — не критично */ }
+            pbSyncUpdateBadge();
+            pbSyncScheduleFlush();
+            return;
+        }
+        // Сеть/сервер временно недоступны — очередь остаётся, ретрай позже
+        pbSyncSetMode('pending', 'Нет связи с сервером — изменения ждут сети');
+    }
+
+    // ---------- ПОЛУЧЕНИЕ + СЛИЯНИЕ ----------
+    function pbSyncStart() {
+        pbSyncLoadQueue();
+        if (!pbSyncAvailable()) {
+            pbSyncSetMode('off');
+            return;
+        }
+        if (pbSyncPulling) return;
+        pbSyncPulling = true;
+        pbSyncSetMode('busy');
+        KipAuth.api('phonebook.getMyData', { token: KipAuth.getToken() }).then(function(res) {
+            pbSyncPulling = false;
+            pbSyncState.lastSync = new Date().toISOString();
+            const sf = (res && res.favorites && typeof res.favorites === 'object') ? res.favorites : {};
+            const sn = (res && res.notes && typeof res.notes === 'object') ? res.notes : {};
+            const changed = pbSyncMerge(sf, sn);
+            pbSaveFavorites();
+            pbSaveNotes();
+            pbSyncSaveBase();
+            pbSyncSaveQueue();
+            // Итог pull: очередь пуста → согласие достигнуто (ok); непуста —
+            // flush ниже сам поставит busy → ok/pending. Без этого бейдж
+            // зависал бы в «Синхронизация…» при пустой очереди.
+            pbSyncSetMode(pbSyncQueue.length ? 'pending' : 'ok', '');
+            if (changed) {
+                try { pbRender(); } catch (e) { /* рендер не должен ломать синхронизацию */ }
+            }
+            // Затем — выталкивание очереди
+            pbSyncFlush();
+        }).catch(function(err) {
+            pbSyncPulling = false;
+            pbSyncPullError(err);
+        });
+    }
+
+    function pbSyncPullError(err) {
+        const msg = String((err && err.message) || err || '');
+        if (/unknown action/i.test(msg)) {
+            pbSyncState.oldServer = true;
+            pbSyncSetMode('off', 'Сервер не поддерживает архив справочника (нет PhonebookArchive.gs — Task 537)');
+            return;
+        }
+        if (/no_session|session_expired|access_denied/i.test(msg)) {
+            pbSyncSetMode('off', 'Сессия истекла — войдите заново, накопленные изменения уйдут на сервер');
+            return;
+        }
+        // Сеть/5xx — локальный режим; очередь ждёт, ретрай по 'online'
+        // или следующему открытию раздела
+        pbSyncSetMode(pbSyncQueue.length ? 'pending' : 'error', 'Сервер недоступен — данные хранятся локально');
+    }
+
+    // 3-way merge серверных карт в локальные. Возвращает true, если
+    // локальное состояние изменилось (нужен пере-рендер).
+    function pbSyncMerge(sfav, snotes) {
+        pbSyncLoadBase();
+        const baseF = pbSyncBase.favorites;
+        const baseN = pbSyncBase.notes;
+        const validIds = new Set(pbFlat.map(item => pbMakeId(item)));
+        let localChanged = false;
+        let conflicts = 0;
+
+        // ---------- ИЗБРАННОЕ ----------
+        const favIds = {};
+        [pbFavorites, sfav, baseF].forEach(function(m) {
+            Object.keys(m || {}).forEach(function(id) { favIds[id] = 1; });
+        });
+        Object.keys(favIds).forEach(function(id) {
+            const inL = pbFavorites[id] === true;
+            const inS = sfav[id] === true;
+            const inB = baseF[id] === true;
+            // Серверский id не существует в текущем phonebook.json —
+            // не поднимаем локально, в архив уходит мягкое удаление
+            if (inS && !validIds.has(id)) {
+                pbSyncEnqueue({ kind: 'fav', id: id, on: false, entry: pbSyncFindEntry(id) });
+                delete baseF[id];
+                if (inL) { delete pbFavorites[id]; localChanged = true; }
+                return;
+            }
+            const keep = (inL && (inS || !inB)) || (inS && !inL && !inB);
+            if (keep !== inL) {
+                if (keep) pbFavorites[id] = true;
+                else delete pbFavorites[id];
+                localChanged = true;
+            }
+            if (keep && inS) {
+                baseF[id] = true;                                    // согласовано с сервером
+            } else if (keep) {
+                pbSyncEnqueue({ kind: 'fav', id: id, on: true, entry: pbSyncFindEntry(id) });    // локальная новинка — на сервер
+            } else if (inS) {
+                pbSyncEnqueue({ kind: 'fav', id: id, on: false, entry: pbSyncFindEntry(id) });   // сервер держит, итог — удалено
+            } else {
+                delete baseF[id];                                    // обе стороны согласны: записи нет
+            }
+        });
+
+        // ---------- ПРИМЕЧАНИЯ ----------
+        const noteIds = {};
+        [pbNotes, snotes, baseN].forEach(function(m) {
+            Object.keys(m || {}).forEach(function(id) { noteIds[id] = 1; });
+        });
+        Object.keys(noteIds).forEach(function(id) {
+            const hasL = Object.prototype.hasOwnProperty.call(pbNotes, id);
+            const hasS = Object.prototype.hasOwnProperty.call(snotes, id);
+            const hasB = Object.prototype.hasOwnProperty.call(baseN, id);
+            const tL = hasL ? String(pbNotes[id]) : null;
+            const tS = hasS ? String(snotes[id]) : null;
+            const tB = hasB ? String(baseN[id]) : null;
+            // Серверский id не существует в текущем справочнике — аналог выше
+            if (hasS && !validIds.has(id)) {
+                pbSyncEnqueue({ kind: 'note', id: id, text: '', entry: pbSyncFindEntry(id) });
+                delete baseN[id];
+                if (hasL) { delete pbNotes[id]; localChanged = true; }
+                return;
+            }
+            const changedL = tL !== tB;
+            const changedS = tS !== tB;
+            if (changedL && changedS && tL !== tS) {
+                conflicts++;
+                console.warn('[pbSync] Конфликт примечания — оставлен локальный вариант: ' + id);
+            }
+            const tM = changedL ? tL : (changedS ? tS : tB);
+            const hasM = tM !== null;
+            if (hasM !== hasL || (hasM && tM !== tL)) {
+                if (hasM) pbNotes[id] = tM;
+                else delete pbNotes[id];
+                localChanged = true;
+            }
+            if (hasM && tM === tS) {
+                baseN[id] = tM;                                      // согласовано с сервером
+            } else {
+                if (tM !== tS) {
+                    pbSyncEnqueue({ kind: 'note', id: id, text: hasM ? tM : '', entry: pbSyncFindEntry(id) });
+                }
+                if (!hasS && !hasM) delete baseN[id];                // согласованное отсутствие
+            }
+        });
+
+        pbSyncState.conflicts += conflicts;
+        if (conflicts > 0) {
+            try {
+                showToast('Примечание справочника изменено на другом устройстве — оставлен вариант с этого устройства');
+            } catch (e) { /* toast недоступен — не критично */ }
+        }
+        return localChanged;
+    }
+
+    // ---------- БЕЙДЖ СТАТУСА ----------
+    function pbSyncSetMode(mode, reason) {
+        pbSyncState.mode = mode;
+        if (reason !== undefined) pbSyncState.reason = reason;
+        pbSyncUpdateBadge();
+    }
+
+    function pbSyncUpdateBadge() {
+        const badge = document.getElementById('pbSyncBadge');
+        const label = document.getElementById('pbSyncBadgeLabel');
+        if (!badge || !label) return;
+        pbSyncLoadQueue();
+        pbSyncState.pending = pbSyncQueue.length;
+        let cls = 'off', text = 'Локально';
+        let title = 'Данные хранятся только на этом устройстве';
+        if (pbSyncState.mode === 'busy') {
+            cls = 'busy'; text = 'Синхронизация…';
+            title = 'Обмен с архивом справочника…';
+        } else if (pbSyncQueue.length) {
+            cls = 'pending'; text = 'Ожидает: ' + pbSyncQueue.length;
+            title = 'Нет связи — изменения ждут сети и уйдут на сервер автоматически';
+        } else if (pbSyncState.mode === 'ok') {
+            cls = 'ok'; text = 'Синхронизировано';
+            title = 'Избранное и примечания синхронизированы с вашим аккаунтом';
+        } else if (pbSyncState.mode === 'error') {
+            cls = 'error'; text = 'Нет связи';
+            title = 'Сервер недоступен — данные хранятся локально';
+        }
+        if (pbSyncState.reason && pbSyncState.mode !== 'busy') {
+            title += '. ' + pbSyncState.reason;
+        }
+        badge.className = 'pb-sync-badge sync-' + cls;
+        badge.title = title;
+        badge.setAttribute('aria-label', 'Синхронизация справочника: ' + text);
+        label.textContent = text;
+    }
+
+    // Тап по бейджу — детали состояния
+    function pbSyncInfo() {
+        let email = '';
+        try {
+            if (typeof KipAuth !== 'undefined' && KipAuth._cachedEmail) email = KipAuth._cachedEmail;
+        } catch (e) { /* не критично */ }
+        pbSyncLoadQueue();
+        const parts = [];
+        if (email) parts.push('аккаунт: ' + email);
+        else parts.push('без входа — данные локальны');
+        if (pbSyncState.lastSync) {
+            try {
+                parts.push('синхронизировано в ' + new Date(pbSyncState.lastSync).toLocaleTimeString());
+            } catch (e) { /* форматирование времени не критично */ }
+        }
+        parts.push('очередь: ' + pbSyncQueue.length);
+        if (pbSyncState.reason) parts.push(pbSyncState.reason);
+        if (pbSyncState.conflicts > 0) parts.push('конфликтов решено: ' + pbSyncState.conflicts);
+        try { showToast('Справочник — ' + parts.join(' · ')); } catch (e) { /* не критично */ }
+    }
+
+    // Ретрай очереди при возвращении сети (входящие изменения догонит
+    // следующее открытие раздела / pbSyncStart)
+    window.addEventListener('online', function() {
+        pbSyncLoadQueue();
+        if (pbSyncQueue.length) pbSyncScheduleFlush();
+    });
 
     // ===== ПРИБОРЫ (КИП ИОС) =====
     let devData = null;            // распарсенный JSON

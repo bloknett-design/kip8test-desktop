@@ -50,6 +50,14 @@
  *     PlanEvents.mark(payload)  → {ok, data/error} (идемпотентно)
  *     PlanEvents.update(payload) → {ok, data/error} (Task 464: дата)
  *     PlanEvents.unmark(payload) → {ok, data/error} (Task 464: снятие)
+ *   PhonebookArchive (Task 537) — «Телефонный справочник»:
+ *     архив пользовательских данных (избранное/примечания) в
+ *     отдельном файле Google Таблиц; каждая строка привязана к
+ *     email — пользователь видит/меняет ТОЛЬКО свои записи
+ *     (гейт secret.view, как у страницы справочника):
+ *     PhonebookArchive.getMyData(payload)   → {ok, data/error}
+ *     PhonebookArchive.setFavorite(payload) → {ok, data/error}
+ *     PhonebookArchive.setNote(payload)     → {ok, data/error}
  * ============================================================
  */
 
@@ -387,6 +395,24 @@ function doPost(e) {
 
       case 'planWorks.setStatus':
         return _json(PlanEvents.setWorkStatus(payload));
+
+      // === Телефонный справочник: архив пользовательских данных ===
+      // PhonebookArchive.gs (Task 537) — избранное и примечания
+      // пользователей в ОТДЕЛЬНОМ файле Google Таблиц «Телефонный
+      // справочник — Архив пользователей» (создаётся
+      // phonebookArchiveInit() или лениво при первом обращении).
+      // Таблицы общие, но данные индивидуальны — каждая строка
+      // привязана к email; пользователь видит/меняет ТОЛЬКО свои
+      // записи. Доступ — право secret.view матрицы KIP8_Access
+      // (как у страницы справочника, проверка внутри модуля)
+      case 'phonebook.getMyData':
+        return _json(PhonebookArchive.getMyData(payload));
+
+      case 'phonebook.setFavorite':
+        return _json(PhonebookArchive.setFavorite(payload));
+
+      case 'phonebook.setNote':
+        return _json(PhonebookArchive.setNote(payload));
 
       default:
         return _json({ ok: false, error: 'Unknown action: ' + action });
