@@ -24,7 +24,7 @@
 //      подсказки пределов: «−50…200 °C» + «39,3…92,8 Ом» (Cu),
 //      «−200…850 °C» + «17,2444…395,16 Ом» (100П), мВ у ТП;
 //      живой пересчёт с новой формулой (59,64 → ≈−100).
-//   D. SW kipia-test-v750 (guard v723).
+//   D. SW kipia-test-v751 (guard v723).
 
 const fs = require('fs');
 const path = require('path');
@@ -471,22 +471,22 @@ describe('Task 498/499 — VM: пределы в полях ППР (плейсх
 
 describe('Task 498 — SW', () => {
 
-    test('SW: CACHE_VERSION = kipia-test-v750, один инкремент', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v750';") !== -1,
-            'CACHE_VERSION = kipia-test-v750');
+    test('SW: CACHE_VERSION = kipia-test-v751, один инкремент', () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v751';") !== -1,
+            'CACHE_VERSION = kipia-test-v751');
     });
 
-    test('SW: guard-версия kipia-test-v750 НЕ выпущена', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v750';");
+    test('SW: guard-версия kipia-test-v751 НЕ выпущена', () => {
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v751';");
         assertTrue(i !== -1, 'строка версии есть');
-        assertFalse(SW_SRC.indexOf('kipia-test-v751') !== -1,
+        assertFalse(SW_SRC.indexOf('kipia-test-v752') !== -1,
             'v723 в sw.js нет (guard для следующей задачи)');
     });
 
     test('SW: комментарий Task 498 в истории', () => {
         const i = SW_SRC.indexOf('Task 498: «Датчики температуры»');
         assertTrue(i !== -1, 'маркер Task 498 есть');
-        const ver = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v750';");
+        const ver = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v751';");
         assertTrue(i < ver, 'комментарий над версией (в блоке истории)');
     });
 });

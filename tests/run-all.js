@@ -906,6 +906,7 @@ require('./test-task537.js');
 // ретраи по 'online'/правке/открытию, бейдж статуса, деградация
 // на localStorage при отсутствии входа/сети/старом сервере.
 require('./test-task538.js');
+require('./test-task539.js');
 require('./test-deploy-url.js');
 
 // Запускаем
