@@ -481,8 +481,8 @@ describe('Task 478 — данные devices.json: инварианты', () => {
 // ==========================================================================
 describe('Task 478 — SW: версия и шапка', () => {
 
-    test('CACHE_VERSION = kipia-test-v752', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v752';") !== -1,
+    test('CACHE_VERSION = kipia-test-v753', () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v753';") !== -1,
             'SW поднят до v702 (Task 478)');
     });
 
@@ -492,12 +492,12 @@ describe('Task 478 — SW: версия и шапка', () => {
     });
 
     test('несуществующая v703 отсутствует (guard)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v753') === -1,
-            'kipia-test-v752 не должен существовать');
+        assertTrue(SW_SRC.indexOf('kipia-test-v754') === -1,
+            'kipia-test-v753 не должен существовать');
     });
 
     test('комментарий Task 478 в шапке версий', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v752';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v753';");
         // Task 480: окно 700 → 1100 — комментарий Task 480 (новый ID
         // Google-таблицы «Перечень КИП ИОС рабочий.xlsx», ~250 симв.)
         // отодвинул комментарий Task 478 до ~835 символов.
@@ -518,7 +518,7 @@ describe('Task 478 — SW: версия и шапка', () => {
         // 474 ~2133; 472 ~2506; 471 ~3055; 461 ~5617 — расширения не нужны
         // Task 480 (~250 симв., новый ID таблицы) тоже вписался:
         // 474 ~2377; 472 ~2750; 471 ~3299; 461 ~5861 — расширения не нужны
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v752';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v753';");
         const i474 = SW_SRC.lastIndexOf('Task 474', i);
         const i472 = SW_SRC.lastIndexOf('Task 472', i);
         const i471 = SW_SRC.lastIndexOf('Task 471', i);

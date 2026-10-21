@@ -60,9 +60,9 @@ const SW_SRC = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 const PFX_MATCH = INDEX_SRC.match(/const PB_FAV_KEY = '(\w+?)_phonebook_favorites'/);
 const PFX = PFX_MATCH ? PFX_MATCH[1] : null;
 // Task 540: v751→v752 (kip8test), v548→v549 (kip8)
-const SW_EXPECTED = { kip8test: 'kipia-test-v752', kip8: 'kipia-v549' }[PFX] || null;
+const SW_EXPECTED = { kip8test: 'kipia-test-v753', kip8: 'kipia-v549' }[PFX] || null;
 const SW_PREV = { kip8test: 'kipia-test-v751', kip8: 'kipia-v548' }[PFX] || null;
-const SW_NEXT = { kip8test: 'kipia-test-v753', kip8: 'kipia-v550' }[PFX] || null;
+const SW_NEXT = { kip8test: 'kipia-test-v754', kip8: 'kipia-v550' }[PFX] || null;
 
 const FAV_KEY = PFX + '_phonebook_favorites';
 
@@ -328,7 +328,8 @@ describe('Task 540 — SRC: вкладка «Все» — два окна', () =
 
     test('pbMasterOpen: правое окно + крошки', () => {
         const i = INDEX_SRC.indexOf('function pbMasterOpen(');
-        const seg = INDEX_SRC.slice(i, i + 1400);
+        // Task 541 добавил авторазворот организации — окно 1400→1800
+        const seg = INDEX_SRC.slice(i, i + 1800);
         assertTrue(seg.indexOf('openDetailPanel(title,') !== -1, 'открывает правое окно #detailPanel');
         assertTrue(seg.indexOf('pb-detail-contacts') !== -1, 'обёртка контактов');
         assertTrue(seg.indexOf('setPhonebookBreadcrumbContent(org, grp);') !== -1, 'обновляет крошки');

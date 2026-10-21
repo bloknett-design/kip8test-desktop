@@ -13190,15 +13190,17 @@
         border: 1px solid rgba(74,143,199,0.16);
         border-radius: 10px;
         background: rgba(255,255,255,0.03);
-        color: var(--text-primary, #e8e8e8);
-        font-size: 14px; font-weight: 600;
+        color: #a9d2f7;
+        font-size: 16px; font-weight: 700;
         cursor: pointer;
         transition: background 0.15s, border-color 0.15s;
     }
+    /* Task 541: организация — крупнее и ярче (светлая тема) */
+    [data-theme="light"] .pb-master-org-row { color: #1d5a99; }
     .pb-master-org-row:hover { background: rgba(74,143,199,0.08); }
     .pb-master-org-row.selected {
-        background: rgba(74,143,199,0.16);
-        border-color: rgba(74,143,199,0.45);
+        background: rgba(74,143,199,0.22);
+        border-color: rgba(74,143,199,0.6);
     }
     .pb-master-org-name {
         flex: 1; min-width: 0;
@@ -13210,48 +13212,95 @@
         padding: 7px 12px 7px 14px;
         border-left: 2px solid rgba(74,143,199,0.22);
         border-radius: 0 8px 8px 0;
-        color: var(--text-secondary, rgba(255,255,255,0.55));
-        font-size: 13px;
+        color: rgba(255,255,255,0.82);
+        font-size: 14.5px;
         cursor: pointer;
         transition: background 0.12s, color 0.12s;
     }
+    /* Task 541: подразделение — крупнее и ярче */
+    [data-theme="light"] .pb-master-row { color: rgba(20,20,19,0.85); }
     .pb-master-row:hover { background: rgba(74,143,199,0.07); color: var(--text-primary, #e8e8e8); }
     .pb-master-row.selected {
         background: rgba(74,143,199,0.14);
-        border-left-color: #6aa6e0;
-        color: #6aa6e0;
-        font-weight: 600;
+        border-left-color: #8fc3f0;
+        color: #9ecbf2;
+        font-weight: 700;
     }
-    [data-theme="light"] .pb-master-row.selected { color: #4a8fc7; }
+    [data-theme="light"] .pb-master-row.selected { color: #1d5a99; }
     .pb-master-row-name {
         flex: 1; min-width: 0;
         overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .pb-master-count {
         flex-shrink: 0;
-        min-width: 17px; height: 17px; padding: 0 5px;
-        border-radius: 9px;
-        background: rgba(255,255,255,0.08);
-        color: rgba(255,255,255,0.55);
-        font-size: 10px; font-weight: 700; line-height: 17px; text-align: center;
+        min-width: 22px; height: 20px; padding: 0 7px;
+        border-radius: 10px;
+        background: rgba(106,166,224,0.22);
+        color: #b7dcfa;
+        font-size: 11.5px; font-weight: 700; line-height: 20px; text-align: center;
     }
-    [data-theme="light"] .pb-master-count { background: rgba(20,20,19,0.08); color: rgba(20,20,19,0.6); }
+    /* Task 541: счётчик рядом с разделом — крупнее и ярче (светлая) */
+    [data-theme="light"] .pb-master-count { background: rgba(42,93,143,0.14); color: #2a5d8f; }
     /* Правое окно #detailPanel — контакты выбранного подразделения */
     #detailPanelBody .pb-detail-contacts { padding: 8px 10px 28px; }
     #detailPanelBody .pb-detail-group-title {
         display: flex; align-items: baseline; gap: 6px;
         margin: 14px 4px 4px;
-        font-size: 12px; font-weight: 700;
+        font-size: 13.5px; font-weight: 700;
         letter-spacing: 0.4px; text-transform: uppercase;
-        color: rgba(255,255,255,0.45);
+        color: rgba(190,220,250,0.85);
     }
-    [data-theme="light"] #detailPanelBody .pb-detail-group-title { color: rgba(20,20,19,0.55); }
+    /* Task 541: подразделения в правом окне — крупнее и ярче */
+    [data-theme="light"] #detailPanelBody .pb-detail-group-title { color: rgba(20,20,19,0.8); }
     #detailPanelBody .pb-detail-group-count {
-        font-size: 10px; font-weight: 700;
-        color: rgba(106,166,224,0.8);
+        font-size: 11px; font-weight: 700;
+        color: #8fc3f0;
         text-transform: none; letter-spacing: 0;
     }
     [data-theme="light"] #detailPanelBody .pb-detail-group-count { color: rgba(42,93,143,0.85); }
+
+    /* ===== Task 541: сворачивание организаций + ярче инлайн-список ===== */
+    /* Кнопка-шеврон в строке организации (левое окно): сворачивает/
+       разворачивает подразделения. Клик по строке открывает правое
+       окно (pbMasterOpen), клик по шеврону — только сворачивает
+       (stopPropagation в pbMasterToggleOrg). Раскрыто — стрелка
+       вниз (rotate 90°), свёрнуто — вправо. */
+    .pb-master-org-toggle {
+        flex-shrink: 0;
+        width: 26px; height: 26px; margin-left: -6px; margin-right: -2px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: transparent; border: none; border-radius: 7px;
+        color: #a9d2f7; cursor: pointer; padding: 0;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 0.15s;
+    }
+    [data-theme="light"] .pb-master-org-toggle { color: #1d5a99; }
+    .pb-master-org-toggle:hover { background: rgba(106,166,224,0.18); }
+    .pb-master-org-toggle:active { transform: scale(0.92); }
+    .pb-master-org-toggle svg {
+        width: 15px; height: 15px;
+        transform: rotate(90deg);
+        transition: transform 0.2s ease;
+    }
+    .pb-master-org.collapsed .pb-master-org-toggle svg { transform: rotate(0deg); }
+    /* Свёрнутая организация: подразделения скрыты, счётчик рядом
+       с названием остаётся (видно, сколько контактов внутри) */
+    .pb-master-org.collapsed .pb-master-row { display: none; }
+
+    /* Организации/подразделения инлайн-списка (мобильная версия,
+       десктопные поиск/«Избранное») — крупнее и ярче. Скоуп #pbList
+       обязательный: .pb-section-title/.pb-subgroup-title — общие
+       классы и для приборов, замков, клапанов, регуляторов. */
+    #pbList .pb-section-title { font-size: 16px; color: #ecb35e; }
+    [data-theme="light"] #pbList .pb-section-title { color: #a06a1a; }
+    #pbList .pb-section-title-count { font-size: 13px; font-weight: 700; color: rgba(236,179,94,0.95); }
+    [data-theme="light"] #pbList .pb-section-title-count { color: rgba(160,106,26,0.95); }
+    #pbList .pb-subgroup-title { font-size: 13.5px; color: #94c4f4; }
+    [data-theme="light"] #pbList .pb-subgroup-title { color: #1f5891; }
+    #pbList .pb-subgroup.expanded .pb-subgroup-title { color: #b4d9f9; }
+    [data-theme="light"] #pbList .pb-subgroup.expanded .pb-subgroup-title { color: #17456f; }
+    #pbList .pb-subgroup-count { font-size: 12px; font-weight: 600; color: rgba(148,196,244,0.9); }
+    [data-theme="light"] #pbList .pb-subgroup-count { color: rgba(31,88,143,0.9); }
 
     /* ===== Task 539: табы «Все / Избранное» телефонного справочника ===== */
     /* Базовые табы (десктоп — компактные в тулбаре; мобильный нижний бар
@@ -23474,10 +23523,16 @@
     // через onclick-атрибуты не возим (экранирование не нужно).
     let pbMasterIndex = [];        // [{header, count, groups: [{name, count}]}]
     let pbDesktopSelected = null;  // {orgIdx, groupIdx|null} — выбранная строка
+    // Task 541: свёрнутые организации левого окна (ключ — header).
+    // По умолчанию все раскрыты (как в Task 540); выбор строки
+    // организации/подразделения разворачивает её обратно.
+    let pbMasterCollapsed = {};
 
     // Отрисовать дерево master (левое окно). Организации — в порядке
     // phonebook.json, подразделения — по алфавиту (как инлайн-рендер),
-    // «Без группы» — в конец; счётчики у каждой строки.
+    // «Без группы» — в конец; счётчики у каждой строки. Task 541:
+    // организация сворачивается шевроном (pbMasterCollapsed, класс
+    // .collapsed прячет её подразделения).
     function pbRenderMaster(list) {
         pbMasterIndex = [];
         for (const header of Object.keys(pbData.sections)) {
@@ -23509,8 +23564,14 @@
         for (let o = 0; o < pbMasterIndex.length; o++) {
             const org = pbMasterIndex[o];
             const orgSel = sel && sel.orgIdx === o && sel.groupIdx == null;
-            html += '<div class="pb-master-org">';
+            const orgCollapsed = pbMasterCollapsed[org.header] === true;
+            html += '<div class="pb-master-org' + (orgCollapsed ? ' collapsed' : '') + '">';
             html += '<div class="pb-master-org-row' + (orgSel ? ' selected' : '') + '" onclick="pbMasterOpen(' + o + ')">';
+            // Task 541: шеврон сворачивания — клик только сворачивает
+            // (без открытия правого окна: stopPropagation в обработчике)
+            html += '<button type="button" class="pb-master-org-toggle" aria-expanded="' + (!orgCollapsed) + '" aria-label="' + (orgCollapsed ? 'Развернуть' : 'Свернуть') + ' подразделения" onclick="pbMasterToggleOrg(event, ' + o + ')">';
+            html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+            html += '</button>';
             html += '<span class="pb-master-org-name">' + pbEsc(org.header) + '</span>';
             html += '<span class="pb-master-count">' + org.count + '</span>';
             html += '</div>';
@@ -23530,6 +23591,39 @@
         list.innerHTML = html;
     }
 
+    // Task 541: свернуть/развернуть организацию шевроном (левое
+    // окно). Клик по строке организации по-прежнему открывает правое
+    // окно (pbMasterOpen), поэтому шеврон глушит всплытие. Без
+    // события (тесты/клавиатура) — меняет состояние и перерисовывает.
+    function pbMasterToggleOrg(ev, orgIdx) {
+        if (ev && ev.stopPropagation) ev.stopPropagation();
+        if (ev && ev.preventDefault) ev.preventDefault();
+        const org = pbMasterIndex && pbMasterIndex[orgIdx];
+        if (!org) return;
+        const willCollapse = pbMasterCollapsed[org.header] !== true;
+        if (willCollapse) {
+            pbMasterCollapsed[org.header] = true;
+        } else {
+            delete pbMasterCollapsed[org.header];
+        }
+        // DOM под рукой — класс на месте (без перерисовки дерева);
+        // иначе — полный рендер
+        const container = (ev && ev.target && ev.target.closest)
+            ? ev.target.closest('.pb-master-org') : null;
+        if (container && container.classList && container.classList.toggle) {
+            container.classList.toggle('collapsed', willCollapse);
+            const btn = container.querySelector('.pb-master-org-toggle');
+            if (btn && btn.setAttribute) {
+                btn.setAttribute('aria-expanded', String(!willCollapse));
+                btn.setAttribute('aria-label',
+                    (willCollapse ? 'Развернуть' : 'Свернуть') + ' подразделения');
+            }
+        } else {
+            pbRender();
+        }
+        if (navigator.vibrate) navigator.vibrate(12);
+    }
+
     // Клик по строке дерева: открыть правое окно (#detailPanel) с
     // контактами. groupIdx не задан — вся организация, иначе —
     // подразделение. Подсветка выбранной строки + крошки.
@@ -23539,6 +23633,9 @@
         const grp = (groupIdx != null && org.groups[groupIdx]) ? org.groups[groupIdx] : null;
         if (groupIdx != null && !grp) return;
         pbDesktopSelected = { orgIdx: orgIdx, groupIdx: grp ? groupIdx : null };
+        // Task 541: выбор строки разворачивает организацию, даже если
+        // она была свёрнута (выбранное подразделение должно быть видно)
+        if (pbMasterCollapsed[org.header] === true) delete pbMasterCollapsed[org.header];
         if (navigator.vibrate) navigator.vibrate(15);
         // Перерисовать дерево — подсветить выбранную строку
         pbRender();
