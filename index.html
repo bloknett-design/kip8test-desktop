@@ -13302,6 +13302,43 @@
     #pbList .pb-subgroup-count { font-size: 12px; font-weight: 600; color: rgba(148,196,244,0.9); }
     [data-theme="light"] #pbList .pb-subgroup-count { color: rgba(31,88,143,0.9); }
 
+    /* ===== Task 542: «Избранное» на десктопе — ТРИ столбца ===== */
+    /* Класс .pb-fav-cols ставит pbRender (десктоп ≥1024px + вкладка
+       «Избранное» + нет поискового запроса). Сетка — на .pb-section-body;
+       обёртки подгрупп/подподгрупп «раскрываются» (display:contents),
+       карточки становятся элементами сетки, заголовки групп — на всю
+       ширину (grid-column: 1 / -1). Аккордеон подгрупп в этом режиме
+       и так выключен (.searching — клики игнорирует pbToggleSubgroup),
+       поэтому display:contents ничего не ломает. Поиск, «Все» и
+       мобильная версия — прежний одноколоночный список. */
+    @media (min-width: 1024px) {
+        #pbList.pb-fav-cols .pb-section-body {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px 10px;
+            align-items: start;
+        }
+        #pbList.pb-fav-cols .pb-subgroup,
+        #pbList.pb-fav-cols .pb-subgroup-body,
+        #pbList.pb-fav-cols .pb-subsubgroup,
+        #pbList.pb-fav-cols .pb-subsubgroup-body {
+            display: contents;
+        }
+        #pbList.pb-fav-cols .pb-subgroup-title,
+        #pbList.pb-fav-cols .pb-subsubgroup-title {
+            grid-column: 1 / -1;
+        }
+        /* Карточка-плитка: в сетке нужна рамка со всех сторон
+           (border-bottom одинокой колонки их не разделяет) */
+        #pbList.pb-fav-cols .pb-card {
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 8px;
+        }
+        [data-theme="light"] #pbList.pb-fav-cols .pb-card {
+            border-color: rgba(42,93,143,0.14);
+        }
+    }
+
     /* ===== Task 539: табы «Все / Избранное» телефонного справочника ===== */
     /* Базовые табы (десктоп — компактные в тулбаре; мобильный нижний бар
        переопределяет размеры ниже). Активный таб — синий акцент
@@ -23296,6 +23333,19 @@
             return;
         }
 
+        // Task 542: десктоп (≥1024px), вкладка «Избранное», без поиска —
+        // карточки в ТРИ столбца. Класс ставится/снимается ДО ветки
+        // мастер-дерева (Task 540), чтобы возврат на «Все», поиск и
+        // мобильная версия получали прежний одноколоночный список.
+        // (add/remove, а не toggle: метод toggle отсутствует в моках
+        // classList тестов Tasks 539–541 — их песочницы не трогаем.)
+        if (typeof isDesktop === 'function' && isDesktop() &&
+                pbFilterFavOnly && !query) {
+            list.classList.add('pb-fav-cols');
+        } else {
+            list.classList.remove('pb-fav-cols');
+        }
+
         // Фильтрация: по поиску + по избранным (если включён фильтр)
         let filtered = pbFlat.slice();
         if (pbFilterFavOnly) {
@@ -23527,6 +23577,22 @@
     // По умолчанию все раскрыты (как в Task 540); выбор строки
     // организации/подразделения разворачивает её обратно.
     let pbMasterCollapsed = {};
+
+    // Task 542: при входе в раздел дерево по умолчанию СВЁРНУТО,
+    // кроме организации ООО ПО «ТОКЕМ» (заявка). Вызывается из pbInit
+    // ПОСЛЕ загрузки данных (нужны header'ы секций); pbInit работает
+    // при каждом входе в раздел (navigateTo('phonebook') → pbInit),
+    // поэтому ручная настройка свёрнутости сбрасывается только при
+    // повторном входе в раздел — внутри раздела шевроны живут как
+    // в Task 541 (переживают смену таба и сброс выбора).
+    const PB_DEFAULT_OPEN_ORG = 'ООО ПО «ТОКЕМ»';
+    function pbMasterApplyDefaultCollapsed() {
+        pbMasterCollapsed = {};
+        if (!pbData || !pbData.sections) return;
+        for (const header of Object.keys(pbData.sections)) {
+            if (header !== PB_DEFAULT_OPEN_ORG) pbMasterCollapsed[header] = true;
+        }
+    }
 
     // Отрисовать дерево master (левое окно). Организации — в порядке
     // phonebook.json, подразделения — по алфавиту (как инлайн-рендер),
@@ -23964,6 +24030,8 @@
             // После загрузки данных — очистить устаревшие записи (старые ID
             // от предыдущих версий pbMakeId, которые больше не валидны)
             pbCleanupStaleFavorites();
+            // Task 542: дерево по умолчанию свёрнуто, кроме ООО ПО «ТОКЕМ»
+            pbMasterApplyDefaultCollapsed();
             pbRender();
             // Task 538: синхронизация с архивом — подтянуть свои данные с
             // других устройств, вытолкнуть накопленные локальные правки
@@ -24313,6 +24381,12 @@
         const baseF = pbSyncBase.favorites;
         const baseN = pbSyncBase.notes;
         const validIds = new Set(pbFlat.map(item => pbMakeId(item)));
+        // Task 542: данные ещё не загружены (pbFlat пуст — повторный вход
+        // в раздел перезагружает данные, синк может опередить загрузку) —
+        // НЕ считать серверские id устаревшими: иначе мягкое удаление
+        // стирало бы всё избранное/примечания при гонке вход/синк
+        // (поймано браузерной верификацией: двойной pbInit на входе).
+        const haveData = validIds.size > 0;
         let localChanged = false;
         let conflicts = 0;
 
@@ -24327,7 +24401,8 @@
             const inB = baseF[id] === true;
             // Серверский id не существует в текущем phonebook.json —
             // не поднимаем локально, в архив уходит мягкое удаление
-            if (inS && !validIds.has(id)) {
+            // (Task 542: haveData — только когда справочник загружен)
+            if (inS && haveData && !validIds.has(id)) {
                 pbSyncEnqueue({ kind: 'fav', id: id, on: false, entry: pbSyncFindEntry(id) });
                 delete baseF[id];
                 if (inL) { delete pbFavorites[id]; localChanged = true; }
@@ -24363,7 +24438,8 @@
             const tS = hasS ? String(snotes[id]) : null;
             const tB = hasB ? String(baseN[id]) : null;
             // Серверский id не существует в текущем справочнике — аналог выше
-            if (hasS && !validIds.has(id)) {
+            // (Task 542: haveData — только когда справочник загружен)
+            if (hasS && haveData && !validIds.has(id)) {
                 pbSyncEnqueue({ kind: 'note', id: id, text: '', entry: pbSyncFindEntry(id) });
                 delete baseN[id];
                 if (hasL) { delete pbNotes[id]; localChanged = true; }

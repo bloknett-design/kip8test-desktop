@@ -7,6 +7,25 @@
 // при падении тестов.
 // ============================================================
 
+// Task 542: СУИТ ПЕРЕРОС ДЕФОЛТНЫЙ ЛИМИТ КУЧИ (~2ГБ на машинах с
+// 4ГБ RAM): 239 тест-файлов, каждый при require держит копию
+// index.html (~4.25МБ) в module scope — суммарно ~2ГБ live-данных.
+// На раннерах CI (7ГБ RAM) node поднимает дефолт выше и всё зелёное,
+// а локально прогон падал с OOM уже на ЧИСТОМ дереве Task 541.
+// Раннер перезапускает себя с явным лимитом кучи 2560МБ (если ещё
+// не поднят и re-exec не выключен переменной KIP_RUNALL_NO_REEXEC=1):
+// одинаково работает локально и в CI, .github/workflows/ci.yml менять
+// не нужно (run-all.js синкается и в десктоп-зеркала).
+if (process.env.KIP_RUNALL_NO_REEXEC !== '1' &&
+        process.execArgv.join(' ').indexOf('--max-old-space-size') === -1) {
+    const { spawnSync } = require('child_process');
+    const reexec = spawnSync(process.execPath,
+        ['--max-old-space-size=2560', __filename],
+        { stdio: 'inherit',
+          env: Object.assign({}, process.env, { KIP_RUNALL_NO_REEXEC: '1' }) });
+    process.exit(reexec.status === null ? 1 : reexec.status);
+}
+
 const { runAll } = require('./test-helpers.js');
 
 // Проверяем, что index.html существует
@@ -913,6 +932,10 @@ require('./test-task539.js');
 // (master-дерево организаций слева, контакты подразделения справа).
 require('./test-task540.js');
 require('./test-task541.js');
+// Task 542 — телефонный справочник: дерево при входе свёрнуто, кроме
+// ООО ПО «ТОКЕМ»; «Избранное» на десктопе в три столбца; обновляемые
+// данные из Google Sheets (scripts/sync-phonebook.py + workflow).
+require('./test-task542.js');
 require('./test-deploy-url.js');
 
 // Запускаем

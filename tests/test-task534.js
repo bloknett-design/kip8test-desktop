@@ -18,7 +18,7 @@
 //      _fetchWttr), порядок каналов в _loadWeather (open-meteo →
 //      wttr; сервер УДАЛЁН — Task 536), календарь без подписей +
 //      левое выравнивание + шрифт, WorkSchedule.gs: серверная погода
-//      УДАЛЕНА, SW kipia-test-v753.
+//      УДАЛЕНА, SW kipia-test-v754.
 //   B. VM ПОГОДА — _parseWttr (поля/lang_ru/EN-слова/cloudcover/
 //      AM-PM → +7/мусор); цепочка: успех open-meteo → wttr НЕ звётся;
 //      сбой open-meteo → wttr успех; оба сбой → why=network, сервер
@@ -26,7 +26,7 @@
 //      каналами, БЕЗ подсказок сервера.
 //   C. VM КАЛЕНДАРЬ — подписей нет, порядок год → месяц → сетка,
 //      4 стрелки, «Сегодня» в строке месяца, 12 опций, _calSetMonth.
-//   D. SW — kipia-test-v753, нет забегания вперёд (v748).
+//   D. SW — kipia-test-v754, нет забегания вперёд (v748).
 //
 // Запуск: через tests/run-all.js (require './test-task534.js').
 
@@ -653,19 +653,19 @@ describe('Task 534 C: VM — календарь (подписи убраны, н
 // ============================================================
 describe('Task 534 D: SW — версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v753', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v753'");
+    test('sw.js: CACHE_VERSION = kipia-test-v754', () => {
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v754'");
         assertTrue(i !== -1, 'версия v747 (Task 534: wttr.in + календарь)');
     });
 
     test('sw.js: нет забегания вперёд (v748 не должно быть)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v754') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v755') === -1,
             'v748 в sw.js отсутствует (гварды живут только в тестах)');
     });
 
     test('index.html: версия согласована (v747 в этом тесте)', () => {
         const t534 = fs.readFileSync(path.join(__dirname, 'test-task534.js'), 'utf8');
-        assertTrue(t534.indexOf('kipia-test-v753') !== -1, 'этот тест знает v747');
+        assertTrue(t534.indexOf('kipia-test-v754') !== -1, 'этот тест знает v747');
         const dir = fs.readdirSync(path.join(__dirname));
         assertTrue(dir.indexOf('test-task534.js') !== -1, 'файл на месте');
     });

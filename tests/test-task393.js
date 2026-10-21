@@ -476,10 +476,10 @@ describe('Task 393 — VM: страница «Работники» — 4 окн�
 // ============================================================
 describe('Task 393 — SW', () => {
 
-    test('SW: kipia-test-v753', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v753'") !== -1,
+    test('SW: kipia-test-v754', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v754'") !== -1,
             'SWVersion bumped');
-        assertTrue(SW_SRC.indexOf('kipia-test-v754') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v755') === -1,
             'двойного бампа не было');
     });
 });
