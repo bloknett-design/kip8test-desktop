@@ -11747,6 +11747,10 @@
     .pb-search-input:focus { border-color: rgba(199,150,74,0.55); }
     .pb-search-input::placeholder { color: rgba(255,255,255,0.35); }
     [data-theme="light"] .pb-search-input::placeholder { color: rgba(20,20,19,0.4); }
+    /* Инфо-строки списков (приборы/клапана: devTypeInfo и пр.).
+       Task 540: ЭЛЕМЕНТ #pbInfo телефонного справочника удалён
+       («Всего: N записей · N организаций…»), но КЛАСС .pb-info
+       остаётся — им пользуются другие разделы. */
     .pb-info { padding: 6px 16px 4px; font-size: 12px; color: rgba(255,255,255,0.4); text-align: center; }
     [data-theme="light"] .pb-info { color: rgba(20,20,19,0.55); }
 
@@ -13149,12 +13153,10 @@
     [data-theme="light"] .pb-note-add { color: rgba(42,93,143,0.8); }
     .pb-note-add:active { opacity: 0.7; }
     .pb-note-add svg { width: 11px; height: 11px; }
-    /* Панель фильтров над списком */
-    .pb-toolbar {
-        padding: 4px 8px 6px;
-        display: flex; align-items: center; gap: 8px;
-        flex-wrap: wrap;
-    }
+    /* Кнопка-«пилюля». Исторически — фильтр справочника (Task 540:
+       кнопка и тулбар удалены); базовый стиль ОСТАВЛЕН для кнопки
+       «Показать ещё» в списках приборов (devRenderSorted,
+       class="pb-filter-btn"). */
     .pb-filter-btn {
         display: inline-flex; align-items: center; gap: 6px;
         padding: 7px 14px;
@@ -13173,19 +13175,83 @@
         background: rgba(184,130,26,0.06);
         color: rgba(184,130,26,0.85);
     }
-    .pb-filter-btn svg { width: 12px; height: 12px; }
-    .pb-filter-btn.active {
-        background: rgba(240,181,60,0.18);
-        border-color: rgba(240,181,60,0.5);
-        color: #f0b53c;
-    }
-    [data-theme="light"] .pb-filter-btn.active {
-        background: rgba(184,130,26,0.18);
-        border-color: rgba(184,130,26,0.55);
-        color: #b8821a;
-    }
     .pb-filter-btn:active { transform: scale(0.96); }
-    .pb-toolbar-spacer { flex: 1; }
+    /* ===== Task 540: вкладка «Все» на десктопе — ДВА ОКНА ===== */
+    /* Левое окно #pbList — компактное дерево «организация →
+       подразделения» (как «разделы» мобильной версии, но раскрытое
+       целиком). Клик по строке открывает правое окно #detailPanel с
+       контактами (по образцу и функционалу расходомеров хозрасчётных:
+       перетаскиваемая граница, ⇄-обмен панелей, ✕-закрытие). */
+    .pb-master { padding: 6px 8px 28px; }
+    .pb-master-org { margin: 4px 0 10px; }
+    .pb-master-org-row {
+        display: flex; align-items: center; gap: 8px;
+        padding: 10px 12px;
+        border: 1px solid rgba(74,143,199,0.16);
+        border-radius: 10px;
+        background: rgba(255,255,255,0.03);
+        color: var(--text-primary, #e8e8e8);
+        font-size: 14px; font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s;
+    }
+    .pb-master-org-row:hover { background: rgba(74,143,199,0.08); }
+    .pb-master-org-row.selected {
+        background: rgba(74,143,199,0.16);
+        border-color: rgba(74,143,199,0.45);
+    }
+    .pb-master-org-name {
+        flex: 1; min-width: 0;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .pb-master-row {
+        display: flex; align-items: center; gap: 8px;
+        margin: 2px 0 2px 10px;
+        padding: 7px 12px 7px 14px;
+        border-left: 2px solid rgba(74,143,199,0.22);
+        border-radius: 0 8px 8px 0;
+        color: var(--text-secondary, rgba(255,255,255,0.55));
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 0.12s, color 0.12s;
+    }
+    .pb-master-row:hover { background: rgba(74,143,199,0.07); color: var(--text-primary, #e8e8e8); }
+    .pb-master-row.selected {
+        background: rgba(74,143,199,0.14);
+        border-left-color: #6aa6e0;
+        color: #6aa6e0;
+        font-weight: 600;
+    }
+    [data-theme="light"] .pb-master-row.selected { color: #4a8fc7; }
+    .pb-master-row-name {
+        flex: 1; min-width: 0;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .pb-master-count {
+        flex-shrink: 0;
+        min-width: 17px; height: 17px; padding: 0 5px;
+        border-radius: 9px;
+        background: rgba(255,255,255,0.08);
+        color: rgba(255,255,255,0.55);
+        font-size: 10px; font-weight: 700; line-height: 17px; text-align: center;
+    }
+    [data-theme="light"] .pb-master-count { background: rgba(20,20,19,0.08); color: rgba(20,20,19,0.6); }
+    /* Правое окно #detailPanel — контакты выбранного подразделения */
+    #detailPanelBody .pb-detail-contacts { padding: 8px 10px 28px; }
+    #detailPanelBody .pb-detail-group-title {
+        display: flex; align-items: baseline; gap: 6px;
+        margin: 14px 4px 4px;
+        font-size: 12px; font-weight: 700;
+        letter-spacing: 0.4px; text-transform: uppercase;
+        color: rgba(255,255,255,0.45);
+    }
+    [data-theme="light"] #detailPanelBody .pb-detail-group-title { color: rgba(20,20,19,0.55); }
+    #detailPanelBody .pb-detail-group-count {
+        font-size: 10px; font-weight: 700;
+        color: rgba(106,166,224,0.8);
+        text-transform: none; letter-spacing: 0;
+    }
+    [data-theme="light"] #detailPanelBody .pb-detail-group-count { color: rgba(42,93,143,0.85); }
 
     /* ===== Task 539: табы «Все / Избранное» телефонного справочника ===== */
     /* Базовые табы (десктоп — компактные в тулбаре; мобильный нижний бар
@@ -13199,20 +13265,25 @@
     [data-theme="light"] .pb-tab-count { background: rgba(20,20,19,0.1); color: rgba(20,20,19,0.8); }
     [data-theme="light"] .pb-tab.active .pb-tab-count { background: rgba(74,143,199,0.18); color: #4a8fc7; }
 
-    /* ДЕСКТОП (≥1024px): компактные табы в тулбаре над списком — по
-       образцу .flow-desktop-tabs расходомеров (Task 120/161). Тулбар
-       (.pb-search-wrap) sticky сверху → табы видны на ОБОИХ «экранах»
-       страницы: «разделы» (организации свёрнуты) и «содержание»
-       (организация раскрыта). На мобильном скрыты (нижний бар). */
+    /* ДЕСКТОП (≥1024px): компактные табы — в баре хлебных крошек
+       #detailBreadcrumbBar (Task 540, по образцу .flow-desktop-tabs
+       расходомеров Task 120/161): показываются только на странице
+       справочника (CSS :has — работает и без JS, как Task 126 у
+       расходомеров), видны в ОБОИХ окнах — дерево организаций слева
+       и контакты выбранного подразделения справа. На мобильном
+       скрыты (нижний бар #pbBottomBar). */
     .pb-desktop-tabs {
         display: none;  /* скрыт на мобильном */
         gap: 0;
         flex-shrink: 0;
+        margin-left: 8px;
         border: 1px solid rgba(74,143,199,0.3);
         border-radius: 8px;
         overflow: hidden;
     }
-    @media (min-width: 1024px) { .pb-desktop-tabs { display: flex; } }
+    @media (min-width: 1024px) {
+        body:has(#page-phonebook.active) #pbDesktopTabs { display: flex !important; }
+    }
     .pb-desktop-tabs .pb-tab {
         padding: 6px 14px;
         font-size: 13px;
@@ -13257,71 +13328,11 @@
     /* Отступ списка снизу на мобильном — фиксированный бар не накрывает
        последнюю карточку (как .ts-page padding-bottom у датчиков) */
     @media (max-width: 1023px) { body:has(#page-phonebook.active) .pb-list { padding-bottom: 96px; } }
-    /* Task 538: бейдж статуса синхронизации справочника (ок/ожидание/
-       обмен/локально/нет связи). Тап — детали (email, время, очередь). */
-    .pb-sync-badge {
-        display: inline-flex; align-items: center; gap: 6px;
-        padding: 7px 12px;
-        border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 18px;
-        background: rgba(255,255,255,0.03);
-        color: rgba(255,255,255,0.45);
-        font-size: 12px; font-weight: 500;
-        font-family: 'Inter', sans-serif;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        transition: all 0.15s;
-        max-width: 100%;
-    }
-    .pb-sync-badge svg { width: 12px; height: 12px; flex: none; }
-    .pb-sync-badge:active { transform: scale(0.96); }
-    .pb-sync-badge.sync-ok {
-        color: rgba(76,175,80,0.9);
-        border-color: rgba(76,175,80,0.25);
-        background: rgba(76,175,80,0.05);
-    }
-    .pb-sync-badge.sync-busy {
-        color: rgba(106,166,224,0.9);
-        border-color: rgba(106,166,224,0.25);
-        background: rgba(106,166,224,0.05);
-    }
-    .pb-sync-badge.sync-busy svg { animation: pbSyncPulse 1.2s ease-in-out infinite; }
-    @keyframes pbSyncPulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
-    .pb-sync-badge.sync-pending {
-        color: rgba(240,181,60,0.9);
-        border-color: rgba(240,181,60,0.3);
-        background: rgba(240,181,60,0.05);
-    }
-    .pb-sync-badge.sync-error {
-        color: rgba(220,70,70,0.85);
-        border-color: rgba(220,70,70,0.3);
-        background: rgba(220,70,70,0.05);
-    }
-    [data-theme="light"] .pb-sync-badge {
-        border-color: rgba(20,20,19,0.12);
-        background: rgba(20,20,19,0.03);
-        color: rgba(20,20,19,0.5);
-    }
-    [data-theme="light"] .pb-sync-badge.sync-ok {
-        color: rgba(56,142,72,0.95);
-        border-color: rgba(56,142,72,0.3);
-        background: rgba(56,142,72,0.06);
-    }
-    [data-theme="light"] .pb-sync-badge.sync-busy {
-        color: rgba(42,93,143,0.95);
-        border-color: rgba(42,93,143,0.3);
-        background: rgba(42,93,143,0.06);
-    }
-    [data-theme="light"] .pb-sync-badge.sync-pending {
-        color: rgba(184,130,26,0.95);
-        border-color: rgba(184,130,26,0.35);
-        background: rgba(184,130,26,0.07);
-    }
-    [data-theme="light"] .pb-sync-badge.sync-error {
-        color: rgba(198,75,75,0.9);
-        border-color: rgba(198,75,75,0.3);
-        background: rgba(198,75,75,0.06);
-    }
+    /* Task 540: бейдж .pb-sync-badge удалён — синхронизация ТИХАЯ
+       (заявка: «убери кнопку синхронизации и сделай её тихой»).
+       Статус живёт в pbSyncState (консоль/отладка), пользовательские
+       подсказки — только редкие тосты об ошибках (invalid_*,
+       конфликт примечаний). */
     .pb-clear-note {
         font-size: 11px; color: rgba(224,90,90,0.7);
         background: transparent; border: none; cursor: pointer;
@@ -15521,6 +15532,33 @@
                 display: none !important;
             }
         }
+        /* ===== Task 540: бар хлебных крошек телефонного справочника ===== */
+        /* Как у расходомеров хозрасчётных (Task 126/127): на десктопе бар
+           крошек заменяет шапку страницы — в нём крошки, табы «Все /
+           Избранное» (#pbDesktopTabs) и поиск (лупа Task 173). Правила с
+           !important стоят ПОСЛЕ блока скрытия выше (равная
+           специфичность — порядок решает), поэтому лупа и разделитель
+           видны на странице справочника даже без открытой правой панели:
+           запрос уходит в #pbSearchInput (см. detailBarGetPageSearchInput).
+           Мобильный блок поиска .pb-search-wrap на десктопе скрыт. */
+        @media (min-width: 1024px) {
+            body:has(#page-phonebook.active) #detailBreadcrumbBar,
+            body:has(#page-phonebook.active) #detailBreadcrumbBar.active {
+                display: flex !important;
+            }
+            body:has(#page-phonebook.active) #page-phonebook > .page-inline-header {
+                display: none !important;
+            }
+            body:has(#page-phonebook.active) #detailBreadcrumbBar .detail-breadcrumb-search,
+            body:has(#page-phonebook.active) #detailBreadcrumbBar .detail-breadcrumb-divider {
+                display: flex !important;
+            }
+            body:has(#page-phonebook.active) #page-phonebook > .pb-search-wrap {
+                display: none !important;
+            }
+        }
+        /* При открытом поиске табы справочника скрываются (как flowDesktopTabs) */
+        #detailBreadcrumbBar.search-open #pbDesktopTabs { visibility: hidden; }
         /* Шеврон «назад» в строке крошек — как в page-inline-header */
         .detail-breadcrumb-chevron {
             position: absolute;
@@ -17788,6 +17826,15 @@
             <button class="flow-tab active" data-flow-tab="all" onclick="FlowmeterData.setTab('all')">Все <span class="flow-tab-count" id="flowAllCountDesk">0</span></button>
             <button class="flow-tab" data-flow-tab="fav" onclick="FlowmeterData.setTab('fav')">Избранные <span class="flow-tab-count" id="flowFavCountDesk">0</span></button>
         </div>
+        <!-- Task 540: табы «Все / Избранное» телефонного справочника — в баре
+             крошек, по образцу #flowDesktopTabs расходомеров (Task 120/161).
+             Показ — CSS-правилом body:has(#page-phonebook.active) на десктопе
+             (≥1024px); на мобильном их заменяет нижний бар #pbBottomBar.
+             Раньше (Task 539) жили в тулбаре .pb-toolbar над списком. -->
+        <div id="pbDesktopTabs" class="pb-desktop-tabs" role="tablist" aria-label="Фильтр контактов телефонного справочника">
+            <button type="button" class="pb-tab active" data-pb-tab="all" onclick="pbSetTab('all')" role="tab" aria-selected="true">Все <span class="pb-tab-count" id="pbAllCountDesk">0</span></button>
+            <button type="button" class="pb-tab" data-pb-tab="fav" onclick="pbSetTab('fav')" role="tab" aria-selected="false">Избранное <span class="pb-tab-count" id="pbFavCountDesk">0</span></button>
+        </div>
         <!-- Task 173: поиск по списку левой панели при открытой detail-панели.
              Кнопка-лупа — слева от ✕, отделена вертикальной линией;
              поле разворачивается на месте крошек и фильтрует список
@@ -19123,28 +19170,15 @@
 
             <div class="pb-search-wrap">
                 <input type="search" id="pbSearchInput" class="pb-search-input" placeholder="Поиск: имя, должность, телефон…" autocomplete="off" enterkeyhint="search" oninput="pbRender()">
-                <div class="pb-toolbar">
-                    <!-- Task 539: табы «Все / Избранное» — по образцу расходомеров
-                         (#flowDesktopTabs, Task 120/161) и датчиков температуры
-                         (.ts-tabs, Task 373): компактные табы в тулбаре над
-                         списком, видны на десктопе (≥1024px) в ОБОИХ состояниях
-                         страницы — «разделы» (организации свёрнуты) и
-                         «содержание» (организация раскрыта): тулбар sticky.
-                         На мобильном (≤1023px) табы скрыты — их заменяет
-                         нижний бар #pbBottomBar. Прежняя кнопка-переключатель
-                         «Только избранные» удалена — её роль выполняет таб
-                         «Избранное» (состояние pbFilterFavOnly прежнее). -->
-                    <div id="pbDesktopTabs" class="pb-desktop-tabs" role="tablist" aria-label="Фильтр контактов телефонного справочника">
-                        <button type="button" class="pb-tab active" data-pb-tab="all" onclick="pbSetTab('all')" role="tab" aria-selected="true">Все <span class="pb-tab-count" id="pbAllCountDesk">0</span></button>
-                        <button type="button" class="pb-tab" data-pb-tab="fav" onclick="pbSetTab('fav')" role="tab" aria-selected="false">Избранное <span class="pb-tab-count" id="pbFavCountDesk">0</span></button>
-                    </div>
-                    <button type="button" id="pbSyncBadge" class="pb-sync-badge sync-off" onclick="pbSyncInfo()" aria-label="Синхронизация избранного и примечаний" title="Синхронизация">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
-                        <span id="pbSyncBadgeLabel">Локально</span>
-                    </button>
-                </div>
             </div>
-            <div class="pb-info" id="pbInfo">Загрузка…</div>
+            <!-- Task 540: блок .pb-search-wrap остаётся ТОЛЬКО для мобильного
+                 (≤1023px, sticky под шапкой). На десктопе (≥1024px) он скрыт
+                 CSS: кнопки-табы «Все / Избранное» (#pbDesktopTabs) и поле
+                 поиска (лупа) живут в баре хлебных крошек #detailBreadcrumbBar
+                 — по образцу расходомеров хозрасчётных (запрос лупы уходит в
+                 #pbSearchInput, oninput жив и без видимого блока). Тулбар и
+                 бейдж синхронизации удалены — синхронизация ТИХАЯ; инфо-строка
+                 «Всего: N записей · N организаций · избранное: N» убрана. -->
             <div id="pbList" class="pb-list"></div>
         </div>
 
@@ -23155,19 +23189,61 @@
         }
     }
 
+    // HTML карточки контакта (Task 540: вынесено из pbRender — карточки
+    // рендерит и инлайн-список, и правое окно #detailPanel мастер-режима).
+    // query — подсветка совпадений поиска (<mark>), zebraClass — зебра-фон.
+    function pbCardHtml(item, query, zebraClass) {
+        const id = pbMakeId(item);
+        const isFav = pbIsFavorite(id);
+        const note = pbGetNote(id);
+        let html = '<div class="pb-card' + (zebraClass || '') + '" data-id="' + pbEsc(id) + '">';
+        html += '<div class="pb-card-top">';
+        html += '<div class="pb-card-top-text">';
+        if (item.name) {
+            html += '<div class="pb-card-name">' + pbMark(item.name, query) + '</div>';
+        }
+        if (item.position) {
+            html += '<div class="pb-card-pos">' + pbMark(item.position, query) + '</div>';
+        }
+        if (item.phone) {
+            html += '<div class="pb-card-phone">' + pbMark(item.phone, query) + '</div>';
+        }
+        html += '</div>'; // .pb-card-top-text
+        // Кнопка-звёздочка
+        html += '<button type="button" class="pb-fav-btn' + (isFav ? ' fav-active' : '') + '" ' +
+                'aria-label="' + (isFav ? 'Убрать из избранного' : 'Добавить в избранное') + '" ' +
+                'onclick="pbToggleFavorite(this, event)">' +
+                '<svg viewBox="0 0 24 24" fill="' + (isFav ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' +
+                '</button>';
+        html += '</div>'; // .pb-card-top
+        // Примечание (если есть) — с кнопкой редактирования
+        if (note) {
+            html += '<div class="pb-note">' + pbEsc(note) +
+                    '<button type="button" class="pb-note-edit" aria-label="Редактировать примечание" onclick="pbEditNote(this)">' +
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+                    '</button></div>';
+        } else {
+            html += '<button type="button" class="pb-note-add" onclick="pbEditNote(this)">' +
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+                    'добавить примечание</button>';
+        }
+        html += '</div>'; // .pb-card
+        return html;
+    }
+
     function pbRender() {
         const list = document.getElementById('pbList');
-        const info = document.getElementById('pbInfo');
-        if (!list || !info) return;
+        if (!list) return;
 
         const query = pbNorm((document.getElementById('pbSearchInput')?.value || '').trim());
 
         // Task 539: обновить табы «Все / Избранное» и счётчики
         pbUpdateTabs();
 
+        // Task 540: элемент #pbInfo удалён — placeholder «Загрузка…»
+        // рендерится прямо в список (раньше писался в инфо-строку)
         if (!pbLoaded) {
-            list.innerHTML = '';
-            info.textContent = 'Загрузка…';
+            list.innerHTML = '<div class="pb-empty">Загрузка…</div>';
             return;
         }
 
@@ -23187,6 +23263,18 @@
             );
         }
 
+        // Task 540: ДЕСКТОП (≥1024px), вкладка «Все», без поискового
+        // запроса — ДВА ОКНА (как расходомеры хозрасчётные): левое окно
+        // #pbList — дерево «организации → подразделения» (pbRenderMaster),
+        // правое окно #detailPanel — контакты выбранного подразделения
+        // (pbMasterOpen). Поиск, вкладка «Избранное» и мобильный — прежний
+        // инлайн-рендер ниже.
+        if (typeof isDesktop === 'function' && isDesktop() &&
+                !pbFilterFavOnly && !query) {
+            pbRenderMaster(list);
+            return;
+        }
+
         // Группировка по header'ам (верхний уровень) с сохранением порядка
         const groupedByHeader = {};
         for (const item of filtered) {
@@ -23194,25 +23282,9 @@
             groupedByHeader[item.header].push(item);
         }
 
-        // Инфо
-        let infoParts = [];
-        const headerCount = Object.keys(groupedByHeader).length;
-        if (pbFilterFavOnly) {
-            infoParts.push('Избранные: ' + filtered.length + ' ' + pbPlural(filtered.length, ['запись', 'записи', 'записей']));
-        } else if (query) {
-            infoParts.push('Найдено: ' + filtered.length + ' ' + pbPlural(filtered.length, ['запись', 'записи', 'записей']) +
-                           ' в ' + headerCount + ' ' + pbPlural(headerCount, ['организации', 'организациях', 'организациях']));
-        } else {
-            infoParts.push('Всего: ' + pbFlat.length + ' ' + pbPlural(pbFlat.length, ['запись', 'записи', 'записей']) +
-                           ' · ' + Object.keys(pbData.sections).length + ' организаций');
-            const favCount = pbGetFavoritesCount();
-            if (favCount > 0) {
-                infoParts.push(' · избранное: ' + favCount);
-            } else {
-                infoParts.push(' · тапните по организации или отделу, чтобы раскрыть');
-            }
-        }
-        info.textContent = infoParts.join('');
+        // Task 540: инфо-строка «Всего: N записей · N организаций ·
+        // избранное: N» удалена (заявка) — счётчики живут в табах
+        // «Все / Избранное» (pbUpdateTabs).
 
         // Режим: есть поисковый запрос ИЛИ фильтр избранных → все секции раскрыты
         const forceExpand = query || pbFilterFavOnly;
@@ -23317,44 +23389,10 @@
                         html += '<div class="pb-subsubgroup-body">';
                     }
                     for (const item of groupedBySubgroup[sg]) {
-                        const id = pbMakeId(item);
-                        const isFav = pbIsFavorite(id);
-                        const note = pbGetNote(id);
                         // Зебра: чётная/нечётная карточка
                         const zebraClass = (cardIndex % 2 === 0) ? ' pb-card-even' : ' pb-card-odd';
                         cardIndex++;
-                        html += '<div class="pb-card' + zebraClass + '" data-id="' + pbEsc(id) + '">';
-                        html += '<div class="pb-card-top">';
-                        html += '<div class="pb-card-top-text">';
-                        if (item.name) {
-                            html += '<div class="pb-card-name">' + pbMark(item.name, query) + '</div>';
-                        }
-                        if (item.position) {
-                            html += '<div class="pb-card-pos">' + pbMark(item.position, query) + '</div>';
-                        }
-                        if (item.phone) {
-                            html += '<div class="pb-card-phone">' + pbMark(item.phone, query) + '</div>';
-                        }
-                        html += '</div>'; // .pb-card-top-text
-                        // Кнопка-звёздочка
-                        html += '<button type="button" class="pb-fav-btn' + (isFav ? ' fav-active' : '') + '" ' +
-                                'aria-label="' + (isFav ? 'Убрать из избранного' : 'Добавить в избранное') + '" ' +
-                                'onclick="pbToggleFavorite(this, event)">' +
-                                '<svg viewBox="0 0 24 24" fill="' + (isFav ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' +
-                                '</button>';
-                        html += '</div>'; // .pb-card-top
-                        // Примечание (если есть) — с кнопкой редактирования
-                        if (note) {
-                            html += '<div class="pb-note">' + pbEsc(note) +
-                                    '<button type="button" class="pb-note-edit" aria-label="Редактировать примечание" onclick="pbEditNote(this)">' +
-                                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
-                                    '</button></div>';
-                        } else {
-                            html += '<button type="button" class="pb-note-add" onclick="pbEditNote(this)">' +
-                                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
-                                    'добавить примечание</button>';
-                        }
-                        html += '</div>'; // .pb-card
+                        html += pbCardHtml(item, query, zebraClass);
                     }
                     if (showSubgroupHeaders && sg !== null) {
                         html += '</div>'; // .pb-subsubgroup-body
@@ -23416,8 +23454,207 @@
         if (navigator.vibrate) navigator.vibrate(25);
         // Сбросить раскрытые секции — в режиме фильтра они раскрываются автоматически
         pbExpandedSections = {};
+        // Task 540: смена таба закрывает правое окно мастер-режима
+        // (сброс выбора + closeDetailPanel при открытой панели)
+        pbMasterResetState();
         pbUpdateTabs();
         pbRender();
+    }
+
+    // ============================================================
+    // Task 540: ДЕСКТОП — вкладка «Все»: ДВА ОКНА (master-detail)
+    // ============================================================
+    // Левое окно #pbList — компактное дерево «организации →
+    // подразделения» (аналог «экрана разделов» мобильной версии, но
+    // раскрытое целиком). Клик по строке — правое окно #detailPanel
+    // с контактами (по образцу и функционалу расходомеров хозрасчётных:
+    // перетаскиваемая граница, ⇄-обмен панелей, ✕-закрытие, крошки в
+    // баре #detailBreadcrumbBar). Индексы (orgIdx, groupIdx) ссылаются
+    // на pbMasterIndex текущего рендера дерева — имена с « »/кавычками
+    // через onclick-атрибуты не возим (экранирование не нужно).
+    let pbMasterIndex = [];        // [{header, count, groups: [{name, count}]}]
+    let pbDesktopSelected = null;  // {orgIdx, groupIdx|null} — выбранная строка
+
+    // Отрисовать дерево master (левое окно). Организации — в порядке
+    // phonebook.json, подразделения — по алфавиту (как инлайн-рендер),
+    // «Без группы» — в конец; счётчики у каждой строки.
+    function pbRenderMaster(list) {
+        pbMasterIndex = [];
+        for (const header of Object.keys(pbData.sections)) {
+            const items = pbFlat.filter(it => it.header === header);
+            const byGroup = {};
+            const order = [];
+            for (const it of items) {
+                const g = it.group || null;
+                if (!(g in byGroup)) { byGroup[g] = 0; order.push(g); }
+                byGroup[g]++;
+            }
+            order.sort((a, b) => {
+                if (a === null) return 1;
+                if (b === null) return -1;
+                const va = a.toString().toLowerCase();
+                const vb = b.toString().toLowerCase();
+                if (va < vb) return -1;
+                if (va > vb) return 1;
+                return 0;
+            });
+            pbMasterIndex.push({
+                header: header,
+                count: items.length,
+                groups: order.map(g => ({ name: g, count: byGroup[g] }))
+            });
+        }
+        const sel = pbDesktopSelected;
+        let html = '<div class="pb-master">';
+        for (let o = 0; o < pbMasterIndex.length; o++) {
+            const org = pbMasterIndex[o];
+            const orgSel = sel && sel.orgIdx === o && sel.groupIdx == null;
+            html += '<div class="pb-master-org">';
+            html += '<div class="pb-master-org-row' + (orgSel ? ' selected' : '') + '" onclick="pbMasterOpen(' + o + ')">';
+            html += '<span class="pb-master-org-name">' + pbEsc(org.header) + '</span>';
+            html += '<span class="pb-master-count">' + org.count + '</span>';
+            html += '</div>';
+            for (let g = 0; g < org.groups.length; g++) {
+                const grp = org.groups[g];
+                const gSel = sel && sel.orgIdx === o && sel.groupIdx === g;
+                const label = grp.name === null ? 'Без группы' : grp.name;
+                html += '<div class="pb-master-row' + (gSel ? ' selected' : '') + '" onclick="pbMasterOpen(' + o + ', ' + g + ')">';
+                html += '<span class="pb-master-row-name">' + pbEsc(label) + '</span>';
+                html += '<span class="pb-master-count">' + grp.count + '</span>';
+                html += '</div>';
+            }
+            html += '</div>';
+        }
+        html += '</div>';
+        list.classList.remove('searching');
+        list.innerHTML = html;
+    }
+
+    // Клик по строке дерева: открыть правое окно (#detailPanel) с
+    // контактами. groupIdx не задан — вся организация, иначе —
+    // подразделение. Подсветка выбранной строки + крошки.
+    function pbMasterOpen(orgIdx, groupIdx) {
+        if (!pbMasterIndex || !pbMasterIndex[orgIdx]) return;
+        const org = pbMasterIndex[orgIdx];
+        const grp = (groupIdx != null && org.groups[groupIdx]) ? org.groups[groupIdx] : null;
+        if (groupIdx != null && !grp) return;
+        pbDesktopSelected = { orgIdx: orgIdx, groupIdx: grp ? groupIdx : null };
+        if (navigator.vibrate) navigator.vibrate(15);
+        // Перерисовать дерево — подсветить выбранную строку
+        pbRender();
+        // Контакты выбранного подразделения/организации
+        const gName = grp ? grp.name : null;
+        const items = pbFlat.filter(function(it) {
+            if (it.header !== org.header) return false;
+            if (!grp) return true;
+            return (it.group || null) === gName;
+        });
+        const groupLabel = grp ? (grp.name === null ? 'Без группы' : grp.name) : '';
+        const title = groupLabel ? (org.header + ' — ' + groupLabel) : org.header;
+        if (typeof openDetailPanel === 'function') {
+            openDetailPanel(title, '<div class="pb-detail-contacts">' +
+                                   pbRenderContactsHtml(items, grp) + '</div>');
+        }
+        setPhonebookBreadcrumbContent(org, grp);
+    }
+
+    // Контакты для правого окна: вся организация — блоки по
+    // подразделениям (заголовки .pb-detail-group-title + карточки),
+    // подразделение — блоки по подгруппам третьего уровня (заголовки
+    // только у именованных). Зебра — сквозная по окну.
+    function pbRenderContactsHtml(items, grp) {
+        const blocks = [];   // {title: string|null, items: []}
+        if (!grp) {
+            const byGroup = {}; const order = [];
+            for (const it of items) {
+                const g = it.group || null;
+                if (!(g in byGroup)) { byGroup[g] = []; order.push(g); }
+                byGroup[g].push(it);
+            }
+            order.sort(function(a, b) {
+                if (a === null) return 1;
+                if (b === null) return -1;
+                const va = a.toString().toLowerCase();
+                const vb = b.toString().toLowerCase();
+                if (va < vb) return -1;
+                if (va > vb) return 1;
+                return 0;
+            });
+            for (const g of order) {
+                blocks.push({ title: g === null ? 'Без группы' : g, items: byGroup[g] });
+            }
+        } else {
+            const bySub = {}; const order = [];
+            for (const it of items) {
+                const sg = it.subgroup || null;
+                if (!(sg in bySub)) { bySub[sg] = []; order.push(sg); }
+                bySub[sg].push(it);
+            }
+            const hasNamed = order.some(sg => sg !== null);
+            for (const sg of order) {
+                blocks.push({ title: (hasNamed && sg !== null) ? sg : null, items: bySub[sg] });
+            }
+        }
+        let html = '';
+        let n = 0;
+        for (const b of blocks) {
+            if (b.title !== null) {
+                html += '<div class="pb-detail-group-title">' + pbEsc(b.title) +
+                        '<span class="pb-detail-group-count">' + b.items.length + '</span></div>';
+            }
+            for (const it of b.items) {
+                const zebraClass = (n % 2 === 0) ? ' pb-card-even' : ' pb-card-odd';
+                n++;
+                html += pbCardHtml(it, '', zebraClass);
+            }
+        }
+        if (n === 0) html += '<div class="pb-empty">В этом подразделении нет контактов.</div>';
+        return html;
+    }
+
+    // Крошки телефона: «Главная / Телефонный справочник
+    // [/ Организация [/ Подразделение]]» — в бар #detailBreadcrumbBar
+    // (как setFlowmeterBreadcrumbContent расходомеров, Task 181).
+    // Клик по «Телефонный справочник» — сброс выбора (закрыть правое
+    // окно); по организации (когда открыто подразделение) — её обзор.
+    function setPhonebookBreadcrumbContent(org, grp) {
+        var bcContent = document.getElementById('detailBreadcrumbContent');
+        if (!bcContent) return;
+        var html = '<span class="breadcrumb-link" onclick="navigateTo(\'dashboard\')">Главная</span>' +
+            '<span class="breadcrumb-sep"> / </span>';
+        if (org) {
+            var orgIdx = (pbDesktopSelected && typeof pbDesktopSelected.orgIdx === 'number')
+                ? pbDesktopSelected.orgIdx : -1;
+            html += '<span class="breadcrumb-link" onclick="pbMasterResetState()">Телефонный справочник</span>';
+            html += '<span class="breadcrumb-sep"> / </span>';
+            if (grp) {
+                html += '<span class="breadcrumb-link" onclick="pbMasterOpen(' + orgIdx + ')">' + pbEsc(org.header) + '</span>';
+                html += '<span class="breadcrumb-sep"> / </span>';
+                html += '<span class="breadcrumb-current">' + pbEsc(grp.name === null ? 'Без группы' : grp.name) + '</span>';
+            } else {
+                html += '<span class="breadcrumb-current">' + pbEsc(org.header) + '</span>';
+            }
+        } else {
+            html += '<span class="breadcrumb-current">Телефонный справочник</span>';
+        }
+        bcContent.innerHTML = html;
+    }
+
+    // Сброс выбора мастер-режима: крошка «Телефонный справочник», смена
+    // таба, закрытие правого окна (✕/Escape). При открытой панели на
+    // странице справочника — closeDetailPanel (его хук Task 181-стиля
+    // восстановит крошки и перерисует дерево); иначе — просто рендер.
+    function pbMasterResetState() {
+        pbDesktopSelected = null;
+        var panel = document.getElementById('detailPanel');
+        var pg = document.getElementById('page-phonebook');
+        var panelOpen = panel && panel.classList && panel.classList.contains('active');
+        var onPage = pg && pg.classList && pg.classList.contains('active');
+        if (panelOpen && onPage && typeof closeDetailPanel === 'function') {
+            closeDetailPanel();
+            return;
+        }
+        if (onPage) pbRender();
     }
 
     // Переключить избранное у контакта
@@ -23613,12 +23850,19 @@
         // Загрузить избранное и примечания из localStorage (всегда)
         pbLoadFavorites();
         pbLoadNotes();
+        // Task 540: при наличии избранного раздел открывается сразу на
+        // вкладке «Избранное» (принцип Task 491 расходомеров/датчиков
+        // температуры; счётчик — по localStorage до загрузки данных).
+        // Пустое избранное — вкладка «Все» (десктоп: master-дерево).
+        pbFilterFavOnly = pbGetFavoritesCount() > 0;
+        pbUpdateTabs();
         // Всегда перезагружаем данные из сети (cache-busting в pbLoad),
         // чтобы увидеть изменения из таблицы Google Sheets.
         // Очистка устаревших избранного будет выполнена после загрузки.
         pbLoaded = false;
         pbData = null;
         pbFlat = [];
+        pbDesktopSelected = null;
         pbLoad().then(() => {
             // После загрузки данных — очистить устаревшие записи (старые ID
             // от предыдущих версий pbMakeId, которые больше не валидны)
@@ -23671,8 +23915,8 @@
     //     одновременная правка на двух устройствах — остаётся
     //     локальный вариант (конфликт — в console.warn и счётчик).
     //
-    // СТАТУС — бейдж в тулбаре (pbSyncBadge): ok/pending/busy/
-    // off/error; тап — детали (email, время, очередь). Серверные
+    // СТАТУС — тихий (Task 540: бейдж pbSyncBadge удалён): режим и
+    // очередь — в pbSyncState (консоль/отладка). Серверные
     // id, которых нет в текущем phonebook.json (сменилась структура
     // справочника), не поднимаются локально — в архив уходит мягкое
     // удаление (снимки контакт_json остаются для истории).
@@ -24060,62 +24304,23 @@
         return localChanged;
     }
 
-    // ---------- БЕЙДЖ СТАТУСА ----------
+    // ---------- СОСТОЯНИЕ (тихая синхронизация, Task 540) ----------
     function pbSyncSetMode(mode, reason) {
         pbSyncState.mode = mode;
         if (reason !== undefined) pbSyncState.reason = reason;
         pbSyncUpdateBadge();
     }
 
+    // Task 540: синхронизация ТИХАЯ — бейдж и тап-детализация удалены
+    // (заявка: «убери кнопку синхронизации и сделай её тихой»).
+    // pbSyncUpdateBadge сохранена как единая точка обновления
+    // СОСТОЯНИЯ: pbSyncState.pending поддерживается для консоли и
+    // отладки. Тосты остаются только у редких событий, требующих
+    // реакции пользователя: invalid_* (сервер отклонил операцию) и
+    // конфликт примечаний двух устройств.
     function pbSyncUpdateBadge() {
-        const badge = document.getElementById('pbSyncBadge');
-        const label = document.getElementById('pbSyncBadgeLabel');
-        if (!badge || !label) return;
         pbSyncLoadQueue();
         pbSyncState.pending = pbSyncQueue.length;
-        let cls = 'off', text = 'Локально';
-        let title = 'Данные хранятся только на этом устройстве';
-        if (pbSyncState.mode === 'busy') {
-            cls = 'busy'; text = 'Синхронизация…';
-            title = 'Обмен с архивом справочника…';
-        } else if (pbSyncQueue.length) {
-            cls = 'pending'; text = 'Ожидает: ' + pbSyncQueue.length;
-            title = 'Нет связи — изменения ждут сети и уйдут на сервер автоматически';
-        } else if (pbSyncState.mode === 'ok') {
-            cls = 'ok'; text = 'Синхронизировано';
-            title = 'Избранное и примечания синхронизированы с вашим аккаунтом';
-        } else if (pbSyncState.mode === 'error') {
-            cls = 'error'; text = 'Нет связи';
-            title = 'Сервер недоступен — данные хранятся локально';
-        }
-        if (pbSyncState.reason && pbSyncState.mode !== 'busy') {
-            title += '. ' + pbSyncState.reason;
-        }
-        badge.className = 'pb-sync-badge sync-' + cls;
-        badge.title = title;
-        badge.setAttribute('aria-label', 'Синхронизация справочника: ' + text);
-        label.textContent = text;
-    }
-
-    // Тап по бейджу — детали состояния
-    function pbSyncInfo() {
-        let email = '';
-        try {
-            if (typeof KipAuth !== 'undefined' && KipAuth._cachedEmail) email = KipAuth._cachedEmail;
-        } catch (e) { /* не критично */ }
-        pbSyncLoadQueue();
-        const parts = [];
-        if (email) parts.push('аккаунт: ' + email);
-        else parts.push('без входа — данные локальны');
-        if (pbSyncState.lastSync) {
-            try {
-                parts.push('синхронизировано в ' + new Date(pbSyncState.lastSync).toLocaleTimeString());
-            } catch (e) { /* форматирование времени не критично */ }
-        }
-        parts.push('очередь: ' + pbSyncQueue.length);
-        if (pbSyncState.reason) parts.push(pbSyncState.reason);
-        if (pbSyncState.conflicts > 0) parts.push('конфликтов решено: ' + pbSyncState.conflicts);
-        try { showToast('Справочник — ' + parts.join(' · ')); } catch (e) { /* не критично */ }
     }
 
     // Ретрай очереди при возвращении сети (входящие изменения догонит
@@ -30305,6 +30510,19 @@
                 if (_flowTabs2) _flowTabs2.style.display = '';
                 if (typeof detailBarUpdateSearchBtn === 'function') detailBarUpdateSearchBtn();
             }
+            // Task 540: телефонный справочник — то же восстановление после
+            // закрытия правого окна (✕ / крошка «Телефонный справочник» /
+            // смена таба): CSS body:has(#page-phonebook.active) держит бар
+            // видимым — восстанавливаем крошки «Главная / Телефонный
+            // справочник» и сбрасываем выбор мастер-дерева (дерево
+            // перерисуется без подсветки).
+            if (_act && _act.id === 'page-phonebook') {
+                var _bcBarPb = document.getElementById('detailBreadcrumbBar');
+                if (_bcBarPb) _bcBarPb.classList.add('active');
+                if (typeof setPhonebookBreadcrumbContent === 'function') setPhonebookBreadcrumbContent(null, null);
+                if (typeof pbMasterResetState === 'function') pbMasterResetState();
+                if (typeof detailBarUpdateSearchBtn === 'function') detailBarUpdateSearchBtn();
+            }
             // Task 181: обновить шеврон в строке крошек — после закрытия панели
             // на flowmeter-data должен быть многострелочный, иначе — однострелочный.
             if (typeof updateChevronArrows === 'function') updateChevronArrows();
@@ -30323,7 +30541,12 @@
     // Поисковый input активной страницы (левой панели)
     function detailBarGetPageSearchInput() {
         var page = document.querySelector('#contentArea > .page-content.active');
-        return page ? (page.querySelector('.dev-header-search') || null) : null;
+        if (!page) return null;
+        // Task 540: телефонный справочник — поиск #pbSearchInput (класс
+        // .pb-search-input, НЕ .dev-header-search): лупа бара крошек
+        // перенаправляет запрос и в него (мобильный блок поиска скрыт
+        // на десктопе CSS, но oninput жив и перерисовывает список)
+        return page.querySelector('.dev-header-search') || page.querySelector('.pb-search-input') || null;
     }
 
     // Обновить видимость кнопки поиска и разделителя:
@@ -30907,6 +31130,17 @@
             // Task 130: показать переключатель «Все / Избранные»
             var _flowTabs = document.getElementById('flowDesktopTabs');
             if (_flowTabs) _flowTabs.style.display = '';
+        }
+        // Task 540: телефонный справочник — бар хлебных крошек с табами
+        // и поиском (как расходомеры, паттерн Task 130): closeDetailPanel()
+        // выше уже очистил бар; восстанавливаем крошки «Главная /
+        // Телефонный справочник» и лупу. Табы #pbDesktopTabs показывает
+        // CSS body:has(#page-phonebook.active) — JS-инлайны не нужны.
+        if (page === 'phonebook') {
+            var _pbBcBar = document.getElementById('detailBreadcrumbBar');
+            if (_pbBcBar) _pbBcBar.classList.add('active');
+            if (typeof setPhonebookBreadcrumbContent === 'function') setPhonebookBreadcrumbContent(null, null);
+            if (typeof detailBarUpdateSearchBtn === 'function') detailBarUpdateSearchBtn();
         }
         // Сбросить состояние прокрутки при переходе на новую страницу
         document.querySelectorAll('.page-content.scrolled').forEach(el => el.classList.remove('scrolled'));

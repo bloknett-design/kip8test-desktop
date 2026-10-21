@@ -9,10 +9,10 @@
 // ЧТО ПРОВЕРЯЕТСЯ:
 //   A. SRC — HTML: нижний бар #pbBottomBar (сиблинг страницы, две
 //      кнопки .pb-tab[data-pb-tab] со счётчиками), десктопные табы
-//      #pbDesktopTabs в тулбаре (видны ≥1024px — оба «экрана»:
-//      разделы и содержание: тулбар sticky), СТАРАЯ кнопка
-//      «Только избранные» (id pbFilterFav / onclick
-//      pbToggleFavFilter) УДАЛЕНА.
+//      #pbDesktopTabs — с Task 540 в баре хлебных крошек
+//      #detailBreadcrumbBar (как #flowDesktopTabs расходомеров),
+//      СТАРАЯ кнопка «Только избранные» (id pbFilterFav /
+//      onclick pbToggleFavFilter) УДАЛЕНА.
 //   B. SRC — CSS: .pb-bottom-bar (fixed, grid 1fr 1fr, показ
 //      body:has(#page-phonebook.active), скрытие ≥1024px),
 //      .pb-desktop-tabs (показ ≥1024px), светлые темы, отступ
@@ -48,7 +48,7 @@ const SW_SRC = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 const PFX_MATCH = INDEX_SRC.match(/const PB_FAV_KEY = '(\w+?)_phonebook_favorites'/);
 const PFX = PFX_MATCH ? PFX_MATCH[1] : null;
 // Ожидаемая версия SW по префиксу (Task 539: v750→v751, v547→v548)
-const SW_EXPECTED = { kip8test: 'kipia-test-v751', kip8: 'kipia-v548' }[PFX] || null;
+const SW_EXPECTED = { kip8test: 'kipia-test-v752', kip8: 'kipia-v548' }[PFX] || null;
 const SW_PREV = { kip8test: 'kipia-test-v750', kip8: 'kipia-v547' }[PFX] || null;
 
 const FAV_KEY = PFX + '_phonebook_favorites';
@@ -213,12 +213,20 @@ describe('Task 539 — SRC: HTML табов и нижнего бара', () => {
         assertTrue(seg.indexOf('>Избранное <') !== -1, 'надпись «Избранное»');
     });
 
-    test('десктопные табы #pbDesktopTabs в тулбаре над списком', () => {
-        const iTool = INDEX_SRC.indexOf('class="pb-toolbar"');
+    test('десктопные табы #pbDesktopTabs в баре крошек (Task 540)', () => {
+        // Task 540: табы переехали из тулбара .pb-toolbar (удалён) в бар
+        // хлебных крошек #detailBreadcrumbBar — после #flowDesktopTabs
+        const iBar = INDEX_SRC.indexOf('id="detailBreadcrumbBar"');
+        const iFlowTabs = INDEX_SRC.indexOf('id="flowDesktopTabs"');
         const iTabs = INDEX_SRC.indexOf('id="pbDesktopTabs"');
-        assertTrue(iTool !== -1 && iTabs !== -1, 'тулбар и табы есть');
-        assertTrue(iTabs > iTool, 'табы внутри тулбара (sticky — видны в обоих состояниях)');
-        const seg = INDEX_SRC.slice(iTabs, iTabs + 1400);
+        const iSearch = INDEX_SRC.indexOf('id="detailBarSearchInput"');
+        assertTrue(iBar !== -1 && iFlowTabs !== -1 && iTabs !== -1 && iSearch !== -1,
+            'бар, табы расходомеров, табы справочника и поиск есть');
+        assertTrue(iTabs > iBar && iTabs > iFlowTabs && iTabs < iSearch,
+            'табы справочника внутри бара, после flowDesktopTabs, до поиска');
+        assertTrue(INDEX_SRC.indexOf('class="pb-toolbar"') === -1,
+            'тулбар .pb-toolbar удалён из HTML');
+        const seg = INDEX_SRC.slice(iTabs, iTabs + 800);
         assertTrue(seg.indexOf('data-pb-tab="all"') !== -1, 'таб Все');
         assertTrue(seg.indexOf('data-pb-tab="fav"') !== -1, 'таб Избранное');
         assertTrue(seg.indexOf('id="pbAllCountDesk"') !== -1, 'счётчик Все (десктоп)');
@@ -293,8 +301,9 @@ describe('Task 539 — SRC: CSS табов и нижнего бара', () => {
 
     test('десктопные табы: показ ≥1024px, компактный размер', () => {
         assertTrue(INDEX_SRC.indexOf('.pb-desktop-tabs {') !== -1, 'базовый стиль');
-        assertTrue(INDEX_SRC.indexOf('@media (min-width: 1024px) { .pb-desktop-tabs { display: flex; } }') !== -1,
-            'показ на десктопе');
+        // Task 540: показ — через body:has (как #flowDesktopTabs), табы в баре крошек
+        assertTrue(INDEX_SRC.indexOf('body:has(#page-phonebook.active) #pbDesktopTabs { display: flex !important; }') !== -1,
+            'показ на десктопе только на странице справочника');
         assertTrue(INDEX_SRC.indexOf('.pb-desktop-tabs .pb-tab {') !== -1,
             'компактные кнопки таба');
         assertTrue(INDEX_SRC.indexOf('.pb-desktop-tabs .pb-tab.active {') !== -1,
@@ -416,13 +425,15 @@ describe('Task 539 — VM: переключение табов фильтруе�
             'Сидоров (не избранный) скрыт');
     });
 
-    test('инфо-строка в режиме «Избранное» показывает счётчик', async () => {
+    test('Task 540: инфо-строка удалена — счётчики в табах', async () => {
         const t = makeVm();
         await seedPhonebook(t);
         seedFavorites(t, { [ID_A]: true });
         t.sandbox.pbSetTab('fav');
-        assertTrue(t.pbInfo.textContent.indexOf('Избранные: 1') !== -1,
-            'инфо: «Избранные: 1 запись» (пежний текст режима сохранён)');
+        assertEqual('', t.pbInfo.textContent,
+            'инфо-строка «Всего: … / Избранные: …» больше не пишется (Task 540)');
+        assertTrue(INDEX_SRC.indexOf('id="pbInfo"') === -1,
+            'элемент #pbInfo удалён из HTML');
     });
 
     test('таб «Все» возвращает полный список', async () => {

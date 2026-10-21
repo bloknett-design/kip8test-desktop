@@ -8,8 +8,9 @@
 //
 // ЧТО ПРОВЕРЯЕТСЯ:
 //   A. SRC — модуль PbSync в index.html (ключи base/queue с
-//      префиксом репозитория), бейдж pbSyncBadge (HTML+CSS, тёмная
-//      и светлая темы), хуки pbInit/pbToggleFavorite/pbEditNote/
+//      префиксом репозитория; Task 540: бейдж pbSyncBadge УДАЛЁН —
+//      синхронизация тихая, статус живёт в pbSyncState), хуки
+//      pbInit/pbToggleFavorite/pbEditNote/
 //      pbCleanupStaleFavorites, вызовы phonebook.getMyData/
 //      setFavorite/setNote, ретрай по 'online', bump SW.
 //   B. VM СЛИЯНИЕ (3-way merge по base-снимку):
@@ -56,7 +57,7 @@ const SW_SRC = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 const PFX_MATCH = INDEX_SRC.match(/const PB_FAV_KEY = '(\w+?)_phonebook_favorites'/);
 const PFX = PFX_MATCH ? PFX_MATCH[1] : null;
 // Ожидаемая версия SW по префиксу (Task 538: v749→v750, v546→v547)
-const SW_EXPECTED = { kip8test: 'kipia-test-v751', kip8: 'kipia-v547' }[PFX] || null;
+const SW_EXPECTED = { kip8test: 'kipia-test-v752', kip8: 'kipia-v547' }[PFX] || null;
 const SW_PREV = { kip8test: 'kipia-test-v749', kip8: 'kipia-v546' }[PFX] || null;
 
 const FAV_KEY = PFX + '_phonebook_favorites';
@@ -241,25 +242,26 @@ describe('Task 538 — SRC: модуль PbSync в index.html', () => {
         assertTrue(INDEX_SRC.indexOf("'phonebook.setNote'") !== -1, 'setNote');
     });
 
-    test('бейдж синхронизации в HTML тулбара', () => {
-        assertTrue(INDEX_SRC.indexOf('id="pbSyncBadge"') !== -1, 'элемент pbSyncBadge');
-        assertTrue(INDEX_SRC.indexOf('id="pbSyncBadgeLabel"') !== -1, 'метка pbSyncBadgeLabel');
-        assertTrue(INDEX_SRC.indexOf('onclick="pbSyncInfo()"') !== -1, 'тап — pbSyncInfo');
+    test('Task 540: бейдж синхронизации УДАЛЁН — синхронизация тихая', () => {
+        assertTrue(INDEX_SRC.indexOf('id="pbSyncBadge"') === -1, 'элемент pbSyncBadge отсутствует');
+        assertTrue(INDEX_SRC.indexOf('id="pbSyncBadgeLabel"') === -1, 'метка pbSyncBadgeLabel отсутствует');
+        assertTrue(INDEX_SRC.indexOf('onclick="pbSyncInfo()"') === -1, 'тап-обработчик pbSyncInfo отсутствует');
+        assertTrue(INDEX_SRC.indexOf('function pbSyncInfo(') === -1, 'функция pbSyncInfo удалена');
     });
 
-    test('CSS бейджа: тёмная и светлая темы, состояния', () => {
-        assertTrue(INDEX_SRC.indexOf('.pb-sync-badge {') !== -1, 'базовый стиль');
-        assertTrue(INDEX_SRC.indexOf('.pb-sync-badge.sync-ok') !== -1, 'sync-ok');
-        assertTrue(INDEX_SRC.indexOf('.pb-sync-badge.sync-pending') !== -1, 'sync-pending');
-        assertTrue(INDEX_SRC.indexOf('.pb-sync-badge.sync-busy') !== -1, 'sync-busy');
-        assertTrue(INDEX_SRC.indexOf('.pb-sync-badge.sync-error') !== -1, 'sync-error');
-        assertTrue(INDEX_SRC.indexOf('[data-theme="light"] .pb-sync-badge') !== -1, 'светлая тема');
+    test('Task 540: CSS бейджа удалён, состояние — в pbSyncState', () => {
+        assertTrue(INDEX_SRC.indexOf('.pb-sync-badge {') === -1, 'базовый стиль удалён');
+        assertTrue(INDEX_SRC.indexOf('.pb-sync-badge.sync-ok') === -1, 'sync-ok удалён');
+        assertTrue(INDEX_SRC.indexOf('@keyframes pbSyncPulse') === -1, 'анимация pbSyncPulse удалена');
+        assertTrue(INDEX_SRC.indexOf('pbSyncState.pending = pbSyncQueue.length') !== -1,
+            'pbSyncUpdateBadge поддерживает счётчик очереди в состоянии');
     });
 
     test('хук pbInit → pbSyncStart', () => {
         const i = INDEX_SRC.indexOf('function pbInit()');
         assertTrue(i !== -1, 'pbInit');
-        const seg = INDEX_SRC.slice(i, i + 900);
+        // Task 540: pbInit вырос (старт на «Избранном» + сброс выбора) — окно 1600
+        const seg = INDEX_SRC.slice(i, i + 1600);
         assertTrue(seg.indexOf('pbCleanupStaleFavorites();') !== -1, 'очистка на месте');
         assertTrue(seg.indexOf('pbSyncStart();') !== -1, 'старт синхронизации после рендера');
     });
@@ -779,34 +781,18 @@ describe('Task 538 — VM: доступность и бейдж', () => {
             'подсказка про право');
     });
 
-    test('бейдж: состояния off → busy → ok → pending', async () => {
+    test('Task 540: тихая синхронизация — режимы в pbSyncState, очередь в pending', async () => {
         const t = makeVm();
         await seedPhonebook(t);
-        t.sandbox.pbSyncSetMode('off');
-        assertEqual(t.badgeEl.className, 'pb-sync-badge sync-off', 'класс off');
-        assertEqual(t.labelEl.textContent, 'Локально', 'текст off');
         t.sandbox.pbSyncSetMode('busy');
-        assertEqual(t.badgeEl.className, 'pb-sync-badge sync-busy', 'класс busy');
-        assertEqual(t.labelEl.textContent, 'Синхронизация…', 'текст busy');
+        assertEqual('busy', t.sandbox.pbSyncGetState().mode, 'режим busy');
         t.sandbox.pbSyncSetMode('ok');
-        assertEqual(t.badgeEl.className, 'pb-sync-badge sync-ok', 'класс ok');
-        assertEqual(t.labelEl.textContent, 'Синхронизировано', 'текст ok');
-        // pending перекрывает ok: очередь не пуста
+        assertEqual('ok', t.sandbox.pbSyncGetState().mode, 'режим ok');
+        // pending перекрывает ok: очередь не пуста — счётчик в состоянии
         t.sandbox.pbSyncEnqueueFav(ID_A, true);
-        assertEqual(t.badgeEl.className, 'pb-sync-badge sync-pending', 'класс pending');
-        assertEqual(t.labelEl.textContent, 'Ожидает: 1', 'текст pending со счётчиком');
-        assertTrue(t.badgeEl.title.indexOf('ждут сети') !== -1, 'подсказка про ожидание');
-    });
-
-    test('тап по бейджу: email, очередь и причина в детализации', async () => {
-        const t = makeVm({ email: 'ivanov@tokem.local' });
-        await seedPhonebook(t);
-        t.sandbox.pbSyncEnqueueNote(ID_A, 'текст');
-        t.sandbox.pbSyncInfo();
-        assertEqual(t.calls.toasts.length, 1, 'тост показан');
-        const msg = t.calls.toasts[0];
-        assertTrue(msg.indexOf('ivanov@tokem.local') !== -1, 'email в детализации');
-        assertTrue(msg.indexOf('очередь: 1') !== -1, 'счётчик очереди');
+        assertEqual(1, t.sandbox.pbSyncGetState().pending, 'pending = 1 при очереди из 1');
+        t.sandbox.pbSyncEnqueueFav(ID_A, false);
+        assertEqual(1, t.sandbox.pbSyncGetState().pending, 'коалесценция — очередь из 1');
     });
 
     test('online: возвращение сети планирует ретрай очереди', async () => {
