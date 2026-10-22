@@ -1276,8 +1276,8 @@ describe('График работы — WorkSchedule', () => {
         const sw = fs.readFileSync(swPath, 'utf8');
 
         test('v514 заменена актуальной версией', () => {
-            assertTrue(sw.indexOf("kipia-test-v755") !== -1,
-                'Актуальная версия — kipia-test-v755 (Task 291)');
+            assertTrue(sw.indexOf("kipia-test-v756") !== -1,
+                'Актуальная версия — kipia-test-v756 (Task 291)');
         });
         test('Старая версия v514 убрана', () => {
             assertTrue(sw.indexOf("kipia-test-v514") === -1,
@@ -1349,8 +1349,8 @@ describe('График работы — WorkSchedule', () => {
         const sw = fs.readFileSync(swPath, 'utf8');
 
         test('v516 заменена актуальной версией', () => {
-            assertTrue(sw.indexOf("kipia-test-v755") !== -1,
-                'Актуальная версия — kipia-test-v755 (Task 291)');
+            assertTrue(sw.indexOf("kipia-test-v756") !== -1,
+                'Актуальная версия — kipia-test-v756 (Task 291)');
         });
     });
 
@@ -1361,8 +1361,8 @@ describe('График работы — WorkSchedule', () => {
         const sw = fs.readFileSync(swPath, 'utf8');
 
         test('v515 заменена актуальной версией', () => {
-            assertTrue(sw.indexOf("kipia-test-v755") !== -1,
-                'Актуальная версия — kipia-test-v755 (Task 291)');
+            assertTrue(sw.indexOf("kipia-test-v756") !== -1,
+                'Актуальная версия — kipia-test-v756 (Task 291)');
         });
     });
 
@@ -1372,8 +1372,8 @@ describe('График работы — WorkSchedule', () => {
         const swPath = path.resolve(__dirname, '..', 'sw.js');
         const sw = fs.readFileSync(swPath, 'utf8');
         test('v513 заменена актуальной версией', () => {
-            assertTrue(sw.indexOf("kipia-test-v755") !== -1,
-                'Актуальная версия — kipia-test-v755');
+            assertTrue(sw.indexOf("kipia-test-v756") !== -1,
+                'Актуальная версия — kipia-test-v756');
         });
     });
 
@@ -1572,8 +1572,8 @@ describe('График работы — WorkSchedule', () => {
         const sw = fs.readFileSync(swPath, 'utf8');
 
         test('v517 заменена актуальной версией', () => {
-            assertTrue(sw.indexOf("kipia-test-v755") !== -1,
-                'Актуальная версия — kipia-test-v755 (Task 291)');
+            assertTrue(sw.indexOf("kipia-test-v756") !== -1,
+                'Актуальная версия — kipia-test-v756 (Task 291)');
         });
         test('Старая версия v517 убрана', () => {
             assertTrue(sw.indexOf("kipia-test-v517") === -1,
@@ -1587,9 +1587,9 @@ describe('График работы — WorkSchedule', () => {
         const swPath = path.resolve(__dirname, '..', 'sw.js');
         const sw = fs.readFileSync(swPath, 'utf8');
 
-        test('CACHE_VERSION = kipia-test-v755', () => {
-            assertTrue(sw.indexOf("kipia-test-v755") !== -1,
-                'CACHE_VERSION должен быть kipia-test-v755 (Task 290)');
+        test('CACHE_VERSION = kipia-test-v756', () => {
+            assertTrue(sw.indexOf("kipia-test-v756") !== -1,
+                'CACHE_VERSION должен быть kipia-test-v756 (Task 290)');
         });
         test('Старая версия v517 убрана', () => {
             assertTrue(sw.indexOf("kipia-test-v517") === -1,
@@ -1936,8 +1936,9 @@ describe('График работы — WorkSchedule', () => {
 
         test('Закреплённый ярлык: рендер как у «Расходомеров» (docs-категория)', () => {
             // renderPinnedItems красит docs-категорию золотистым — как flowmeter-data
-            assertTrue(html.indexOf("const isDocs = s.category === 'docs';") !== -1,
-                'стилизация docs-категории в renderPinnedItems');
+            // (Task 544: категория phonebook красится так же — как кнопка раздела)
+            assertTrue(html.indexOf("const isDocs = s.category === 'docs' || s.category === 'phonebook';") !== -1,
+                'стилизация docs-категории в renderPinnedItems (+phonebook, Task 544)');
         });
     });
 
@@ -1976,9 +1977,9 @@ describe('График работы — WorkSchedule', () => {
         const swPath = path.resolve(__dirname, '..', 'sw.js');
         const sw = fs.readFileSync(swPath, 'utf8');
 
-        test('CACHE_VERSION = kipia-test-v755', () => {
-            assertTrue(sw.indexOf("kipia-test-v755") !== -1,
-                'CACHE_VERSION должен быть kipia-test-v755 (Task 290)');
+        test('CACHE_VERSION = kipia-test-v756', () => {
+            assertTrue(sw.indexOf("kipia-test-v756") !== -1,
+                'CACHE_VERSION должен быть kipia-test-v756 (Task 290)');
         });
         test('Старая версия v523 убрана', () => {
             assertTrue(sw.indexOf("kipia-test-v523") === -1,
@@ -2371,9 +2372,9 @@ describe('График работы — WorkSchedule', () => {
         const swPath = path.resolve(__dirname, '..', 'sw.js');
         const sw = fs.readFileSync(swPath, 'utf8');
 
-        test('CACHE_VERSION = kipia-test-v755', () => {
-            assertTrue(sw.indexOf("kipia-test-v755") !== -1,
-                'CACHE_VERSION должен быть kipia-test-v755 (Task 290)');
+        test('CACHE_VERSION = kipia-test-v756', () => {
+            assertTrue(sw.indexOf("kipia-test-v756") !== -1,
+                'CACHE_VERSION должен быть kipia-test-v756 (Task 290)');
         });
         test('Старая версия v525 убрана', () => {
             assertTrue(sw.indexOf("kipia-test-v525") === -1,
@@ -2769,8 +2770,8 @@ describe('График работы — WorkSchedule', () => {
         const sw = fs.readFileSync(swPath, 'utf8');
 
         test('v527 заменена актуальной версией', () => {
-            assertTrue(sw.indexOf("kipia-test-v755") !== -1,
-                'Актуальная версия — kipia-test-v755');
+            assertTrue(sw.indexOf("kipia-test-v756") !== -1,
+                'Актуальная версия — kipia-test-v756');
         });
         test('Старая версия v527 убрана', () => {
             assertTrue(sw.indexOf("kipia-test-v527") === -1,
@@ -3054,10 +3055,10 @@ describe('Task 298 — коды статусов Т-12/Т-13: клиентски
             'счётчик 16 в заголовке эндпоинтов');
     });
 
-    test('SW: кэш поднят до kipia-test-v755 (Task 298)', () => {
+    test('SW: кэш поднят до kipia-test-v756 (Task 298)', () => {
         const sw = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
-        assertTrue(sw.indexOf("CACHE_VERSION = 'kipia-test-v755'") !== -1,
-            'CACHE_VERSION = kipia-test-v755');
+        assertTrue(sw.indexOf("CACHE_VERSION = 'kipia-test-v756'") !== -1,
+            'CACHE_VERSION = kipia-test-v756');
         assertFalse(sw.indexOf("CACHE_VERSION = 'kipia-test-v539'") !== -1,
             'старой версии v539 нет');
     });
@@ -3215,9 +3216,9 @@ describe('Task 307 — вкладка «Сотрудники» удалена, �
             '.ws-add-bar/.ws-add-btn удалены (Task 308: страницы больше нет)');
     });
 
-    test('SW: кэш поднят до kipia-test-v755 (Task 309; история: v547 — Task 308)', () => {
-        assertTrue(sw.indexOf("CACHE_VERSION = 'kipia-test-v755'") !== -1,
-            'CACHE_VERSION = kipia-test-v755');
+    test('SW: кэш поднят до kipia-test-v756 (Task 309; история: v547 — Task 308)', () => {
+        assertTrue(sw.indexOf("CACHE_VERSION = 'kipia-test-v756'") !== -1,
+            'CACHE_VERSION = kipia-test-v756');
     });
 });
 
@@ -3451,9 +3452,9 @@ describe('Task 308 — вкладки «Инструктажи»/«Отпуск�
             'светлая тема строки дней жива');
     });
 
-    test('SW: кэш поднят до kipia-test-v755 (Task 308)', () => {
-        assertTrue(sw.indexOf("CACHE_VERSION = 'kipia-test-v755'") !== -1,
-            'CACHE_VERSION = kipia-test-v755');
+    test('SW: кэш поднят до kipia-test-v756 (Task 308)', () => {
+        assertTrue(sw.indexOf("CACHE_VERSION = 'kipia-test-v756'") !== -1,
+            'CACHE_VERSION = kipia-test-v756');
         assertTrue(sw.indexOf("CACHE_VERSION = 'kipia-test-v546'") === -1,
             'старой версии v546 нет');
     });

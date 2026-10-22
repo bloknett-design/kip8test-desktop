@@ -35,7 +35,7 @@
 //     + clip ghFigClip; при h=0 нет; при h=D полная), в разметке НЕТ
 //     ни marker, ни #ffffff (белые подписи старых картинок не
 //     читались в светлой теме).
-//   SW: kipia-test-v755.
+//   SW: kipia-test-v756.
 //
 // Запуск: через tests/run-all.js (require './test-task526.js').
 
@@ -354,10 +354,10 @@ describe('Task 526 D: VM — живые схемы (движок + formatNumber)
 // ============================================================
 describe('Task 526 — SW: версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v755', () => {
+    test('sw.js: CACHE_VERSION = kipia-test-v756', () => {
         const m = SW_SRC.match(/const CACHE_VERSION = '([^']+)'/);
         assertTrue(m, 'CACHE_VERSION найден');
-        assertEqual(m[1], 'kipia-test-v755',
+        assertEqual(m[1], 'kipia-test-v756',
             'версия бампнута v740 → v741 (правка index.html, Task 528)');
     });
 

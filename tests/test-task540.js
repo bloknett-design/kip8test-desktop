@@ -60,9 +60,9 @@ const SW_SRC = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 const PFX_MATCH = INDEX_SRC.match(/const PB_FAV_KEY = '(\w+?)_phonebook_favorites'/);
 const PFX = PFX_MATCH ? PFX_MATCH[1] : null;
 // Task 540: v751→v752 (kip8test), v548→v549 (kip8)
-const SW_EXPECTED = { kip8test: 'kipia-test-v755', kip8: 'kipia-v549' }[PFX] || null;
+const SW_EXPECTED = { kip8test: 'kipia-test-v756', kip8: 'kipia-v549' }[PFX] || null;
 const SW_PREV = { kip8test: 'kipia-test-v751', kip8: 'kipia-v548' }[PFX] || null;
-const SW_NEXT = { kip8test: 'kipia-test-v756', kip8: 'kipia-v550' }[PFX] || null;
+const SW_NEXT = { kip8test: 'kipia-test-v757', kip8: 'kipia-v550' }[PFX] || null;
 
 const FAV_KEY = PFX + '_phonebook_favorites';
 
@@ -474,8 +474,8 @@ describe('Task 540 — VM: два окна на вкладке «Все»', () =
         t.sandbox.pbRender();
         assertTrue(t.pbList.innerHTML.indexOf('selected') === -1, 'до выбора — без подсветки');
         t.sandbox.pbMasterOpen(0, 0);
-        assertTrue(t.pbList.innerHTML.indexOf('pb-master-row selected') !== -1,
-            'после выбора — строка подразделения подсвечена');
+        assertTrue(t.pbList.innerHTML.indexOf('pb-master-row pb-master-row-even selected') !== -1,
+            'после выбора — строка подразделения подсвечена (зебра Task 544 + selected)');
         assertTrue(t.pbList.innerHTML.indexOf('onclick="pbMasterOpen(0, 0)"') !== -1,
             'строка кликабельна (индексы)');
     });

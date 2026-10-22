@@ -25,7 +25,9 @@
 //      secret.view → «Сапёр»; кнопка на странице «Документация»
 //      (id=phonebookDocsBtn + openPinSheet('phonebook')); SUBSECTIONS
 //      содержит 'phonebook' (закрепление на главной + свайп-обёртка);
-//      renderPinnedItems красит категорию 'phonebook' синим; на главной
+//      renderPinnedItems красит категорию 'phonebook' золотым
+//      «Документации» (Task 544: цвет кнопки — как в разделе
+//      «Документация»; синий акцент Task 543 отменён); на главной
 //      НЕТ id=phonebookBtn; SECRET_BUTTON_IDS = ['minesweeperBtn'];
 //      _applyRoleToUI не управляет phonebookBtn; PAGE_PARENTS → 'docs'.
 //   B. SRC — ЗЕБРА БЕЗ РАМОК: #pbList — сплошное поле (фон), .pb-section/
@@ -59,9 +61,9 @@ const SW_SRC = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 const PFX_MATCH = INDEX_SRC.match(/const PB_FAV_KEY = '(\w+?)_phonebook_favorites'/);
 const PFX = PFX_MATCH ? PFX_MATCH[1] : null;
 // Task 543: v754→v755 (kip8test), v551→v552 (kip8)
-const SW_EXPECTED = { kip8test: 'kipia-test-v755', kip8: 'kipia-v552' }[PFX] || null;
+const SW_EXPECTED = { kip8test: 'kipia-test-v756', kip8: 'kipia-v552' }[PFX] || null;
 const SW_PREV = { kip8test: 'kipia-test-v754', kip8: 'kipia-v551' }[PFX] || null;
-const SW_NEXT = { kip8test: 'kipia-test-v756', kip8: 'kipia-v553' }[PFX] || null;
+const SW_NEXT = { kip8test: 'kipia-test-v757', kip8: 'kipia-v553' }[PFX] || null;
 
 const FAV_KEY = PFX + '_phonebook_favorites';
 
@@ -262,16 +264,19 @@ describe('Task 543 — SRC: кнопка раздела — не секретн�
         const seg = INDEX_SRC.slice(i, INDEX_SRC.indexOf('}', i) + 1);
         assertTrue(seg.indexOf("target: 'phonebook'") !== -1, 'цель навигации');
         assertTrue(seg.indexOf("category: 'phonebook'") !== -1,
-            'категория phonebook (синий акцент закреплённого ярлыка)');
+            'категория phonebook (закреплённый ярлык — золотой акцент «Документации», Task 544)');
     });
 
-    test('renderPinnedItems: категория phonebook — синий акцент', () => {
-        const i = INDEX_SRC.indexOf("const isPhonebook = s.category === 'phonebook';");
-        assertTrue(i !== -1, 'ветка isPhonebook есть');
-        const seg = INDEX_SRC.slice(i, i + 500);
-        assertTrue(seg.indexOf("'border-color:rgba(74,143,199,0.35);'") !== -1,
-            'синяя рамка закреплённого ярлыка справочника');
-        assertTrue(seg.indexOf("'color:#6aa6e0;'") !== -1, 'синяя подпись');
+    test('renderPinnedItems: категория phonebook — золотой акцент «Документации» (Task 544)', () => {
+        const i = INDEX_SRC.indexOf(
+            "const isDocs = s.category === 'docs' || s.category === 'phonebook';");
+        assertTrue(i !== -1, 'категория phonebook красится как «Документация»');
+        const seg = INDEX_SRC.slice(i, i + 400);
+        assertTrue(seg.indexOf("'border-color:rgba(199,150,74,0.35);'") !== -1,
+            'золотая рамка закреплённого ярлыка справочника');
+        assertTrue(seg.indexOf("'color:#c7964a;'") !== -1, 'золотая подпись');
+        assertTrue(INDEX_SRC.indexOf("const isPhonebook = s.category === 'phonebook';") === -1,
+            'синяя ветка Task 543 удалена (Task 544: цвет — как в «Документации»)');
     });
 
     test('на главной НЕТ кнопки phonebookBtn (секретной больше нет)', () => {

@@ -696,9 +696,9 @@ describe('Task 408 — GAS-VM: сервер (моки листов)', () => {
 // 7. SW — версия кэша
 // ============================================================
 describe('Task 408 — SW', () => {
-    test('SW: версия кэша kipia-test-v755', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v755'") !== -1,
-            'CACHE_VERSION = kipia-test-v755');
+    test('SW: версия кэша kipia-test-v756', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v756'") !== -1,
+            'CACHE_VERSION = kipia-test-v756');
         assertTrue(SW_SRC.indexOf('kipia-test-v634') === -1,
             'старой версии нет');
     });

@@ -13211,7 +13211,8 @@
         background: rgba(74,143,199,0.22);
         border-color: rgba(74,143,199,0.6);
     }
-    /* Task 543: без flex:1 — счётчик стоит сразу после названия */
+    /* Task 543: без flex:1 — имя не растягивается. Task 544: счётчики —
+       единой колонкой у правого края блока (margin-left:auto у пилюли) */
     .pb-master-org-name {
         flex: 0 1 auto; min-width: 0;
         overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -13237,13 +13238,18 @@
         font-weight: 700;
     }
     [data-theme="light"] .pb-master-row.selected { color: #1d5a99; }
-    /* Task 543: без flex:1 — счётчик стоит сразу после названия */
+    /* Task 543: без flex:1 — имя не растягивается. Task 544: счётчики —
+       единой колонкой у правого края блока (margin-left:auto у пилюли) */
     .pb-master-row-name {
         flex: 0 1 auto; min-width: 0;
         overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .pb-master-count {
         flex-shrink: 0;
+        /* Task 544: пилюля прижата к правому краю строки — счётчики
+           организаций и подразделений на ОДНОМ расстоянии («по самому
+           дальнему»: ширина блока = самой длинной строке, Task 543) */
+        margin-left: auto;
         min-width: 22px; height: 20px; padding: 0 7px;
         border-radius: 10px;
         background: rgba(106,166,224,0.22);
@@ -13264,6 +13270,9 @@
     /* Task 541: подразделения в правом окне — крупнее и ярче */
     [data-theme="light"] #detailPanelBody .pb-detail-group-title { color: rgba(20,20,19,0.8); }
     #detailPanelBody .pb-detail-group-count {
+        /* Task 544: прижат к правому краю строки заголовка — счётчики
+           правого окна тоже единой колонкой, как в дереве */
+        margin-left: auto;
         font-size: 11px; font-weight: 700;
         color: #8fc3f0;
         text-transform: none; letter-spacing: 0;
@@ -13344,6 +13353,48 @@
     #pbList .pb-subgroup:first-child { border-top: none; }
     #pbList .pb-subgroup.expanded { background: transparent; }
     [data-theme="light"] #pbList .pb-subgroup { background: transparent; }
+
+    /* ===== Task 544: списки подразделений — зебра; счётчики — одной колонкой ===== */
+    /* Заявка: «Списки подразделений тоже сделай зеброй и все счётчики
+       расположи на одном расстоянии по самому дальнему». Строки-
+       подразделения — та же зебра, что у карточек контактов (Task 543):
+       чётные светлее поля, нечётные — ещё светлее; перезапуск внутри
+       каждой организации. Классы вешает рендер (pbRender — подгруппы
+       аккордеона, pbRenderMaster — строки десктоп-дерева). Скоуп
+       #pbList ОБЯЗАТЕЛЕН: .pb-subgroup-title — общий класс списков
+       приборов/замков/клапанов/регуляторов. */
+    .pb-master-row-even { background: rgba(40, 50, 65, 0.96); }
+    .pb-master-row-odd  { background: rgba(55, 68, 85, 0.96); }
+    [data-theme="light"] .pb-master-row-even { background: rgba(252, 248, 240, 0.97); }
+    [data-theme="light"] .pb-master-row-odd  { background: rgba(220, 213, 200, 0.94); }
+    /* Подсветка ПОВЕРХ зебры: в светлой теме [data-theme="light"]-зебра
+       (0,2,0, позже в CSS) гасила базовые .selected/:hover (0,2,0) —
+       возвращаем явными правилами (тёмная тема не затронута: там зебра
+       (0,1,0) и без того слабее подсветки) */
+    .pb-master-row-even:hover, .pb-master-row-odd:hover { background: rgba(74, 143, 199, 0.07); }
+    .pb-master-row-even.selected, .pb-master-row-odd.selected { background: rgba(74, 143, 199, 0.14); }
+    #pbList .pb-subgroup-title.pb-subrow-even { background: rgba(40, 50, 65, 0.96); }
+    #pbList .pb-subgroup-title.pb-subrow-odd  { background: rgba(55, 68, 85, 0.96); }
+    [data-theme="light"] #pbList .pb-subgroup-title.pb-subrow-even { background: rgba(252, 248, 240, 0.97); }
+    [data-theme="light"] #pbList .pb-subgroup-title.pb-subrow-odd  { background: rgba(220, 213, 200, 0.94); }
+    /* Тап-подсветка зебра-строк: специфичность (0,3,0) выше базовой
+       .pb-subgroup-title:active (0,2,0) — компенсируем явным правилом */
+    #pbList .pb-subgroup-title.pb-subrow-even:active,
+    #pbList .pb-subgroup-title.pb-subrow-odd:active { background: rgba(106, 166, 224, 0.2); }
+    [data-theme="light"] #pbList .pb-subgroup-title.pb-subrow-even:active,
+    [data-theme="light"] #pbList .pb-subgroup-title.pb-subrow-odd:active { background: rgba(42, 93, 143, 0.22); }
+    /* Счётчики ОРГАНИЗАЦИЙ аккордеона — на одном расстоянии со счётчиками
+       подразделений (32px от правого края): было 36px (padding-right
+       .pb-section-title) против 32px у .pb-subgroup-title */
+    #pbList .pb-section-title { padding-right: 32px; }
+    /* Длинные названия подразделений («ПРОИЗВОДСТВЕННО-ТЕХНИЧЕСКИЙ
+       ОТДЕЛ» и т.п.) не выталкивают счётчик за край экрана: текст
+       сжимается с ellipsis (как у заголовков секций), пилюля всегда
+       видна на своём месте — «на одном расстоянии» (поймано VLM) */
+    #pbList .pb-subgroup-title-text {
+        flex: 1; min-width: 0;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
 
     /* ===== Task 539: табы «Все / Избранное» телефонного справочника ===== */
     /* Базовые табы (десктоп — компактные в тулбаре; мобильный нижний бар
@@ -17988,8 +18039,10 @@
                      виден ролям с доступом к разделам «Билеты» и «Библиотека КИП и А»
                      (страница phonebook в _LIBRARY_PAGES → право library.view матрицы
                      KIP8_Access), остальным ролям полностью скрыт. Кнопка «…» —
-                     закрепление раздела на главной (реестр SUBSECTIONS). -->
-                <div class="menu-btn" id="phonebookDocsBtn" onclick="navigateTo('phonebook')" style="border-color:rgba(74,143,199,0.35);"><div class="menu-btn-text"><div class="menu-btn-label" style="color:#6aa6e0;">Телефонный справочник</div><div class="menu-btn-sublabel">ООО ПО «ТОКЕМ»</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('phonebook')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow" style="color:rgba(74,143,199,0.4);">›</i></div>
+                     закрепление раздела на главной (реестр SUBSECTIONS).
+                     Task 544: цветовое оформление — как у соседних кнопок раздела
+                     «Документация» (золотой акцент; синий акцент Task 543 отменён). -->
+                <div class="menu-btn" id="phonebookDocsBtn" onclick="navigateTo('phonebook')" style="border-color:rgba(199,150,74,0.35);"><div class="menu-btn-text"><div class="menu-btn-label" style="color:#c7964a;">Телефонный справочник</div><div class="menu-btn-sublabel">ООО ПО «ТОКЕМ»</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('phonebook')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow" style="color:rgba(199,150,74,0.4);">›</i></div>
                 <div class="menu-btn" onclick="navigateTo('kip-ios')" style="border-color:rgba(199,150,74,0.35);"><div class="menu-btn-text"><div class="menu-btn-label" style="color:#c7964a;">КИП ИОС</div><div class="menu-btn-sublabel">Перечень приборов, документация</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('kip-ios')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow" style="color:rgba(199,150,74,0.4);">›</i></div>
                 <div class="menu-btn" onclick="navigateTo('docs-ios')" style="border-color:rgba(200,112,72,0.35);"><div class="menu-btn-text"><div class="menu-btn-label" style="color:#c87048;">Документация ИОС</div><div class="menu-btn-sublabel">Документация и оперативные данные</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('docs-ios')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow" style="color:rgba(200,112,72,0.4);">›</i></div>
             </div>
@@ -23456,6 +23509,9 @@
 
             // Глобальный счётчик карточек для зебра-фона
             let cardIndex = 0;
+            // Task 544: индекс строки-подразделения для зебры списков
+            // подразделений (перезапуск внутри каждой организации)
+            let subIndex = 0;
 
             for (const g of groupOrder) {
                 if (showGroupHeaders) {
@@ -23465,7 +23521,8 @@
                     const subgroupKey = header + '|' + (g === null ? '' : g);
                     const sgExpanded = forceExpand ? true : (pbExpandedSubgroups[subgroupKey] === true);
                     html += '<div class="pb-subgroup' + (sgExpanded ? ' expanded' : '') + '" data-subgroup="' + pbEsc(subgroupKey) + '">';
-                    html += '<div class="pb-subgroup-title" onclick="pbToggleSubgroup(this)">';
+                    html += '<div class="pb-subgroup-title' + (subIndex % 2 === 0 ? ' pb-subrow-even' : ' pb-subrow-odd') + '" onclick="pbToggleSubgroup(this)">';
+                    subIndex++;
                     html += '<span class="pb-subgroup-title-text">' + pbMark(groupLabel, query) + '</span>';
                     html += '<span class="pb-subgroup-count">' + groupCount + '</span>';
                     html += '<span class="pb-subgroup-arrow"></span>';
@@ -23654,7 +23711,10 @@
                 const grp = org.groups[g];
                 const gSel = sel && sel.orgIdx === o && sel.groupIdx === g;
                 const label = grp.name === null ? 'Без группы' : grp.name;
-                html += '<div class="pb-master-row' + (gSel ? ' selected' : '') + '" onclick="pbMasterOpen(' + o + ', ' + g + ')">';
+                // Task 544: зебра строк-подразделений (перезапуск внутри
+                // организации: g — индекс подразделения этой организации)
+                const rowZebra = (g % 2 === 0) ? ' pb-master-row-even' : ' pb-master-row-odd';
+                html += '<div class="pb-master-row' + rowZebra + (gSel ? ' selected' : '') + '" onclick="pbMasterOpen(' + o + ', ' + g + ')">';
                 html += '<span class="pb-master-row-name">' + pbEsc(label) + '</span>';
                 html += '<span class="pb-master-count">' + grp.count + '</span>';
                 html += '</div>';
@@ -31990,16 +32050,14 @@
         items.forEach(key => {
             const s = SUBSECTIONS[key];
             if (!s) return;
-            const isDocs = s.category === 'docs';
-            // Task 543: закреплённый «Телефонный справочник» — свой синий
-            // акцент (как у кнопки раздела), а не золотистый «доков»
-            const isPhonebook = s.category === 'phonebook';
-            const borderColor = isDocs ? 'border-color:rgba(199,150,74,0.35);'
-                              : isPhonebook ? 'border-color:rgba(74,143,199,0.35);' : '';
-            const labelColor  = isDocs ? 'color:#c7964a;'
-                              : isPhonebook ? 'color:#6aa6e0;' : '';
-            const arrowColor  = isDocs ? 'color:rgba(199,150,74,0.4);'
-                              : isPhonebook ? 'color:rgba(74,143,199,0.4);' : '';
+            // Task 544: закреплённый «Телефонный справочник» — золотой
+            // акцент «Документации», как у кнопки раздела (заявка:
+            // «цветовое оформление кнопки — как в разделе Документация»;
+            // синий акцент Task 543 отменён)
+            const isDocs = s.category === 'docs' || s.category === 'phonebook';
+            const borderColor = isDocs ? 'border-color:rgba(199,150,74,0.35);' : '';
+            const labelColor  = isDocs ? 'color:#c7964a;' : '';
+            const arrowColor  = isDocs ? 'color:rgba(199,150,74,0.4);' : '';
             html +=
                 '<div class="pinned-item-cell">' +
                     '<div class="pinned-item-delete-bg pinned-item-delete-left"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span>Убрать</span></div>' +

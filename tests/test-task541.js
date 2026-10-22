@@ -50,9 +50,9 @@ const SW_SRC = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 const PFX_MATCH = INDEX_SRC.match(/const PB_FAV_KEY = '(\w+?)_phonebook_favorites'/);
 const PFX = PFX_MATCH ? PFX_MATCH[1] : null;
 // Task 541: v752→v753 (kip8test), v549→v550 (kip8)
-const SW_EXPECTED = { kip8test: 'kipia-test-v755', kip8: 'kipia-v550' }[PFX] || null;
+const SW_EXPECTED = { kip8test: 'kipia-test-v756', kip8: 'kipia-v550' }[PFX] || null;
 const SW_PREV = { kip8test: 'kipia-test-v752', kip8: 'kipia-v549' }[PFX] || null;
-const SW_NEXT = { kip8test: 'kipia-test-v756', kip8: 'kipia-v551' }[PFX] || null;
+const SW_NEXT = { kip8test: 'kipia-test-v757', kip8: 'kipia-v551' }[PFX] || null;
 
 const FAV_KEY = PFX + '_phonebook_favorites';
 
@@ -432,8 +432,8 @@ describe('Task 541 — VM: сворачивание организаций в л
         assertEqual('ООО Тест — Цех 1', t.calls.open[0].title, 'заголовок окна');
         assertTrue(t.pbList.innerHTML.indexOf('pb-master-org collapsed') === -1,
             'организация развернулась (выбранное подразделение видно)');
-        assertTrue(t.pbList.innerHTML.indexOf('pb-master-row selected') !== -1,
-            'строка подразделения подсвечена');
+        assertTrue(t.pbList.innerHTML.indexOf('pb-master-row pb-master-row-even selected') !== -1,
+            'строка подразделения подсвечена (зебра Task 544 + selected)');
     });
 
     test('свёрнутая одна организация не разворачивается выбором другой', async () => {
@@ -467,7 +467,7 @@ describe('Task 541 — VM: сворачивание организаций в л
         t.sandbox.pbMasterResetState();         // сброс выбора (панель закрыта)
         assertTrue(t.pbList.innerHTML.indexOf('pb-master-org collapsed') !== -1,
             'свёрнутость пережила сброс выбора');
-        assertTrue(t.pbList.innerHTML.indexOf('pb-master-row selected') === -1,
-            'выбор сброшен');
+        assertTrue(t.pbList.innerHTML.indexOf('pb-master-row-even selected') === -1,
+            'выбор сброшен (зебра-классы остаются, подсветки нет)');
     });
 });
