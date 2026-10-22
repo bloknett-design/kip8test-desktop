@@ -48,7 +48,7 @@ const SW_SRC = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 const PFX_MATCH = INDEX_SRC.match(/const PB_FAV_KEY = '(\w+?)_phonebook_favorites'/);
 const PFX = PFX_MATCH ? PFX_MATCH[1] : null;
 // Ожидаемая версия SW по префиксу (Task 539: v750→v751, v547→v548)
-const SW_EXPECTED = { kip8test: 'kipia-test-v754', kip8: 'kipia-v548' }[PFX] || null;
+const SW_EXPECTED = { kip8test: 'kipia-test-v755', kip8: 'kipia-v548' }[PFX] || null;
 const SW_PREV = { kip8test: 'kipia-test-v750', kip8: 'kipia-v547' }[PFX] || null;
 
 const FAV_KEY = PFX + '_phonebook_favorites';

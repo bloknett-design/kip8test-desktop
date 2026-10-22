@@ -41,7 +41,7 @@
 //       .chart-stats-*/.chart-stat-*), Топ-10 бары (_renderBarChart,
 //       .chart-bar-*/.chart-card*) и _groupLabel/_avgPerProd —
 //       заявка «убери текущие графики и подсчёты»;
-//   SW: kipia-test-v754 (логика SW не менялась; окна истории
+//   SW: kipia-test-v755 (логика SW не менялась; окна истории
 //       расширены scripts/task485-windows.py; бамп tests —
 //       scripts/task485-bump-sw.py; OWN-файл — этот тест).
 //   АДАПТАЦИИ: test-task484.js («Кап. ремонт» x8, тест «стат-код
@@ -145,9 +145,9 @@ describe('Task 485: Кап. ремонт (блокировки)', () => {
 
     test('данные блокировок не задеты (значения/структура прежние)', () => {
         const ppr = LOCKOUTS_JSON.ppr_chart;
-        // Task 540: авто-синк f42423f5 (20.10.2026) — 531 → 529
-        assertEqual(LOCKOUTS_JSON.total_lockouts, 529, 'total прежний');
-        assertEqual(LOCKOUTS_JSON.lockouts.length, 529, 'массив прежний');
+        // Task 540: авто-синк f42423f5 (20.10.2026) — 531 → 529; Task 542: авто-синк c60c426b (21.10.2026) — 529 → 528
+        assertEqual(LOCKOUTS_JSON.total_lockouts, 528, 'total прежний');
+        assertEqual(LOCKOUTS_JSON.lockouts.length, 528, 'массив прежний');
         assertEqual(ppr.series[0].values.length, 12, '12 значений Кр');
         const sumKr = ppr.series[0].values.reduce((a, b) => a + b, 0);
         assertTrue(sumKr > 0 && sumKr <= LOCKOUTS_JSON.total_lockouts,
@@ -549,8 +549,8 @@ describe('Task 485: VM — вкладка «Регуляторы» (data/regulat
 // 6. SW: версия v709 + комментарий Task 485
 // ==========================================================================
 describe('Task 485: SW — версия и кэши', () => {
-    test('CACHE_VERSION = kipia-test-v754', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v754';") !== -1,
+    test('CACHE_VERSION = kipia-test-v755', () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v755';") !== -1,
             'версия поднята');
     });
 
@@ -559,11 +559,11 @@ describe('Task 485: SW — версия и кэши', () => {
     });
 
     test('v710 в sw.js отсутствует (лишний инкремент не сделан)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v755') === -1);
+        assertTrue(SW_SRC.indexOf('kipia-test-v756') === -1);
     });
 
     test('комментарий Task 485 в шапке версий (окно 1500)', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v754';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v755';");
         // Task 502: окно 7600 → 8000 (якорь 7759).
         const ctx = SW_SRC.slice(Math.max(0, i - 9300), i);
         assertTrue(ctx.indexOf('Task 485') !== -1, 'маркер задачи');

@@ -13045,7 +13045,7 @@
     [data-theme="light"] .pb-subsubgroup-count { color: rgba(150,100,40,0.5); }
     .pb-card {
         padding: 10px 14px;
-        border-bottom: 1px solid rgba(255,255,255,0.04);
+        /* Task 543: разделители-рамки убраны — строки разделяет зебра */
         display: flex; flex-direction: column; gap: 3px;
         cursor: default;
         transition: background 0.15s;
@@ -13064,8 +13064,6 @@
     [data-theme="light"] .pb-card-odd {
         background: rgba(220, 213, 200, 0.94);
     }
-    [data-theme="light"] .pb-card { border-bottom-color: rgba(20,20,19,0.06); }
-    .pb-card:last-child { border-bottom: none; }
     .pb-card-name { font-size: 16px; font-weight: 600; color: #e8e8e8; line-height: 1.3; }
     [data-theme="light"] .pb-card-name { color: #1a1a1a; }
     .pb-card-pos { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.3; }
@@ -13182,7 +13180,18 @@
        целиком). Клик по строке открывает правое окно #detailPanel с
        контактами (по образцу и функционалу расходомеров хозрасчётных:
        перетаскиваемая граница, ⇄-обмен панелей, ✕-закрытие). */
-    .pb-master { padding: 6px 8px 28px; }
+    /* Task 543: ширина блоков строк — по МАКСИМАЛЬНОМУ тексту: дерево —
+       inline-flex-колонка (shrink-wrap), все строки одной ширины, равной
+       самому длинному названию со счётчиком. Счётчики — РЯДОМ с названиями
+       (имена без flex:1, пилюля прижата к тексту, а не к правому краю).
+       Окно #pbList прежней ширины — дерево просто не растянуто на всё окно
+       (max-width страхует от сверхдлинных названий). */
+    .pb-master {
+        padding: 6px 8px 28px;
+        display: inline-flex;
+        flex-direction: column;
+        max-width: 100%;
+    }
     .pb-master-org { margin: 4px 0 10px; }
     .pb-master-org-row {
         display: flex; align-items: center; gap: 8px;
@@ -13202,8 +13211,9 @@
         background: rgba(74,143,199,0.22);
         border-color: rgba(74,143,199,0.6);
     }
+    /* Task 543: без flex:1 — счётчик стоит сразу после названия */
     .pb-master-org-name {
-        flex: 1; min-width: 0;
+        flex: 0 1 auto; min-width: 0;
         overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .pb-master-row {
@@ -13227,8 +13237,9 @@
         font-weight: 700;
     }
     [data-theme="light"] .pb-master-row.selected { color: #1d5a99; }
+    /* Task 543: без flex:1 — счётчик стоит сразу после названия */
     .pb-master-row-name {
-        flex: 1; min-width: 0;
+        flex: 0 1 auto; min-width: 0;
         overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .pb-master-count {
@@ -13302,42 +13313,37 @@
     #pbList .pb-subgroup-count { font-size: 12px; font-weight: 600; color: rgba(148,196,244,0.9); }
     [data-theme="light"] #pbList .pb-subgroup-count { color: rgba(31,88,143,0.9); }
 
-    /* ===== Task 542: «Избранное» на десктопе — ТРИ столбца ===== */
-    /* Класс .pb-fav-cols ставит pbRender (десктоп ≥1024px + вкладка
-       «Избранное» + нет поискового запроса). Сетка — на .pb-section-body;
-       обёртки подгрупп/подподгрупп «раскрываются» (display:contents),
-       карточки становятся элементами сетки, заголовки групп — на всю
-       ширину (grid-column: 1 / -1). Аккордеон подгрупп в этом режиме
-       и так выключен (.searching — клики игнорирует pbToggleSubgroup),
-       поэтому display:contents ничего не ломает. Поиск, «Все» и
-       мобильная версия — прежний одноколоночный список. */
-    @media (min-width: 1024px) {
-        #pbList.pb-fav-cols .pb-section-body {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px 10px;
-            align-items: start;
-        }
-        #pbList.pb-fav-cols .pb-subgroup,
-        #pbList.pb-fav-cols .pb-subgroup-body,
-        #pbList.pb-fav-cols .pb-subsubgroup,
-        #pbList.pb-fav-cols .pb-subsubgroup-body {
-            display: contents;
-        }
-        #pbList.pb-fav-cols .pb-subgroup-title,
-        #pbList.pb-fav-cols .pb-subsubgroup-title {
-            grid-column: 1 / -1;
-        }
-        /* Карточка-плитка: в сетке нужна рамка со всех сторон
-           (border-bottom одинокой колонки их не разделяет) */
-        #pbList.pb-fav-cols .pb-card {
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 8px;
-        }
-        [data-theme="light"] #pbList.pb-fav-cols .pb-card {
-            border-color: rgba(42,93,143,0.14);
-        }
+    /* ===== Task 543: «Избранное»/«Все» — текст на всю ширину, без рамок, зебра ===== */
+    /* Заявка: «на вкладке избранного размести текст контактов на всю
+       ширину поля, убери рамки блоков, а фон сделай зеброй, так же зеброй
+       на вкладке Все». Три столбца Task 542 отменены (класс pb-fav-cols и
+       его сетка удалены): карточки — во всю ширину поля списка, строки
+       разделяет только зебра. Скоуп #pbList ОБЯЗАТЕЛЕН: .pb-section и
+       .pb-subgroup — общие классы списков приборов/замков/клапанов
+       (базовые рамки-плашки там сохранены). */
+    #pbList {
+        /* Поле списка: сплошной фон вровень с краями окна — клетчатый
+           паттерн body не просвечивает, карточки и заголовки секций
+           занимают всю ширину поля (без боковых рамок-плашек) */
+        background: rgba(28, 34, 46, 0.94);
     }
+    [data-theme="light"] #pbList { background: rgba(255, 252, 245, 0.96); }
+    #pbList .pb-section {
+        margin: 0;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+    }
+    [data-theme="light"] #pbList .pb-section { border: none; }
+    #pbList .pb-subgroup {
+        margin: 0;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+    }
+    #pbList .pb-subgroup:first-child { border-top: none; }
+    #pbList .pb-subgroup.expanded { background: transparent; }
+    [data-theme="light"] #pbList .pb-subgroup { background: transparent; }
 
     /* ===== Task 539: табы «Все / Избранное» телефонного справочника ===== */
     /* Базовые табы (десктоп — компактные в тулбаре; мобильный нижний бар
@@ -17947,15 +17953,16 @@
 
             <!-- Кнопка «Заметки» рендерится динамически внутри pinnedItemsContainer -->
 
-            <!-- Секретные кнопки «Сапёр» и «Телефонный справочник» — скрыты по умолчанию.
-                 Открываются 2 тапами по заголовку приложения.
-                 Объединены в один menu-btn-row, чтобы стояли рядом друг с другом.
-                 Раздел «Приборы» перенесён в Документацию (не секретный).
-                 Task 189: подзаголовок «Сапёру» — та же двухстрочная структура
-                 (label + sublabel), что у остальных кнопок главной страницы. -->
+            <!-- Секретная кнопка «Сапёр» — скрыта по умолчанию, открывается
+                 2 тапами по заголовку приложения (Task 189; подзаголовок — та же
+                 двухстрочная структура, что у остальных кнопок главной).
+                 Task 543: «Телефонный справочник» больше НЕ секретный — кнопка
+                 раздела живёт в «Документации» (доступ — как у «Билетов» и
+                 «Библиотеки КИП и А», телефонный справочник в _LIBRARY_PAGES),
+                 её можно закрепить на главной (меню «…» → «Добавить на главную»).
+                 Раздел «Приборы» перенесён в Документацию (не секретный). -->
             <div class="menu-btn-row menu-btn-row-secret-pair">
                 <div class="menu-btn menu-btn-secret" id="minesweeperBtn" onclick="navigateTo('minesweeper')" style="border-color:rgba(199,150,74,0.35);"><div class="menu-btn-text"><div class="menu-btn-label" style="color:#c7964a;">Сапёр</div><div class="menu-btn-sublabel">Три уровня сложности</div></div></div>
-                <div class="menu-btn menu-btn-secret" id="phonebookBtn" onclick="navigateTo('phonebook')" style="border-color:rgba(74,143,199,0.35);"><div class="menu-btn-text"><div class="menu-btn-label" style="color:#6aa6e0;">Телефонный справочник</div><div class="menu-btn-sublabel">ООО ПО «ТОКЕМ»</div></div><i class="menu-btn-arrow" style="color:rgba(74,143,199,0.4);">›</i></div>
             </div>
         </div>
 
@@ -17977,6 +17984,12 @@
             <div class="menu-btn-row">
                 <div class="menu-btn" onclick="navigateTo('exam-tickets')" style="border-color:rgba(199,150,74,0.35);"><div class="menu-btn-text"><div class="menu-btn-label" style="color:#c7964a;">Экзаменационные билеты</div><div class="menu-btn-sublabel">4, 5, 6 разряд, до 1000 В</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('exam-tickets')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow" style="color:rgba(199,150,74,0.4);">›</i></div>
                 <div class="menu-btn" onclick="navigateTo('library')" style="border-color:rgba(199,150,74,0.35);"><div class="menu-btn-text"><div class="menu-btn-label" style="color:#c7964a;">Библиотека КИП и А</div><div class="menu-btn-sublabel">Документация, схемы, инструкции</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('library')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow" style="color:rgba(199,150,74,0.4);">›</i></div>
+                <!-- Task 543: «Телефонный справочник» — в «Документации», НЕ секретный:
+                     виден ролям с доступом к разделам «Билеты» и «Библиотека КИП и А»
+                     (страница phonebook в _LIBRARY_PAGES → право library.view матрицы
+                     KIP8_Access), остальным ролям полностью скрыт. Кнопка «…» —
+                     закрепление раздела на главной (реестр SUBSECTIONS). -->
+                <div class="menu-btn" id="phonebookDocsBtn" onclick="navigateTo('phonebook')" style="border-color:rgba(74,143,199,0.35);"><div class="menu-btn-text"><div class="menu-btn-label" style="color:#6aa6e0;">Телефонный справочник</div><div class="menu-btn-sublabel">ООО ПО «ТОКЕМ»</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('phonebook')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow" style="color:rgba(74,143,199,0.4);">›</i></div>
                 <div class="menu-btn" onclick="navigateTo('kip-ios')" style="border-color:rgba(199,150,74,0.35);"><div class="menu-btn-text"><div class="menu-btn-label" style="color:#c7964a;">КИП ИОС</div><div class="menu-btn-sublabel">Перечень приборов, документация</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('kip-ios')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow" style="color:rgba(199,150,74,0.4);">›</i></div>
                 <div class="menu-btn" onclick="navigateTo('docs-ios')" style="border-color:rgba(200,112,72,0.35);"><div class="menu-btn-text"><div class="menu-btn-label" style="color:#c87048;">Документация ИОС</div><div class="menu-btn-sublabel">Документация и оперативные данные</div></div><button type="button" class="menu-btn-overflow" aria-label="Действия" onclick="event.stopPropagation(); openPinSheet('docs-ios')"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><i class="menu-btn-arrow" style="color:rgba(200,112,72,0.4);">›</i></div>
             </div>
@@ -22990,12 +23003,15 @@
         row.innerHTML = html;
     }
 
-    // ===== СЕКРЕТНЫЕ КНОПКИ (САПЁР + ТЕЛЕФОННЫЙ СПРАВОЧНИК) =====
+    // ===== СЕКРЕТНАЯ КНОПКА (САПЁР) =====
+    // Task 543: «Телефонный справочник» больше не секретный (кнопка в
+    // «Документации», доступ по library.view) — жест двойного тапа по
+    // заголовку открывает/прячет только «Сапёр».
     let secretTapCount = 0;
     let secretTapTimer = null;
     const SECRET_TAP_THRESHOLD = 2;
     let secretTouchHandled = false;
-    const SECRET_BUTTON_IDS = ['minesweeperBtn', 'phonebookBtn'];
+    const SECRET_BUTTON_IDS = ['minesweeperBtn'];
     function secretTapHandler() {
         secretTapCount++;
         document.querySelector('.header-title').classList.add('hint-pulse');
@@ -23333,18 +23349,11 @@
             return;
         }
 
-        // Task 542: десктоп (≥1024px), вкладка «Избранное», без поиска —
-        // карточки в ТРИ столбца. Класс ставится/снимается ДО ветки
-        // мастер-дерева (Task 540), чтобы возврат на «Все», поиск и
-        // мобильная версия получали прежний одноколоночный список.
-        // (add/remove, а не toggle: метод toggle отсутствует в моках
-        // classList тестов Tasks 539–541 — их песочницы не трогаем.)
-        if (typeof isDesktop === 'function' && isDesktop() &&
-                pbFilterFavOnly && !query) {
-            list.classList.add('pb-fav-cols');
-        } else {
-            list.classList.remove('pb-fav-cols');
-        }
+        // Task 543: ТРИ столбца «Избранного» (Task 542) ОТМЕНЕНЫ заявкой —
+        // «текст контактов на всю ширину поля, убери рамки блоков, фон
+        // зеброй»: класс pb-fav-cols и его сетка удалены, «Избранное» —
+        // одноколоночный список (как «Все» и поиск), карточки во всю
+        // ширину поля #pbList, разделение строк — только зеброй.
 
         // Фильтрация: по поиску + по избранным (если включён фильтр)
         let filtered = pbFlat.slice();
@@ -23784,6 +23793,10 @@
         var bcContent = document.getElementById('detailBreadcrumbContent');
         if (!bcContent) return;
         var html = '<span class="breadcrumb-link" onclick="navigateTo(\'dashboard\')">Главная</span>' +
+            '<span class="breadcrumb-sep"> / </span>';
+        // Task 543: раздел живёт в «Документации» — хаб в крошках (клик —
+        // на страницу «Документация», как у «Билетов» и «Библиотеки»)
+        html += '<span class="breadcrumb-link" onclick="navigateTo(\'docs\')">Документация</span>' +
             '<span class="breadcrumb-sep"> / </span>';
         if (org) {
             var orgIdx = (pbDesktopSelected && typeof pbDesktopSelected.orgIdx === 'number')
@@ -31520,7 +31533,9 @@
         // Верхний уровень (корневые разделы)
         'calculators':      'dashboard',
         'docs':             'dashboard',
-        'phonebook':        'dashboard',
+        // Task 543: справочник — подраздел «Документации» (кнопка живёт
+        // там); назад/крошки идут через хаб «Документация»
+        'phonebook':        'docs',
         'minesweeper':      'dashboard',   // Task 194: Сапёр — корневой раздел главной
                                             // (был 'calculators' — крошки показывали
                                             // «Главная / Инженерные калькуляторы / Сапёр»)
@@ -31881,6 +31896,10 @@
         'library':       { label: 'Библиотека КИП и А',      sublabel: 'Документация, схемы, инструкции',                target: 'library',       category: 'docs' },
         'kip-ios':       { label: 'КИП ИОС',                  sublabel: 'Перечень приборов, документация',               target: 'kip-ios',       category: 'docs' },
         'docs-ios':      { label: 'Документация ИОС',         sublabel: 'Документация и оперативные данные',              target: 'docs-ios',      category: 'docs' },
+        // Task 543: «Телефонный справочник» — можно закрепить на главной
+        // (кнопка на странице «Документация»); категория 'phonebook' — синий
+        // акцент раздела, свайп-обёртка включается этим реестром.
+        'phonebook':     { label: 'Телефонный справочник', sublabel: 'ООО ПО «ТОКЕМ»', target: 'phonebook', category: 'phonebook' },
         // ===== Документация ИОС — подразделы (страница page-docs-ios) =====
         'flowmeter-data': { label: 'Расходомеры хозрасчётные', sublabel: 'Накопительные расходы и показания',             target: 'flowmeter-data',category: 'docs' },
         // Task 267: «График работы» можно закрепить на главной — свайп
@@ -31972,9 +31991,15 @@
             const s = SUBSECTIONS[key];
             if (!s) return;
             const isDocs = s.category === 'docs';
-            const borderColor = isDocs ? 'border-color:rgba(199,150,74,0.35);' : '';
-            const labelColor  = isDocs ? 'color:#c7964a;' : '';
-            const arrowColor  = isDocs ? 'color:rgba(199,150,74,0.4);' : '';
+            // Task 543: закреплённый «Телефонный справочник» — свой синий
+            // акцент (как у кнопки раздела), а не золотистый «доков»
+            const isPhonebook = s.category === 'phonebook';
+            const borderColor = isDocs ? 'border-color:rgba(199,150,74,0.35);'
+                              : isPhonebook ? 'border-color:rgba(74,143,199,0.35);' : '';
+            const labelColor  = isDocs ? 'color:#c7964a;'
+                              : isPhonebook ? 'color:#6aa6e0;' : '';
+            const arrowColor  = isDocs ? 'color:rgba(199,150,74,0.4);'
+                              : isPhonebook ? 'color:rgba(74,143,199,0.4);' : '';
             html +=
                 '<div class="pinned-item-cell">' +
                     '<div class="pinned-item-delete-bg pinned-item-delete-left"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span>Убрать</span></div>' +
@@ -37863,11 +37888,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Структура (всё хранится как массивы page-id):
         //   _BASE_PAGES       — главная страница (доступна всем, включая гостей).
         //   _CALC_PAGES       — инженерные калькуляторы.
-        //   _LIBRARY_PAGES    — библиотека: «Экзаменационные билеты» + «Библиотека КИП и А».
+        //   _LIBRARY_PAGES    — библиотека: «Экзаменационные билеты» + «Библиотека КИП и А»
+        //                      + «Телефонный справочник» (Task 543 — следует за library.view).
         //   _KIP_IOS_PAGES    — раздел КИП ИОС (включая кабельный журнал для просмотра).
         //   _FLOWMETER_PAGES  — расходомеры хозрасчётные (просмотр).
         //   _CHARTS_PAGES     — графики КИП ИОС (только Админ).
-        //   _SECRET_PAGES     — секретные кнопки (сапёр + телефонный справочник).
+        //   _SECRET_PAGES     — секретная кнопка «Сапёр» (Task 543: телефонный
+        //                      справочник перенесён в _LIBRARY_PAGES).
         //   _WHATS_NEW_PAGES  — раздел «Что нового».
         //
         // Право ЗАПИСИ в кабельный журнал (добавление, правка, удаление кабелей)
@@ -37883,9 +37910,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Карта ролей (из Excel, актуальная 2026-08-15):
         //   Запрет           — нет доступа (только dashboard).
         //   Общий доступ     — только калькуляторы. НЕ требует входа — гостевой режим.
-        //   КИП8             — калькуляторы + библиотека + секретные кнопки + Что нового.
+        //   КИП8             — калькуляторы + библиотека (+ телефонный справочник,
+        //                      Task 543) + «Сапёр» (секрет) + Что нового.
         //   КИП8 pro         — то же, что КИП8.
-        //   КИП ИОС          — калькуляторы + библиотека + КИП ИОС + секретные + Что нового.
+        //   КИП ИОС          — калькуляторы + библиотека (+ справочник, Task 543)
+        //                      + КИП ИОС + «Сапёр» (секрет) + Что нового.
         //   КИП ИОС pro      — то же + canEdit (право записи в кабельный журнал).
         //   КИП ИОС дежурный — КИП ИОС + расходомеры (просмотр) + canInputReadings.
         //   ИТР8             — КИП ИОС + расходомеры (просмотр).
@@ -37906,8 +37935,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                       'orifice-select', 'orifice-quick', 'orifice-dp', 'orifice-flow', 'orifice-diameter',
                       'circuit-breaker',
                       'geo-circle', 'geo-ring', 'geo-cylinder', 'geo-horiz', 'geo-sphere', 'geo-cone'],
+        // Task 543: 'phonebook' здесь — доступ к разделу «Телефонный
+        // справочник» следует за правом library.view (доступ к разделам
+        // «Билеты» и «Библиотека КИП и А» в матрице KIP8_Access)
         _LIBRARY_PAGES: ['docs', 'library', 'library-internal', 'library-electro',
-                         'exam-tickets', 'tickets-4', 'tickets-5', 'tickets-6', 'tickets-1000v'],
+                         'exam-tickets', 'tickets-4', 'tickets-5', 'tickets-6', 'tickets-1000v', 'phonebook'],
         _KIP_IOS_PAGES: ['kip-ios',
                          'docs-ios',
                          'devices',
@@ -37946,7 +37978,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         _WORK_SCHEDULE_PAGES: ['work-schedule', 'ws-totals', 'ws-workers', 'ws-legend', 'ws-talons'],
         // Графики КИП ИОС — отдельная группа доступа (только Админ)
         _CHARTS_PAGES: ['charts'],
-        _SECRET_PAGES: ['minesweeper', 'phonebook'],
+        _SECRET_PAGES: ['minesweeper'],  // Task 543: справочник — в _LIBRARY_PAGES
         _WHATS_NEW_PAGES: ['whats-new'],
 
         // Task 296 (Этап 4): серверная карта прав из матрицы KIP8_Access
@@ -38768,9 +38800,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
          * permissions, Task 293):
          *   calc.view              → калькуляторы
          *   library.view           → библиотека (включая «Документация»)
+         *                            + «Телефонный справочник» (Task 543)
          *   kipios.view|restricted → разделы КИП ИОС
          *   kipios.restricted      → «Документация» (ИТР ТОКЕМ, фильтр 4)
-         *   secret.view            → секретные кнопки
+         *   secret.view            → «Сапёр» (Task 543: только сапёр)
          *   whatsnew.view          → «Что нового»
          *   charts.view            → графики (Electron)
          *   flowmeter.view         → расходомеры (+ «Документация ИОС»
@@ -39113,15 +39146,14 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 if (projectsBtn2) projectsBtn2.style.display = (isAll || allowed.indexOf('projects-prod') !== -1) ? '' : 'none';
             }
 
-            // Скрыть кнопки "Сапёр" и "Телефонный справочник" на главной,
-            // если нет доступа.
+            // Скрыть секретную кнопку "Сапёр" на главной, если нет доступа.
+            // Task 543: кнопка «Телефонный справочник» на главной удалена —
+            // раздел живёт в «Документации» (видимость по library.view через
+            // общий цикл .menu-btn) и закрепляется на главной как обычный
+            // подраздел (SUBSECTIONS; цикл выше прячет ярлык без доступа).
             const minesweeperBtn = document.getElementById('minesweeperBtn');
             if (minesweeperBtn) {
                 minesweeperBtn.style.display = (isAll || allowed.indexOf('minesweeper') !== -1) ? '' : 'none';
-            }
-            const phonebookBtn = document.getElementById('phonebookBtn');
-            if (phonebookBtn) {
-                phonebookBtn.style.display = (isAll || allowed.indexOf('phonebook') !== -1) ? '' : 'none';
             }
 
             // ============================================================

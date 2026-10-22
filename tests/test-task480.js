@@ -92,9 +92,9 @@ function countOf(haystack, needle) {
 // ==========================================================================
 describe('Task 480 — SW: версия кэша', () => {
 
-    test("CACHE_VERSION = 'kipia-test-v754'", () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v754';") !== -1,
-            'SW поднят до kipia-test-v754 (Task 480)');
+    test("CACHE_VERSION = 'kipia-test-v755'", () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v755';") !== -1,
+            'SW поднят до kipia-test-v755 (Task 480)');
     });
 
     test('прежняя версия v703 отсутствует', () => {
@@ -103,8 +103,8 @@ describe('Task 480 — SW: версия кэша', () => {
     });
 
     test('несуществующая v705 отсутствует (guard)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v755') === -1,
-            'kipia-test-v754 не должен существовать');
+        assertTrue(SW_SRC.indexOf('kipia-test-v756') === -1,
+            'kipia-test-v755 не должен существовать');
     });
 
     test('персистентные кэши картинок/данных НЕ инкрементировались', () => {
@@ -116,7 +116,7 @@ describe('Task 480 — SW: версия кэша', () => {
     });
 
     test('комментарий Task 480 в шапке версий (окно 2600 → 3200 → 6000, Task 486/490)', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v754';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v755';");
         // Task 490: +480 симв. комментария — окно 5000 → 6000 (якорь 5440)
         // Task 492: комментарий (~290 симв.) отодвинул якорь Task 480
         // до ~6221 — окно 6000 → 6800.
@@ -262,10 +262,11 @@ describe('Task 480 — data/*.json: метаданные источника', ()
     // 3 прибора в Google Sheets — devices 1291 → 1288 (данные живые,
     // structure/лист/остальные файлы не тронуты)
     // Task 540 (поверх авто-синка f42423f5 от 20.10.2026): пользователь
-    // удалил 2 блокировки в Google Sheets — lockouts 531 → 529
+    // авто-синк c60c426b (21.10.2026) — ещё 1 блокировка удалена: 529 → 528
+    // (прецедент: Task 540 → 541 — пины двигаются как ассист)
     const TOTALS = {
         'data/devices.json':    { total: 'total_devices',    value: 1288, sheet: 'Приборы_app' },
-        'data/lockouts.json':   { total: 'total_lockouts',   value: 529,  sheet: 'Блокировки_app' },
+        'data/lockouts.json':   { total: 'total_lockouts',   value: 528,  sheet: 'Блокировки_app' },
         'data/valves.json':     { total: 'total_valves',     value: 320,  sheet: 'Клапана_app' },
         'data/regulators.json': { total: 'total_regulators', value: 268,  sheet: 'Регуляторы_app' }
     };

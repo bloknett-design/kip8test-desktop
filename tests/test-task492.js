@@ -407,9 +407,9 @@ describe('Task 492 — VM: featured у кнопок в избранном', () =
 // ============================================================
 describe('Task 492 — SW: версия кеша', () => {
 
-    test('SW: кэш поднят до kipia-test-v754', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v754'") !== -1,
-            'CACHE_VERSION = kipia-test-v754 (Task 492)');
+    test('SW: кэш поднят до kipia-test-v755', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v755'") !== -1,
+            'CACHE_VERSION = kipia-test-v755 (Task 492)');
         assertFalse(SW_SRC.indexOf('kipia-test-v715') !== -1,
             'старой версии v715 нет');
     });

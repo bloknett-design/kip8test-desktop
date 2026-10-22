@@ -14,12 +14,11 @@
 //      pbInit().then() ПОСЛЕ pbCleanupStaleFavorites и ДО pbRender
 //      (pbInit срабатывает при каждом входе в раздел — значит,
 //      «при входе дерево свёрнуто, кроме ТОКЕМ»).
-//   B. SRC — ТРИ СТОЛБЦА «ИЗБРАННОГО» (десктоп): pbRender вешает
-//      класс pb-fav-cols ДО ветки мастер-дерева (десктоп + вкладка
-//      «Избранное» + нет запроса); CSS: сетка repeat(3, 1fr) на
-//      .pb-section-body, display:contents у обёрток подгрупп,
-//      заголовки групп grid-column: 1 / -1, @media ≥1024px, рамки
-//      карточек в обеих темах.
+//   B. SRC — ТРИ СТОЛБЦА «ИЗБРАННОГО» (десктоп) — ОТМЕНЕНЫ Task 543
+//      (заявка: «на вкладке избранного размести текст контактов на
+//      всю ширину поля, убери рамки блоков, а фон сделай зеброй»):
+//      класс pb-fav-cols и его сетка удалены, тесты секции B
+//      переписаны под одноколоночный список (1:1, счёт сохранён).
 //   C. SRC — ОБНОВЛЯЕМЫЕ ДАННЫЕ: scripts/sync-phonebook.py (ID
 //      таблицы пользователя, DEFAULT_HEADER = ООО ПО «ТОКЕМ», правила
 //      плоской таблицы), workflow sync-phonebook.yml (cron 03:50,
@@ -66,9 +65,9 @@ const WF_SRC = fs.existsSync(WF_PATH)
 const PFX_MATCH = INDEX_SRC.match(/const PB_FAV_KEY = '(\w+?)_phonebook_favorites'/);
 const PFX = PFX_MATCH ? PFX_MATCH[1] : null;
 // Task 542: v753→v754 (kip8test), v550→v551 (kip8)
-const SW_EXPECTED = { kip8test: 'kipia-test-v754', kip8: 'kipia-v551' }[PFX] || null;
+const SW_EXPECTED = { kip8test: 'kipia-test-v755', kip8: 'kipia-v551' }[PFX] || null;
 const SW_PREV = { kip8test: 'kipia-test-v753', kip8: 'kipia-v550' }[PFX] || null;
-const SW_NEXT = { kip8test: 'kipia-test-v755', kip8: 'kipia-v552' }[PFX] || null;
+const SW_NEXT = { kip8test: 'kipia-test-v756', kip8: 'kipia-v552' }[PFX] || null;
 
 const FAV_KEY = PFX + '_phonebook_favorites';
 const SHEET_ID = '1phGnzRS1UPtl6G6jcfnt34jlqlKYhGn_';
@@ -260,71 +259,50 @@ describe('Task 542 — SRC: дерево свёрнуто при входе, к�
 });
 
 // ============================================================
-// B. SRC — «Избранное» на десктопе в три столбца
+// B. SRC — «Избранное» на десктопе: ТРИ СТОЛБЦА ОТМЕНЕНЫ (Task 543)
 // ============================================================
-describe('Task 542 — SRC: «Избранное» на десктопе — три столбца', () => {
+describe('Task 542/543 — SRC: «Избранное» — одна колонка (отмена 3 столбцов)', () => {
 
-    test('pbRender вешает класс pb-fav-cols (до мастер-ветки)', () => {
-        const iAdd = INDEX_SRC.indexOf("list.classList.add('pb-fav-cols');");
-        assertTrue(iAdd !== -1, 'вызов add есть');
-        const iRemove = INDEX_SRC.indexOf("list.classList.remove('pb-fav-cols');");
-        assertTrue(iRemove !== -1, 'вызов remove есть (снятие класса)');
+    test('Task 543: pbRender НЕ вешает класс pb-fav-cols', () => {
+        assertTrue(INDEX_SRC.indexOf("list.classList.add('pb-fav-cols');") === -1,
+            'вызова add больше нет — «Избранное» без сетки');
+        assertTrue(INDEX_SRC.indexOf("list.classList.remove('pb-fav-cols');") === -1,
+            'вызова remove нет — класс удалён из кода целиком');
         const iMaster = INDEX_SRC.indexOf('pbRenderMaster(list);');
-        assertTrue(iMaster !== -1, 'ветка мастер-дерева есть');
-        assertTrue(iAdd < iMaster,
-            'класс ставится ДО ветки мастер-дерева — снимается на «Все»/поиске');
-        const seg = INDEX_SRC.slice(iAdd - 400, iAdd);
-        assertTrue(seg.indexOf('isDesktop()') !== -1, 'условие десктопа');
-        assertTrue(seg.indexOf('pbFilterFavOnly') !== -1, 'условие вкладки «Избранное»');
-        assertTrue(seg.indexOf('!query') !== -1, 'без поискового запроса');
+        assertTrue(iMaster !== -1, 'ветка мастер-дерева жива (Task 540)');
     });
 
-    test('CSS: сетка из трёх колонок на .pb-section-body', () => {
-        const i = INDEX_SRC.indexOf('#pbList.pb-fav-cols .pb-section-body {');
-        assertTrue(i !== -1, 'правило есть');
-        const seg = INDEX_SRC.slice(i, INDEX_SRC.indexOf('}', i) + 1);
-        assertTrue(seg.indexOf('display: grid;') !== -1, 'grid');
-        assertTrue(seg.indexOf('grid-template-columns: repeat(3, 1fr);') !== -1,
-            'ровно ТРИ колонки');
-        assertTrue(seg.indexOf('gap: 8px 10px;') !== -1, 'отступы сетки');
+    test('Task 543: CSS-сетки трёх колонок нет', () => {
+        assertTrue(INDEX_SRC.indexOf('#pbList.pb-fav-cols .pb-section-body {') === -1,
+            'правило сетки repeat(3, 1fr) удалено');
+        assertTrue(INDEX_SRC.indexOf('#pbList.pb-fav-cols .pb-subgroup-body') === -1,
+            'тело подгруппы не раскрывается в сетку');
     });
 
-    test('CSS: обёртки подгрупп раскрыты в сетку (display: contents)', () => {
-        const i = INDEX_SRC.indexOf('#pbList.pb-fav-cols .pb-subgroup,');
-        assertTrue(i !== -1, 'блок правил есть');
-        const seg = INDEX_SRC.slice(i, INDEX_SRC.indexOf('}', i) + 1);
-        assertTrue(seg.indexOf('.pb-subgroup-body') !== -1, 'тело подгруппы');
-        assertTrue(seg.indexOf('.pb-subsubgroup') !== -1, 'подподгруппа 3-го уровня');
-        assertTrue(seg.indexOf('.pb-subsubgroup-body') !== -1, 'тело подподгруппы');
-        assertTrue(seg.indexOf('display: contents;') !== -1,
-            'обёртки не создают боксы — карточки становятся элементами сетки');
+    test('Task 543: CSS-обёрток display:contents нет', () => {
+        assertTrue(INDEX_SRC.indexOf('#pbList.pb-fav-cols .pb-subgroup,') === -1,
+            'блока правил обёрток нет');
+        assertTrue(INDEX_SRC.indexOf('#pbList.pb-fav-cols .pb-subgroup-body') === -1,
+            'тело подгруппы не раскрывается в сетку');
     });
 
-    test('CSS: заголовки групп — на всю ширину (grid-column: 1 / -1)', () => {
-        const i = INDEX_SRC.indexOf('#pbList.pb-fav-cols .pb-subgroup-title,');
-        assertTrue(i !== -1, 'правило есть');
-        const seg = INDEX_SRC.slice(i, INDEX_SRC.indexOf('}', i) + 1);
-        assertTrue(seg.indexOf('.pb-subsubgroup-title') !== -1, 'и заголовок подподгруппы');
-        assertTrue(seg.indexOf('grid-column: 1 / -1;') !== -1,
-            'заголовок занимает все три колонки');
+    test('Task 543: заголовки групп без grid-column: 1 / -1', () => {
+        assertTrue(INDEX_SRC.indexOf('#pbList.pb-fav-cols .pb-subgroup-title,') === -1,
+            'правила заголовков сетки нет');
+        assertTrue(INDEX_SRC.indexOf('#pbList.pb-fav-cols .pb-subsubgroup-title') === -1,
+            'и подподгруппы — вне сетки');
     });
 
-    test('CSS: правило только для десктопа (@media ≥1024px)', () => {
-        const i = INDEX_SRC.indexOf('#pbList.pb-fav-cols .pb-section-body {');
-        const before = INDEX_SRC.slice(Math.max(0, i - 400), i);
-        assertTrue(before.lastIndexOf('@media (min-width: 1024px)') >
-                   before.lastIndexOf('@media (max-width'),
-            'блок внутри @media (min-width: 1024px) — мобильный список не тронут');
+    test('Task 543: плиток-карточек с рамкой нет', () => {
+        assertTrue(INDEX_SRC.indexOf('#pbList.pb-fav-cols .pb-card {') === -1,
+            'правило карточки-плитки удалено');
+        assertTrue(INDEX_SRC.indexOf('[data-theme="light"] #pbList.pb-fav-cols .pb-card {') === -1,
+            'светлая тема: плитки удалены');
     });
 
-    test('CSS: карточки-плитки с рамкой в обеих темах', () => {
-        const i = INDEX_SRC.indexOf('#pbList.pb-fav-cols .pb-card {');
-        assertTrue(i !== -1, 'правило карточки есть');
-        const seg = INDEX_SRC.slice(i, INDEX_SRC.indexOf('}', i) + 1);
-        assertTrue(seg.indexOf('border: 1px solid') !== -1, 'рамка со всех сторон');
-        assertTrue(seg.indexOf('border-radius: 8px;') !== -1, 'скругление');
-        assertTrue(INDEX_SRC.indexOf('[data-theme="light"] #pbList.pb-fav-cols .pb-card {') !== -1,
-            'светлая тема: рамка');
+    test('Task 543: класс pb-fav-cols исчез из кода', () => {
+        assertTrue(INDEX_SRC.indexOf('.pb-fav-cols') === -1,
+            'ни CSS, ни JS не содержат селектор/класс pb-fav-cols');
     });
 });
 
@@ -523,24 +501,24 @@ describe('Task 542 — VM: засев свёрнутости и три стол�
             html.slice(html.lastIndexOf('pb-master-org', iTok), iTok));
     });
 
-    test('класс pb-fav-cols — десктоп + «Избранное» + без запроса', async () => {
+    test('Task 543: класс pb-fav-cols НЕ вешается — одна колонка', async () => {
         const t = makeVm({ desktop: true });
         await seedPhonebook(t);
         seedFavorites(t, [ID_IVANOV]);
         t.sandbox.pbSetTab('fav');
-        assertTrue(t.listClasses['pb-fav-cols'] === true,
-            'класс вешается (карточки в 3 столбца)');
+        assertTrue(t.listClasses['pb-fav-cols'] !== true,
+            'класс не вешается (три столбца отменены Task 543)');
         assertTrue(t.pbList.innerHTML.indexOf('pb-card') !== -1,
             'инлайн-рендер избранного с карточками');
     });
 
-    test('поиск на «Избранном» — класс снят (одноколоночный)', async () => {
+    test('поиск на «Избранном» — одноколоночный список (класса нет)', async () => {
         const t = makeVm({ desktop: true, query: 'Ива' });
         await seedPhonebook(t);
         seedFavorites(t, [ID_IVANOV]);
         t.sandbox.pbSetTab('fav');
         assertTrue(t.listClasses['pb-fav-cols'] !== true,
-            'при поиске трёх столбцов нет');
+            'при поиске сетки нет (Task 543: её нет вообще)');
     });
 
     test('вкладка «Все» на десктопе — класс снят (мастер-дерево)', async () => {

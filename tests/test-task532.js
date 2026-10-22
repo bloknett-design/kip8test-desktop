@@ -24,7 +24,7 @@
 //   D. СЕРВЕР — getWeather v2: UA-заголовки, резерв open-meteo,
 //      _parseOpenMeteo (WMO-коды, румбы, давление), diag-цепочка
 //      попыток, кэш 1800.
-//   E. SW — kipia-test-v754.
+//   E. SW — kipia-test-v755.
 //
 // Запуск: через tests/run-all.js (require './test-task532.js').
 
@@ -664,15 +664,15 @@ describe('Task 532 D: Сервер — Task 536: серверная погода
 // ============================================================
 describe('Task 532 — SW: версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v754', () => {
+    test('sw.js: CACHE_VERSION = kipia-test-v755', () => {
         const m = SW_SRC.match(/const CACHE_VERSION = '(kipia-test-v\d+)'/);
         assertTrue(m !== null, 'CACHE_VERSION найден');
-        assertEqual(m[1], 'kipia-test-v754', 'SW поднят до v745 (Task 532)');
+        assertEqual(m[1], 'kipia-test-v755', 'SW поднят до v745 (Task 532)');
         assertTrue(m[1] !== 'kipia-test-v744', 'старая версия v744 не осталась');
     });
 
     test('sw.js: нет забегания вперёд (v746 не должно быть)', () => {
-        assertFalse(SW_SRC.indexOf('kipia-test-v755') !== -1,
+        assertFalse(SW_SRC.indexOf('kipia-test-v756') !== -1,
             'двойной бамп не сделан');
     });
 
