@@ -2,8 +2,8 @@
 """
 Синхронизация телефонного справочника с Google Sheets.
 
-Источник (таблица пользователя, Task 542):
-  https://docs.google.com/spreadsheets/d/1phGnzRS1UPtl6G6jcfnt34jlqlKYhGn_/edit
+Источник (таблица пользователя, Task 542; ссылка обновлена Task 545):
+  https://docs.google.com/spreadsheets/d/1rFbDn-jNRSoELTnsiaKjNvatSqIhVvbS/edit
   лист: "Лист1" (плоская таблица из 3 колонок: Должность | Ф.И.О. | № тел.)
 
 Скрипт работает по тому же принципу, что и scripts/sync-cables.py
@@ -36,7 +36,7 @@
 
 Переменные окружения:
   PHONEBOOK_SPREADSHEET_ID — ID Google Sheets
-      (по умолчанию 1phGnzRS1UPtl6G6jcfnt34jlqlKYhGn_)
+      (по умолчанию 1rFbDn-jNRSoELTnsiaKjNvatSqIhVvbS — Task 545)
   PHONEBOOK_SHEET_NAME — имя листа (по умолчанию "Лист1")
 
 Секреты НЕ требуются — таблица доступна «у кого есть ссылка».
@@ -62,7 +62,7 @@ except ImportError:
 # ============================================================
 # Настройки Google Sheets
 # ============================================================
-DEFAULT_SPREADSHEET_ID = '1phGnzRS1UPtl6G6jcfnt34jlqlKYhGn_'
+DEFAULT_SPREADSHEET_ID = '1rFbDn-jNRSoELTnsiaKjNvatSqIhVvbS'
 DEFAULT_SHEET_NAME = 'Лист1'
 SHEET_URL = ('https://docs.google.com/spreadsheets/d/'
              + DEFAULT_SPREADSHEET_ID + '/edit')

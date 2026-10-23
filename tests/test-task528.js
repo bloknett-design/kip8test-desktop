@@ -29,7 +29,7 @@
 //     Sполн, Sосн, Sбок конуса, S сегмента, масса воды ρ=998 —
 //     совпадают с математикой calcGeo*); высоты 206+17·n; юнит-тесты
 //     gfDimH (над линией / узкий / у края) и gfDimV 'none'.
-//   Слой 5 — SW: kipia-test-v756.
+//   Слой 5 — SW: kipia-test-v757.
 //
 // Запуск: через tests/run-all.js (require './test-task528.js').
 
@@ -462,10 +462,10 @@ describe('Task 528 D: VM — надписи НАД линиями, все рез
 // ============================================================
 describe('Task 528 — SW: версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v756', () => {
+    test('sw.js: CACHE_VERSION = kipia-test-v757', () => {
         const m = SW_SRC.match(/const CACHE_VERSION = '([^']+)'/);
         assertTrue(m, 'CACHE_VERSION найден');
-        assertEqual(m[1], 'kipia-test-v756',
+        assertEqual(m[1], 'kipia-test-v757',
             'версия бампнута v740 → v741 (правка index.html, Task 528)');
     });
 

@@ -58,6 +58,11 @@
  *     PhonebookArchive.getMyData(payload)   → {ok, data/error}
  *     PhonebookArchive.setFavorite(payload) → {ok, data/error}
  *     PhonebookArchive.setNote(payload)     → {ok, data/error}
+ *   MinesweeperArchive (Task 546) — «Сапёр»: архив счёта
+ *     пользователей по email — лист «Сапёр» в таблице
+ *     KIP8_Access (новая страница по заявке):
+ *     MinesweeperArchive.recordResult(payload) → {ok, data/error}
+ *     MinesweeperArchive.getMyArchive(payload) → {ok, data/error}
  * ============================================================
  */
 
@@ -413,6 +418,16 @@ function doPost(e) {
 
       case 'phonebook.setNote':
         return _json(PhonebookArchive.setNote(payload));
+
+      // MinesweeperArchive.gs (Task 546) — архив счёта «Сапёра»
+      // по email: лист «Сапёр» в таблице KIP8_Access. Запись
+      // партии + своя история. Гейт secret.view (как у страницы
+      // «Сапёр» на клиенте), проверка внутри модуля
+      case 'minesweeper.recordResult':
+        return _json(MinesweeperArchive.recordResult(payload));
+
+      case 'minesweeper.getMyArchive':
+        return _json(MinesweeperArchive.getMyArchive(payload));
 
       default:
         return _json({ ok: false, error: 'Unknown action: ' + action });

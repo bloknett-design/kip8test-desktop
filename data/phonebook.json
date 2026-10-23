@@ -1,7 +1,7 @@
 {
   "title": "Телефонный справочник ООО ПО «ТОКЕМ»",
-  "source": "https://docs.google.com/spreadsheets/d/1phGnzRS1UPtl6G6jcfnt34jlqlKYhGn_/edit",
-  "total_records": 220,
+  "source": "https://docs.google.com/spreadsheets/d/1rFbDn-jNRSoELTnsiaKjNvatSqIhVvbS/edit",
+  "total_records": 230,
   "total_companies": 5,
   "parsing_rules": {
     "source": "Google Sheets (плоская таблица 3 колонок: Должность / Ф.И.О. / № тел.) — Task 542",
@@ -161,6 +161,13 @@
         "phone": "54 69"
       },
       {
+        "group": "Производственная группа",
+        "subgroup": null,
+        "position": "",
+        "name": "",
+        "phone": "50 05"
+      },
+      {
         "group": "Отдел по работе с персоналом (ОРП)",
         "subgroup": null,
         "position": "Начальник отдела",
@@ -215,6 +222,13 @@
         "position": "Начальник отдела",
         "name": "Павлов Евгений Игоревич",
         "phone": "54 75"
+      },
+      {
+        "group": "Отдел материально-технического снабжения (ОМТС)",
+        "subgroup": null,
+        "position": "",
+        "name": "",
+        "phone": "50 06"
       },
       {
         "group": "Отдел материально-технического снабжения (ОМТС)",
@@ -369,6 +383,13 @@
         "position": "программист 1С",
         "name": "Фирциков Евгений Андреевич",
         "phone": "51 23"
+      },
+      {
+        "group": "Общий отдел",
+        "subgroup": null,
+        "position": "",
+        "name": "",
+        "phone": "51 62"
       },
       {
         "group": "Общий отдел",
@@ -544,6 +565,13 @@
         "position": "Кабельщики-спайщики",
         "name": "Зайцев Александр Сергеевич 5020",
         "phone": "53 71"
+      },
+      {
+        "group": "Цех № 8 (КИПиА)",
+        "subgroup": null,
+        "position": "",
+        "name": "Никитин Николай Сергеевич",
+        "phone": ""
       },
       {
         "group": "Цех № 8 (КИПиА)",
@@ -737,6 +765,13 @@
       {
         "group": "Отделение по подготовке производства",
         "subgroup": null,
+        "position": "",
+        "name": "",
+        "phone": "52 55"
+      },
+      {
+        "group": "Отделение по подготовке производства",
+        "subgroup": null,
         "position": "Склад готовой продукции производства ИОС",
         "name": "(цех №26)",
         "phone": "52 37, 57 01"
@@ -812,11 +847,32 @@
         "phone": "53 81"
       },
       {
+        "group": "Лаборатория ССиЛ и текстолита",
+        "subgroup": null,
+        "position": "",
+        "name": "",
+        "phone": "56 87"
+      },
+      {
+        "group": "Лаборатория ССиЛ и текстолита",
+        "subgroup": null,
+        "position": "",
+        "name": "",
+        "phone": "54 55"
+      },
+      {
         "group": "Лаборатория по контролю производства ИОС",
         "subgroup": null,
         "position": "Начальник лаборатории",
         "name": "Смагина Юлия Анатольевна",
         "phone": "57 07, 54 26"
+      },
+      {
+        "group": "Лаборатория по контролю производства ИОС",
+        "subgroup": null,
+        "position": "",
+        "name": "",
+        "phone": "52 73"
       },
       {
         "group": "ЦЕХ № 14 (Ремонтно-механический (РМЦ))",
@@ -1150,6 +1206,13 @@
       {
         "group": "ЦЕХ № 18 (Транспортный)",
         "subgroup": null,
+        "position": "",
+        "name": "Пригодич Светлана Витальевна",
+        "phone": "53 89"
+      },
+      {
+        "group": "ЦЕХ № 18 (Транспортный)",
+        "subgroup": null,
         "position": "Начальник автоколонны - механик",
         "name": "Красноперов Денис Александрович",
         "phone": "54 21"
@@ -1479,6 +1542,13 @@
         "position": "Начальник караула",
         "name": "",
         "phone": "53 83"
+      },
+      {
+        "group": null,
+        "subgroup": null,
+        "position": "",
+        "name": "",
+        "phone": "50 59"
       },
       {
         "group": null,

@@ -58,6 +58,10 @@ const PURE_FUNCTIONS = [
     'msRecordResult',
     'msMigrateResults',
     'msRenderAchievements',
+    // Сапёр (Task 546: анимация переворота + серверный архив)
+    'msFlipDelay',
+    'msSrvThrottled',
+    'msRenderArchiveRow',
     // Навигация (Task 194: Сапёр — корневой раздел главной)
     'buildBreadcrumbPath',
     // Расходомеры: комментарий к последним показаниям (Task 195)

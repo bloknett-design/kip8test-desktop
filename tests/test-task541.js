@@ -50,9 +50,9 @@ const SW_SRC = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 const PFX_MATCH = INDEX_SRC.match(/const PB_FAV_KEY = '(\w+?)_phonebook_favorites'/);
 const PFX = PFX_MATCH ? PFX_MATCH[1] : null;
 // Task 541: v752→v753 (kip8test), v549→v550 (kip8)
-const SW_EXPECTED = { kip8test: 'kipia-test-v756', kip8: 'kipia-v550' }[PFX] || null;
+const SW_EXPECTED = { kip8test: 'kipia-test-v757', kip8: 'kipia-v550' }[PFX] || null;
 const SW_PREV = { kip8test: 'kipia-test-v752', kip8: 'kipia-v549' }[PFX] || null;
-const SW_NEXT = { kip8test: 'kipia-test-v757', kip8: 'kipia-v551' }[PFX] || null;
+const SW_NEXT = { kip8test: 'kipia-test-v758', kip8: 'kipia-v551' }[PFX] || null;
 
 const FAV_KEY = PFX + '_phonebook_favorites';
 
