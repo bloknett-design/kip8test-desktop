@@ -318,8 +318,8 @@ describe('Task 484: lockouts.json — блок ppr_chart', () => {
     test('структура lockouts.json не задета (массив и заголовки прежние)', () => {
         // Task 540: авто-синк f42423f5 (20.10.2026) — пользователь удалил
         // авто-синк c60c426b (21.10.2026): 529 → 528 (данные живые)
-        assertEqual(LOCKOUTS_JSON.total_lockouts, 528, 'total_lockouts прежний');
-        assertEqual(LOCKOUTS_JSON.lockouts.length, 528, 'массив прежний');
+        assertEqual(LOCKOUTS_JSON.total_lockouts, 529, 'total_lockouts прежний');
+        assertEqual(LOCKOUTS_JSON.lockouts.length, 529, 'массив прежний');
         assertEqual(LOCKOUTS_JSON.headers.length, 13, '13 колонок');
         assertEqual(LOCKOUTS_JSON.sheet, 'Блокировки_app', 'лист _app прежний');
     });

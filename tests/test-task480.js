@@ -266,7 +266,7 @@ describe('Task 480 — data/*.json: метаданные источника', ()
     // (прецедент: Task 540 → 541 — пины двигаются как ассист)
     const TOTALS = {
         'data/devices.json':    { total: 'total_devices',    value: 1288, sheet: 'Приборы_app' },
-        'data/lockouts.json':   { total: 'total_lockouts',   value: 528,  sheet: 'Блокировки_app' },
+        'data/lockouts.json':   { total: 'total_lockouts',   value: 529,  sheet: 'Блокировки_app' },
         'data/valves.json':     { total: 'total_valves',     value: 320,  sheet: 'Клапана_app' },
         'data/regulators.json': { total: 'total_regulators', value: 268,  sheet: 'Регуляторы_app' }
     };
