@@ -488,8 +488,8 @@ describe('Task 479 — карточка: интеграция не сломан�
 // ==========================================================================
 describe('Task 479 — SW: версия и шапка', () => {
 
-    test('CACHE_VERSION = kipia-test-v759', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v759';") !== -1,
+    test('CACHE_VERSION = kipia-test-v760', () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v760';") !== -1,
             'SW поднят до v703 (Task 479)');
     });
 
@@ -499,12 +499,12 @@ describe('Task 479 — SW: версия и шапка', () => {
     });
 
     test('несуществующая v704 отсутствует (guard)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v760') === -1,
-            'kipia-test-v759 не должен существовать');
+        assertTrue(SW_SRC.indexOf('kipia-test-v761') === -1,
+            'kipia-test-v760 не должен существовать');
     });
 
     test('комментарий Task 479 в шапке версий', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v759';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v760';");
         // Task 480: окно 700 → 1100 — комментарий Task 480 (~250 симв.)
         // отодвинул комментарий Task 478 до ~835 (за прежним окном 700).
         // Task 481: окно 1100 → 1400 — комментарий «ТО = только год»
@@ -529,7 +529,7 @@ describe('Task 479 — SW: версия и шапка', () => {
         // 471 ~3055 < 3400; 461 ~5617 < 6000 (запасы 345+)
         // Task 480 (~250 симв.) тоже вписался: 474 ~2377; 472 ~2750;
         // 471 ~3299; 461 ~5861 — расширения не нужны (запасы 101+)
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v759';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v760';");
         const i474 = SW_SRC.lastIndexOf('Task 474', i);
         const i472 = SW_SRC.lastIndexOf('Task 472', i);
         const i471 = SW_SRC.lastIndexOf('Task 471', i);

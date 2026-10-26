@@ -62,8 +62,8 @@ const RM_SRC = fs.readFileSync(path.join(ROOT, 'scripts', 'RoleMatrix.gs'), 'utf
 const PFX_MATCH = INDEX_SRC.match(/const PB_FAV_KEY = '(\w+?)_phonebook_favorites'/);
 const PFX = PFX_MATCH ? PFX_MATCH[1] : null;
 // Task 546: v756→v757 (kip8test), v553→v554 (kip8)
-const SW_EXPECTED = { kip8test: 'kipia-test-v759', kip8: 'kipia-v554' }[PFX] || null;
-const SW_NEXT = { kip8test: 'kipia-test-v760', kip8: 'kipia-v555' }[PFX] || null;
+const SW_EXPECTED = { kip8test: 'kipia-test-v760', kip8: 'kipia-v554' }[PFX] || null;
+const SW_NEXT = { kip8test: 'kipia-test-v761', kip8: 'kipia-v555' }[PFX] || null;
 
 // Фрагмент кода игры «Сапёр» (для локальных проверок)
 function msRegion() {

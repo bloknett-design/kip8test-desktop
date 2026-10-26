@@ -3006,6 +3006,49 @@
         background: rgba(220, 80, 80, 0.2); color: #e07070;
     }
     .kip-dialog-ok.danger:active { background: rgba(220, 80, 80, 0.35); }
+    /* Task 549 (заявка: «в диалоговом окне подтверждения удаления
+       ручных правок сделай возможность удаления каждой правки по
+       отдельности с кратким наименованием правок»): диалог-список
+       kipConfirmList — расширение kipConfirm строками-чекбоксами
+       (каждая правка снимается/отмечается отдельно) */
+    .kip-dialog.with-list { max-width: 420px; }
+    .kip-dialog-items {
+        display: flex; flex-direction: column; gap: 2px;
+        max-height: 40vh; overflow-y: auto; margin-bottom: 10px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .kip-dialog-item {
+        display: flex; align-items: flex-start; gap: 10px;
+        padding: 7px 10px; border-radius: 8px; cursor: pointer;
+        transition: background 0.15s;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .kip-dialog-item:hover { background: rgba(255,255,255,0.05); }
+    .kip-dialog-item input[type="checkbox"] {
+        flex: none; margin: 2px 0 0; accent-color: #7ab3e0;
+        cursor: pointer;
+    }
+    .kip-dialog-item-text { min-width: 0; }
+    .kip-dialog-item-label {
+        display: block; font-size: 13px; color: #e0e0e0;
+        line-height: 1.45; word-break: break-word;
+    }
+    .kip-dialog-item-sub {
+        display: block; font-size: 11px; color: rgba(255,255,255,0.45);
+        line-height: 1.4; margin-top: 1px; word-break: break-word;
+    }
+    .kip-dialog-selectrow {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 8px; margin-bottom: 14px;
+    }
+    .kip-dialog-selectall {
+        background: none; border: none; padding: 2px 0;
+        font-size: 12px; color: #7ab3e0; cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .kip-dialog-selectall:active { opacity: 0.7; }
+    .kip-dialog-count { font-size: 12px; color: rgba(255,255,255,0.45); }
+    .kip-dialog-btn:disabled { opacity: 0.35; cursor: default; }
     [data-theme="light"] .kip-dialog { background: rgba(250, 249, 245, 0.98); border-color: rgba(20,20,19,0.12); box-shadow: 0 12px 40px rgba(0,0,0,0.15); }
     [data-theme="light"] .kip-dialog-title { color: #1a1a1a; }
     [data-theme="light"] .kip-dialog-msg { color: rgba(0,0,0,0.55); }
@@ -3019,6 +3062,12 @@
     [data-theme="light"] .kip-dialog-ok:active { background: rgba(42, 93, 143, 0.25); }
     [data-theme="light"] .kip-dialog-ok.danger { background: rgba(180, 40, 40, 0.1); color: #a83030; }
     [data-theme="light"] .kip-dialog-ok.danger:active { background: rgba(180, 40, 40, 0.2); }
+    [data-theme="light"] .kip-dialog-item:hover { background: rgba(0,0,0,0.05); }
+    [data-theme="light"] .kip-dialog-item-label { color: #1a1a1a; }
+    [data-theme="light"] .kip-dialog-item-sub { color: rgba(0,0,0,0.45); }
+    [data-theme="light"] .kip-dialog-item input[type="checkbox"] { accent-color: #2a5d8f; }
+    [data-theme="light"] .kip-dialog-selectall { color: #2a5d8f; }
+    [data-theme="light"] .kip-dialog-count { color: rgba(0,0,0,0.45); }
 
     /* ====== Admin: модалка создания пользователя ====== */
     .create-user-overlay {
@@ -18665,7 +18714,15 @@
                              (деструктивное действие); видна ТОЛЬКО
                              редакторам (как «Сформировать»: init +
                              _onRoleUpdate); подтверждение — kipConfirm
-                             danger со счётчиком; при _saving — блок -->
+                             danger со счётчиком; при _saving — блок.
+                             Task 549 (заявка: «в диалоговом окне
+                             подтверждения удаления ручных правок
+                             сделай возможность удаления каждой правки
+                             по отдельности с кратким наименованием
+                             правок»): подтверждение — kipConfirmList,
+                             список чекбоксов «работник · дата ·
+                             наименование» — галочки по одной, OK
+                             применяется только к отмеченным -->
                         <button type="button" id="wsClearManualBtn" class="ws-cancel-btn ws-clear-manual-btn" onclick="WorkSchedule.clearManualEdits()" hidden>Очистить правки</button>
                     </div>
                 </div>
@@ -35120,6 +35177,121 @@ function kipPrompt(msg, defaultVal) {
             inp.focus();
             inp.select();
         });
+    });
+}
+
+/**
+ * Кастомный confirm-диалог со СПИСКОМ чекбоксов (Task 549 —
+ * заявка: «В диалоговом окне подтверждения удаления ручных правок
+ * сделай возможность удаления каждой правки по отдельности с
+ * кратким наименованием правок (пример краткого содержания —
+ * работник/дата правки/наименование правки)»). Каждая строка
+ * отмечается/снимается отдельно (кнопка «Выбрать все / Снять
+ * все», счётчик «Выбрано: N из M»); OK применяется ТОЛЬКО к
+ * отмеченным строкам. Построен на общем оверлее/анимации
+ * kipConfirm (Task 265/278: Escape — отмена, Enter — подтверждение
+ * не с кнопки/чекбокса; повторное срабатывание защищено).
+ * @param {string} msg — вводный текст над списком
+ * @param {Array<{id:string, label:string, sub?:string}>} items —
+ *   строки: id вернётся в выборке, label — краткое наименование
+ *   (работник · дата · наименование правки), sub — пояснение
+ *   серым мелким (тип правки/комментарий)
+ * @param {object} [opts] — как kipConfirm ({ title, okText,
+ *   cancelText, danger }) + selectAll (default true) — исходное
+ *   состояние всех чекбоксов
+ * @returns {Promise<Array<string>|null>} — массив ВЫБРАННЫХ id (OK;
+ *   пустая выборка невозможна — кнопка блокируется) / null (отмена,
+ *   Escape)
+ */
+function kipConfirmList(msg, items, opts) {
+    opts = opts || {};
+    return new Promise(function(resolve) {
+        var ov = _kipDialogOverlay();
+        var dangerCls = opts.danger ? ' danger' : '';
+        var title = (opts.title != null && String(opts.title)) || 'Подтвердите действие';
+        var okText = (opts.okText != null && String(opts.okText)) || 'OK';
+        var cancelText = (opts.cancelText != null && String(opts.cancelText)) || 'Отмена';
+        var list = Array.isArray(items) ? items : [];
+        var html =
+            '<div class="kip-dialog with-list">' +
+                '<div class="kip-dialog-title">' + _kipDialogEsc(title) + '</div>' +
+                '<div class="kip-dialog-msg">' + (msg || '').replace(/</g, '&lt;') + '</div>' +
+                '<div class="kip-dialog-items">';
+        for (var i = 0; i < list.length; i++) {
+            var it = list[i] || {};
+            html +=
+                '<label class="kip-dialog-item">' +
+                    '<input type="checkbox" data-id="' + _kipDialogEsc(it.id) + '"' +
+                        (opts.selectAll === false ? '' : ' checked') + '>' +
+                    '<span class="kip-dialog-item-text">' +
+                        '<span class="kip-dialog-item-label">' + _kipDialogEsc(it.label) + '</span>' +
+                        (it.sub ? '<span class="kip-dialog-item-sub">' + _kipDialogEsc(it.sub) + '</span>' : '') +
+                    '</span>' +
+                '</label>';
+        }
+        html +=
+                '</div>' +
+                '<div class="kip-dialog-selectrow">' +
+                    '<button type="button" class="kip-dialog-selectall">Выбрать все</button>' +
+                    '<span class="kip-dialog-count"></span>' +
+                '</div>' +
+                '<div class="kip-dialog-btns">' +
+                    '<button type="button" class="kip-dialog-btn kip-dialog-cancel">' + _kipDialogEsc(cancelText) + '</button>' +
+                    '<button type="button" class="kip-dialog-btn kip-dialog-ok' + dangerCls + '">' + _kipDialogEsc(okText) + '</button>' +
+                '</div>' +
+            '</div>';
+        ov.innerHTML = html;
+        var boxes = Array.prototype.slice.call(
+            ov.querySelectorAll('.kip-dialog-item input[type="checkbox"]'));
+        var okBtn = ov.querySelector('.kip-dialog-ok');
+        var countEl = ov.querySelector('.kip-dialog-count');
+        var selAllBtn = ov.querySelector('.kip-dialog-selectall');
+        var settled = false;
+        var selected = function() {
+            var out = [];
+            for (var s = 0; s < boxes.length; s++) {
+                if (boxes[s].checked) out.push(boxes[s].getAttribute('data-id'));
+            }
+            return out;
+        };
+        // пересчёт: счётчик «Выбрано: N из M», блок OK при 0,
+        // подпись тумблера «Выбрать все» ↔ «Снять все»
+        var recount = function() {
+            var n = 0;
+            for (var b = 0; b < boxes.length; b++) if (boxes[b].checked) n++;
+            if (countEl) countEl.textContent = 'Выбрано: ' + n + ' из ' + boxes.length;
+            okBtn.disabled = (n === 0);
+            if (selAllBtn) {
+                selAllBtn.textContent = (n === boxes.length) ? 'Снять все' : 'Выбрать все';
+            }
+        };
+        boxes.forEach(function(bx) { bx.addEventListener('change', recount); });
+        if (selAllBtn) selAllBtn.onclick = function() {
+            var anyOff = boxes.some(function(bx) { return !bx.checked; });
+            for (var s2 = 0; s2 < boxes.length; s2++) boxes[s2].checked = anyOff;
+            recount();
+        };
+        var onKey = function(e) {
+            var t = e && e.target;
+            // Enter с кнопки жмёт её, с чекбокса/строки — не подтверждает
+            var fromCtrl = t && t.closest
+                ? t.closest('.kip-dialog-btn, .kip-dialog-item, .kip-dialog-selectall')
+                : null;
+            if (e.key === 'Escape') done(null);
+            else if (e.key === 'Enter' && !fromCtrl && !okBtn.disabled) done(selected());
+        };
+        var cleanup = function() { document.removeEventListener('keydown', onKey); };
+        var done = function(value) {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            _kipDialogClose(ov, resolve, value);
+        };
+        ov.querySelector('.kip-dialog-cancel').onclick = function() { done(null); };
+        okBtn.onclick = function() { if (!okBtn.disabled) done(selected()); };
+        recount();
+        document.addEventListener('keydown', onKey);
+        requestAnimationFrame(function() { ov.classList.add('active'); });
     });
 }
 
@@ -65544,6 +65716,26 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // Идемпотентность: уже запланированные удаления не
         // пересчитываются — повторный клик по очищенному состоянию
         // честно говорит «нечего очищать».
+        // Task 549 (заявка: «В диалоговом окне подтверждения удаления
+        // ручных правок сделай возможность удаления каждой правки по
+        // отдельности с кратким наименованием правок (пример краткого
+        // содержания — работник/дата правки/наименование правки)»):
+        // диалог заменён kipConfirmList — СПИСОК чекбоксов, по строке
+        // на каждую правку: «РАБОТНИК · ДАТА · НАИМЕНОВАНИЕ ПРАВКИ»
+        // (ФИО из справочника, нет — «таб. № X»; дата — день ячейки
+        // dd.mm.гггг; наименование — краткое обозначение кода из
+        // «Коды_статусов», неизвестный код → «код «X»», пустой/«.» →
+        // «Выходной»); серым мелким — тип правки («ручная запись на
+        // сервере» / «несохранённая правка» / «авто-подмена,
+        // материализована» — реестр Task 458) и комментарий (≤40
+        // симв.). Порядок строк — по дате, затем таб-номеру; все
+        // отмечены по умолчанию (прежнее поведение «очистить всё»);
+        // «Выбрать все/Снять все» + счётчик «Выбрано: N из M»; OK
+        // применяется ТОЛЬКО к отмеченным — надгробия/реестр/тост
+        // «Очищено правок: N» — по выборке. Отмена/Escape — ничего
+        // не меняется. Фолбэк-среды без kipConfirmList (старые
+        // VM-харнессы): прежний kipConfirm danger со счётчиком —
+        // очистка ВСЕГО скопом (обратная совместимость тестов 548).
         clearManualEdits: function() {
             if (!this._canEdit || this._saving) return;
             var self = this;
@@ -65556,8 +65748,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             }
             var pend = this._PENDING || (this._PENDING = {});
             // 1) серверные ручные записи месяца — под удаление
+            // (rows — строки диалога Task 549: id = ключ ячейки)
             var delKeys = {};
             var regen = false;
+            var rows = [];
             var entries = this._ENTRIES || [];
             for (var e = 0; e < entries.length; e++) {
                 var en = entries[e];
@@ -65572,10 +65766,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 delKeys[keyE] = 1;
                 // запись на плановой смене → ячейка опустеет до
                 // «Сформировать» (генерация вставит авто-смену)
-                if (!regen && typeof this._plannedShiftAt === 'function' &&
-                        this._plannedShiftAt(dateE, tabs[tabE])) {
-                    regen = true;
-                }
+                var rowRegen = !!(typeof this._plannedShiftAt === 'function' &&
+                        this._plannedShiftAt(dateE, tabs[tabE]));
+                if (rowRegen) regen = true;
+                rows.push({ key: keyE, date: dateE, tab: tabE, kind: 'srv',
+                            code: String(en['статус'] || ''),
+                            comm: String(en['комментарий'] || ''),
+                            regen: rowRegen });
             }
             // 2) локальные правки: поверх ручной записи — запись уже
             // в delKeys (правка заменяется удалением); поверх авто /
@@ -65593,6 +65790,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 // правка поверх авто-записи АРХИВНОГО таба — не трогаем
                 if (srv && !tabs[parts[1]]) continue;
                 dropPend.push(keyP);
+                rows.push({ key: keyP, date: parts[0], tab: parts[1], kind: 'pend',
+                            code: String((pend[keyP] || {})['статус'] || ''),
+                            comm: String((pend[keyP] || {})['комментарий'] || ''),
+                            regen: false });
             }
             var nDel = Object.keys(delKeys).length;
             var nDrop = dropPend.length;
@@ -65603,17 +65804,59 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 }
                 return;
             }
-            var msg = 'Очистить ручные правки месяца — ' + n +
-                      ' (' + nDel + ' ' +
-                      this._plural(nDel, ['запись на сервере', 'записи на сервере', 'записей на сервере']) +
-                      (nDrop ? ', ' + nDrop + ' ' +
-                       this._plural(nDrop, ['несохранённая правка', 'несохранённые правки', 'несохранённых правок']) : '') +
-                      ')?\n' +
-                      'Ячейки освободятся для автоматической расстановки подмен и генерации; ' +
-                      'записи «авто» не затрагиваются.' +
-                      (regen ? '\nРучные записи на плановых сменах восстановит «Сформировать».' : '');
-            var doClear = function() {
+            // Task 549: строки диалога — РАБОТНИК · ДАТА · НАИМЕНОВАНИЕ
+            // ПРАВКИ; порядок — по дате, затем таб-номеру
+            rows.sort(function(a, b) {
+                if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+                return String(a.tab) < String(b.tab) ? -1 :
+                       (String(a.tab) > String(b.tab) ? 1 : 0);
+            });
+            var items = [];
+            for (var rr = 0; rr < rows.length; rr++) {
+                var row = rows[rr];
+                var emp = tabs[row.tab] || null;
+                var who = emp ? String(emp['ФИО'] || '').trim() : '';
+                if (!who) who = 'таб. № ' + row.tab;
+                var code = String(row.code || '');
+                var what;
+                if (code === '' || code === '.') {
+                    what = 'Выходной';
+                } else {
+                    var meta = (typeof this._statusMeta === 'function')
+                        ? this._statusMeta(code) : null;
+                    var nm = meta ? String(meta.short || meta.name || '') : '';
+                    what = nm ? (code + ' — ' + nm) : ('код «' + code + '»');
+                }
+                var sub = (row.kind === 'srv')
+                    ? 'ручная запись на сервере'
+                    : 'несохранённая правка';
+                if (row.kind === 'srv' && typeof this._autoDnIsKey === 'function' &&
+                        this._autoDnIsKey(row.key)) {
+                    sub = 'авто-подмена, материализована';
+                }
+                if (row.comm) {
+                    sub += ' · комм.: ' +
+                        (row.comm.length > 40 ? row.comm.slice(0, 40) + '…' : row.comm);
+                }
+                items.push({
+                    id: row.key,
+                    label: who + ' · ' +
+                        (typeof this._fmtDateRu === 'function'
+                            ? this._fmtDateRu(row.date) : row.date) +
+                        ' · ' + what,
+                    sub: sub
+                });
+            }
+            var intro = 'Ячейки освободятся для автоматической расстановки подмен и генерации; ' +
+                        'записи «авто» не затрагиваются.' +
+                        (regen ? '\nРучные записи на плановых сменах восстановит «Сформировать».' : '');
+            // применение: sel не задан → очистить ВСЁ (фолбэк-среды),
+            // иначе — ТОЛЬКО отмеченные строки; счётчик тоста — по
+            // факту применения (затеняет внешний n счётчика строк)
+            var doClear = function(sel) {
+                var n = 0;
                 for (var k in delKeys) {
+                    if (sel && !sel[k]) continue;
                     self._PENDING[k] = { __delete: true };
                     // метка реестра авто-«д»/«н» снимается: ячейка
                     // полностью свободна, надгробия НЕТ (план Task 456
@@ -65623,29 +65866,63 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                             typeof self._autoDnUnmark === 'function') {
                         self._autoDnUnmark(k);
                     }
+                    n++;
                 }
                 for (var d = 0; d < dropPend.length; d++) {
+                    if (sel && !sel[dropPend[d]]) continue;
                     delete self._PENDING[dropPend[d]];
                     if (typeof self._autoDnIsKey === 'function' &&
                             self._autoDnIsKey(dropPend[d]) &&
                             typeof self._autoDnUnmark === 'function') {
                         self._autoDnUnmark(dropPend[d]);
                     }
+                    n++;
+                }
+                if (!n) return;
+                // подсказка «Сформировать» — только если в ВЫБОРКЕ есть
+                // записи на плановых сменах (Task 549)
+                var regenSel = regen;
+                if (sel) {
+                    regenSel = false;
+                    for (var g = 0; g < rows.length; g++) {
+                        if (sel[rows[g].key] && rows[g].regen) { regenSel = true; break; }
+                    }
                 }
                 self._updateSaveBtn();
                 self._renderGrid();
                 if (typeof KipToast !== 'undefined' && KipToast.show) {
                     KipToast.show('Очищено правок: ' + n + ' — нажмите «Сохранить»' +
-                        (regen ? ', затем «Сформировать» восстановит плановые смены'
-                               : ' — подмены расставятся заново'));
+                        (regenSel ? ', затем «Сформировать» восстановит плановые смены'
+                                  : ' — подмены расставятся заново'));
                 }
             };
-            if (typeof kipConfirm === 'function') {
-                kipConfirm(msg, { title: 'Очистка ручных правок',
-                                  okText: 'Очистить правки', danger: true })
-                    .then(function(ok) { if (ok) doClear(); });
+            if (typeof kipConfirmList === 'function') {
+                // Task 549: выборочное удаление — каждая правка отдельной
+                // строкой (работник/дата/наименование), галочки по одной
+                kipConfirmList('Отметьте правки к удалению (по умолчанию — все).' +
+                               '\n' + intro,
+                               items, { title: 'Очистка ручных правок',
+                                       okText: 'Очистить правки', danger: true })
+                    .then(function(selArr) {
+                        if (!selArr) return;   // отмена/Escape — ничего не меняем
+                        var sel = {};
+                        for (var s3 = 0; s3 < selArr.length; s3++) sel[selArr[s3]] = 1;
+                        doClear(sel);
+                    });
             } else {
-                if (confirm(msg)) doClear();
+                // фолбэк (старые харнессы): прежний диалог со счётчиком
+                // — очистка ВСЕГО скопом (обратная совместимость 548)
+                var msg = 'Очистить ручные правки месяца — ' + n +
+                          ' (' + nDel + ' ' +
+                          this._plural(nDel, ['запись на сервере', 'записи на сервере', 'записей на сервере']) +
+                          (nDrop ? ', ' + nDrop + ' ' +
+                           this._plural(nDrop, ['несохранённая правка', 'несохранённые правки', 'несохранённых правок']) : '') +
+                          ')?\n' + intro;
+                if (typeof kipConfirm === 'function') {
+                    kipConfirm(msg, { title: 'Очистка ручных правок',
+                                      okText: 'Очистить правки', danger: true })
+                        .then(function(ok) { if (ok) doClear(); });
+                } else if (confirm(msg)) doClear();
             }
         },
 
