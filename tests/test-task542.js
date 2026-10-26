@@ -65,9 +65,9 @@ const WF_SRC = fs.existsSync(WF_PATH)
 const PFX_MATCH = INDEX_SRC.match(/const PB_FAV_KEY = '(\w+?)_phonebook_favorites'/);
 const PFX = PFX_MATCH ? PFX_MATCH[1] : null;
 // Task 542: v753→v754 (kip8test), v550→v551 (kip8)
-const SW_EXPECTED = { kip8test: 'kipia-test-v758', kip8: 'kipia-v551' }[PFX] || null;
+const SW_EXPECTED = { kip8test: 'kipia-test-v759', kip8: 'kipia-v551' }[PFX] || null;
 const SW_PREV = { kip8test: 'kipia-test-v753', kip8: 'kipia-v550' }[PFX] || null;
-const SW_NEXT = { kip8test: 'kipia-test-v759', kip8: 'kipia-v552' }[PFX] || null;
+const SW_NEXT = { kip8test: 'kipia-test-v760', kip8: 'kipia-v552' }[PFX] || null;
 
 const FAV_KEY = PFX + '_phonebook_favorites';
 // Task 545: ID таблицы обновлён (новая ссылка пользователя).

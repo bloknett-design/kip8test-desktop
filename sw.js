@@ -440,7 +440,7 @@
 // закреплением A3. Клиент-only.
 // Task 508: Кабельный журнал — архив: удалённые записи (_archived) скрыты
 // из печати/PDF, видны в Excel (блок «Архив»); сервер — CableJournal.gs.
-const CACHE_VERSION = 'kipia-test-v758';
+const CACHE_VERSION = 'kipia-test-v759';
 const CACHE_NAME = CACHE_VERSION;
 
 // Отдельный кэш для картинок Google Drive (превью + полные).

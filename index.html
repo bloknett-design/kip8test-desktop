@@ -18644,6 +18644,29 @@
                         <button type="button" id="wsGenerateBtn" class="ws-generate-btn" onclick="WorkSchedule.generateYear()" hidden>Сформировать</button>
                         <button type="button" id="wsSaveBtn" class="ws-save-btn" onclick="WorkSchedule.saveAll()" hidden>Сохранить</button>
                         <button type="button" id="wsCancelBtn" class="ws-cancel-btn" onclick="WorkSchedule.cancelAll()" hidden>Отменить</button>
+                        <!-- Task 548 (заявка: «Я поставил вручную у сменного
+                             работника выходной день и поэтому автоматическая
+                             расстановка подменных смен за отпускника
+                             сместилась на другого работника, предлагаю, что
+                             бы избежать в будущем такие накладки, сделать
+                             возможность очистки ячеек шахматки от ручных
+                             правок, для того, что бы автоматическая логика
+                             срабатывала более точнее»): кнопка «Очистить
+                             правки» — сброс РУЧНЫХ правок месяца к
+                             авто-состоянию (серверные записи «руч» +
+                             несохранённые локальные правки → __delete/
+                             снятие; записи «авто» — слой генерации —
+                             НЕ трогаются; материализованные авто-«д»/«н»
+                             Task 458 чистятся БЕЗ «.»-надгробий: метки
+                             реестра ws_auto_dn_keys снимаются, ячейки
+                             полностью освобождаются — план Task 456
+                             расставит подмены заново после «Сохранить»).
+                             Стиль — приглушённо-красная, как «Отменить»
+                             (деструктивное действие); видна ТОЛЬКО
+                             редакторам (как «Сформировать»: init +
+                             _onRoleUpdate); подтверждение — kipConfirm
+                             danger со счётчиком; при _saving — блок -->
+                        <button type="button" id="wsClearManualBtn" class="ws-cancel-btn ws-clear-manual-btn" onclick="WorkSchedule.clearManualEdits()" hidden>Очистить правки</button>
                     </div>
                 </div>
                 <!-- Task 315: окно 2 бара — данные ВСЕХ мероприятий
@@ -51355,6 +51378,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
 
             var genBtn = document.getElementById('wsGenerateBtn');
             if (genBtn) genBtn.hidden = !this._canEdit;
+            // Task 548: «Очистить правки» — только редакторам (сброс
+            // ручных правок месяца к авто-состоянию; повтор — в
+            // _onRoleUpdate: роль может прийти позже init)
+            var clearBtnInit = document.getElementById('wsClearManualBtn');
+            if (clearBtnInit) clearBtnInit.hidden = !this._canEdit;
             // Task 385 → 395: «Работники» (ряд 1) — страница карточек.
             // Task 395 (заявка): кнопка НЕ отображается пользователям
             // БЕЗ доступа к разделу (уровень null) и с ОГРАНИЧЕННЫМ
@@ -52758,6 +52786,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var newCanEdit = (newLevel === 'edit');
             var genBtn = document.getElementById('wsGenerateBtn');
             if (genBtn) genBtn.hidden = !newCanEdit;
+            // Task 548: «Очистить правки» — только редакторам (повтор
+            // гварда init: роль/матрица могла прийти позже)
+            var clearMnlBtn = document.getElementById('wsClearManualBtn');
+            if (clearMnlBtn) clearMnlBtn.hidden = !newCanEdit;
             // Task 385 → 395: «Работники» (ряд 1) — страница
             // карточек. Task 395 (заявка): кнопка скрыта уровням null
             // (нет доступа к разделу) и min (ограниченный просмотр) —
@@ -65473,6 +65505,147 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     .then(function(ok) { if (ok) doRevert(); });
             } else {
                 if (confirm('Отменить все несохранённые правки (' + n + ')?')) doRevert();
+            }
+        },
+
+        // Task 548 (заявка: «Я поставил вручную у сменного работника
+        // выходной день и поэтому автоматическая расстановка подменных
+        // смен за отпускника сместилась на другого работника, предлагаю,
+        // что бы избежать в будущем такие накладки, сделать возможность
+        // очистки ячеек шахматки от ручных правок, для того, что бы
+        // автоматическая логика срабатывала более точнее»): кнопка
+        // «Очистить правки» (ряд 3 #wsActionsRow, после «Отменить»;
+        // только редакторам) — сброс РУЧНЫХ правок месяца к
+        // авто-состоянию, чтобы слой авто-логики (план подмен Task
+        // 456/458, генерация «Сформировать») сработал заново по чистым
+        // ячейкам:
+        //   • серверные записи с источником «руч» (ручные коды/«.»-
+        //     надгробия поверх авто/материализованные авто-«д»/«н»
+        //     Task 458) → правка __delete («Сохранить» удалит
+        //     deleteEntry-путём, «Отменить» вернёт); метки реестра
+        //     ws_auto_dn_keys снимаются — надгробий НЕТ, ячейки
+        //     полностью свободны, план расставит подмены заново
+        //     (спрос отпусков жив) при перерисовке после «Сохранить»;
+        //   • несохранённые локальные правки: поверх авто-записи →
+        //     снимаются (ячейка снова авто), без записи (в т.ч.
+        //     несохранённая материализация __autoDn) → снимаются;
+        //     уже запланированные __delete (свип Task 547/пользователь)
+        //     остаются как есть;
+        //   • записи «авто» (плановые смены/«ОТ»/мероприятия — вывод
+        //     «Сформировать») НЕВОССТРЕВЕННО не трогаются: это слой
+        //     авто-логики, deleteEntry сервером для них запрещён;
+        //   • записи таб-номеров ВНЕ справочника (архив) сеткой не
+        //     видны — вслепую не чистятся.
+        // Ручная запись на ПЛАНОВОЙ СМЕНЕ (правка статуса дня смены)
+        // после удаления опустошит ячейку до «Сформировать» (генерация
+        // идемпотентно вставит авто-смену) — детектится _plannedShiftAt
+        // и подсказывается в тосте. Подтверждение — kipConfirm danger
+        // со счётчиком; блокируется при _saving и для зрителей.
+        // Идемпотентность: уже запланированные удаления не
+        // пересчитываются — повторный клик по очищенному состоянию
+        // честно говорит «нечего очищать».
+        clearManualEdits: function() {
+            if (!this._canEdit || this._saving) return;
+            var self = this;
+            // справочник месяца: записи архивных табов сеткой не видны
+            var tabs = {};
+            for (var i = 0; i < (this._EMPLOYEES || []).length; i++) {
+                var empI = this._EMPLOYEES[i];
+                var tabI = String(empI['таб_номер'] || '');
+                if (tabI) tabs[tabI] = empI;
+            }
+            var pend = this._PENDING || (this._PENDING = {});
+            // 1) серверные ручные записи месяца — под удаление
+            var delKeys = {};
+            var regen = false;
+            var entries = this._ENTRIES || [];
+            for (var e = 0; e < entries.length; e++) {
+                var en = entries[e];
+                if (String(en['источник'] || '').trim() !== 'руч') continue;
+                var dateE = String(en['дата'] || '');
+                var tabE = String(en['таб_номер'] || '');
+                if (!dateE || !tabE || !tabs[tabE]) continue;
+                var keyE = dateE + '|' + tabE;
+                // уже запланированное удаление (свип/пользователь) —
+                // не пересчитываем (идемпотентность счётчика)
+                if (pend[keyE] && pend[keyE].__delete) continue;
+                delKeys[keyE] = 1;
+                // запись на плановой смене → ячейка опустеет до
+                // «Сформировать» (генерация вставит авто-смену)
+                if (!regen && typeof this._plannedShiftAt === 'function' &&
+                        this._plannedShiftAt(dateE, tabs[tabE])) {
+                    regen = true;
+                }
+            }
+            // 2) локальные правки: поверх ручной записи — запись уже
+            // в delKeys (правка заменяется удалением); поверх авто /
+            // локальная / несохранённая материализация — снимаются
+            var dropPend = [];
+            var pk = Object.keys(pend);
+            for (var q = 0; q < pk.length; q++) {
+                var keyP = pk[q];
+                if (pend[keyP] && pend[keyP].__delete) continue;
+                var parts = String(keyP).split('|');
+                if (parts.length !== 2 || !parts[0] || !parts[1]) continue;
+                var srv = (typeof this._serverEntry === 'function')
+                    ? this._serverEntry(parts[0], parts[1]) : null;
+                if (srv && String(srv['источник'] || '').trim() === 'руч') continue;
+                // правка поверх авто-записи АРХИВНОГО таба — не трогаем
+                if (srv && !tabs[parts[1]]) continue;
+                dropPend.push(keyP);
+            }
+            var nDel = Object.keys(delKeys).length;
+            var nDrop = dropPend.length;
+            var n = nDel + nDrop;
+            if (!n) {
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Ручных правок в месяце нет — очищать нечего');
+                }
+                return;
+            }
+            var msg = 'Очистить ручные правки месяца — ' + n +
+                      ' (' + nDel + ' ' +
+                      this._plural(nDel, ['запись на сервере', 'записи на сервере', 'записей на сервере']) +
+                      (nDrop ? ', ' + nDrop + ' ' +
+                       this._plural(nDrop, ['несохранённая правка', 'несохранённые правки', 'несохранённых правок']) : '') +
+                      ')?\n' +
+                      'Ячейки освободятся для автоматической расстановки подмен и генерации; ' +
+                      'записи «авто» не затрагиваются.' +
+                      (regen ? '\nРучные записи на плановых сменах восстановит «Сформировать».' : '');
+            var doClear = function() {
+                for (var k in delKeys) {
+                    self._PENDING[k] = { __delete: true };
+                    // метка реестра авто-«д»/«н» снимается: ячейка
+                    // полностью свободна, надгробия НЕТ (план Task 456
+                    // расставит подмену заново после «Сохранить»)
+                    if (typeof self._autoDnIsKey === 'function' &&
+                            self._autoDnIsKey(k) &&
+                            typeof self._autoDnUnmark === 'function') {
+                        self._autoDnUnmark(k);
+                    }
+                }
+                for (var d = 0; d < dropPend.length; d++) {
+                    delete self._PENDING[dropPend[d]];
+                    if (typeof self._autoDnIsKey === 'function' &&
+                            self._autoDnIsKey(dropPend[d]) &&
+                            typeof self._autoDnUnmark === 'function') {
+                        self._autoDnUnmark(dropPend[d]);
+                    }
+                }
+                self._updateSaveBtn();
+                self._renderGrid();
+                if (typeof KipToast !== 'undefined' && KipToast.show) {
+                    KipToast.show('Очищено правок: ' + n + ' — нажмите «Сохранить»' +
+                        (regen ? ', затем «Сформировать» восстановит плановые смены'
+                               : ' — подмены расставятся заново'));
+                }
+            };
+            if (typeof kipConfirm === 'function') {
+                kipConfirm(msg, { title: 'Очистка ручных правок',
+                                  okText: 'Очистить правки', danger: true })
+                    .then(function(ok) { if (ok) doClear(); });
+            } else {
+                if (confirm(msg)) doClear();
             }
         },
 
