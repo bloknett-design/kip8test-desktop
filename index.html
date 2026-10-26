@@ -56795,7 +56795,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     'переработка': 0,
                     'замещает': null,
                     'комментарий': '',
-                    'часы': null
+                    'часы': null,
+                    // Task 547: флаг материализации — свип отличает
+                    // СВОЮ правку от пользовательской (снимать можно
+                    // только свою); saveAll поле не отправляет
+                    '__autoDn': true
                 };
                 reg[mk][k] = 1;
                 added++;
@@ -56804,6 +56808,132 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 this._autoDnKeysSave(mk);
             }
             return added;
+        },
+
+        // Task 547 (заявка: «ранее подменные дни, распределённые
+        // другим сменным работникам, остаются, хотя у отпускного
+        // работника возвращаются его рабочие смены и отпуск
+        // смещается»): СВИП устаревших авто-«д»/«н» замещения
+        // отпуска. Отпуск сместился, «Сформировать» вернуло
+        // отпускнику его смены (сервер Task 547 — рестор из-под
+        // устаревшего «ОТ») — СПРОС дня (отпускник со плановой
+        // сменой «Д»/«Н» этого типа, как need _autoDnPlan)
+        // исчез, а материализованные ранее «д»/«н» остались
+        // записями «руч» (замещает пуст — серверу они неотличимы
+        // от ручного ввода). Реестр месяца (_autoDnKeysLoad,
+        // localStorage) знает эти ячейки; день без спроса:
+        //   • серверная запись «руч» → правка __delete с флагом
+        //     __autoStale («Сохранить» удалит; «Отменить» вернёт;
+        //     повторный рендер не дублирует);
+        //   • НЕСОХРАНЁННАЯ материализация (правка с __autoDn) →
+        //     правка снимается, метка реестра тоже (план
+        //     расставит заново, если спрос вернётся).
+        // Спрос вернулся — запланированное СВИПОМ удаление
+        // откатывается (пользовательское __delete и правки
+        // пользователя поверх — не трогаем). Ручные «д»/
+        // «н» ВНЕ реестра неприкосновенны (приоритет ручной
+        // правки; явные замещения с «замещает» снимает сервер
+        // 4.8 — generateMonth Task 547). Идемпотентен; возвращает
+        // число снятых ячеек (для тоста).
+        _autoDnStaleSweep: function() {
+            if (!this._canEdit) return 0;
+            var mk = this._year + '-' +
+                     ((this._month < 10 ? '0' : '') + this._month);
+            var reg = (this._AUTO_DN_KEYS || {})[mk];
+            if (!reg) return 0;
+            var keys = Object.keys(reg);
+            if (!keys.length) return 0;
+            // сменный персонал с шаблоном и стартом — как _autoDnPlan
+            var shifts = [];
+            for (var i = 0; i < (this._EMPLOYEES || []).length; i++) {
+                var e = this._EMPLOYEES[i];
+                if (String(e['тип'] || '').trim() !== 'сменный') continue;
+                if (!e.шаблон_ротации || !e.старт_цикла) continue;
+                shifts.push(e);
+            }
+            if (shifts.length < 2) return 0;
+            var pend = this._PENDING || (this._PENDING = {});
+            var vacCodes = this._VAC_CODES || [];
+            var swept = 0;
+            for (var j = 0; j < keys.length; j++) {
+                var key = keys[j];
+                var parts = String(key).split('|');
+                if (parts.length !== 2) continue;
+                var iso = parts[0];
+                var tab = parts[1];
+                var day = parseInt(String(iso).split('-')[2], 10) || 0;
+                if (!day) continue;
+                var p = pend[key];
+                // Правка пользователя поверх слоя (любой код, не
+                // удаление) — НЕПРИКОСВОВЕННА: пользовательский ввод
+                // главнее (даже «д»/«н», перепечатанный руками)
+                if (p && !p.__delete && !p.__autoDn) continue;
+                // Живой «д»/«н»: серверная запись ИЛИ несохранённая
+                // материализация (правка с __autoDn). СТАТУС — ПО
+                // СЕРВЕРУ: под запланированным __delete эффективное
+                // состояние пусто, а запись жива (откат удаления)
+                var srv = (typeof this._serverEntry === 'function')
+                    ? this._serverEntry(iso, tab) : null;
+                var srvSt = srv ? String(srv['статус'] || '') : '';
+                var pendSt = (p && p.__autoDn) ? String(p['статус'] || '') : '';
+                var isDn = (srvSt === 'д' || srvSt === 'н');
+                var isDnPend = (pendSt === 'д' || pendSt === 'н');
+                if (!isDn && !isDnPend) continue;
+                var st = isDn ? srvSt : pendSt;
+                var type = (st === 'д') ? 'Д' : 'Н';
+                // спрос дня — как need _autoDnPlan: отпускник
+                // (эффективная запись семейства отпусков ИЛИ план
+                // листа «Отпуска» в пустой ячейке) со плановой
+                // сменой этого типа
+                var demand = false;
+                for (var s = 0; s < shifts.length; s++) {
+                    var sh = shifts[s];
+                    if (sh['таб_номер'] === tab) continue;
+                    var onVac = false;
+                    var rec = (typeof this._effectiveEntry === 'function')
+                        ? this._effectiveEntry(iso, sh['таб_номер']) : null;
+                    if (rec) {
+                        var rst = String(rec['статус'] || '');
+                        for (var v = 0; v < vacCodes.length; v++) {
+                            if (rst === vacCodes[v]) { onVac = true; break; }
+                        }
+                    } else if (typeof this._vacationAt === 'function') {
+                        onVac = !!this._vacationAt(iso, sh['таб_номер']);
+                    }
+                    if (!onVac) continue;
+                    if (typeof this._plannedShiftAt === 'function' &&
+                            this._plannedShiftAt(iso, sh) === type) {
+                        demand = true;
+                        break;
+                    }
+                }
+                if (demand) {
+                    // спрос вернулся — откатить запланированное
+                    // СВИПОМ удаление (пользовательское не трогаем)
+                    if (p && p.__delete && p.__autoStale) {
+                        delete pend[key];
+                    }
+                    continue;
+                }
+                if (p && p.__delete) continue;  // уже удаляется (свип/пользователь)
+                if (!srv) {
+                    // несохранённая материализация — снять правку и метку
+                    if (p && p.__autoDn && isDnPend) {
+                        delete pend[key];
+                        if (typeof this._autoDnUnmark === 'function') {
+                            this._autoDnUnmark(key);
+                        }
+                        swept++;
+                    }
+                    continue;
+                }
+                // серверная запись — запланировать удаление
+                if (srv.источник === 'руч') {
+                    pend[key] = { __delete: true, __autoStale: true };
+                    swept++;
+                }
+            }
+            return swept;
         },
 
         // Task 458: реестр месяца из localStorage — авто-«д»/«н»,
@@ -57095,6 +57225,20 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     typeof this._autoDnMaterialize === 'function') {
                 if (typeof this._autoDnKeysLoad === 'function') {
                     this._autoDnKeysLoad();
+                }
+                // Task 547: устаревшие авто-«д»/«н» (отпуск сместился —
+                // спрос дня исчез) снимаются ДО материализации нового
+                // плана: свободные ячейки план сможет занять заново
+                var autoSwept = (typeof this._autoDnStaleSweep === 'function')
+                    ? this._autoDnStaleSweep() : 0;
+                if (autoSwept > 0) {
+                    this._updateSaveBtn();
+                    if (typeof KipToast !== 'undefined' &&
+                            KipToast.show) {
+                        KipToast.show('Авто: снято ' + autoSwept +
+                                      ' устаревших «д»/«н» (замещение отпуска)' +
+                                      ' — нажмите «Сохранить»');
+                    }
                 }
                 var autoAdded = this._autoDnMaterialize();
                 if (autoAdded > 0) {
@@ -60497,6 +60641,11 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         // цикла / выходные дневного персонала), убранные
                         // сверкой — отдельная строка тоста
                         var removedShift = (data && data.removedShift) || 0;
+                        // Task 547: смены, возвращённые отпускникам при
+                        // смещении/удалении периода, и снятые замещения
+                        // («замещает»=X работает свою смену)
+                        var vacRestored = (data && data.vacationRestored) || 0;
+                        var subsRemoved = (data && data.substitutionsRemoved) || 0;
                         KipToast.show(monthName + ' ' + self._year + ': сформировано ' +
                                       ((data && data.generated) || 0) + ' зап., обновлено ' +
                                       ((data && data.updated) || 0) +
@@ -60506,6 +60655,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                           : '') +
                                       (removedShift
                                           ? ', убрано ' + removedShift + ' лишних смен'
+                                          : '') +
+                                      (vacRestored
+                                          ? ', возвращено смен из отпусков ' + vacRestored
+                                          : '') +
+                                      (subsRemoved
+                                          ? ', снято замещений ' + subsRemoved
                                           : '') +
                                       ((data && data.vacationError)
                                           ? '; отпуска не проверены: ' + data.vacationError
@@ -60544,6 +60699,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             var totalVacDays = 0;
             // Task 320: сумма убранных авто-смен (до старта/выходные)
             var totalRemovedShift = 0;
+            // Task 547: суммы возвращённых из-под отпусков смен и
+            // снятых устаревших замещений
+            var totalVacRestored = 0;
+            var totalSubsRemoved = 0;
             // Task 304: предупреждения всех месяцев (таб не из справочника)
             var totalWarns = [];
             var monthsDone = 0;
@@ -60561,6 +60720,10 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                                        ' устаревших отпусков' : '') +
                                       (totalRemovedShift ? ', убрано ' + totalRemovedShift +
                                        ' лишних смен' : '') +
+                                      (totalVacRestored ? ', возвращено смен из отпусков ' +
+                                       totalVacRestored : '') +
+                                      (totalSubsRemoved ? ', снято замещений ' +
+                                       totalSubsRemoved : '') +
                                       (totalWarns.length
                                           ? '; ⚠ ' + totalWarns.slice(0, 3).join('; ') +
                                             (totalWarns.length > 3
@@ -60581,6 +60744,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         totalRemoved += (data && data.removed) || 0;
                         totalVacDays += (data && data.vacationDays) || 0;
                         totalRemovedShift += (data && data.removedShift) || 0;
+                        // Task 547: рестор смен и снятые замещения месяца
+                        totalVacRestored += (data && data.vacationRestored) || 0;
+                        totalSubsRemoved += (data && data.substitutionsRemoved) || 0;
                         // Task 304: предупреждения месяца (таб не из справочника)
                         if (data && data.warnings && data.warnings.length) {
                             totalWarns = totalWarns.concat(data.warnings);
