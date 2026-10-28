@@ -264,9 +264,11 @@ describe('Task 480 — data/*.json: метаданные источника', ()
     // Task 540 (поверх авто-синка f42423f5 от 20.10.2026): пользователь
     // авто-синк c60c426b (21.10.2026) — ещё 1 блокировка удалена: 529 → 528
     // (прецедент: Task 540 → 541 — пины двигаются как ассист)
+    // Task 550 (rebase поверх авто-синков b5901225/602358e9/c7f09ed5
+    // от 27–28.10.2026): пользователь добавил блокировку — 529 → 530
     const TOTALS = {
         'data/devices.json':    { total: 'total_devices',    value: 1288, sheet: 'Приборы_app' },
-        'data/lockouts.json':   { total: 'total_lockouts',   value: 529,  sheet: 'Блокировки_app' },
+        'data/lockouts.json':   { total: 'total_lockouts',   value: 530,  sheet: 'Блокировки_app' },
         'data/valves.json':     { total: 'total_valves',     value: 320,  sheet: 'Клапана_app' },
         'data/regulators.json': { total: 'total_regulators', value: 268,  sheet: 'Регуляторы_app' }
     };
