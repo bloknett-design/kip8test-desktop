@@ -39,7 +39,7 @@
 //       (защита примечаний от формул);
 //   scripts/Code.gs — роутинг phonebook.getMyData / setFavorite /
 //   setNote (+ строка в шапке-индексе модулей);
-//   клиент НЕ менялся (SW без изменений — kipia-test-v760).
+//   клиент НЕ менялся (SW без изменений — kipia-test-v761).
 //
 // Запуск: через tests/run-all.js (require './test-task537.js').
 

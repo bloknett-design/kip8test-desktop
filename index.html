@@ -58482,6 +58482,21 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return 8;
         },
 
+        // Task 550: дата записи табеля — нерабочий праздничный день
+        // (ст. 112 ТК РФ)? «дата» записи — ISO YYYY-MM-DD (сервер и
+        // ручные правки). Источник — ОБЩИЙ с «чистыми» днями отпуска
+        // шторки/карточки (Task 310): _vacIsHoliday →
+        // ProdCalendar.dayInfo (данные года шахматки, фолбэк —
+        // фиксированные даты ст. 112), итоги и шторка сходятся в
+        // одну цифру. Без ProdCalendar — false: мягкая деградация,
+        // прежний подсчёт всеми календарными днями
+        _entryIsHoliday: function(entry) {
+            if (!entry) return false;
+            var dt = this._parseIsoLocal(entry['дата']);
+            if (!dt) return false;
+            return this._vacIsHoliday(dt);
+        },
+
         // Агрегация записей месяца по сотрудникам. Возвращает
         // { byTab: {таб_номер: счётчик}, grand: счётчик-сумма }.
         // Классификация кода (Task 322): «д»/«н» — ПЕРЕРАБОТКА
@@ -58493,7 +58508,9 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // незнакомые коды без часов → other; total — все записи
         // (каждая запись = один день табеля). empTypeMap — карта
         // типов персонала (_empTypeMap), месяц и год собирают её из
-        // своего списка сотрудников
+        // своего списка сотрудников. Task 550: «ОТ» на нерабочий
+        // праздничный день (ст. 112) в счётчик «Отпуск (ОТ)» НЕ
+        // входит (ст. 120 ТК РФ) — см. ветку ниже и _entryIsHoliday
         _totalsAgg: function(entries, empTypeMap) {
             var types = empTypeMap || {};
             var byTab = {};
@@ -58522,7 +58539,26 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                     else a.day++;
                 } else if (code === 'ОТ' || code === 'У' || code === 'ОВ' ||
                            code === 'Б' || code === 'ПР') {
-                    a[code]++;
+                    // Task 550 (заявка: «при расчёте в итогах учёта
+                    // количества дней отпуска официальные праздничные
+                    // дни, которые не учитываются в отпуске, не должны
+                    // учитываться»): «ОТ» на нерабочий праздничный
+                    // день (ст. 112 ТК РФ) в число дней отпуска НЕ
+                    // входит (ст. 120 ТК РФ) — счётчик «Отпуск (ОТ)»
+                    // его НЕ считает; запись остаётся днём табеля
+                    // (total++) и «ОТ» в сетке (отпуск — в календарных
+                    // днях, период целиком). Только «ОТ»: «У» — уч.
+                    // отпуск в календарных днях справкой-вызовом
+                    // (ст. 173/174 ТК РФ), праздники входят; «Б»/«ОВ»/
+                    // «ПР» — без вычета. Источник праздников — общий
+                    // с «чистыми» днями шторки отпуска (Task 310).
+                    // typeof-оговорка — старые VM-харнессы тестов без
+                    // _entryIsHoliday (Task 321+): прежний подсчёт
+                    // всеми календарными днями
+                    var otHol = (code === 'ОТ'
+                                 && typeof this._entryIsHoliday === 'function'
+                                 && this._entryIsHoliday(e));
+                    if (!otHol) a[code]++;
                 } else if (code) {
                     a.other++;
                 }
@@ -59457,6 +59493,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
         // УДАЛЕНЫ по заявке; столбцы РАВНОЙ ширины (table-layout:
         // fixed — см. CSS), заголовки переносятся на 2 строки при
         // нехватке; зебра строк сохранена
+        // Task 550 (заявка: «при расчёте в итогах учёта количества
+        // дней отпуска официальные праздничные дни, которые не
+        // учитываются в отпуске, не должны учитываться»): столбец
+        // «Отпуск (ОТ)» — «чистые» дни: нерабочие праздничные дни
+        // ст. 112 в число дней отпуска не входят (ст. 120 ТК РФ) —
+        // вычитаются в _totalsAgg (как в шторке отпуска, Task 310);
+        // уч. отпуск «У» и «Б»/«ОВ» — в календарных днях, БЕЗ вычета
         _renderTotalsMonth: function() {
             var body = (typeof this._ttBodyEl === 'function')
                 ? this._ttBodyEl() : document.getElementById('wsTtBody');
@@ -59524,7 +59567,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                 cols = cols.concat([
                     { key: 'ОВ',    name: 'Отгул (ОВ)',        wcls: 'ws-tt-c-ov' },
                     { key: 'Б',     name: 'Больничный (Б)',     wcls: 'ws-tt-c-b' },
-                    { key: 'ОТ',    name: 'Отпуск (ОТ)',        wcls: 'ws-tt-c-ot' },
+                    { key: 'ОТ',    name: 'Отпуск (ОТ)',        wcls: 'ws-tt-c-ot',
+                      title: 'Дни отпуска за вычетом нерабочих праздничных дней — ст. 112 не входит в отпуск (ст. 120 ТК РФ)' },
                     { key: 'У',     name: 'Уч. отпуск (У)',     wcls: 'ws-tt-c-u' },
                     { key: 'ПР',    name: 'Прогул (ПР)',        wcls: 'ws-tt-c-pr' },
                     { key: 'day',   name: 'День (Д)',           wcls: 'ws-tt-c-day' },
