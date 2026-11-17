@@ -6424,6 +6424,15 @@
         flex: 1;
         min-width: 0;
     }
+    /* Task 553: примечание записи («комментарий» листа «Инструктажи»,
+       столбец H) в строках блока «Повторные инструктажи и периодическая
+       проверка знаний» — курсив, чуть тише текста строки (opacity —
+       действует в обеих темах); в карте переносится вместе с темой
+       (Task 415), размер в карте — ниже (.ws-wcard .ws-tr-note) */
+    .ws-tr-note {
+        font-style: italic;
+        opacity: 0.75;
+    }
     /* Task 319 (заявка): окно ВЫБОРА КОДОВ — НАЗВАНИЕ кода чуть
        МЕЛЬЧЕ и ПЕРЕНОСИТСЯ по строкам (прежде — однострочное
        многоточие): длинные названия («Отпуск без сохранения …»)
@@ -7550,6 +7559,9 @@
     /* Task 444: мета-строка (даты/сроки) в карточке — 13px,
        «до …» — 1.15em ≈ 15px, заметно крупнее */
     .ws-wcard .ws-ppe-meta { font-size: 13px; }
+    /* Task 553: примечание инструктажей/проверок знаний в карте —
+       13px, как мета-строка СИЗ (курсив/затемнение — .ws-tr-note) */
+    .ws-wcard .ws-tr-note { font-size: 13px; }
     /* Task 415 (заявка): в блоках КАРТЫ работника записи, не
        помещающиеся в одну строку, ПЕРЕНОСЯТСЯ на следующую
        (прежде — обрезались многоточием). Темы мероприятий и
@@ -62469,6 +62481,13 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         ? this._fmtDateRu(it.дата_начала)
                         : (this._fmtDateRu(it.дата_начала) + ' — ' +
                            this._fmtDateRu(it.дата_окончания));
+                    // Task 553 (typeof-оговорка — приём Task 550 для
+                    // старых VM-харнессов без хелпера): примечание
+                    // записи — в конце строки («тема · дата ·
+                    // «примечание»»); хост без метода рендерит как
+                    // прежде (без примечания)
+                    var iNote = (typeof this._instrNoteHtml === 'function')
+                        ? this._instrNoteHtml(it) : '';
                     // Task 418 (заявка: столбцы «дата_проведения» /
                     // «выполнение» / «просрочен» листа «Инструктажи»):
                     // состояние записи — отметка о выполнении
@@ -62534,7 +62553,7 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                           // остались в тултипе бейджа, окнах дня и
                           // месяца, печати табеля)
                           this._esc(it.тема || iMeta.name || it.тип) +
-                          ' · ' + iPeriod + '</span>' +
+                          ' · ' + iPeriod + iNote + '</span>' +
                           iLateTag + iRowEnd + '</div>';
                 }
             }
@@ -62922,6 +62941,30 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
             return { ins: ins, evs: evs };
         },
 
+        // Task 553 (заявка: «в разделе "Табель учёта рабочего времени /
+        // Работники" в блоке инструктажей и проверки знаний, сделай
+        // отображения примечания в инструктажах и проверках данных»):
+        // примечание записи — поле «комментарий» листа «Инструктажи»
+        // (столбец H; шторки «+ Инструктаж…»/«✎» сохраняют его полем
+        // «Комментарий (необязательно)», сервер addTraining пишет и
+        // listTrainings отдаёт — изменений GAS НЕ ТРЕБУЕТ). Хелпер —
+        // « · «примечание»» (курсив .ws-tr-note) для конца строки
+        // записи; пробельные и пустые значения не показываются.
+        // Один хелпер на все три вью блока «Повторные инструктажи и
+        // периодическая проверка знаний»: плоские строки КАРТЫ
+        // (страница «Работники», asBlocks), строки групп
+        // «Список_И_и_ПЗ» попапа ячейки (после даты — тема в
+        // заголовке группы) и строки «вне списка»; в карте
+        // примечание переносится вместе с темой строки (Task 415).
+        // Вызовы — с typeof-оговоркой (приём Task 550): старые
+        // VM-харнессы тестов без хелпера рендерят как прежде
+        _instrNoteHtml: function(rec) {
+            var note = String((rec || {}).комментарий || '').trim();
+            return note
+                ? ' · <span class="ws-tr-note">«' + this._esc(note) + '»</span>'
+                : '';
+        },
+
         _renderInstrSection: function(ins, tabNo, withEdit, asBlocks, iList, year) {
             var html = '';
             var today = this._isoDate(new Date());
@@ -63049,10 +63092,16 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         ? this._fmtDateRu(gr.дата_начала)
                         : (this._fmtDateRu(gr.дата_начала) + ' — ' +
                            this._fmtDateRu(gr.дата_окончания));
+                    // Task 553 (typeof-оговорка — приём Task 550
+                    // для старых VM-харнессов): примечание — после
+                    // даты строки группы (тема записи — в заголовке
+                    // группы над строками)
+                    var rNote = (typeof this._instrNoteHtml === 'function')
+                        ? this._instrNoteHtml(gr) : '';
                     html += '<div class="ws-popup-row ws-popup-event ws-il-row">' +
                             '<span class="ws-popup-code">' +
                             this._esc(this._trainingCodeOf(gr.тип) || gCode) + '</span>' +
-                            '<span class="ws-popup-name">' + rPeriod + '</span>' +
+                            '<span class="ws-popup-name">' + rPeriod + rNote + '</span>' +
                             rActs + '</div>';
                 }
                 if (asBlocks && !gRows.length) {
@@ -63099,6 +63148,12 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                         ? this._fmtDateRu(ot.дата_начала)
                         : (this._fmtDateRu(ot.дата_начала) + ' — ' +
                            this._fmtDateRu(ot.дата_окончания));
+                    // Task 553 (typeof-оговорка — приём Task 550
+                    // для старых VM-харнессов): примечание — как в
+                    // плоских строках карты (тема · дата ·
+                    // «примечание»)
+                    var oNote = (typeof this._instrNoteHtml === 'function')
+                        ? this._instrNoteHtml(ot) : '';
                     html += '<div class="ws-popup-row ws-popup-event' +
                           ((asBlocks && oi % 2 === 1) ? ' ws-row-alt' : '') + '">' +
                           '<span class="ws-popup-swatch" style="background:' +
@@ -63106,7 +63161,8 @@ function calculateBuoySignalValue(pct,st){ let r=getBuoySignalRangeAndUnit(st); 
                           '<span class="ws-popup-code">' + this._esc(oCode || '—') + '</span>' +
                           '<span class="ws-popup-name">' +
                           this._esc(ot.тема || oMeta.name || ot.тип) +
-                          ' · ' + oPeriod + '</span>' + oActs + '</div>';
+                          ' · ' + oPeriod + oNote +
+                          '</span>' + oActs + '</div>';
                 }
             }
             return html;

@@ -92,9 +92,9 @@ function countOf(haystack, needle) {
 // ==========================================================================
 describe('Task 480 — SW: версия кэша', () => {
 
-    test("CACHE_VERSION = 'kipia-test-v761'", () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v761';") !== -1,
-            'SW поднят до kipia-test-v761 (Task 480)');
+    test("CACHE_VERSION = 'kipia-test-v762'", () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v762';") !== -1,
+            'SW поднят до kipia-test-v762 (Task 480)');
     });
 
     test('прежняя версия v703 отсутствует', () => {
@@ -103,8 +103,8 @@ describe('Task 480 — SW: версия кэша', () => {
     });
 
     test('несуществующая v705 отсутствует (guard)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v762') === -1,
-            'kipia-test-v761 не должен существовать');
+        assertTrue(SW_SRC.indexOf('kipia-test-v763') === -1,
+            'kipia-test-v762 не должен существовать');
     });
 
     test('персистентные кэши картинок/данных НЕ инкрементировались', () => {
@@ -116,7 +116,7 @@ describe('Task 480 — SW: версия кэша', () => {
     });
 
     test('комментарий Task 480 в шапке версий (окно 2600 → 3200 → 6000, Task 486/490)', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v761';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v762';");
         // Task 490: +480 симв. комментария — окно 5000 → 6000 (якорь 5440)
         // Task 492: комментарий (~290 симв.) отодвинул якорь Task 480
         // до ~6221 — окно 6000 → 6800.
@@ -266,10 +266,13 @@ describe('Task 480 — data/*.json: метаданные источника', ()
     // (прецедент: Task 540 → 541 — пины двигаются как ассист)
     // Task 550 (rebase поверх авто-синков b5901225/602358e9/c7f09ed5
     // от 27–28.10.2026): пользователь добавил блокировку — 529 → 530
+    // Task 553 (rebase поверх авто-синков 37dde331/2ce7934f от
+    // 16.11.2026): пользователь правит Google Sheets — devices
+    // 1288 → 1279, lockouts 530 → 524, valves 320 → 325
     const TOTALS = {
-        'data/devices.json':    { total: 'total_devices',    value: 1288, sheet: 'Приборы_app' },
-        'data/lockouts.json':   { total: 'total_lockouts',   value: 530,  sheet: 'Блокировки_app' },
-        'data/valves.json':     { total: 'total_valves',     value: 320,  sheet: 'Клапана_app' },
+        'data/devices.json':    { total: 'total_devices',    value: 1279, sheet: 'Приборы_app' },
+        'data/lockouts.json':   { total: 'total_lockouts',   value: 524,  sheet: 'Блокировки_app' },
+        'data/valves.json':     { total: 'total_valves',     value: 325,  sheet: 'Клапана_app' },
         'data/regulators.json': { total: 'total_regulators', value: 268,  sheet: 'Регуляторы_app' }
     };
 

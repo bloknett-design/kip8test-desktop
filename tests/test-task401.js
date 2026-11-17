@@ -386,12 +386,12 @@ describe('Task 401 — VM: _renderTotalsYearTable — разметка', () => {
 // 6. SW — версия кэша
 // ============================================================
 describe('Task 401 — SW: версия кэша', () => {
-    test('CACHE_VERSION = kipia-test-v761 (Task 401)', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v761'") !== -1,
+    test('CACHE_VERSION = kipia-test-v762 (Task 401)', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v762'") !== -1,
             'фронтенд менялся — кэш поднят до v628');
     });
     test('guard: v629 отсутствует (следующий бамп)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v762') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v763') === -1,
             'v629 ещё не существует (guard следующего бампа)');
     });
 });

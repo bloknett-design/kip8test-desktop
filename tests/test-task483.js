@@ -39,7 +39,7 @@
 //       живым для вкладки «Блокировки»;
 //   (в) sync-devices.py: устойчивость — лист «Приборы» недоступен
 //       (экспорт с gid= одного листа) → сохранён прежний ppr_chart.
-//   SW: kipia-test-v761 (логика SW не менялась; окна истории
+//   SW: kipia-test-v762 (логика SW не менялась; окна истории
 //       расширены scripts/task483-windows.py; бамп tests —
 //       scripts/task483-bump-sw.py). АДАПТАЦИЯ test-task473.js:
 //   _PPR_DEVICES → локальный мок (механика _renderPPRChart жива для
@@ -347,8 +347,9 @@ describe('Task 483: devices.json — блок ppr_chart', () => {
     test('структура devices.json не задета (массив и заголовки прежние)', () => {
         // Task 491 (rebase поверх авто-синка 5238816d): 1291 → 1288 —
         // пользователь удалил 3 прибора в Google Sheets
-        assertEqual(DEVICES_JSON.total_devices, 1288, 'total_devices прежний');
-        assertEqual(DEVICES_JSON.devices.length, 1288, 'массив прежний');
+        // Task 553 (rebase поверх авто-синка 2ce7934f): 1288 → 1279
+        assertEqual(DEVICES_JSON.total_devices, 1279, 'total_devices прежний');
+        assertEqual(DEVICES_JSON.devices.length, 1279, 'массив прежний');
         assertEqual(DEVICES_JSON.headers.length, 24, '24 колонки');
         assertEqual(DEVICES_JSON.headers[0], 'ID', 'ID первый');
     });
@@ -489,8 +490,8 @@ describe('Task 483: VM — _renderDevicesPPR (таблица + диаграмм�
 // 5. SW: версия v707 + комментарий Task 483
 // ==========================================================================
 describe('Task 483: SW — версия и кэши', () => {
-    test('CACHE_VERSION = kipia-test-v761', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v761';") !== -1,
+    test('CACHE_VERSION = kipia-test-v762', () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v762';") !== -1,
             'версия поднята');
     });
 
@@ -499,11 +500,11 @@ describe('Task 483: SW — версия и кэши', () => {
     });
 
     test('v708 в sw.js отсутствует (лишний инкремент не сделан)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v762') === -1);
+        assertTrue(SW_SRC.indexOf('kipia-test-v763') === -1);
     });
 
     test('комментарий Task 483 в шапке версий (окно 700)', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v761';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v762';");
         // Task 490: +480 симв. комментария — окно 3900 → 4400 (якорь 4137)
         // Task 502: окно 8000 → 8600 (якорь 8474).
                 // Task 508: окно 9300 → 10500 — комментарий архива

@@ -35,7 +35,7 @@
 //      «Инструктажи» (листы независимы);
 //   9) eventsInit: существующий «Инструктажи» с данными НЕ
 //      тронут (записей 0 в лист), «Мероприятия» создан.
-//   SW: kipia-test-v761.
+//   SW: kipia-test-v762.
 // ============================================================
 
 const fs = require('fs');
@@ -361,10 +361,10 @@ describe('Task 425 — GAS-VM: блоки не влияют друг на дру
 // 3. SW — версия кэша
 // ============================================================
 describe('Task 425 — SW: версия кэша', () => {
-    test('CACHE_VERSION = kipia-test-v761', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v761'") !== -1,
+    test('CACHE_VERSION = kipia-test-v762', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v762'") !== -1,
             'SW v653 (Task 426)');
-        assertTrue(SW_SRC.indexOf('kipia-test-v762') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v763') === -1,
             'двойной бамп отсутствует');
     });
 });
