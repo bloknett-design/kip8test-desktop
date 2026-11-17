@@ -2985,6 +2985,12 @@ var WorkSchedule = {
   // раздельным»): последовательности id «Инструктажей» и
   // «Мероприятий» РАЗДЕЛЬНЫЕ (addTraining — максимум СВОЕГО
   // листа, автосоздание — только «Инструктажей»); srvVer '427'
+  // Task 554 (заявка: «при отметке галочкой о выполнении и
+  // автоматическом формировании списка на следующий год,
+  // примечания так же должны переноситься»): примечание
+  // (комментарий, столбец H) отмеченной записи переносится в
+  // автосозданные записи с новыми сроками — и в лист, и в ответ
+  // created (клиент показывает примечание сразу); srvVer '554'
   setTrainingDone: function(payload) {
     var auth = this._requireWrite(payload.token);
     if (auth.error) return auth.error;
@@ -3012,7 +3018,8 @@ var WorkSchedule = {
           // A..H отмечаемой строки (таб_номер/тип/тема/дата нужны
           // автосозданию новых сроков — Task 419)
           var rowData = sheet.getRange(row, 1, 1, 8).getValues()[0];
-          // E: дата_проведения → пересчёт «просрочен» по отметке
+          // E: дата_проведения → пересчёт «просрочен» по отметке;
+          // H: комментарий — переносится автосозданием (Task 554)
           var provDate = rowData[4];
           var late = this._isTrainingLate(provDate, done);
           sheet.getRange(row, 6, 1, 2).setValues([[done, late]]);
@@ -3054,10 +3061,12 @@ var WorkSchedule = {
           // общего при любом значении листа, Task 423; '425' —
           // мероприятия без автосоздания, Task 425; '426' —
           // День шахтёра не праздник, Task 426; '427' —
-          // раздельные последовательности id листов, Task 427)
+          // раздельные последовательности id листов, Task 427;
+          // '554' — примечание отмеченной записи переносится
+          // в автосозданные записи, Task 554)
           return { ok: true, data: { id: id, 'выполнение': done,
                                      'просрочен': late,
-                                     srvVer: '427',
+                                     srvVer: '554',
                                      autoNote: autoNote,
                                      created: created,
                                      updated: updated,
@@ -3119,6 +3128,12 @@ var WorkSchedule = {
     var tip   = String(rowData[2] || '').trim();
     var tema  = String(rowData[3] || '').trim();
     var provDate = rowData[4];
+    // Task 554 (заявка: «примечания так же должны переноситься»):
+    // примечание отмеченной записи (столбец H «комментарий») —
+    // переносится в автосозданные записи с новыми сроками
+    // (список следующего года/срока); trim — пустое/пробельное
+    // не переносится; лимит 500 символов — как addTraining
+    var srcNote = String(rowData[7] || '').trim().slice(0, 500);
     // Task 425: мероприятие — без автопродления (вносится вручную)
     var tipKey = String(tip || '').trim().toLowerCase()
                    .replace(/\s+/g, '_');
@@ -3216,7 +3231,7 @@ var WorkSchedule = {
       if (nextDate && !hasInWindow(tema, provDate, nextDate) &&
           !(parentKey && hasInWindow(parentKey, provDate, nextDate))) {
         created.push(this._appendTrainingRow(
-          sheet, ++maxId, tabNo, tip, tema, nextDate, values));
+          sheet, ++maxId, tabNo, tip, tema, nextDate, values, srcNote));
       }
     }
 
@@ -3264,7 +3279,7 @@ var WorkSchedule = {
           if (chDate && !hit) {
             created.push(this._appendTrainingRow(
               sheet, ++maxId, tabNo, this._instrTypeOfItem(ch, tip),
-              ch.название, chDate, values));
+              ch.название, chDate, values, srcNote));
             childNotes.push(chName + ' → ' + ruDate(chDate));
           } else {
             var reason = chDate
@@ -3311,13 +3326,19 @@ var WorkSchedule = {
   // запись в форме _readTrainingsSheet; строка также дописывается в
   // values (снимок листа) — повторные проверки окна автосоздания её
   // видят, индекс values совпадает со строкой листа (v + 2)
-  _appendTrainingRow: function(sheet, newId, tabNo, tip, tema, date, values) {
+  // Task 554: note — примечание (комментарий, столбец H) ОТМЕЧЕННОЙ
+  // записи; переносится и в лист, и в created-запись ответа (клиент
+  // показывает примечание в созданной записи); параметр
+  // необязательный — старые вызовы пишут ''
+  _appendTrainingRow: function(sheet, newId, tabNo, tip, tema, date, values, note) {
     var late = this._isTrainingLate(date, 0);
+    // Task 554: лимит 500 символов — как комментарий addTraining
+    var noteVal = String(note || '').slice(0, 500);
     this._appendRowKeepText(sheet,
-      [newId, tabNo, tip, tema, date, 0, late, ''], [2]);
+      [newId, tabNo, tip, tema, date, 0, late, noteVal], [2]);
     var iso = this._toIsoDate(date);
     if (values) {
-      values.push([newId, tabNo, tip, tema, date, 0, late, '']);
+      values.push([newId, tabNo, tip, tema, date, 0, late, noteVal]);
     }
     return {
       id: newId,
@@ -3327,7 +3348,7 @@ var WorkSchedule = {
       'дата_начала':     iso,
       'дата_окончания':  iso,
       'длительность_дней': 1,
-      'комментарий':      '',
+      'комментарий':      noteVal,
       'дата_проведения':  iso,
       'выполнение':       0,
       'просрочен':        late

@@ -44,7 +44,7 @@
 //      инструктаж id 5);
 //  17) _doDeleteTraining: API payload несёт инстр;
 //  18) toggleTrainingDone: помечается ТОЛЬКО копия инструктажа.
-//   SW: kipia-test-v762.
+//   SW: kipia-test-v763.
 // ============================================================
 
 const fs = require('fs');
@@ -114,10 +114,10 @@ describe('Task 427 — SRC: сервер (раздельные последов�
             'инструктаж/без флага — прежний порядок листов');
     });
 
-    test('srvVer 427 — версия сервера в ответе setTrainingDone', () => {
+    test('srvVer 554 — версия сервера в ответе setTrainingDone', () => {
         const fn = stripComments(methodText(WS_SRC, 'setTrainingDone'));
-        assertTrue(fn.indexOf("srvVer: '427'") !== -1,
-            'srvVer 427 (Task 427: раздельные последовательности id)');
+        assertTrue(fn.indexOf("srvVer: '554'") !== -1,
+            'srvVer 554 (Task 554: примечание — перенос; Task 427: раздельные последовательности id)');
         assertTrue(fn.indexOf("srvVer: '426'") === -1,
             'старой версии в коде нет');
     });
@@ -221,10 +221,10 @@ describe('Task 427 — SRC: клиент (адресация id по семей�
             'delete старой строки несёт флаг');
     });
 
-    test('порог предупреждения «старый сервер» — srvVer < 427', () => {
+    test('порог предупреждения «старый сервер» — srvVer < 554', () => {
         const fn = stripComments(methodText(INDEX_SRC, 'toggleTrainingDone'));
-        assertTrue(fn.indexOf('parseInt(d.srvVer, 10) < 427') !== -1,
-            'сквозная нумерация id (сервер до 427) — тоже старый сервер');
+        assertTrue(fn.indexOf('parseInt(d.srvVer, 10) < 554') !== -1,
+            'примечание не переносится / сквозная нумерация id (сервер до 554) — тоже старый сервер');
     });
 });
 
@@ -379,7 +379,7 @@ describe('Task 427 — GAS-VM: раздельные последовательн
         assertEqual(r.data.created[0].id, 21,
             'id 21 = max «Инструктажей» (20) + 1 — max «Мероприятий» (99) НЕ мешает');
         assertEqual(r.data.created[1].id, 22, 'id 22 — следующий СВОЕЙ последовательности');
-        assertEqual(r.data.srvVer, '427', 'версия сервера Task 427');
+        assertEqual(r.data.srvVer, '554', 'версия сервера Task 554');
     });
 
     test('регресс 425: отметка легаси-«обучения» — автосоздания нет', () => {
@@ -601,7 +601,7 @@ describe('Task 427 — VM: клиент (семейство решает кол�
         self._api = function() {
             return Promise.resolve({
                 data: { id: 5, 'выполнение': 1, 'просрочен': 0,
-                        srvVer: '427', autoNote: '', created: [],
+                        srvVer: '554', autoNote: '', created: [],
                         updated: [], skipped: [] }
             });
         };
@@ -629,10 +629,10 @@ describe('Task 427 — VM: клиент (семейство решает кол�
 // 5. SW — версия кэша
 // ============================================================
 describe('Task 427 — SW: версия кэша', () => {
-    test('CACHE_VERSION = kipia-test-v762', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v762'") !== -1,
+    test('CACHE_VERSION = kipia-test-v763', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v763'") !== -1,
             'SW v654 (Task 427)');
-        assertTrue(SW_SRC.indexOf('kipia-test-v763') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v764') === -1,
             'двойной бамп отсутствует');
     });
 });

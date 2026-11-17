@@ -269,15 +269,15 @@ describe('Task 518 — VM: заявка Cu50 (50 Ом → 0 °C) и номина
 // ============================================================
 // C. SW v732 (guard v733)
 // ============================================================
-describe('Task 518 — SW: версия кэша kipia-test-v762', () => {
+describe('Task 518 — SW: версия кэша kipia-test-v763', () => {
 
-    test('CACHE_VERSION = kipia-test-v762', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v762'") !== -1,
+    test('CACHE_VERSION = kipia-test-v763', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v763'") !== -1,
             'SW бампнут до v732');
     });
 
     test('Guard: v733 ещё не существует', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v763') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v764') === -1,
             'v733 не должен существовать (следующий бамп)');
     });
 });

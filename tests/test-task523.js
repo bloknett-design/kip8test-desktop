@@ -23,7 +23,7 @@
 //   Слой 4 — VM клиента: префилл точной парой (раунд-трип),
 //     _applyCellStatus с временами, рендер с временами/полночь/
 //     только часы/не указано.
-//   SW: kipia-test-v762.
+//   SW: kipia-test-v763.
 //
 // Запуск: через tests/run-all.js (require './test-task523.js').
 
@@ -669,9 +669,9 @@ describe('Task 523 — VM: _applyCellStatus/_dnDayInfoAt/_renderDnDayInfo', () =
 // 5. SW: версия кэша
 // ============================================================
 describe('Task 523 — SW: версия кэша', () => {
-    test('SW: кэш поднят до kipia-test-v762 (Task 523)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v762') !== -1,
-            'SW несёт версию kipia-test-v762');
+    test('SW: кэш поднят до kipia-test-v763 (Task 523)', () => {
+        assertTrue(SW_SRC.indexOf('kipia-test-v763') !== -1,
+            'SW несёт версию kipia-test-v763');
         assertTrue(SW_SRC.indexOf('kipia-test-v735') === -1,
             'прошлая версия вычищена');
     });

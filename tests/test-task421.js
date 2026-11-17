@@ -25,7 +25,7 @@
 //   КЛИЕНТ index.html:
 //   6) toggleTrainingDone: пустой created — тост «Отмечено
 //      выполнение» (без «новые сроки»), пулы не растут;
-//   7) SW kipia-test-v762.
+//   7) SW kipia-test-v763.
 // ============================================================
 
 const fs = require('fs');
@@ -434,8 +434,8 @@ describe('Task 421 — VM: toggleTrainingDone — 9-ОГЭ без автосоз
                       дата_начала: '2026-12-01', выполнение: 0, просрочен: 0 };
         const ctx = makeCtx(rec, {
             id: 21, выполнение: 1, просрочен: 0,
-            // srvVer актуального сервера (Task 427) — предупреждения в тосте нет
-            srvVer: '427',
+            // srvVer актуального сервера (Task 554) — предупреждения в тосте нет
+            srvVer: '554',
             created: [], updated: [], skipped: []
         });
         let shown = null;
@@ -483,10 +483,10 @@ describe('Task 421 — VM: toggleTrainingDone — 9-ОГЭ без автосоз
 // 4. SW — версия кэша
 // ============================================================
 describe('Task 421 — SW: версия кэша', () => {
-    test('CACHE_VERSION = kipia-test-v762', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v762'") !== -1,
+    test('CACHE_VERSION = kipia-test-v763', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v763'") !== -1,
             'SW v648 (Task 421)');
-        assertTrue(SW_SRC.indexOf('kipia-test-v763') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v764') === -1,
             'двойной бамп отсутствует');
     });
 });

@@ -35,7 +35,7 @@
 //      «Инструктажи» (листы независимы);
 //   9) eventsInit: существующий «Инструктажи» с данными НЕ
 //      тронут (записей 0 в лист), «Мероприятия» создан.
-//   SW: kipia-test-v762.
+//   SW: kipia-test-v763.
 // ============================================================
 
 const fs = require('fs');
@@ -111,10 +111,10 @@ describe('Task 425 — SRC: стоп-правило мероприятий + р�
             'форс-3 эталона 9-ОГЭ (Task 423) жив');
     });
 
-    test('srvVer 427 — версия сервера в ответе setTrainingDone', () => {
+    test('srvVer 554 — версия сервера в ответе setTrainingDone', () => {
         const fn = stripComments(methodText(WS_SRC, 'setTrainingDone'));
-        assertTrue(fn.indexOf("srvVer: '427'") !== -1,
-            'srvVer 427 (Task 427: раздельные последовательности id листов; День шахтёра не праздник — Task 426; мероприятия без автосоздания — Task 425)');
+        assertTrue(fn.indexOf("srvVer: '554'") !== -1,
+            'srvVer 554 (Task 554: примечание — перенос в автосозданные записи; Task 427: раздельные последовательности id листов; День шахтёра не праздник — Task 426; мероприятия без автосоздания — Task 425)');
         assertTrue(fn.indexOf("srvVer: '426'") === -1,
             'старой версии в коде нет');
     });
@@ -256,7 +256,7 @@ describe('Task 425 — GAS-VM: блоки не влияют друг на дру
         assertTrue(String(r.data.autoNote)
             .indexOf('автосоздания нет') !== -1,
             'причина — в autoNote: ' + r.data.autoNote);
-        assertEqual(r.data.srvVer, '427', 'версия сервера Task 427');
+        assertEqual(r.data.srvVer, '554', 'версия сервера Task 554');
         // отметка ЗАПИСАНА в строку
         assertEqual(sheets['Инструктажи'].rows.length, 2,
             'новых строк не добавлено');
@@ -361,10 +361,10 @@ describe('Task 425 — GAS-VM: блоки не влияют друг на дру
 // 3. SW — версия кэша
 // ============================================================
 describe('Task 425 — SW: версия кэша', () => {
-    test('CACHE_VERSION = kipia-test-v762', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v762'") !== -1,
+    test('CACHE_VERSION = kipia-test-v763', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v763'") !== -1,
             'SW v653 (Task 426)');
-        assertTrue(SW_SRC.indexOf('kipia-test-v763') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v764') === -1,
             'двойной бамп отсутствует');
     });
 });

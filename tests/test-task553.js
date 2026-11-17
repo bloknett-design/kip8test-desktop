@@ -280,15 +280,17 @@ describe('Task 553 — санитар', () => {
             'раздел заявки назван');
     });
 
-    test('санитар: сервер WorkSchedule.gs НЕ менялся (КЛИЕНТ-ONLY)', () => {
+    test('санитар: сервер WorkSchedule.gs менялся ТОЛЬКО Task 554 (не 553)', () => {
         assertTrue(WS_GS_SRC.indexOf('Task 553') === -1,
-            'метки Task 553 в сервере нет — серверного деплоя НЕТ');
+            'метки Task 553 в сервере нет — отображение примечания КЛИЕНТ-ONLY');
+        assertTrue(WS_GS_SRC.indexOf('Task 554') !== -1,
+            'Task 554 — перенос примечания при автосоздании (заявка: «примечания так же должны переноситься»): сервер ДЕПЛОИТСЯ');
     });
 
     test('санитар: sw.js — версия кэша поднята (горячее обновление)', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v762'") !== -1,
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v763'") !== -1,
             'SW v762 — клиенты обновятся при открытии');
-        assertTrue(SW_SRC.indexOf('kipia-test-v763') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v764') === -1,
             'следующей версии нет');
     });
 });

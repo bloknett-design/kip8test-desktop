@@ -92,9 +92,9 @@ function countOf(haystack, needle) {
 // ==========================================================================
 describe('Task 480 — SW: версия кэша', () => {
 
-    test("CACHE_VERSION = 'kipia-test-v762'", () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v762';") !== -1,
-            'SW поднят до kipia-test-v762 (Task 480)');
+    test("CACHE_VERSION = 'kipia-test-v763'", () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v763';") !== -1,
+            'SW поднят до kipia-test-v763 (Task 480)');
     });
 
     test('прежняя версия v703 отсутствует', () => {
@@ -103,8 +103,8 @@ describe('Task 480 — SW: версия кэша', () => {
     });
 
     test('несуществующая v705 отсутствует (guard)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v763') === -1,
-            'kipia-test-v762 не должен существовать');
+        assertTrue(SW_SRC.indexOf('kipia-test-v764') === -1,
+            'kipia-test-v763 не должен существовать');
     });
 
     test('персистентные кэши картинок/данных НЕ инкрементировались', () => {
@@ -116,7 +116,7 @@ describe('Task 480 — SW: версия кэша', () => {
     });
 
     test('комментарий Task 480 в шапке версий (окно 2600 → 3200 → 6000, Task 486/490)', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v762';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v763';");
         // Task 490: +480 симв. комментария — окно 5000 → 6000 (якорь 5440)
         // Task 492: комментарий (~290 симв.) отодвинул якорь Task 480
         // до ~6221 — окно 6000 → 6800.

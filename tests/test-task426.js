@@ -27,7 +27,7 @@
 //       ст. 112 вычитаются, как раньше.
 //   VM-СЕРВЕР: _getProdCal (legalic / фолбэк) — 30.08 обычное
 //     воскресенье; TRANSFERRED_WORKING на 30.08 остаётся РАБОЧИМ.
-//   SW: kipia-test-v762.
+//   SW: kipia-test-v763.
 //
 // Запуск: через tests/run-all.js (require './test-task426.js').
 
@@ -180,9 +180,9 @@ describe('Task 426 — сервер: День шахтёра удалён из �
             'маркер заявки Task 426 в комментариях сервера');
     });
 
-    test('JS: srvVer 427 в ответе setTrainingDone', () => {
-        assertTrue(WS_GS_SRC.indexOf("srvVer: '427'") !== -1,
-            'srvVer 427 (Task 427: раздельные последовательности id; День шахтёра не праздник — Task 426)');
+    test('JS: srvVer 554 в ответе setTrainingDone', () => {
+        assertTrue(WS_GS_SRC.indexOf("srvVer: '554'") !== -1,
+            'srvVer 554 (Task 554: примечание — перенос; Task 427: раздельные последовательности id; День шахтёра не праздник — Task 426)');
         assertTrue(WS_GS_SRC.indexOf("srvVer: '426'") === -1,
             'старой версии в коде нет');
     });
@@ -211,10 +211,10 @@ describe('Task 426 — клиент: ProdCalendar без Дня шахтёра',
             'ключ v2 вычищается при сохранении новых данных');
     });
 
-    test('JS: регресс — порог предупреждения «старый сервер» srvVer < 427', () => {
+    test('JS: регресс — порог предупреждения «старый сервер» srvVer < 554', () => {
         const fn = extractMethod(INDEX_SRC, 'toggleTrainingDone');
-        assertTrue(fn !== null && fn.indexOf('parseInt(d.srvVer, 10) < 427') !== -1,
-            'клиент предупреждает при srvVer < 427 (Task 427 поднял границу: сквозная нумерация id — тоже старый сервер; историческая 423 поглощена)');
+        assertTrue(fn !== null && fn.indexOf('parseInt(d.srvVer, 10) < 554') !== -1,
+            'клиент предупреждает при srvVer < 554 (Task 554 поднял границу: примечание не переносится — тоже старый сервер; исторические 423/427 поглощены)');
     });
 
     test('JS: регресс — День города Кемерово (12 июня) остаётся названием', () => {
@@ -307,10 +307,10 @@ describe('Task 426 — сервер VM: производственный кал�
 // 5. SW — версия кэша
 // ============================================================
 describe('Task 426 — SW: версия кэша', () => {
-    test('CACHE_VERSION = kipia-test-v762', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v762'") !== -1,
+    test('CACHE_VERSION = kipia-test-v763', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v763'") !== -1,
             'SW v653 (Task 426)');
-        assertTrue(SW_SRC.indexOf('kipia-test-v763') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v764') === -1,
             'двойной бамп отсутствует');
     });
 });
