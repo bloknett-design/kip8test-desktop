@@ -50,10 +50,12 @@ const WS_CLIENT = INDEX_SRC.slice(INDEX_SRC.indexOf('var WorkSchedule = {'));
 // 1. SRC: дата — span.ws-tr-date (ярче) в плоской ветке b5
 // ============================================================
 describe('Task 556 — SRC: дата строки карты ярче', () => {
-    test('SRC: заявка-цитата в комментарии у iNameBody', () => {
-        const i = WS_CLIENT.indexOf("' · <span class=\"ws-tr-date\">' + iPeriod");
-        assertTrue(i !== -1, 'дата обёрнута span.ws-tr-date в iNameBody');
-        const chunk = WS_CLIENT.slice(Math.max(0, i - 900), i + 500);
+    test('SRC: заявка-цитата в комментарии у iDateHtml', () => {
+        // Task 557: дата — отдельный фрагмент iDateHtml (после
+        // краткого; без краткого — в конце однострочной темы)
+        const i = WS_CLIENT.indexOf("var iDateHtml = '<span class=\"ws-tr-date\">' + iPeriod");
+        assertTrue(i !== -1, 'дата обёрнута span.ws-tr-date (iDateHtml)');
+        const chunk = WS_CLIENT.slice(Math.max(0, i - 1300), i + 500);
         assertTrue(chunk.indexOf('Task 556') !== -1,
             'метка задачи в комментарии над составлением строки');
         assertTrue(chunk.indexOf('по') !== -1 &&
@@ -62,21 +64,23 @@ describe('Task 556 — SRC: дата строки карты ярче', () => {
     });
 
     test('SRC: состав iNameBody — тема · дата(спан) · примечание', () => {
+        // Task 557: тема — iNameText; без краткого — одна строка
         assertTrue(WS_CLIENT.indexOf(
-            "var iNameBody = this._esc(it.тема || iMeta.name || it.тип) +") !== -1,
+            'var iNameText = this._esc(it.тема || iMeta.name || it.тип);') !== -1,
             'полная тема — первой частью строки (Task 417 жив)');
         assertTrue(WS_CLIENT.indexOf(
-            "' · <span class=\"ws-tr-date\">' + iPeriod + '</span>' + iNote;") !== -1,
+            "var iNameBody = iNameText + ' · ' + iDateHtml + iNote;") !== -1,
             'дата в спане, примечание Task 553 — после даты');
     });
 
     test('SRC: спан даты — БЕЗ условия iShort (без краткого тоже ярче)', () => {
-        // iNameBody составляется ДО тернарника iShort и попадает в
-        // ОБЕ ветки (iShort есть / нет) — дата ярче у ВСЕХ записей
-        const iBody = WS_CLIENT.indexOf("' · <span class=\"ws-tr-date\">' + iPeriod");
+        // Task 557: iDateHtml составляется ДО тернарника iShort и
+        // попадает в ОБЕ ветки (iShort есть / нет) — дата ярче у
+        // ВСЕХ записей (после краткого / в конце однострочной темы)
+        const iBody = WS_CLIENT.indexOf("var iDateHtml = '<span class=\"ws-tr-date\">'");
         const iTern = WS_CLIENT.indexOf('var iNameHtml = iShort');
         assertTrue(iBody !== -1 && iTern !== -1 && iBody < iTern,
-            'спан даты — в iNameBody, ДО ветвления по краткому имени');
+            'спан даты — до ветвления по краткому имени');
         const calls = WS_CLIENT.split('<span class="ws-tr-date">').length - 1;
         assertEqual(calls, 1,
             'РОвно один датовый спан (плоская ветка b5, без дублей)');
@@ -173,9 +177,9 @@ describe('Task 556 — санитар', () => {
 
     test('санитар: sw.js — версия кэша поднята (горячее обновление)', () => {
         assertTrue(SW_SRC.indexOf(
-            "const CACHE_VERSION = 'kipia-test-v765'") !== -1,
+            "const CACHE_VERSION = 'kipia-test-v766'") !== -1,
             'SW v765 — клиенты обновятся при открытии');
-        assertTrue(SW_SRC.indexOf('kipia-test-v766') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v767') === -1,
             'следующей версии нет');
     });
 

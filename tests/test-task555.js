@@ -179,14 +179,19 @@ describe('Task 555 — SRC: строки карты с кратким наиме
     });
 
     test('SRC: полная тема и примечание остаются (Task 417/553)', () => {
-        const i = WS_CLIENT.indexOf("var iNameHtml = iShort");
-        const chunk = WS_CLIENT.slice(Math.max(0, i - 200), i + 900);
-        assertTrue(chunk.indexOf(
-            'this._esc(it.тема || iMeta.name || it.тип)') !== -1,
+        // Task 557: тема — iNameText; остальной текст (.ws-tr-rest,
+        // вторая строка) — тема + примечание; дата — первой
+        // строкой после краткого, в конце НЕ повторяется
+        const i = WS_CLIENT.indexOf(
+            "'<span class=\"ws-tr-rest\">' + iNameText + iNote + '</span>'");
+        assertTrue(i !== -1,
+            'остальной текст — iNameText + примечание Task 553');
+        assertTrue(WS_CLIENT.indexOf(
+            'var iNameText = this._esc(it.тема || iMeta.name || it.тип);') !== -1,
             'полное название записи — в остальном тексте (Task 417)');
-        assertTrue(chunk.indexOf(
-            "' · <span class=\"ws-tr-date\">' + iPeriod + '</span>' + iNote;") !== -1,
-            'дата (Task 556 — span.ws-tr-date, ярче) и примечание Task 553 — в конце');
+        assertTrue(WS_CLIENT.indexOf(
+            "var iNameBody = iNameText + ' · ' + iDateHtml + iNote;") !== -1,
+            'дата (Task 556 — span.ws-tr-date, ярче) в конце — только у строки БЕЗ краткого');
         // строка карты (конец ветки b5, ~4.7 КБ ниже объявления
         // iNameHtml) использует iNameHtml внутри .ws-popup-name —
         // отдельное окно вокруг вхождения
@@ -395,9 +400,9 @@ describe('Task 555 — санитар', () => {
 
     test('санитар: sw.js — версия кэша поднята (горячее обновление)', () => {
         assertTrue(SW_SRC.indexOf(
-            "const CACHE_VERSION = 'kipia-test-v765'") !== -1,
+            "const CACHE_VERSION = 'kipia-test-v766'") !== -1,
             'SW v764 — клиенты обновятся при открытии');
-        assertTrue(SW_SRC.indexOf('kipia-test-v766') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v767') === -1,
             'следующей версии нет');
     });
 });

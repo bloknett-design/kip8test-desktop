@@ -1042,6 +1042,11 @@ require('./test-task555.js');
 // span.ws-tr-date (--text-primary, 600), колонка .ws-wcol-instr —
 // поля 6px/4px и gap 4px; КЛИЕНТ-ONLY.
 require('./test-task556.js');
+// Task 557 (заявка: «Поменяй местами текст, дату поставь после
+// краткого наименования, а остальной текст под ними»): дата —
+// iDateHtml сразу ПОСЛЕ краткого, остальной текст — ВТОРОЙ
+// строкой (.ws-tr-rest display: block); КЛИЕНТ-ONLY.
+require('./test-task557.js');
 require('./test-deploy-url.js');
 
 // Запускаем

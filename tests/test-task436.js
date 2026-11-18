@@ -34,7 +34,7 @@
 //  10) менее 2× [10,15] → прежняя нормализация 5/100;
 //  11) все равны [7,7,7] → плоская 60/60/60;
 //  12) одна запись — графика нет; записи вне окна 31 не влияют.
-//   SW: kipia-test-v765 (главный), v660 — прежней нет.
+//   SW: kipia-test-v766 (главный), v660 — прежней нет.
 // ============================================================
 
 const fs = require('fs');
@@ -260,10 +260,10 @@ describe('Task 436 — VM: высоты баров', () => {
 // ============================================================
 // 3. SW — версия кэша
 // ============================================================
-describe('Task 436 — SW: версия kipia-test-v765', () => {
-    test('CACHE_VERSION = kipia-test-v765, прежней v660 нет', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v765'") !== -1,
-            'CACHE_VERSION = kipia-test-v765');
+describe('Task 436 — SW: версия kipia-test-v766', () => {
+    test('CACHE_VERSION = kipia-test-v766, прежней v660 нет', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v766'") !== -1,
+            'CACHE_VERSION = kipia-test-v766');
         assertFalse(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v660'") !== -1,
             'v660 как активная версия больше не существует');
     });
