@@ -184,8 +184,9 @@ describe('Task 555 — SRC: строки карты с кратким наиме
         assertTrue(chunk.indexOf(
             'this._esc(it.тема || iMeta.name || it.тип)') !== -1,
             'полное название записи — в остальном тексте (Task 417)');
-        assertTrue(chunk.indexOf("' · ' + iPeriod + iNote;") !== -1,
-            'дата и примечание Task 553 — в конце остального текста');
+        assertTrue(chunk.indexOf(
+            "' · <span class=\"ws-tr-date\">' + iPeriod + '</span>' + iNote;") !== -1,
+            'дата (Task 556 — span.ws-tr-date, ярче) и примечание Task 553 — в конце');
         // строка карты (конец ветки b5, ~4.7 КБ ниже объявления
         // iNameHtml) использует iNameHtml внутри .ws-popup-name —
         // отдельное окно вокруг вхождения
@@ -394,9 +395,9 @@ describe('Task 555 — санитар', () => {
 
     test('санитар: sw.js — версия кэша поднята (горячее обновление)', () => {
         assertTrue(SW_SRC.indexOf(
-            "const CACHE_VERSION = 'kipia-test-v764'") !== -1,
+            "const CACHE_VERSION = 'kipia-test-v765'") !== -1,
             'SW v764 — клиенты обновятся при открытии');
-        assertTrue(SW_SRC.indexOf('kipia-test-v765') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v766') === -1,
             'следующей версии нет');
     });
 });

@@ -381,9 +381,9 @@ describe('Task 395 — VM: гейты страницы по матрице', () 
 // ============================================================
 describe('Task 395 — SW-кэш', () => {
     test('SW поднят до v623 (Task 395 — фронтенд менялся)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v764') !== -1,
-            'sw.js: CACHE_VERSION kipia-test-v764');
-        assertTrue(SW_SRC.indexOf('kipia-test-v765') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v765') !== -1,
+            'sw.js: CACHE_VERSION kipia-test-v765');
+        assertTrue(SW_SRC.indexOf('kipia-test-v766') === -1,
             'двойного бампа нет (v624 не существует)');
     });
 });

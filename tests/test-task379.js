@@ -34,7 +34,7 @@
 //     повторный — обе сброшены; НОВЫЙ текст в раскрытом — 310px +
 //     -215px; исчезновение переполнения — авто-сворачивание, маржа
 //     сброшена; значок .on при раскрытии.
-//   SW: kipia-test-v764 (guard v609).
+//   SW: kipia-test-v765 (guard v609).
 //   Регресс: итоги Task 378 (#FFFFFF светлой) живы; тёмные тоталы
 //     #eef0f2 живы; зебра ФИО сетки жива.
 //
@@ -301,10 +301,10 @@ describe('Task 379 — VM: габарит бара всегда 95px', () => {
 // ============================================================
 describe('Task 379 — SW и регресс', () => {
 
-    test('SW: kipia-test-v764', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v764'") !== -1,
-            'версия кэша kipia-test-v764');
-        assertFalse(SW_SRC.indexOf('kipia-test-v765') !== -1,
+    test('SW: kipia-test-v765', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v765'") !== -1,
+            'версия кэша kipia-test-v765');
+        assertFalse(SW_SRC.indexOf('kipia-test-v766') !== -1,
             'двойного бампа нет');
     });
 

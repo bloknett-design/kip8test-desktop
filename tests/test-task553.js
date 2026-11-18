@@ -129,7 +129,8 @@ describe('Task 553 — SRC: три вью блока инструктажей', 
         // Task 555: тело строки карты строится через iNameBody →
         // iNameHtml (краткое наименование пункта + остальной текст
         // мельче) — примечание осталось в конце ОСТАЛЬНОГО текста
-        const i = WS_CLIENT.indexOf("' · ' + iPeriod + iNote;");
+        // Task 556: дата — span.ws-tr-date (ярче), примечание — после
+        const i = WS_CLIENT.indexOf("' · <span class=\"ws-tr-date\">' + iPeriod + '</span>' + iNote;");
         assertTrue(i !== -1, 'вставка после даты строки карты (iNameBody)');
         assertTrue(WS_CLIENT.indexOf('this._instrNoteHtml(it)') !== -1,
             'вызов хелпера в ветке b5');
@@ -210,7 +211,8 @@ describe('Task 553 — SRC: стили .ws-tr-note', () => {
         // span живёт ВНУТРИ .ws-popup-name (перенос строки карты),
         // а не отдельной колонкой строки; Task 555: примечание —
         // внутри .ws-tr-rest ОСТАЛЬНОГО текста строки карты
-        const i = WS_CLIENT.indexOf("' · ' + iPeriod + iNote;");
+        // Task 556: дата — span.ws-tr-date (ярче) до примечания
+        const i = WS_CLIENT.indexOf("' · <span class=\"ws-tr-date\">' + iPeriod + '</span>' + iNote;");
         const chunk = WS_CLIENT.slice(Math.max(0, i - 200), i + 800);
         assertTrue(chunk.indexOf('ws-tr-rest') !== -1,
             'примечание внутри .ws-tr-rest — общий перенос Task 415');
@@ -298,9 +300,9 @@ describe('Task 553 — санитар', () => {
     });
 
     test('санитар: sw.js — версия кэша поднята (горячее обновление)', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v764'") !== -1,
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v765'") !== -1,
             'SW v762 — клиенты обновятся при открытии');
-        assertTrue(SW_SRC.indexOf('kipia-test-v765') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v766') === -1,
             'следующей версии нет');
     });
 });
