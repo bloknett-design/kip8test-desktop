@@ -200,7 +200,11 @@ describe('Task 418 — SRC: клиент (index.html)', () => {
             'поле листа приоритетно, расчёт по дате — фолбэк (старый сервер)');
     });
 
-    test('выполненная строка приглушена (класс ws-row-done)', () => {
+    test('класс выполненной строки ws-row-done (состояние — галочкой)', () => {
+        // Task 555 (заявка: «шрифт не должен тускнеть при отметке
+        // выполнения»): текст строки больше НЕ приглушается —
+        // состояние отмечает только зелёная галочка ws-done-on;
+        // класс остаётся маркером состояния строки в разметке
         assertTrue(FLAT.indexOf('ws-row-done') !== -1,
             'класс строки-состояния');
     });
@@ -241,15 +245,22 @@ describe('Task 418 — SRC: клиент (index.html)', () => {
             'только в режиме правки с отметкой');
     });
 
-    test('CSS: галочка, бейдж, приглушение', () => {
+    test('CSS: галочка, бейдж (приглушение снято Task 555)', () => {
         assertTrue(INDEX_SRC.indexOf('.ws-done-chk {') !== -1,
             'стили галочки');
         assertTrue(INDEX_SRC.indexOf('.ws-done-chk.ws-done-on {') !== -1,
             'стили выполненной галочки');
         assertTrue(INDEX_SRC.indexOf('.ws-late-tag {') !== -1,
             'стили бейджа просрочки');
-        assertTrue(INDEX_SRC.indexOf('.ws-wcard .ws-popup-row.ws-row-done') !== -1,
-            'приглушение выполненной строки');
+        // Task 555 (заявка: «шрифт не должен тускнеть при отметке
+        // выполнения, а оставаться таким же нормально читаемым»):
+        // правило приглушения текста выполненной строки СНЯТО
+        assertTrue(INDEX_SRC.indexOf(
+            '.ws-wcard .ws-popup-row.ws-row-done .ws-popup-name') === -1,
+            'приглушение .ws-popup-name удалено (Task 555)');
+        assertTrue(INDEX_SRC.indexOf(
+            '.ws-wcard .ws-popup-row.ws-row-done .ws-popup-code') === -1,
+            'приглушение .ws-popup-code удалено (Task 555)');
     });
 });
 
@@ -729,10 +740,10 @@ describe('Task 418 — VM: WorkSchedule.toggleTrainingDone', () => {
 // 6. SW — версия кэша
 // ============================================================
 describe('Task 418 — SW: версия кэша', () => {
-    test('CACHE_VERSION = kipia-test-v763', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v763'") !== -1,
+    test('CACHE_VERSION = kipia-test-v764', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v764'") !== -1,
             'SW v645 (Task 418)');
-        assertTrue(SW_SRC.indexOf('kipia-test-v764') === -1,
+        assertTrue(SW_SRC.indexOf('kipia-test-v765') === -1,
             'двойной бамп отсутствует');
     });
 });
