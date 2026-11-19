@@ -114,8 +114,13 @@ describe('Task 456 — SRC: _autoDnPlan (правила заявки)', () => {
 
     test('кандидат — ТОЛЬКО полностью пустая планово-выходная ячейка', () => {
         const fn = methodText(WS_SRC, '_autoDnPlan');
-        assertTrue(fn.indexOf('recIdx[keyB] || pend[keyB] || plan[keyB]) continue') !== -1,
-            'запись/правка/уже назначенный авто — ячейка занята');
+        // Task 558-adapt: якорь обновлён — запись-мероприятие (И/ОБ/ПЗ)
+        // ячейку кандидата НЕ занимает (recB && !isEv); занятость —
+        // не-мероприятие/правка/план
+        assertTrue(fn.indexOf("pend[keyB] || plan[keyB]) continue") !== -1,
+            'запись(не мероприятие)/правка/уже назначенный авто — ячейка занята');
+        assertTrue(fn.indexOf('var recB = recIdx[keyB];') !== -1,
+            'Task 558: запись читается в recB для проверки мероприятия');
         assertTrue(fn.indexOf("dayCat(empB, iso) !== 'off'") !== -1,
             'сам день — плановый выходной (не смена, не до старта цикла)');
     });
@@ -251,9 +256,9 @@ describe('Task 456/458 — SRC: записи и отчёты без виртуа
 // ============================================================
 // 4. SRC — SW
 // ============================================================
-describe('Task 456 — SRC: SW kipia-test-v766', () => {
-    test('CACHE_VERSION = kipia-test-v766, прежней v679 нет', () => {
-        assertTrue(SW_SRC.indexOf("'kipia-test-v766'") !== -1,
+describe('Task 456 — SRC: SW kipia-test-v767', () => {
+    test('CACHE_VERSION = kipia-test-v767, прежней v679 нет', () => {
+        assertTrue(SW_SRC.indexOf("'kipia-test-v767'") !== -1,
             'новая версия SW v680');
         assertEqual(SW_SRC.indexOf("'kipia-test-v679'"), -1,
             'старой версии v679 не осталось');

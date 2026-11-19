@@ -16,7 +16,7 @@
 //   сервер (справочные копии): WorkSchedule.gs _requireRead пускает
 //   чтение по view/view.min/edit; RoleMatrixTask340Init.gs —
 //   одноразовое добавление столбца в матрицу.
-//   SW: kipia-test-v766.
+//   SW: kipia-test-v767.
 //
 // Запуск: через tests/run-all.js (require './test-task340.js').
 
@@ -38,7 +38,10 @@ const WS_START = INDEX_SRC.indexOf('var WorkSchedule = {');
 // Task 489-adapt: окно 560000 → 600000 — хелперы имени (~1,6 КБ
 // перед карточкой) сдвинули хвост _renderWorkerCard (~36 КБ);
 // карточка теперь ЦЕЛИКОМ в окне (конец ~586,6 КБ)
-const WS_CLIENT = INDEX_SRC.slice(WS_START, WS_START + 600000);
+// Task 558-adapt: окно 600000 → 640000 — правки Task 558 (~4,3 КБ
+// в начале модуля) сдвинули хвост _renderWorkerCard за старую
+// границу (конец ~630,5 КБ)
+const WS_CLIENT = INDEX_SRC.slice(WS_START, WS_START + 640000);
 
 function methodText(src, name) {
     const sig = '\n        ' + name + ': function';
@@ -607,10 +610,10 @@ describe('Task 340 — сервер: _requireRead пускает все три �
 // ============================================================
 describe('Task 340 — Service Worker', () => {
 
-    test('SW: кэш поднят до kipia-test-v766', () => {
-        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v766'") !== -1,
-            'CACHE_VERSION = kipia-test-v766 (Task 340 — фронтенд)');
-        assertFalse(SW_SRC.indexOf('kipia-test-v767') !== -1,
+    test('SW: кэш поднят до kipia-test-v767', () => {
+        assertTrue(SW_SRC.indexOf("CACHE_VERSION = 'kipia-test-v767'") !== -1,
+            'CACHE_VERSION = kipia-test-v767 (Task 340 — фронтенд)');
+        assertFalse(SW_SRC.indexOf('kipia-test-v768') !== -1,
             'лишний инкремент (v579) не сделан');
     });
 
