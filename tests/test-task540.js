@@ -60,9 +60,9 @@ const SW_SRC = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 const PFX_MATCH = INDEX_SRC.match(/const PB_FAV_KEY = '(\w+?)_phonebook_favorites'/);
 const PFX = PFX_MATCH ? PFX_MATCH[1] : null;
 // Task 540: v751→v752 (kip8test), v548→v549 (kip8)
-const SW_EXPECTED = { kip8test: 'kipia-test-v767', kip8: 'kipia-v549' }[PFX] || null;
+const SW_EXPECTED = { kip8test: 'kipia-test-v768', kip8: 'kipia-v549' }[PFX] || null;
 const SW_PREV = { kip8test: 'kipia-test-v751', kip8: 'kipia-v548' }[PFX] || null;
-const SW_NEXT = { kip8test: 'kipia-test-v768', kip8: 'kipia-v550' }[PFX] || null;
+const SW_NEXT = { kip8test: 'kipia-test-v769', kip8: 'kipia-v550' }[PFX] || null;
 
 const FAV_KEY = PFX + '_phonebook_favorites';
 
@@ -310,12 +310,16 @@ describe('Task 540 — SRC: вкладка «Все» — два окна', () =
 
     test('master-ветка pbRender: десктоп + «Все» + без запроса', () => {
         const i = INDEX_SRC.indexOf('function pbRender()');
-        const seg = INDEX_SRC.slice(i, i + 3000);
+        const seg = INDEX_SRC.slice(i, i + 3200);
         assertTrue(seg.indexOf("typeof isDesktop === 'function' && isDesktop()") !== -1,
             'условие десктопа');
-        assertTrue(seg.indexOf('!pbFilterFavOnly && !query') !== -1,
-            'вкладка «Все» и пустой поиск');
+        // Task 559: «Избранное» на десктопе без запроса — ТОЖЕ два окна
+        // (своё дерево pbRenderFavMaster); условие ветки — десктоп + !query
+        assertTrue(seg.indexOf('isDesktop() && !query') !== -1,
+            'десктоп и пустой поиск (Task 559: обе вкладки — два окна)');
         assertTrue(seg.indexOf('pbRenderMaster(list);') !== -1, 'вызов pbRenderMaster');
+        assertTrue(seg.indexOf('pbRenderFavMaster(list);') !== -1,
+            'вызов pbRenderFavMaster (Task 559 — вкладка «Избранное»)');
     });
 
     test('функции мастер-режима определены в телефонном блоке', () => {
@@ -423,13 +427,18 @@ describe('Task 540 — VM: два окна на вкладке «Все»', () =
         assertTrue(t.pbList.innerHTML.indexOf('pb-master') === -1, 'дерева нет');
     });
 
-    test('десктоп + таб «Избранное» — инлайн-рендер избранных', async () => {
+    test('десктоп + таб «Избранное» — дерево избранного (Task 559)', async () => {
         const t = makeVm({ desktop: true });
         await seedPhonebook(t);
         seedFavorites(t, { [ID_A]: true });
         t.sandbox.pbSetTab('fav');
-        assertTrue(t.pbList.innerHTML.indexOf('Иванов') !== -1, 'избранный в списке');
-        assertTrue(t.pbList.innerHTML.indexOf('pb-master') === -1, 'дерева нет (не вкладка «Все»)');
+        // Task 559: «Избранное» на десктопе — ДВА ОКНА, как «Все»:
+        // левое окно — дерево по избранным, карточки — в правом окне
+        assertTrue(t.pbList.innerHTML.indexOf('pb-master-org-row') !== -1, 'дерево организаций');
+        assertTrue(t.pbList.innerHTML.indexOf('ООО Тест') !== -1, 'организация с избранным');
+        assertTrue(t.pbList.innerHTML.indexOf('ЧОО Тест') === -1, 'организация без избранного скрыта');
+        assertTrue(t.pbList.innerHTML.indexOf('Иванов') === -1, 'карточек в левом окне нет');
+        assertTrue(t.pbList.innerHTML.indexOf('pb-card') === -1, 'карточек нет (они в правом окне)');
     });
 
     test('десктоп + поиск — инлайн-рендер результатов', async () => {
@@ -527,7 +536,8 @@ describe('Task 540 — VM: два окна на вкладке «Все»', () =
         t.sandbox.pbMasterOpen(0, 0);
         t.sandbox.pbSetTab('fav');
         assertEqual(1, t.calls.close, 'правое окно закрылось при смене таба');
-        assertTrue(t.pbList.innerHTML.indexOf('Иванов') !== -1, 'список — избранные');
+        // Task 559: «Избранное» — дерево (карточки только в правом окне)
+        assertTrue(t.pbList.innerHTML.indexOf('pb-master-org-row') !== -1, 'дерево избранного');
         assertTrue(t.pbList.innerHTML.indexOf('selected') === -1, 'выбор сброшен');
     });
 
@@ -535,8 +545,10 @@ describe('Task 540 — VM: два окна на вкладке «Все»', () =
         const t = makeVm({ desktop: true });
         seedFavorites(t, { [ID_A]: true });
         await runInit(t);
-        assertTrue(t.pbList.innerHTML.indexOf('Иванов') !== -1, 'избранный контакт в списке');
-        assertTrue(t.pbList.innerHTML.indexOf('Петров') === -1, 'неизбранный скрыт');
+        // Task 559: старт на «Избранном» — дерево по избранным
+        // (карточки — в правом окне при выборе группы)
+        assertTrue(t.pbList.innerHTML.indexOf('pb-master-org-row') !== -1, 'дерево избранного');
+        assertTrue(t.pbList.innerHTML.indexOf('pb-card') === -1, 'карточек в левом окне нет');
         assertTrue(t.tabs[1]._active, 'активен таб «Избранное» (десктоп)');
         assertTrue(t.tabs[3]._active, 'активен таб «Избранное» (моб)');
     });

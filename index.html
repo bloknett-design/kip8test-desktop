@@ -23898,11 +23898,17 @@
         // запроса — ДВА ОКНА (как расходомеры хозрасчётные): левое окно
         // #pbList — дерево «организации → подразделения» (pbRenderMaster),
         // правое окно #detailPanel — контакты выбранного подразделения
-        // (pbMasterOpen). Поиск, вкладка «Избранное» и мобильный — прежний
-        // инлайн-рендер ниже.
-        if (typeof isDesktop === 'function' && isDesktop() &&
-                !pbFilterFavOnly && !query) {
-            pbRenderMaster(list);
+        // (pbMasterOpen). Поиск и мобильный — прежний инлайн-рендер ниже.
+        // Task 559: вкладка «Избранное» БЕЗ запроса — ТОЖЕ ДВА ОКНА:
+        // левое окно — дерево, построенное по избранным контактам
+        // (pbRenderFavMaster), правое — избранные выбранной группы
+        // (pbFavMasterOpen). Инлайн-рендер остаётся у поиска и мобильного.
+        if (typeof isDesktop === 'function' && isDesktop() && !query) {
+            if (pbFilterFavOnly) {
+                pbRenderFavMaster(list);
+            } else {
+                pbRenderMaster(list);
+            }
             return;
         }
 
@@ -24319,9 +24325,14 @@
     // (как setFlowmeterBreadcrumbContent расходомеров, Task 181).
     // Клик по «Телефонный справочник» — сброс выбора (закрыть правое
     // окно); по организации (когда открыто подразделение) — её обзор.
-    function setPhonebookBreadcrumbContent(org, grp) {
+    // Task 559: третий аргумент opts {openFn, orgIdx} — дерево «Избранного»
+    // передаёт свою функцию открытия (pbFavMasterOpen) и индекс организации
+    // в СВОЁМ индексе; без opts — прежнее поведение «Все» (pbMasterOpen /
+    // pbDesktopSelected), прежние вызовы не менялись.
+    function setPhonebookBreadcrumbContent(org, grp, opts) {
         var bcContent = document.getElementById('detailBreadcrumbContent');
         if (!bcContent) return;
+        var openFn = (opts && opts.openFn) ? opts.openFn : 'pbMasterOpen';
         var html = '<span class="breadcrumb-link" onclick="navigateTo(\'dashboard\')">Главная</span>' +
             '<span class="breadcrumb-sep"> / </span>';
         // Task 543: раздел живёт в «Документации» — хаб в крошках (клик —
@@ -24329,12 +24340,13 @@
         html += '<span class="breadcrumb-link" onclick="navigateTo(\'docs\')">Документация</span>' +
             '<span class="breadcrumb-sep"> / </span>';
         if (org) {
-            var orgIdx = (pbDesktopSelected && typeof pbDesktopSelected.orgIdx === 'number')
-                ? pbDesktopSelected.orgIdx : -1;
+            var orgIdx = (opts && typeof opts.orgIdx === 'number') ? opts.orgIdx
+                : ((pbDesktopSelected && typeof pbDesktopSelected.orgIdx === 'number')
+                    ? pbDesktopSelected.orgIdx : -1);
             html += '<span class="breadcrumb-link" onclick="pbMasterResetState()">Телефонный справочник</span>';
             html += '<span class="breadcrumb-sep"> / </span>';
             if (grp) {
-                html += '<span class="breadcrumb-link" onclick="pbMasterOpen(' + orgIdx + ')">' + pbEsc(org.header) + '</span>';
+                html += '<span class="breadcrumb-link" onclick="' + openFn + '(' + orgIdx + ')">' + pbEsc(org.header) + '</span>';
                 html += '<span class="breadcrumb-sep"> / </span>';
                 html += '<span class="breadcrumb-current">' + pbEsc(grp.name === null ? 'Без группы' : grp.name) + '</span>';
             } else {
@@ -24352,6 +24364,9 @@
     // восстановит крошки и перерисует дерево); иначе — просто рендер.
     function pbMasterResetState() {
         pbDesktopSelected = null;
+        // Task 559: сброс выбора дерева «Избранного» (выбор хранится по
+        // именам, но живёт только пока дерево открыто)
+        pbFavSelected = null;
         var panel = document.getElementById('detailPanel');
         var pg = document.getElementById('page-phonebook');
         var panelOpen = panel && panel.classList && panel.classList.contains('active');
@@ -24361,6 +24376,210 @@
             return;
         }
         if (onPage) pbRender();
+    }
+
+    // ============================================================
+    // Task 559: ДЕСКТОП — вкладка «Избранное»: ДВА ОКНА (как «Все»)
+    // ============================================================
+    // Заявка: «В телефонном справочнике, на вкладке избранного
+    // отображение сделай как во вкладке "Все", группы в одном окне,
+    // а телефоны при выборе группы во втором окне». Левое окно
+    // #pbList — дерево «организации → подразделения» ТОЛЬКО по
+    // избранным контактам (организации/подразделения без избранного
+    // не показываются, счётчики — число избранных), правое окно
+    // #detailPanel — избранные контакты выбранного подразделения
+    // или всей организации (блоки по подразделениям — pbRenderContactsHtml,
+    // как у «Все»). Разметка/зебра/сворачиваемость — общие с «Все»
+    // (классы .pb-master-*, pbMasterCollapsed); мобильная версия и
+    // поиск — прежний инлайн-рендер (не менялись).
+    let pbFavMasterIndex = [];  // [{header, count, groups: [{name, count}]}] — только избранные
+    // Выбор строки дерева «Избранного»: {header} — организация целиком,
+    // {header, group} — подразделение (group === null → «Без группы»).
+    // Хранение ПО ИМЕНАМ, не индексами: при снятии ★ группа/организация
+    // могут опустеть и индексы pbFavMasterIndex сдвинутся (у «Все» дерево
+    // статично при открытом табе, поэтому там индексы безопасны — Task 540).
+    let pbFavSelected = null;
+
+    // Избранные контакты в порядке справочника
+    function pbFavoritesFlat() {
+        return pbFlat.filter(function(it) { return pbIsFavorite(pbMakeId(it)); });
+    }
+
+    // Перестроить индекс дерева «Избранного» + валидация выбора:
+    // опустевшие группа/организация (сняли последнюю ★) сбрасывают
+    // выбор и закрывают правое окно (если оно открыто на странице
+    // справочника).
+    function pbFavMasterBuildIndex() {
+        pbFavMasterIndex = [];
+        const favs = pbFavoritesFlat();
+        for (const header of Object.keys(pbData.sections)) {
+            const items = favs.filter(it => it.header === header);
+            if (items.length === 0) continue;
+            const byGroup = {};
+            const order = [];
+            for (const it of items) {
+                const g = it.group || null;
+                if (!(g in byGroup)) { byGroup[g] = 0; order.push(g); }
+                byGroup[g]++;
+            }
+            order.sort((a, b) => {
+                if (a === null) return 1;
+                if (b === null) return -1;
+                const va = a.toString().toLowerCase();
+                const vb = b.toString().toLowerCase();
+                if (va < vb) return -1;
+                if (va > vb) return 1;
+                return 0;
+            });
+            pbFavMasterIndex.push({
+                header: header,
+                count: items.length,
+                groups: order.map(g => ({ name: g, count: byGroup[g] }))
+            });
+        }
+        if (pbFavSelected) {
+            const sel = pbFavSelected;
+            const org = pbFavMasterIndex.find(o => o.header === sel.header);
+            const grpOk = org && (!('group' in sel) ||
+                org.groups.some(g => g.name === sel.group));
+            if (!grpOk) {
+                pbFavSelected = null;
+                const panel = document.getElementById('detailPanel');
+                const pg = document.getElementById('page-phonebook');
+                if (panel && panel.classList && panel.classList.contains &&
+                        panel.classList.contains('active') &&
+                        pg && pg.classList && pg.classList.contains &&
+                        pg.classList.contains('active') &&
+                        typeof closeDetailPanel === 'function') {
+                    closeDetailPanel();
+                }
+            }
+        }
+    }
+
+    // Отрисовать дерево «Избранного» (левое окно): разметка — как у
+    // pbRenderMaster вкладки «Все» (классы, зебра Task 544, счётчики
+    // одной колонкой Task 544), отличия — индекс pbFavMasterIndex,
+    // клики pbFavMasterOpen / pbFavMasterToggleOrg и подсветка
+    // pbFavSelected (имена → индексы текущего дерева).
+    function pbRenderFavMaster(list) {
+        pbFavMasterBuildIndex();
+        if (pbFavMasterIndex.length === 0) {
+            list.classList.remove('searching');
+            list.innerHTML = '<div class="pb-empty">Нет избранных контактов.<br>Нажмите на ★ рядом с контактом, чтобы добавить его сюда.</div>';
+            return;
+        }
+        const sel = pbFavSelected;
+        let selOrg = -1, selGrp = -1;
+        if (sel) {
+            for (let o = 0; o < pbFavMasterIndex.length; o++) {
+                if (pbFavMasterIndex[o].header === sel.header) { selOrg = o; break; }
+            }
+            if (selOrg !== -1 && 'group' in sel) {
+                const grps = pbFavMasterIndex[selOrg].groups;
+                for (let g = 0; g < grps.length; g++) {
+                    if (grps[g].name === sel.group) { selGrp = g; break; }
+                }
+            }
+        }
+        let html = '<div class="pb-master">';
+        for (let o = 0; o < pbFavMasterIndex.length; o++) {
+            const org = pbFavMasterIndex[o];
+            const orgSel = selOrg === o && selGrp === -1;
+            const orgCollapsed = pbMasterCollapsed[org.header] === true;
+            html += '<div class="pb-master-org' + (orgCollapsed ? ' collapsed' : '') + '">';
+            html += '<div class="pb-master-org-row' + (orgSel ? ' selected' : '') + '" onclick="pbFavMasterOpen(' + o + ')">';
+            // Шеврон сворачивания — клик только сворачивает (Task 541)
+            html += '<button type="button" class="pb-master-org-toggle" aria-expanded="' + (!orgCollapsed) + '" aria-label="' + (orgCollapsed ? 'Развернуть' : 'Свернуть') + ' подразделения" onclick="pbFavMasterToggleOrg(event, ' + o + ')">';
+            html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+            html += '</button>';
+            html += '<span class="pb-master-org-name">' + pbEsc(org.header) + '</span>';
+            html += '<span class="pb-master-count">' + org.count + '</span>';
+            html += '</div>';
+            for (let g = 0; g < org.groups.length; g++) {
+                const grp = org.groups[g];
+                const gSel = selOrg === o && selGrp === g;
+                const label = grp.name === null ? 'Без группы' : grp.name;
+                // Task 544: зебра строк-подразделений (перезапуск внутри организации)
+                const rowZebra = (g % 2 === 0) ? ' pb-master-row-even' : ' pb-master-row-odd';
+                html += '<div class="pb-master-row' + rowZebra + (gSel ? ' selected' : '') + '" onclick="pbFavMasterOpen(' + o + ', ' + g + ')">';
+                html += '<span class="pb-master-row-name">' + pbEsc(label) + '</span>';
+                html += '<span class="pb-master-count">' + grp.count + '</span>';
+                html += '</div>';
+            }
+            html += '</div>';
+        }
+        html += '</div>';
+        list.classList.remove('searching');
+        list.innerHTML = html;
+    }
+
+    // Свернуть/развернуть организацию шевроном в дереве «Избранного» —
+    // как pbMasterToggleOrg вкладки «Все» (Task 541), но индекс —
+    // pbFavMasterIndex. Состояние свёрнутости ОБЩЕЕ с «Все»
+    // (pbMasterCollapsed — предпочтение вида, переживает смену вкладки;
+    // сброс к умолчанию — повторный вход в раздел, Task 542).
+    function pbFavMasterToggleOrg(ev, orgIdx) {
+        if (ev && ev.stopPropagation) ev.stopPropagation();
+        if (ev && ev.preventDefault) ev.preventDefault();
+        const org = pbFavMasterIndex && pbFavMasterIndex[orgIdx];
+        if (!org) return;
+        const willCollapse = pbMasterCollapsed[org.header] !== true;
+        if (willCollapse) {
+            pbMasterCollapsed[org.header] = true;
+        } else {
+            delete pbMasterCollapsed[org.header];
+        }
+        // DOM под рукой — класс на месте (без перерисовки дерева);
+        // иначе — полный рендер
+        const container = (ev && ev.target && ev.target.closest)
+            ? ev.target.closest('.pb-master-org') : null;
+        if (container && container.classList && container.classList.toggle) {
+            container.classList.toggle('collapsed', willCollapse);
+            const btn = container.querySelector('.pb-master-org-toggle');
+            if (btn && btn.setAttribute) {
+                btn.setAttribute('aria-expanded', String(!willCollapse));
+                btn.setAttribute('aria-label',
+                    (willCollapse ? 'Развернуть' : 'Свернуть') + ' подразделения');
+            }
+        } else {
+            pbRender();
+        }
+        if (navigator.vibrate) navigator.vibrate(12);
+    }
+
+    // Клик по строке дерева «Избранного»: открыть правое окно с
+    // избранными контактами. groupIdx не задан — все избранные
+    // организации (блоками по подразделениям), иначе — избранные
+    // подразделения (блоки по подгруппам третьего уровня). Крошки —
+    // с функцией открытия дерева «Избранного» (Task 559 opts).
+    function pbFavMasterOpen(orgIdx, groupIdx) {
+        if (!pbFavMasterIndex || !pbFavMasterIndex[orgIdx]) return;
+        const org = pbFavMasterIndex[orgIdx];
+        const grp = (groupIdx != null && org.groups[groupIdx]) ? org.groups[groupIdx] : null;
+        if (groupIdx != null && !grp) return;
+        // Выбор — ПО ИМЕНАМ (см. комментарий у pbFavSelected)
+        pbFavSelected = (grp !== null)
+            ? { header: org.header, group: grp.name }
+            : { header: org.header };
+        // Как у «Все» (Task 541): выбор разворачивает свёрнутую организацию
+        if (pbMasterCollapsed[org.header] === true) delete pbMasterCollapsed[org.header];
+        if (navigator.vibrate) navigator.vibrate(15);
+        // Перерисовать дерево — подсветить выбранную строку
+        pbRender();
+        const gName = grp ? grp.name : null;
+        const items = pbFavoritesFlat().filter(function(it) {
+            if (it.header !== org.header) return false;
+            if (!grp) return true;
+            return (it.group || null) === gName;
+        });
+        const groupLabel = grp ? (grp.name === null ? 'Без группы' : grp.name) : '';
+        const title = groupLabel ? (org.header + ' — ' + groupLabel) : org.header;
+        if (typeof openDetailPanel === 'function') {
+            openDetailPanel(title, '<div class="pb-detail-contacts">' +
+                                   pbRenderContactsHtml(items, grp) + '</div>');
+        }
+        setPhonebookBreadcrumbContent(org, grp, { openFn: 'pbFavMasterOpen', orgIdx: orgIdx });
     }
 
     // Переключить избранное у контакта
@@ -24391,6 +24610,17 @@
         pbSyncEnqueueFav(id, pbFavorites[id] === true);
         // Если включён фильтр избранных — пере-рендер (карточка может исчезнуть)
         if (pbFilterFavOnly) {
+            // Task 559: в мастер-режиме «Избранного» (десктоп, без запроса)
+            // снятая с ★ карточка уходит из правого окна НА МЕСТЕ — без
+            // переоткрытия панели (прокрутка не сбрасывается); левое
+            // дерево и счётчики обновит pbRender, опустевшие группа /
+            // организация сбросят выбор и закроют окно (валидация в
+            // pbFavMasterBuildIndex). Поиск и мобильный — инлайн-рендер.
+            const favQ = pbNorm((document.getElementById('pbSearchInput')?.value || '').trim());
+            if (typeof isDesktop === 'function' && isDesktop() && !favQ) {
+                const favCard = btnEl.closest('.pb-card');
+                if (favCard && favCard.parentNode) favCard.parentNode.removeChild(favCard);
+            }
             pbRender();
         } else {
             pbUpdateTabs();
@@ -24569,6 +24799,7 @@
         pbData = null;
         pbFlat = [];
         pbDesktopSelected = null;
+        pbFavSelected = null;   // Task 559: сброс выбора дерева «Избранного»
         pbLoad().then(() => {
             // После загрузки данных — очистить устаревшие записи (старые ID
             // от предыдущих версий pbMakeId, которые больше не валидны)

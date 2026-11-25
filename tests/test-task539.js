@@ -48,7 +48,7 @@ const SW_SRC = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 const PFX_MATCH = INDEX_SRC.match(/const PB_FAV_KEY = '(\w+?)_phonebook_favorites'/);
 const PFX = PFX_MATCH ? PFX_MATCH[1] : null;
 // Ожидаемая версия SW по префиксу (Task 539: v750→v751, v547→v548)
-const SW_EXPECTED = { kip8test: 'kipia-test-v767', kip8: 'kipia-v548' }[PFX] || null;
+const SW_EXPECTED = { kip8test: 'kipia-test-v768', kip8: 'kipia-v548' }[PFX] || null;
 const SW_PREV = { kip8test: 'kipia-test-v750', kip8: 'kipia-v547' }[PFX] || null;
 
 const FAV_KEY = PFX + '_phonebook_favorites';
@@ -389,7 +389,10 @@ describe('Task 539 — SRC: JS pbSetTab / pbUpdateTabs', () => {
 
     test('pbToggleFavorite вызывает pbUpdateTabs', () => {
         const i = INDEX_SRC.indexOf('function pbToggleFavorite(');
-        const seg = INDEX_SRC.slice(i, i + 1500);
+        // Task 559: функция выросла (карточка уходит из правого окна
+        // «Избранного» на месте) — окно среза 1500 → 2400
+        // (прецедент Task 541: срез обязан покрывать рост функции)
+        const seg = INDEX_SRC.slice(i, i + 2400);
         assertTrue(seg.indexOf('pbUpdateTabs();') !== -1,
             'счётчик «Избранное» живо реагирует на звезду');
     });

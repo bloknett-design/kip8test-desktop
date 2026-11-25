@@ -56,9 +56,9 @@ const SW_SRC = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 const PFX_MATCH = INDEX_SRC.match(/const PB_FAV_KEY = '(\w+?)_phonebook_favorites'/);
 const PFX = PFX_MATCH ? PFX_MATCH[1] : null;
 // Task 544: v755→v756 (kip8test), v552→v553 (kip8)
-const SW_EXPECTED = { kip8test: 'kipia-test-v767', kip8: 'kipia-v553' }[PFX] || null;
+const SW_EXPECTED = { kip8test: 'kipia-test-v768', kip8: 'kipia-v553' }[PFX] || null;
 const SW_PREV = { kip8test: 'kipia-test-v755', kip8: 'kipia-v552' }[PFX] || null;
-const SW_NEXT = { kip8test: 'kipia-test-v768', kip8: 'kipia-v554' }[PFX] || null;
+const SW_NEXT = { kip8test: 'kipia-test-v769', kip8: 'kipia-v554' }[PFX] || null;
 
 const FAV_KEY = PFX + '_phonebook_favorites';
 
@@ -436,8 +436,11 @@ describe('Task 544 — VM: рендер справочника', () => {
         assertTrue(even > 0 && odd > 0, 'карточки продолжают зебриться');
     });
 
-    test('«Избранное»: подгруппы с зебра-классами (forceExpand)', async () => {
-        const t = makeVm({ desktop: true });
+    test('«Избранное»: подгруппы с зебра-классами (мобильный инлайн)', async () => {
+        // Task 559: на десктопе без запроса «Избранное» — дерево двух
+        // окон; инлайн-рендер с подгруппами — мобильная версия и поиск.
+        // Зебра строк-подгрупп проверяется на мобильном инлайне
+        const t = makeVm({ desktop: false });
         await seedPhonebook(t);
         seedFavorites(t, [ID_IVANOV]);
         t.sandbox.pbSetTab('fav');

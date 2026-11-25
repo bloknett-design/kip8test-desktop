@@ -61,9 +61,9 @@ const SW_SRC = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 const PFX_MATCH = INDEX_SRC.match(/const PB_FAV_KEY = '(\w+?)_phonebook_favorites'/);
 const PFX = PFX_MATCH ? PFX_MATCH[1] : null;
 // Task 543: v754→v755 (kip8test), v551→v552 (kip8)
-const SW_EXPECTED = { kip8test: 'kipia-test-v767', kip8: 'kipia-v552' }[PFX] || null;
+const SW_EXPECTED = { kip8test: 'kipia-test-v768', kip8: 'kipia-v552' }[PFX] || null;
 const SW_PREV = { kip8test: 'kipia-test-v754', kip8: 'kipia-v551' }[PFX] || null;
-const SW_NEXT = { kip8test: 'kipia-test-v768', kip8: 'kipia-v553' }[PFX] || null;
+const SW_NEXT = { kip8test: 'kipia-test-v769', kip8: 'kipia-v553' }[PFX] || null;
 
 const FAV_KEY = PFX + '_phonebook_favorites';
 
@@ -397,19 +397,26 @@ describe('Task 543 — SRC: десктоп «Все» — ширина стро�
 // ============================================================
 describe('Task 543 — VM: рендер справочника', () => {
 
-    test('«Избранное» на десктопе — без pb-fav-cols, карточки в одну колонку', async () => {
+    test('«Избранное» на десктопе — без pb-fav-cols, дерево двух окон (Task 559)', async () => {
         const t = makeVm({ desktop: true });
         await seedPhonebook(t);
         seedFavorites(t, [ID_IVANOV]);
         t.sandbox.pbSetTab('fav');
         assertTrue(t.listClasses['pb-fav-cols'] !== true,
             'класс сетки не вешается (три столбца отменены)');
-        assertTrue(t.pbList.innerHTML.indexOf('pb-card') !== -1,
-            'карточки отрисованы инлайн (одноколоночно)');
+        // Task 559: «Избранное» на десктопе без запроса — дерево по
+        // избранным (два окна, как «Все»); инлайн-карточки — поиск/мобайл
+        assertTrue(t.pbList.innerHTML.indexOf('pb-master') !== -1,
+            'дерево избранного (Task 559)');
+        assertTrue(t.pbList.innerHTML.indexOf('pb-card') === -1,
+            'карточек в левом окне нет');
     });
 
-    test('«Избранное» — зебра-классы у карточек чередуются', async () => {
-        const t = makeVm({ desktop: true });
+    test('«Избранное» — зебра-классы у карточек чередуются (поиск)', async () => {
+        // Task 559: инлайн-рендер «Избранного» на десктопе — только при
+        // поисковом запросе (без запроса — дерево двух окон);
+        // зебра карточек проверяется через поиск
+        const t = makeVm({ desktop: true, query: 'Ива' });
         await seedPhonebook(t);
         seedFavorites(t, [ID_IVANOV]);
         t.sandbox.pbSetTab('fav');

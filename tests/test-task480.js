@@ -92,9 +92,9 @@ function countOf(haystack, needle) {
 // ==========================================================================
 describe('Task 480 — SW: версия кэша', () => {
 
-    test("CACHE_VERSION = 'kipia-test-v767'", () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v767';") !== -1,
-            'SW поднят до kipia-test-v767 (Task 480)');
+    test("CACHE_VERSION = 'kipia-test-v768'", () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v768';") !== -1,
+            'SW поднят до kipia-test-v768 (Task 480)');
     });
 
     test('прежняя версия v703 отсутствует', () => {
@@ -103,8 +103,8 @@ describe('Task 480 — SW: версия кэша', () => {
     });
 
     test('несуществующая v705 отсутствует (guard)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v768') === -1,
-            'kipia-test-v767 не должен существовать');
+        assertTrue(SW_SRC.indexOf('kipia-test-v769') === -1,
+            'kipia-test-v768 не должен существовать');
     });
 
     test('персистентные кэши картинок/данных НЕ инкрементировались', () => {
@@ -116,7 +116,7 @@ describe('Task 480 — SW: версия кэша', () => {
     });
 
     test('комментарий Task 480 в шапке версий (окно 2600 → 3200 → 6000, Task 486/490)', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v767';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v768';");
         // Task 490: +480 симв. комментария — окно 5000 → 6000 (якорь 5440)
         // Task 492: комментарий (~290 симв.) отодвинул якорь Task 480
         // до ~6221 — окно 6000 → 6800.
@@ -269,9 +269,11 @@ describe('Task 480 — data/*.json: метаданные источника', ()
     // Task 553 (rebase поверх авто-синков 37dde331/2ce7934f от
     // 16.11.2026): пользователь правит Google Sheets — devices
     // 1288 → 1279, lockouts 530 → 524, valves 320 → 325
+    // Хвост-синк (авто-коммит 14c9a3c от 19.11.2026, после закрытия
+    // Task 558): пользователь удалил 6 блокировок — 524 → 518
     const TOTALS = {
         'data/devices.json':    { total: 'total_devices',    value: 1279, sheet: 'Приборы_app' },
-        'data/lockouts.json':   { total: 'total_lockouts',   value: 524,  sheet: 'Блокировки_app' },
+        'data/lockouts.json':   { total: 'total_lockouts',   value: 518,  sheet: 'Блокировки_app' },
         'data/valves.json':     { total: 'total_valves',     value: 325,  sheet: 'Клапана_app' },
         'data/regulators.json': { total: 'total_regulators', value: 268,  sheet: 'Регуляторы_app' }
     };

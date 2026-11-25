@@ -65,9 +65,9 @@ const WF_SRC = fs.existsSync(WF_PATH)
 const PFX_MATCH = INDEX_SRC.match(/const PB_FAV_KEY = '(\w+?)_phonebook_favorites'/);
 const PFX = PFX_MATCH ? PFX_MATCH[1] : null;
 // Task 542: v753→v754 (kip8test), v550→v551 (kip8)
-const SW_EXPECTED = { kip8test: 'kipia-test-v767', kip8: 'kipia-v551' }[PFX] || null;
+const SW_EXPECTED = { kip8test: 'kipia-test-v768', kip8: 'kipia-v551' }[PFX] || null;
 const SW_PREV = { kip8test: 'kipia-test-v753', kip8: 'kipia-v550' }[PFX] || null;
-const SW_NEXT = { kip8test: 'kipia-test-v768', kip8: 'kipia-v552' }[PFX] || null;
+const SW_NEXT = { kip8test: 'kipia-test-v769', kip8: 'kipia-v552' }[PFX] || null;
 
 const FAV_KEY = PFX + '_phonebook_favorites';
 // Task 545: ID таблицы обновлён (новая ссылка пользователя).
@@ -486,11 +486,12 @@ describe('Task 542 — VM: засев свёрнутости и три стол�
         const t = makeVm({ desktop: true });
         seedFavorites(t, [ID_IVANOV]);
         await runInit(t);
-        // Старт на «Избранном» (Task 540) — эффект: отфильтрованный список
-        assertTrue(t.pbList.innerHTML.indexOf('Иванов') !== -1,
-            'избранный контакт в списке');
-        assertTrue(t.pbList.innerHTML.indexOf('Козлов') === -1,
-            'не-избранные скрыты (режим «Избранное» активен)');
+        // Task 559: старт на «Избранном» (Task 540) — ДЕРЕВО по избранным
+        // (два окна, как «Все»); карточки — в правом окне при выборе группы
+        assertTrue(t.pbList.innerHTML.indexOf('pb-master-org-row') !== -1,
+            'дерево избранного отрисовано');
+        assertTrue(t.pbList.innerHTML.indexOf('Иванов') === -1,
+            'карточек в левом окне нет (режим «Избранное» активен)');
         // Переключение на «Все» — дерево уже свёрнуто, кроме ТОКЕМ
         t.sandbox.pbSetTab('all');
         const html = t.pbList.innerHTML;
@@ -509,8 +510,12 @@ describe('Task 542 — VM: засев свёрнутости и три стол�
         t.sandbox.pbSetTab('fav');
         assertTrue(t.listClasses['pb-fav-cols'] !== true,
             'класс не вешается (три столбца отменены Task 543)');
-        assertTrue(t.pbList.innerHTML.indexOf('pb-card') !== -1,
-            'инлайн-рендер избранного с карточками');
+        // Task 559: «Избранное» на десктопе без запроса — ДЕРЕВО по
+        // избранным (два окна, как «Все»); инлайн-карточки — поиск/мобайл
+        assertTrue(t.pbList.innerHTML.indexOf('pb-master') !== -1,
+            'дерево избранного (Task 559 — два окна)');
+        assertTrue(t.pbList.innerHTML.indexOf('pb-card') === -1,
+            'карточек в левом окне нет (они в правом)');
     });
 
     test('поиск на «Избранном» — одноколоночный список (класса нет)', async () => {

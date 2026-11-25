@@ -26,7 +26,7 @@
 //       ppr-y-*, ppr-totals-*) — минус ~12,4 КБ;
 //   (г) устойчивость: лист «Блокировки» недоступен (экспорт с
 //       gid= одного листа) → сохранён прежний ppr_chart.
-//   SW: kipia-test-v767 (логика SW не менялась; окна истории
+//   SW: kipia-test-v768 (логика SW не менялась; окна истории
 //       расширены scripts/task484-windows.py; бамп tests —
 //       scripts/task484-bump-sw.py; OWN-файл — этот тест).
 //   АДАПТАЦИИ: test-task473.js (механика мёртвого _renderPPRChart
@@ -320,8 +320,10 @@ describe('Task 484: lockouts.json — блок ppr_chart', () => {
         // авто-синк c60c426b (21.10.2026): 529 → 528 (данные живые)
         // Task 553 (rebase поверх авто-синка 37dde331 от 16.11.2026):
         // 530 → 524 (данные живые)
-        assertEqual(LOCKOUTS_JSON.total_lockouts, 524, 'total_lockouts прежний');
-        assertEqual(LOCKOUTS_JSON.lockouts.length, 524, 'массив прежний');
+        // Хвост-синк (авто-коммит 14c9a3c от 19.11.2026, после закрытия
+        // Task 558): 524 → 518 (данные живые)
+        assertEqual(LOCKOUTS_JSON.total_lockouts, 518, 'total_lockouts прежний');
+        assertEqual(LOCKOUTS_JSON.lockouts.length, 518, 'массив прежний');
         assertEqual(LOCKOUTS_JSON.headers.length, 13, '13 колонок');
         assertEqual(LOCKOUTS_JSON.sheet, 'Блокировки_app', 'лист _app прежний');
     });
@@ -442,8 +444,8 @@ describe('Task 484: VM — _renderDevicesPPR (блокировки)', () => {
 // 5. SW: версия v708 + комментарий Task 484
 // ==========================================================================
 describe('Task 484: SW — версия и кэши', () => {
-    test('CACHE_VERSION = kipia-test-v767', () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v767';") !== -1,
+    test('CACHE_VERSION = kipia-test-v768', () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v768';") !== -1,
             'версия поднята');
     });
 
@@ -452,11 +454,11 @@ describe('Task 484: SW — версия и кэши', () => {
     });
 
     test('v709 в sw.js отсутствует (лишний инкремент не сделан)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v768') === -1);
+        assertTrue(SW_SRC.indexOf('kipia-test-v769') === -1);
     });
 
     test('комментарий Task 484 в шапке версий (окно 700)', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v767';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v768';");
         // Task 490: +480 симв. комментария — окно 3900 → 4500 (якорь 4232)
         // Task 502: окно 8100 → 8300 (якорь 8149).
         const ctx = SW_SRC.slice(Math.max(0, i - 9600), i);
