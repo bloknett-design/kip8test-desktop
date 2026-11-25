@@ -2,7 +2,7 @@
 """
 Синхронизация регуляторов с Google Sheets.
 
-Источник: https://docs.google.com/spreadsheets/d/1ZKOPBsD9x4wdlC5rDjz09UypD86G0Cee/edit
+Источник: https://docs.google.com/spreadsheets/d/14l0ac4zGwOblvuH8kRkwwdOymAVXD5op/edit
           (файл «Перечень КИП ИОС рабочий.xlsx», импортированный в Google Sheets,
            тот же что и для приборов/блокировок/клапанов)
 Лист: "Регуляторы_app"
@@ -17,7 +17,7 @@
 
 Переменные окружения:
   REGULATORS_SPREADSHEET_ID — ID Google Sheets
-      (по умолчанию 1ZKOPBsD9x4wdlC5rDjz09UypD86G0Cee)
+      (по умолчанию 14l0ac4zGwOblvuH8kRkwwdOymAVXD5op)
   REGULATORS_SHEET_NAME — имя листа (по умолчанию "Регуляторы_app")
   REGULATORS_GID — numeric ID листа (опционально; если задан, экспортирует
       конкретный лист через &gid=...). Если не задан — экспортируется вся книга.
@@ -44,7 +44,7 @@ import openpyxl
 # ============================================================
 # Настройки Google Sheets
 # ============================================================
-DEFAULT_SPREADSHEET_ID = '1ZKOPBsD9x4wdlC5rDjz09UypD86G0Cee'
+DEFAULT_SPREADSHEET_ID = '14l0ac4zGwOblvuH8kRkwwdOymAVXD5op'
 DEFAULT_SHEET_NAME = 'Регуляторы_app'
 
 DOWNLOAD_DIR = Path('/tmp/regulators_download')
@@ -153,6 +153,11 @@ def parse_regulators(xlsx_path, sheet_name):
     for cell in ws[1]:
         val = str(cell.value).strip() if cell.value is not None else ''
         headers.append(val)
+    # Task 560: Excel-реимпорт новой таблицы растягивает формат на
+    # колонки правее данных — хвостовые ПУСТЫЕ заголовки в JSON не
+    # тащим (структура листов остаётся прежней).
+    while headers and headers[-1] == '':
+        headers.pop()
     log(f'Заголовки ({len(headers)}): {headers}')
 
     # Читаем данные
@@ -200,6 +205,11 @@ def parse_regulators(xlsx_path, sheet_name):
             if isinstance(val, datetime):
                 val = val.strftime('%Y-%m-%d')
             elif val is not None:
+                if isinstance(val, float) and val.is_integer():
+                    # Task 560: Excel-реимпорт хранит целые как float
+                    # (9984837.0) — приводим к int, чтобы в JSON было
+                    # прежнее «9984837», а не «9984837.0».
+                    val = int(val)
                 val = str(val).strip()
                 # Убираем мягкие переносы и нормализуем пробелы
                 val = val.replace('\xad', '').replace('\u00a0', ' ')

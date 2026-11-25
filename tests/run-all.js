@@ -641,9 +641,9 @@ require('./test-task478.js');
 // приборов (десктоп-модуль devices-table-desktop.js).
 require('./test-task479.js');
 // Task 480 — новый ID Google-таблицы «Перечень КИП ИОС рабочий.xlsx»
-// (1ZKOPBsD9x4wdlC5rDjz09UypD86G0Cee): sync-скрипты + workflows +
-// data/*.json (source) + index.html-комментарии + README + промт;
-// данные и структура листов те же (1291/531/320/268).
+// (ID обновлён Task 560: 14l0ac4zGwOblvuH8kRkwwdOymAVXD5op): sync-скрипты +
+// workflows + data/*.json (source) + index.html-комментарии + README +
+// промт; данные и структура листов те же (1291/531/320/268).
 require('./test-task480.js');
 // Task 481 — ППР-индикация, вид ремонта «ТО»: сравнивается ТОЛЬКО ГОД
 // даты ремонта (текущий → зелёный, не текущий → красный; период/месяц
@@ -1061,6 +1061,16 @@ require('./test-task558.js');
 // ДВА ОКНА: дерево организаций/подразделений по избранным (слева) +
 // избранные выбранной группы (справа); КЛИЕНТ-ONLY.
 require('./test-task559.js');
+// Task 560 (заявка: «Замени во всех местах ссылку на файл "Перечень
+// КИП ИОС рабочий.xlsx" на ссылку https://docs.google.com/
+// spreadsheets/d/14l0ac4zGwOblvuH8kRkwwdOymAVXD5op/edit?…»):
+// смена ID Google-таблицы во ВСЕХ местах (sync-скрипты, workflows,
+// data/*.json source, index.html, README, промт, sw-комментарий
+// Task 480) + харденинг sync-скриптов от артефактов Excel-реимпорта
+// (пустые хвостовые заголовки срезаются, целые float → int) + синк
+// данных из новой таблицы (правки пользователя); SW kipia-test-v768
+// → v769.
+require('./test-task560.js');
 require('./test-deploy-url.js');
 
 // Запускаем

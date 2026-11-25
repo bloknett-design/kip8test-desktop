@@ -274,8 +274,8 @@
 // (dev-ppr-warn); месяц срока раньше — красный. Те же цвета — в
 // столбце «Дата» табличного вида приборов (десктоп, Task 479).
 // Task 480: новый ID Google-таблицы «Перечень КИП ИОС рабочий.xlsx»
-// (1ZKOPBsD9x4wdlC5rDjz09UypD86G0Cee) в sync-скриптах, workflows,
-// data/*.json, README и промте; данные и структура листов те же
+// (обновлён Task 560: 14l0ac4zGwOblvuH8kRkwwdOymAVXD5op) в sync-скриптах,
+// workflows, data/*.json, README и промте; данные и структура листов те же
 // (1291/531/320/268). Логики SW не менял.
 // Task 481: ППР-индикация, вид ремонта «ТО» — сравнивается ТОЛЬКО
 // ГОД даты ремонта (ТО ежегодно): текущий год → зелёный, другой
@@ -440,7 +440,7 @@
 // закреплением A3. Клиент-only.
 // Task 508: Кабельный журнал — архив: удалённые записи (_archived) скрыты
 // из печати/PDF, видны в Excel (блок «Архив»); сервер — CableJournal.gs.
-const CACHE_VERSION = 'kipia-test-v768';
+const CACHE_VERSION = 'kipia-test-v769';
 const CACHE_NAME = CACHE_VERSION;
 
 // Отдельный кэш для картинок Google Drive (превью + полные).

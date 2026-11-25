@@ -1,6 +1,6 @@
 {
   "title": "Перечень приборов КИП ИОС",
-  "source": "Google Sheets: https://docs.google.com/spreadsheets/d/1ZKOPBsD9x4wdlC5rDjz09UypD86G0Cee/edit",
+  "source": "Google Sheets: https://docs.google.com/spreadsheets/d/14l0ac4zGwOblvuH8kRkwwdOymAVXD5op/edit",
   "sheet": "Приборы_app",
   "total_devices": 1279,
   "headers": [
@@ -95,7 +95,7 @@
       "ID": 0,
       "Наименование": "≡ Изменения в перечнях от",
       "Изображение": "",
-      "Тип": "46345.599731828705",
+      "Тип": "46350.53016388889",
       "Предел измерения": "",
       "№ прибора": "",
       "Место установки": "",
