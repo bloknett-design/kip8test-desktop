@@ -24,7 +24,7 @@
 //     label → sublabel → cancelled; строка отмены внутри того же
 //     <a>, что и «Инструкция СО 153-34.03.603-2003» (не в чужой
 //     кнопке); блок <a> валиден (закрыт).
-//   SW: kipia-test-v769.
+//   SW: kipia-test-v770.
 //
 // Запуск: через tests/run-all.js (require './test-task525.js').
 
@@ -248,10 +248,10 @@ describe('Task 525 — структура кнопки', () => {
 // ============================================================
 describe('Task 525 — SW: версия кэша', () => {
 
-    test('sw.js: CACHE_VERSION = kipia-test-v769', () => {
+    test('sw.js: CACHE_VERSION = kipia-test-v770', () => {
         const m = SW_SRC.match(/const CACHE_VERSION = '([^']+)'/);
         assertTrue(m, 'CACHE_VERSION найден');
-        assertEqual(m[1], 'kipia-test-v769',
+        assertEqual(m[1], 'kipia-test-v770',
             'версия бампнута v737 → v738 (правка index.html)');
     });
 

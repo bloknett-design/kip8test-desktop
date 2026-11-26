@@ -2,7 +2,7 @@
 """
 Синхронизация перечня приборов КИП ИОС с Google Sheets.
 
-Источник: https://docs.google.com/spreadsheets/d/14l0ac4zGwOblvuH8kRkwwdOymAVXD5op/edit
+Источник: https://docs.google.com/spreadsheets/d/1VMJHY1DmsRPoWOAYKGN7QU9cjHtWZJlx/edit
           (файл «Перечень КИП ИОС рабочий.xlsx», импортированный в Google Sheets)
 Лист: "Приборы_app"
 
@@ -24,7 +24,7 @@ Task 483: дополнительно читается лист «Приборы�
 
 Переменные окружения:
   DEVICES_SPREADSHEET_ID — ID Google Sheets
-      (по умолчанию 14l0ac4zGwOblvuH8kRkwwdOymAVXD5op)
+      (по умолчанию 1VMJHY1DmsRPoWOAYKGN7QU9cjHtWZJlx)
   DEVICES_SHEET_NAME — имя листа (по умолчанию "Приборы_app")
   DEVICES_GID — numeric ID листа (опционально; если задан, экспортирует
       конкретный лист через &gid=...). Если не задан — экспортируется вся книга.
@@ -45,7 +45,7 @@ import openpyxl
 # ============================================================
 # Настройки Google Sheets
 # ============================================================
-DEFAULT_SPREADSHEET_ID = '14l0ac4zGwOblvuH8kRkwwdOymAVXD5op'
+DEFAULT_SPREADSHEET_ID = '1VMJHY1DmsRPoWOAYKGN7QU9cjHtWZJlx'
 DEFAULT_SHEET_NAME = 'Приборы_app'
 
 DOWNLOAD_DIR = Path('/tmp/devices_download')

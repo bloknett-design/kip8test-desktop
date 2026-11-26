@@ -30,7 +30,7 @@
 //   VM: идемпотентность — материализованная «д» поверх И (правка
 //       _PENDING) закрывает день покрытием, ячейка занята —
 //       повторный план не переназначает и не дублирует;
-//   SW: kipia-test-v769, прежней v766 нет;
+//   SW: kipia-test-v770, прежней v766 нет;
 //   Санитар: сервер WorkSchedule.gs НЕ менялся (КЛИЕНТ-Only);
 //     tests/run-all.js подключает test-task558.js.
 //
@@ -528,8 +528,8 @@ describe('Task 558 — VM: план после материализации (и�
 // ============================================================
 describe('Task 558 — SW и санитар', () => {
 
-    test('SW: CACHE_VERSION = kipia-test-v769, прежней v766 нет', () => {
-        assertTrue(SW_SRC.indexOf("'kipia-test-v769'") !== -1,
+    test('SW: CACHE_VERSION = kipia-test-v770, прежней v766 нет', () => {
+        assertTrue(SW_SRC.indexOf("'kipia-test-v770'") !== -1,
             'новая версия SW v767');
         assertEqual(SW_SRC.indexOf("'kipia-test-v766'"), -1,
             'старой версии v766 не осталось');

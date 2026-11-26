@@ -2,7 +2,7 @@
 """
 Синхронизация клапанов с Google Sheets.
 
-Источник: https://docs.google.com/spreadsheets/d/14l0ac4zGwOblvuH8kRkwwdOymAVXD5op/edit
+Источник: https://docs.google.com/spreadsheets/d/1VMJHY1DmsRPoWOAYKGN7QU9cjHtWZJlx/edit
           (файл «Перечень КИП ИОС рабочий.xlsx», импортированный в Google Sheets,
            тот же что и для приборов/блокировок)
 Лист: "Клапана_app"
@@ -17,7 +17,7 @@
 
 Переменные окружения:
   VALVES_SPREADSHEET_ID — ID Google Sheets
-      (по умолчанию 14l0ac4zGwOblvuH8kRkwwdOymAVXD5op)
+      (по умолчанию 1VMJHY1DmsRPoWOAYKGN7QU9cjHtWZJlx)
   VALVES_SHEET_NAME — имя листа (по умолчанию "Клапана_app")
   VALVES_GID — numeric ID листа (опционально; если задан, экспортирует
       конкретный лист через &gid=...). Если не задан — экспортируется вся книга.
@@ -44,7 +44,7 @@ import openpyxl
 # ============================================================
 # Настройки Google Sheets
 # ============================================================
-DEFAULT_SPREADSHEET_ID = '14l0ac4zGwOblvuH8kRkwwdOymAVXD5op'
+DEFAULT_SPREADSHEET_ID = '1VMJHY1DmsRPoWOAYKGN7QU9cjHtWZJlx'
 DEFAULT_SHEET_NAME = 'Клапана_app'
 
 DOWNLOAD_DIR = Path('/tmp/valves_download')

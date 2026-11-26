@@ -42,7 +42,7 @@
 // Task 560 (смена ссылки ЕЩЁ РАЗ): ID 1ZKOPBsD9x4wdlC5rDjz09UypD86G0Cee
 //     заменён на 14l0ac4zGwOblvuH8kRkwwdOymAVXD5op (новый файл —
 //     Excel-реимпорт). NEW_ID здесь = АКТУАЛЬНЫЙ ID; негативные
-//     проверки гоняют ОБА прежних ID (OLD_ID Task 480 + PREV_ID
+//     проверки гоняют ВСЕ ТРИ прежних ID (OLD_ID Task 480 + PREV_ID
 //     Task 560, helper hasOldId). Данные из новой таблицы засинкены
 //     отдельным chore-коммитом (правки пользователя в блокировках +
 //     дата заметки «от 24.11»); totals прежние (1279/518/325/268),
@@ -60,8 +60,9 @@ const ROOT = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 const OLD_ID = '1eUUwwulUvKUGWTgQ__XP-y7z1aEkt5Wy';
-const PREV_ID = '1ZKOPBsD9x4wdlC5rDjz09UypD86G0Cee';  // Task 560: прежний текущий
-const NEW_ID = '14l0ac4zGwOblvuH8kRkwwdOymAVXD5op';
+const MID_ID = '1ZKOPBsD9x4wdlC5rDjz09UypD86G0Cee';   // ID Task 480 (до Task 560)
+const PREV_ID = '14l0ac4zGwOblvuH8kRkwwdOymAVXD5op';  // Task 561: прежний текущий
+const NEW_ID = '1VMJHY1DmsRPoWOAYKGN7QU9cjHtWZJlx';   // актуальный (Task 561)
 const NEW_URL = 'https://docs.google.com/spreadsheets/d/' + NEW_ID + '/edit';
 
 const INDEX_SRC = read('index.html');
@@ -101,7 +102,8 @@ function countOf(haystack, needle) {
 
 // Task 560: «старых» ID теперь ДВА — проверяем оба разом
 function hasOldId(src) {
-    return src.indexOf(OLD_ID) !== -1 || src.indexOf(PREV_ID) !== -1;
+    return src.indexOf(OLD_ID) !== -1 || src.indexOf(MID_ID) !== -1 ||
+        src.indexOf(PREV_ID) !== -1;
 }
 
 // =========================================================================
@@ -109,9 +111,9 @@ function hasOldId(src) {
 // ==========================================================================
 describe('Task 480 — SW: версия кэша', () => {
 
-    test("CACHE_VERSION = 'kipia-test-v769'", () => {
-        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v769';") !== -1,
-            'SW поднят до kipia-test-v769 (Task 480)');
+    test("CACHE_VERSION = 'kipia-test-v770'", () => {
+        assertTrue(SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v770';") !== -1,
+            'SW поднят до kipia-test-v770 (Task 480)');
     });
 
     test('прежняя версия v703 отсутствует', () => {
@@ -120,8 +122,8 @@ describe('Task 480 — SW: версия кэша', () => {
     });
 
     test('несуществующая v705 отсутствует (guard)', () => {
-        assertTrue(SW_SRC.indexOf('kipia-test-v770') === -1,
-            'kipia-test-v769 не должен существовать');
+        assertTrue(SW_SRC.indexOf('kipia-test-v771') === -1,
+            'kipia-test-v770 не должен существовать');
     });
 
     test('персистентные кэши картинок/данных НЕ инкрементировались', () => {
@@ -133,7 +135,7 @@ describe('Task 480 — SW: версия кэша', () => {
     });
 
     test('комментарий Task 480 в шапке версий (окно 2600 → 3200 → 6000, Task 486/490)', () => {
-        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v769';");
+        const i = SW_SRC.indexOf("const CACHE_VERSION = 'kipia-test-v770';");
         // Task 490: +480 симв. комментария — окно 5000 → 6000 (якорь 5440)
         // Task 492: комментарий (~290 симв.) отодвинул якорь Task 480
         // до ~6221 — окно 6000 → 6800.
